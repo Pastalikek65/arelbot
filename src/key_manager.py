@@ -63,6 +63,10 @@ class ServiceType(Enum):
     GEMINI = "gemini"
     IAMHC = "iamhc"
     EVREN = "evren"
+    # NVIDIA NIM exposes the DeepSeek V4.1 Flash model through an
+    # OpenAI-compatible endpoint.  It is optional and only enters routing
+    # when NVIDIA_API_KEY is configured (or explicitly selected in a route).
+    NVIDIA = "nvidia"
     # Kept as a compatibility enum for old fixtures and explicitly pinned
     # legacy deployments. Production routing never selects it by default.
     CLEANAPIS = "cleanapis"
@@ -80,6 +84,7 @@ class KeyManager:
             ServiceType.GROQ: self._maybe_decrypt(Config.GROQ_KEYS),
             ServiceType.IAMHC: self._maybe_decrypt([Config.IAMHC_KEY]) if Config.IAMHC_KEY else [],
             ServiceType.EVREN: self._maybe_decrypt([Config.EVREN_KEY]) if Config.EVREN_KEY else [],
+            ServiceType.NVIDIA: self._maybe_decrypt([Config.NVIDIA_KEY]) if Config.NVIDIA_KEY else [],
             ServiceType.CLEANAPIS: self._maybe_decrypt([Config.CLEANAPIS_KEY]) if Config.CLEANAPIS_KEY else [],
             ServiceType.NINEROUTER: self._maybe_decrypt([Config.NINEROUTER_KEY]) if Config.NINEROUTER_KEY else [],
             ServiceType.CEREBRAS: self._maybe_decrypt(Config.CEREBRAS_KEYS),
@@ -100,6 +105,7 @@ class KeyManager:
             ServiceType.GROQ: 0,
             ServiceType.IAMHC: 0,
             ServiceType.EVREN: 0,
+            ServiceType.NVIDIA: 0,
             ServiceType.CLEANAPIS: 0,
             ServiceType.NINEROUTER: 0,
             ServiceType.CEREBRAS: 0,
@@ -113,6 +119,7 @@ class KeyManager:
             ServiceType.GROQ: {k: KeyStatus.ACTIVE for k in self.keys[ServiceType.GROQ] if k},
             ServiceType.IAMHC: {k: KeyStatus.ACTIVE for k in self.keys[ServiceType.IAMHC] if k},
             ServiceType.EVREN: {k: KeyStatus.ACTIVE for k in self.keys[ServiceType.EVREN] if k},
+            ServiceType.NVIDIA: {k: KeyStatus.ACTIVE for k in self.keys[ServiceType.NVIDIA] if k},
             ServiceType.CLEANAPIS: {k: KeyStatus.ACTIVE for k in self.keys[ServiceType.CLEANAPIS] if k},
             ServiceType.NINEROUTER: {k: KeyStatus.ACTIVE for k in self.keys[ServiceType.NINEROUTER] if k},
             ServiceType.CEREBRAS: {k: KeyStatus.ACTIVE for k in self.keys[ServiceType.CEREBRAS] if k},
@@ -132,10 +139,11 @@ class KeyManager:
             ServiceType.GEMINI: {},
             ServiceType.IAMHC: {},
             ServiceType.EVREN: {},
+            ServiceType.NVIDIA: {},
             ServiceType.CLEANAPIS: {},
         }
     def _maybe_decrypt(self, keys_list: List[str]) -> List[str]:
-        """EÄŸer encryptor varsa ve key ÅŸifreliyse deÅŸifre eder."""
+        """Eğer encryptor varsa ve key şifreliyse deşifre eder."""
         if not self.encryptor or not self.encryptor.is_available:
             return [k.strip() for k in keys_list if k and k.strip()]
 
@@ -280,3 +288,4 @@ class KeyManager:
         keys_list = self.keys[service_type]
         current = self.current_indices[service_type]
         self.current_indices[service_type] = (current + 1) % len(keys_list)
+

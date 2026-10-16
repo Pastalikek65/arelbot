@@ -13,7 +13,7 @@ from unified_logger import UnifiedLogger
 
 
 def test_private_event_summary_does_not_emit_user_payload_or_identity() -> None:
-    payload = "Ali'nin Ã¶zel notu: https://example.test/private?token=secret"
+    payload = "Ali'nin özel notu: https://example.test/private?token=secret"
 
     summary = summarize_private_text(payload, label="user_input")
 
@@ -75,6 +75,24 @@ def test_redaction_filter_replaces_exception_arguments_with_type_only() -> None:
     assert "secret" not in str(record.args)
 
 
+def test_redaction_filter_masks_nvidia_api_keys() -> None:
+    leaked = "nvapi-abcdefghijklmnopqrstuvwx1234567890"
+    record = logging.LogRecord(
+        name="test",
+        level=logging.ERROR,
+        pathname=__file__,
+        lineno=1,
+        msg="provider key=%s",
+        args=(leaked,),
+        exc_info=None,
+    )
+
+    assert RedactionFilter().filter(record) is True
+    assert leaked not in str(record.msg)
+    assert leaked not in str(record.args)
+    assert "<nvidia-api-key>" in str(record.args)
+
+
 @pytest.mark.asyncio
 async def test_retry_logging_never_interpolates_exception_message() -> None:
     stream = io.StringIO()
@@ -110,7 +128,7 @@ async def test_retry_logging_never_interpolates_exception_message() -> None:
 
 @pytest.mark.asyncio
 async def test_handler_log_event_does_not_send_private_payload(monkeypatch) -> None:
-    payload = "gizli kullanÄ±cÄ± mesajÄ± https://example.test/private"
+    payload = "gizli kullanıcı mesajı https://example.test/private"
     sent: list[str] = []
 
     class Bot:
@@ -123,17 +141,17 @@ async def test_handler_log_event_does_not_send_private_payload(monkeypatch) -> N
     monkeypatch.setattr(Config, "DM_LOG_THREAD_ID", 1, raising=False)
     context = SimpleNamespace(bot=Bot())
 
-    await log_event(context, message=payload, user_info="Ali KullanÄ±cÄ±", chat_type="private")
+    await log_event(context, message=payload, user_info="Ali Kullanıcı", chat_type="private")
 
     assert len(sent) == 1
     assert payload not in sent[0]
-    assert "Ali KullanÄ±cÄ±" not in sent[0]
+    assert "Ali Kullanıcı" not in sent[0]
     assert "length=" in sent[0]
 
 
 @pytest.mark.asyncio
 async def test_message_handler_log_event_does_not_send_ai_payload(monkeypatch) -> None:
-    payload = "AI yanÄ±tÄ±ndaki kiÅŸisel iÃ§erik ve https://youtube.com/watch?v=secret"
+    payload = "AI yanıtındaki kişisel içerik ve https://youtube.com/watch?v=secret"
     sent: list[str] = []
 
     class Bot:
@@ -150,7 +168,7 @@ async def test_message_handler_log_event_does_not_send_ai_payload(monkeypatch) -
     await handler._log_event(
         context,
         message=payload,
-        user_info="Sistem YanÄ±tÄ±",
+        user_info="Sistem Yanıtı",
         chat_type="private",
     )
 
@@ -263,3 +281,4 @@ async def test_message_handler_log_event_is_suppressed_in_errors_only_mode(monke
     await handler._log_event(SimpleNamespace(bot=Bot()), message="normal event", chat_type="private")
 
     assert sent == []
+

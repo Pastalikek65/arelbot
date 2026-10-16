@@ -1,56 +1,56 @@
-# Arelbot Operasyon ve DaÄŸÄ±tÄ±m Rehberi
+# Arelbot Operasyon ve Dağıtım Rehberi
 
-Bu belge Windows geliÅŸtirme, Linux VDS production, yedekleme, rollback,
-saÄŸlÄ±k, gÃ¶zlemlenebilirlik ve replay kapÄ±larÄ±nÄ± tanÄ±mlar. Secret
-deÄŸerleri bu dosyaya yazÄ±lmaz.
+Bu belge Windows geliştirme, Linux VDS production, yedekleme, rollback,
+sağlık, gözlemlenebilirlik ve replay kapılarını tanımlar. Secret
+değerleri bu dosyaya yazılmaz.
 
 ## Yerel Windows
 
 TELEGRAM_MODE=polling ile MongoDB ve Redis Docker Compose dev profiliyle
-Ã§alÄ±ÅŸtÄ±rÄ±lÄ±r. FFmpeg, ffprobe ve Node.js PATH Ã¼zerinde bulunur.
+çalıştırılır. FFmpeg, ffprobe ve Node.js PATH üzerinde bulunur.
 
-Transport sÃ¶zleÅŸmesi polling ve webhook modlarÄ±nÄ± ayrÄ± doÄŸrular; webhook
-modunda HTTPS, credential/query iÃ§ermeyen URL, gÃ¼venli path segmentleri,
-URL-safe secret ve 1-65535 port aralÄ±ÄŸÄ± uygulama baÅŸlamadan kontrol edilir.
+Transport sözleşmesi polling ve webhook modlarını ayrı doğrular; webhook
+modunda HTTPS, credential/query içermeyen URL, güvenli path segmentleri,
+URL-safe secret ve 1-65535 port aralığı uygulama başlamadan kontrol edilir.
 
     docker compose --profile dev up -d mongo redis
     python -m pytest -q
     python scripts/architecture_check.py --strict
 
-Windows'ta varsayÄ±lan olarak iÅŸletim sisteminin doÄŸrulanmÄ±ÅŸ kÃ¶k sertifika deposu
-kullanÄ±lÄ±r. Kurumsal HTTPS inspection kullanÄ±lÄ±yorsa doÄŸrulanmÄ±ÅŸ kÃ¶k CA dosyasÄ±
-ARELBOT_EXTRA_CA_CERT ile verilir (Ã§alÄ±ÅŸan sÃ¼reÃ§te SSL_CERT_FILE olarak
-birleÅŸtirilir). TLS verify=False kullanÄ±lmaz. Docker build iÃ§in
-ARELBOT_BUILD_CA_FILE BuildKit secret olarak kullanÄ±lÄ±r.
+Windows'ta varsayılan olarak işletim sisteminin doğrulanmış kök sertifika deposu
+kullanılır. Kurumsal HTTPS inspection kullanılıyorsa doğrulanmış kök CA dosyası
+ARELBOT_EXTRA_CA_CERT ile verilir (çalışan süreçte SSL_CERT_FILE olarak
+birleştirilir). TLS verify=False kullanılmaz. Docker build için
+ARELBOT_BUILD_CA_FILE BuildKit secret olarak kullanılır.
 
-Bootstrap dispatch'i de aynÄ± sÃ¶zleÅŸmeyi kullanÄ±r: Windows polling profili
-yalnÄ±zca `run_polling`, Linux webhook profili yalnÄ±zca `run_webhook`
-Ã§aÄŸrÄ±sÄ± alÄ±r. Bu seÃ§im `src/tests/test_main_transport.py` iÃ§inde PTB
-uygulamasÄ± baÅŸlatÄ±lmadan iki yÃ¶nlÃ¼ olarak doÄŸrulanÄ±r.
+Bootstrap dispatch'i de aynı sözleşmeyi kullanır: Windows polling profili
+yalnızca `run_polling`, Linux webhook profili yalnızca `run_webhook`
+çağrısı alır. Bu seçim `src/tests/test_main_transport.py` içinde PTB
+uygulaması başlatılmadan iki yönlü olarak doğrulanır.
 
 ## Linux VDS production
 
-TELEGRAM_MODE=webhook, HTTPS reverse proxy, ayrÄ± bot ve worker container'larÄ±,
-MONGODB_REQUIRED=true ve MEDIA_REDIS_REQUIRED=true kullanÄ±lÄ±r. .env dosyasÄ±
-0600 izinli olmalÄ±dÄ±r.
+TELEGRAM_MODE=webhook, HTTPS reverse proxy, ayrı bot ve worker container'ları,
+MONGODB_REQUIRED=true ve MEDIA_REDIS_REQUIRED=true kullanılır. .env dosyası
+0600 izinli olmalıdır.
 
-DaÄŸÄ±tÄ±m Ã¶ncesi hedef hostun mevcut uygulamalarÄ±nÄ± durdurmadan salt-okunur
-hazÄ±rlÄ±ÄŸÄ± Ã¶lÃ§Ã¼lÃ¼r. Probe, known-hosts iÃ§indeki SSH anahtarÄ±nÄ± zorunlu
-tutar; Docker/Compose, `/opt/arel` yapÄ±sÄ±, yazma izni, boÅŸ disk kotasÄ±,
-paylaÅŸÄ±mlÄ± env varlÄ±ÄŸÄ±, mevcut release sayÄ±sÄ±, Arel Compose projesine ait
-container sayÄ±sÄ± ve dinleyen portlarÄ± okur. Uzak
-dosya, container, Nginx veya Telegram durumu deÄŸiÅŸtirilmez:
+Dağıtım öncesi hedef hostun mevcut uygulamalarını durdurmadan salt-okunur
+hazırlığı ölçülür. Probe, known-hosts içindeki SSH anahtarını zorunlu
+tutar; Docker/Compose, `/opt/arel` yapısı, yazma izni, boş disk kotası,
+paylaşımlı env varlığı, mevcut release sayısı, Arel Compose projesine ait
+container sayısı ve dinleyen portları okur. Uzak
+dosya, container, Nginx veya Telegram durumu değiştirilmez:
 
     $env:AREL_SSH_PASSWORD='operator-secret'
     $env:ARELBOT_VDS_READINESS_LIVE='1'
     python scripts/vds_readiness.py --host <vds> --user root --live --confirm-live --json --report deploy/evidence/vds-readiness.json
 
-Rapor `ok=false` ise `blockers` alanÄ±ndaki her madde giderilmeden immutable
-release deploy edilmez. Probe host adÄ±, kimlik bilgisi, container adÄ± veya
-uzak hata metni saklamaz. `/opt/arel/shared/.env` yoksa deployer'a yalnÄ±zca
-operator tarafÄ±ndan hazÄ±rlanmÄ±ÅŸ, UTF-8 ve 0600 izinli production env dosyasÄ±
-`--bootstrap-env-file` ile verilebilir; yerel geliÅŸtirme `.env` dosyasÄ±
-otomatik olarak production secret store sayÄ±lmaz.
+Rapor `ok=false` ise `blockers` alanındaki her madde giderilmeden immutable
+release deploy edilmez. Probe host adı, kimlik bilgisi, container adı veya
+uzak hata metni saklamaz. `/opt/arel/shared/.env` yoksa deployer'a yalnızca
+operator tarafından hazırlanmış, UTF-8 ve 0600 izinli production env dosyası
+`--bootstrap-env-file` ile verilebilir; yerel geliştirme `.env` dosyası
+otomatik olarak production secret store sayılmaz.
 
     python scripts/production_preflight.py --nginx-config /etc/nginx/sites-enabled/arelbot
     docker compose --profile prod up -d --build
@@ -62,9 +62,9 @@ checked-in example uses `/telegram/webhook`; if a public prefix is configured,
 update the exact Nginx location to the public URL path and keep `proxy_pass`
 pointing at the Python webhook's internal `WEBHOOK_PATH`.
 
-Reverse proxy yalnÄ±zca webhook yolunu botun loopback portuna iletir. DNS,
-sertifika, firewall ve Telegram setWebhook gerÃ§ek VDS kabul listesinde ayrÄ±ca
-doÄŸrulanÄ±r. Healthcheck baÅŸarÄ±sÄ±zsa Compose restart politikasÄ± devreye
+Reverse proxy yalnızca webhook yolunu botun loopback portuna iletir. DNS,
+sertifika, firewall ve Telegram setWebhook gerçek VDS kabul listesinde ayrıca
+doğrulanır. Healthcheck başarısızsa Compose restart politikası devreye
 girer.
 
 Production preflight, MONGODB_REQUIRED=true, REDIS_REQUIRED=true ve
@@ -75,11 +75,11 @@ host tarafinda 0600 izinli ARELBOT_OBSERVABILITY_TOKEN_FILE tanimlanir.
 Preflight token icerigini loglamadan dosya varligini, izinlerini ve URL-safe
 formatini dogrular.
 
-Yeni veya boÅŸ bir VDS'de `/opt/arel/shared/.env` yoksa deployer, secret iÃ§eriÄŸini terminale yazmadan aÃ§Ä±kÃ§a verilen yerel dosyayÄ± SFTP ile `/tmp` altÄ±nda taÅŸÄ±r ve yalnÄ±zca uzak shared env yoksa `install -m 600` ile kurar:
+Yeni veya boş bir VDS'de `/opt/arel/shared/.env` yoksa deployer, secret içeriğini terminale yazmadan açıkça verilen yerel dosyayı SFTP ile `/tmp` altında taşır ve yalnızca uzak shared env yoksa `install -m 600` ile kurar:
 
     python scripts/deploy_release.py --host <vds> --user root --bootstrap-env-file C:/secure/arelbot.production.env
 
-Mevcut uzak `.env` Ã¼zerine yazÄ±lmaz. Yerel dosya normal UTF-8 dosya olmalÄ±, 128 KiB sÄ±nÄ±rÄ±nÄ± aÅŸmamalÄ± ve symlink olmamalÄ±dÄ±r. Uzak preflight veya saÄŸlÄ±k kontrolÃ¼ baÅŸarÄ±sÄ±z olsa bile archive geÃ§ici dosyalarÄ± temizlenir; operator env dosyasÄ± rollback sÄ±rasÄ±nda korunur.
+Mevcut uzak `.env` üzerine yazılmaz. Yerel dosya normal UTF-8 dosya olmalı, 128 KiB sınırını aşmamalı ve symlink olmamalıdır. Uzak preflight veya sağlık kontrolü başarısız olsa bile archive geçici dosyaları temizlenir; operator env dosyası rollback sırasında korunur.
 
 EVREN kullanilacaksa anahtar yalnizca deployment secret store icinden verilir;
 repository veya Docker image icine yazilmaz. OpenAI-compatible route asagidaki
@@ -87,20 +87,33 @@ gibi acikca secilir:
 
     EVREN_URL=https://evren-llmapi.ssyz.org.tr/v1
     EVREN_MODEL=deepseek-v4.1-flash
-    AI_PROVIDER_ROUTES={"chat":["evren"],"fast":["evren"],"analysis":["evren"],"summary":["evren"],"sticker_tagging":["evren"]}
+    AI_PROVIDER_ROUTES={"chat":["nvidia","evren"],"fast":["nvidia","evren"],"analysis":["nvidia","evren"],"summary":["nvidia","evren"],"sticker_tagging":["nvidia","evren"]}
 
-`EVREN_LLM_API_KEY` degeri preflight/health/log raporlarinda gorunmez. EVREN anahtari ayarlandiginda `chat`, `fast`, `analysis`, `summary` ve `sticker_tagging` gorevleri varsayilan olarak `deepseek-v4.1-flash` modeline yonlendirilir; baska bir provider route'u acikca yazilirsa o allowlist kullanilir. EVREN kullanim sartlari hesapta kabul edilmeden production istegi baslatilmaz.
+`EVREN_LLM_API_KEY` degeri preflight/health/log raporlarinda gorunmez. NVIDIA anahtari ayarlandiginda gorevler varsayilan olarak `nvidia -> evren` sirasini kullanir; NVIDIA anahtari yoksa yalnizca EVREN rotasi etkin kalir. Baska bir provider route'u acikca yazilirsa o allowlist kullanilir. Her provider kullanim sartlari hesapta kabul edilmeden production istegi baslatilmaz.
 
-HÄ±zlÄ± sohbet yolu `AI_FAST_TIMEOUT_SECONDS` ile sÄ±nÄ±rlÄ±dÄ±r (varsayÄ±lan 8
-saniye). Tek saÄŸlayÄ±cÄ±lÄ± bir route geÃ§ici 408/429/5xx cevabÄ± verirse
-`AI_PROVIDER_RETRY_ATTEMPTS` (varsayÄ±lan 1) kadar kÄ±sa aralÄ±kla yeniden denenir;
-okuma zaman aÅŸÄ±mÄ± ikinci kez beklenmez. `AI_PROVIDER_RETRY_BACKOFF_MS`
-varsayÄ±lan olarak 150 milisaniyedir. BÃ¶ylece anlÄ±k upstream titremesi kullanÄ±cÄ±ya
-hemen servis kesintisi olarak yansÄ±maz, kalÄ±cÄ± yavaÅŸlÄ±kta ise yanÄ±t sÃ¼resi
-kontrollÃ¼ kalÄ±r.
+NVIDIA NIM opsiyonel bir OpenAI-compatible failover'dur. Anahtar yalnızca
+deployment secret store'dan `NVIDIA_API_KEY` olarak verilir; repository veya
+image içine yazılmaz. EVREN ve NVIDIA birlikte kullanılacaksa route sırası
+açıkça tanımlanır:
 
-GeÃ§ici saÄŸlayÄ±cÄ± hatasÄ±nda anahtar soÄŸuma sÃ¼resi 10 saniyedir; bu sÃ¼re kota
-veya geÃ§ersiz anahtar askÄ±ya alma davranÄ±ÅŸÄ±ndan ayrÄ±dÄ±r.
+    NVIDIA_URL=https://integrate.api.nvidia.com/v1
+    NVIDIA_MODEL=deepseek-ai/deepseek-v4.1-flash
+    AI_PROVIDER_ROUTES={"chat":["nvidia","evren"],"fast":["nvidia","evren"],"analysis":["nvidia","evren"],"summary":["nvidia","evren"],"sticker_tagging":["nvidia","evren"]}
+
+NVIDIA modeline reasoning payload'i gönderilmez; istekler ortak token, timeout
+ve medya boyutu sınırlarından geçirilir. NVIDIA terms, quota ve model lisansı
+onayı olmadan production route'u açılmaz.
+
+Hızlı sohbet yolu `AI_FAST_TIMEOUT_SECONDS` ile sınırlıdır (varsayılan 8
+saniye). Tek sağlayıcılı bir route geçici 408/429/5xx cevabı verirse
+`AI_PROVIDER_RETRY_ATTEMPTS` (varsayılan 1) kadar kısa aralıkla yeniden denenir;
+okuma zaman aşımı ikinci kez beklenmez. `AI_PROVIDER_RETRY_BACKOFF_MS`
+varsayılan olarak 150 milisaniyedir. Böylece anlık upstream titremesi kullanıcıya
+hemen servis kesintisi olarak yansımaz, kalıcı yavaşlıkta ise yanıt süresi
+kontrollü kalır.
+
+Geçici sağlayıcı hatasında anahtar soğuma süresi 10 saniyedir; bu süre kota
+veya geçersiz anahtar askıya alma davranışından ayrıdır.
 
 Model endpointini deployment acmadan dogrulamak icin acik gate ile bounded probe calistirilabilir. Probe model ciktisini, anahtari veya upstream hata metnini kaydetmez:
 
@@ -146,145 +159,145 @@ target a disposable staging chat, never a production group.
 
 ## Live medya staging matrisi
 
-CanlÄ± platform denetimi offline testlerin yerine geÃ§mez. Matris varsayÄ±lan olarak yalnÄ±zca yapÄ±yÄ± doÄŸrular; dÄ±ÅŸ aÄŸa eriÅŸim iÃ§in Ã¼Ã§ baÄŸÄ±msÄ±z onay gerekir:
+Canlı platform denetimi offline testlerin yerine geçmez. Matris varsayılan olarak yalnızca yapıyı doğrular; dış ağa erişim için üç bağımsız onay gerekir:
 
     ARELBOT_MEDIA_STAGING_LIVE=1 python scripts/media_staging_matrix.py --config docs/media-live-matrix.example.json --live --confirm-live --report deploy/evidence/media-staging-live.json
 
-GerÃ§ek dosya indirme ayrÄ±ca `--download` ister. CanlÄ± indirme raporu `scope=live-media-matrix` taÅŸÄ±r; tam URL, baÅŸlÄ±k, cookie ve upstream hata metni saklamaz; yalnÄ±zca platform, host, sÃ¼re, boyut ve sabit hata kodu taÅŸÄ±r. Her iÅŸ sonrasÄ± geÃ§ici medya klasÃ¶rÃ¼ temizlenir.
-Tam deployment kanÄ±tÄ± iÃ§in matriste dÃ¶rt canlÄ± vaka (Instagram, TikTok, YouTube Shorts ve X) etkinleÅŸtirildikten sonra `--require-platform-matrix --require-slo --report deploy/evidence/media-staging-full-matrix.json` kullanÄ±lÄ±r; eksik platform dÄ±ÅŸ aÄŸa Ã§Ä±kmadan reddedilir.
+Gerçek dosya indirme ayrıca `--download` ister. Canlı indirme raporu `scope=live-media-matrix` taşır; tam URL, başlık, cookie ve upstream hata metni saklamaz; yalnızca platform, host, süre, boyut ve sabit hata kodu taşır. Her iş sonrası geçici medya klasörü temizlenir.
+Tam deployment kanıtı için matriste dört canlı vaka (Instagram, TikTok, YouTube Shorts ve X) etkinleştirildikten sonra `--require-platform-matrix --require-slo --report deploy/evidence/media-staging-full-matrix.json` kullanılır; eksik platform dış ağa çıkmadan reddedilir.
 
 ## Immutable release
 
-scripts/deploy_release.py temiz ve commit edilmiÅŸ Git checkout ister. Release
-arÅŸivi RELEASE.json ve RELEASE_MANIFEST.sha256 ile hash'lenir. Preflight,
+scripts/deploy_release.py temiz ve commit edilmiş Git checkout ister. Release
+arşivi RELEASE.json ve RELEASE_MANIFEST.sha256 ile hash'lenir. Preflight,
 bot/worker health ve rollback tamamlanmadan current release symlink'i
-deÄŸiÅŸtirilmez. SSH host key daha Ã¶nceden known_hosts iÃ§inde bulunmalÄ±dÄ±r.
+değiştirilmez. SSH host key daha önceden known_hosts içinde bulunmalıdır.
 
-ArÅŸivi SSH baÄŸlantÄ±sÄ±ndan baÄŸÄ±msÄ±z Ã¼retmek iÃ§in temiz checkout'ta
+Arşivi SSH bağlantısından bağımsız üretmek için temiz checkout'ta
 `python scripts/deploy_release.py --host example.invalid --build-only`
-Ã§alÄ±ÅŸtÄ±rÄ±labilir. Bu kip aÄŸa baÄŸlanmaz; yalnÄ±zca arÅŸiv yolunu ve
-SHA-256 deÄŸerini verir. Normal kip aynÄ± checksum doÄŸrulamasÄ±ndan sonra
-SSH/SFTP ile yÃ¼kleme, preflight, health bekleme ve baÅŸarÄ±sÄ±z aktivasyonda
+çalıştırılabilir. Bu kip ağa bağlanmaz; yalnızca arşiv yolunu ve
+SHA-256 değerini verir. Normal kip aynı checksum doğrulamasından sonra
+SSH/SFTP ile yükleme, preflight, health bekleme ve başarısız aktivasyonda
 rollback uygular.
 
 
-SSH kurulum betiÄŸi fail-closed Ã§alÄ±ÅŸÄ±r: preflight veya health baÅŸarÄ±sÄ±zlÄ±ÄŸÄ±nda
-commit edilmemiÅŸ release klasÃ¶rÃ¼nÃ¼ ve yÃ¼klenen arÅŸivi EXIT trap ile temizler.
-Bilinen Ã¶nceki release varsa rollback sÄ±rasÄ±nda korunur; baÅŸarÄ±lÄ± aktivasyonda
-yalnÄ±zca geÃ§ici yÃ¼kleme dosyasÄ± silinir. Bu davranÄ±ÅŸ `test_deploy_release.py`
-ile Linux/Bash replay ve Docker release gate iÃ§inde doÄŸrulanÄ±r.
+SSH kurulum betiği fail-closed çalışır: preflight veya health başarısızlığında
+commit edilmemiş release klasörünü ve yüklenen arşivi EXIT trap ile temizler.
+Bilinen önceki release varsa rollback sırasında korunur; başarılı aktivasyonda
+yalnızca geçici yükleme dosyası silinir. Bu davranış `test_deploy_release.py`
+ile Linux/Bash replay ve Docker release gate içinde doğrulanır.
 
-## Health ve yÃ¶netici komutlarÄ±
+## Health ve yönetici komutları
 
-Telegram yÃ¼zeyleri:
+Telegram yüzeyleri:
 
-- /health: MongoDB, Redis, FFmpeg, provider ve worker durumlarÄ±.
-- /metrics: kuyruk derinliÄŸi, servis ve typed feature p50/p95/p99 gecikmeleri,
-  baÅŸarÄ±/hata sayaÃ§larÄ±, AI token/maliyet ve feature telemetry.
-- /providers: provider health, circuit ve AI saÄŸlayÄ±cÄ± durumu.
-- /providers governance: kaynak yÃ¶netiÅŸimi, robots/terms incelemesi ve Ã¼retim sign-off durumunu URL veya secret gÃ¶stermeden listeler.
-- `scripts/evidence_audit.py`: deterministik staging kanÄ±tlarÄ±nÄ±n ÅŸema/invariant/gizli veri kontrolÃ¼; `--require-live` ayrÄ±ca gerÃ§ek Telegram mutation, tam medya matrisi, VDS backup/restore, monitoring delivery ve provider approval kanÄ±t dosyalarÄ±nÄ± zorunlu tutar.
-- `--require-live` dosyanÄ±n yalnÄ±zca mevcut olmasÄ±na veya `ok=true` yazmasÄ±na gÃ¼venmez: `telegram-mutation-live`, `live-media-matrix`, `vds-backup-restore`, `live-monitoring-alert-delivery` ve `provider-governance-approval` scope'larÄ±nÄ±; iÅŸlem sayÄ±larÄ±nÄ±, 10 saniye medya p95'ini, en az 100 sohbet slotunu, checksum'Ä± ve approval ID'lerini ayrÄ±ca denetler.
-- `scripts/release_gate.py --report <path>` gate Ã§Ä±ktÄ±sÄ±nÄ± atomik ve redacted JSON kanÄ±tÄ± olarak saklar; rapor hedefi symlink ise yazmayÄ± reddeder.
-- /jobs <id>: herhangi bir worker iÅŸinin durumu.
-- /audit: maskeli yÃ¶netici iÅŸlem kayÄ±tlarÄ±.
-- /maintenance on|off: medya bakÄ±m kill-switch'i.
+- /health: MongoDB, Redis, FFmpeg, provider ve worker durumları.
+- /metrics: kuyruk derinliği, servis ve typed feature p50/p95/p99 gecikmeleri,
+  başarı/hata sayaçları, AI token/maliyet ve feature telemetry.
+- /providers: provider health, circuit ve AI sağlayıcı durumu.
+- /providers governance: kaynak yönetişimi, robots/terms incelemesi ve üretim sign-off durumunu URL veya secret göstermeden listeler.
+- `scripts/evidence_audit.py`: deterministik staging kanıtlarının şema/invariant/gizli veri kontrolü; `--require-live` ayrıca gerçek Telegram mutation, tam medya matrisi, VDS backup/restore, monitoring delivery ve provider approval kanıt dosyalarını zorunlu tutar.
+- `--require-live` dosyanın yalnızca mevcut olmasına veya `ok=true` yazmasına güvenmez: `telegram-mutation-live`, `live-media-matrix`, `vds-backup-restore`, `live-monitoring-alert-delivery` ve `provider-governance-approval` scope'larını; işlem sayılarını, 10 saniye medya p95'ini, en az 100 sohbet slotunu, checksum'ı ve approval ID'lerini ayrıca denetler.
+- `scripts/release_gate.py --report <path>` gate çıktısını atomik ve redacted JSON kanıtı olarak saklar; rapor hedefi symlink ise yazmayı reddeder.
+- /jobs <id>: herhangi bir worker işinin durumu.
+- /audit: maskeli yönetici işlem kayıtları.
+- /maintenance on|off: medya bakım kill-switch'i.
 
 ## Loopback observability endpoint
 
 OBSERVABILITY_ENABLED=true ile opsiyonel /healthz ve Prometheus uyumlu
-/metrics aÃ§Ä±lÄ±r. Bot OBSERVABILITY_PORT, worker
-OBSERVABILITY_WORKER_PORT kullanÄ±r. VarsayÄ±lan bind 127.0.0.1'dir. Public
-bind iÃ§in 16-256 karakterlik OBSERVABILITY_TOKEN zorunludur; token
-X-Arelbot-Metrics-Token baÅŸlÄ±ÄŸÄ± veya Bearer ÅŸemasÄ±yla gÃ¶nderilir.
-Endpoint yalnÄ±zca bounded GET kabul eder, query verisini echo etmez, kullanÄ±cÄ±
-etiketi Ã¼retmez ve Cache-Control no-store dÃ¶ner. Reverse proxy/firewall
-arkasÄ±nda tutulmalÄ±dÄ±r. `/healthz` `dependencies`, `providers` ve `status`
-alanlarÄ±nÄ± dÃ¶ndÃ¼rÃ¼r; `healthy` Ã§ekirdek ve provider'larÄ±n iyi olduÄŸunu,
-`degraded` yalnÄ±zca opsiyonel provider sorunu bulunduÄŸunu, `unhealthy` ise
-MongoDB/Redis gibi zorunlu baÄŸÄ±mlÄ±lÄ±ÄŸÄ±n eriÅŸilemediÄŸini belirtir. BeÅŸ saniyelik
-snapshot cache'i polling trafiÄŸinin upstream provider'larÄ± tetiklemesini Ã¶nler.
-HTTP sÃ¶zleÅŸmesinde `healthy` ve `degraded` iÃ§in 200, `unhealthy` iÃ§in 503
-dÃ¶ner; Docker, reverse proxy ve readiness probe'larÄ± zorunlu baÄŸÄ±mlÄ±lÄ±k
-arÄ±zasÄ±nda yanlÄ±ÅŸlÄ±kla saÄŸlÄ±klÄ± rapor vermez.
+/metrics açılır. Bot OBSERVABILITY_PORT, worker
+OBSERVABILITY_WORKER_PORT kullanır. Varsayılan bind 127.0.0.1'dir. Public
+bind için 16-256 karakterlik OBSERVABILITY_TOKEN zorunludur; token
+X-Arelbot-Metrics-Token başlığı veya Bearer şemasıyla gönderilir.
+Endpoint yalnızca bounded GET kabul eder, query verisini echo etmez, kullanıcı
+etiketi üretmez ve Cache-Control no-store döner. Reverse proxy/firewall
+arkasında tutulmalıdır. `/healthz` `dependencies`, `providers` ve `status`
+alanlarını döndürür; `healthy` çekirdek ve provider'ların iyi olduğunu,
+`degraded` yalnızca opsiyonel provider sorunu bulunduğunu, `unhealthy` ise
+MongoDB/Redis gibi zorunlu bağımlılığın erişilemediğini belirtir. Beş saniyelik
+snapshot cache'i polling trafiğinin upstream provider'ları tetiklemesini önler.
+HTTP sözleşmesinde `healthy` ve `degraded` için 200, `unhealthy` için 503
+döner; Docker, reverse proxy ve readiness probe'ları zorunlu bağımlılık
+arızasında yanlışlıkla sağlıklı rapor vermez.
 
 ## Backup ve restore
 
-MongoDB dump, Redis RDB ve mevcut Chroma klasÃ¶rÃ¼ tek atomik backup klasÃ¶rÃ¼ne
-alÄ±nÄ±r. BACKUP.json SHA-256 ve byte boyutlarÄ±nÄ± taÅŸÄ±r.
+MongoDB dump, Redis RDB ve mevcut Chroma klasörü tek atomik backup klasörüne
+alınır. BACKUP.json SHA-256 ve byte boyutlarını taşır.
 
     python scripts/backup.py --output-dir backups
 
-Restore varsayÄ±lan olarak yalnÄ±zca checksum doÄŸrular. Destructive iÅŸlem iÃ§in
+Restore varsayılan olarak yalnızca checksum doğrular. Destructive işlem için
 confirm gerekir.
 
     python scripts/restore.py backups/arel-YYYYMMDDTHHMMSSZ --mongo-uri MONGODB_URI --redis-rdb-target /var/lib/redis/dump.rdb --chroma-target /opt/arel/shared/chroma_db --confirm
 
-Redis RDB hedef data dizinine servis durdurularak yerleÅŸtirilir ve Redis
-yeniden baÅŸlatÄ±lÄ±r. Staging restore sonrasÄ± manifest, koleksiyon sayÄ±larÄ±
-ve Chroma arama smoke testi yapÄ±lÄ±r. Mongo namespace remap kullanÄ±lÄ±yorsa
+Redis RDB hedef data dizinine servis durdurularak yerleştirilir ve Redis
+yeniden başlatılır. Staging restore sonrası manifest, koleksiyon sayıları
+ve Chroma arama smoke testi yapılır. Mongo namespace remap kullanılıyorsa
 mongo-source-database ve mongo-target-database birlikte verilir; restore
-kodÄ± URI veritabanÄ± yolunu kaldÄ±rÄ±p nsFrom/nsTo uygulayarak kaynak
-arÅŸivini hedefe taÅŸÄ±r. Symlink hedefleri ve archive traversal reddedilir.
+kodı URI veritabanı yolunu kaldırıp nsFrom/nsTo uygulayarak kaynak
+arşivini hedefe taşır. Symlink hedefleri ve archive traversal reddedilir.
 
-Compose staging kanÄ±tÄ± iÃ§in yalnÄ±zca isimlendirilmiÅŸ sentinel verisi kullanan
-Mongo dump/namespace-remap ve Redis RDB snapshot/load smoke Ã§alÄ±ÅŸtÄ±rÄ±labilir:
+Compose staging kanıtı için yalnızca isimlendirilmiş sentinel verisi kullanan
+Mongo dump/namespace-remap ve Redis RDB snapshot/load smoke çalıştırılabilir:
 
     python scripts/persistence_staging_smoke.py --report deploy/evidence/persistence-staging.json
 
-Komut sonunda sentinel verisi, geÃ§ici container ve arÅŸiv dosyasÄ± temizlenir;
-rapor credential veya provider Ã§Ä±ktÄ±sÄ± iÃ§ermez. Bu kontrol VDS backup/restore
-tatbikatÄ±nÄ±n yerine geÃ§mez; release Ã¶ncesi gerÃ§ek staging hedefinde tekrar
-uygulanmalÄ±dÄ±r.
+Komut sonunda sentinel verisi, geçici container ve arşiv dosyası temizlenir;
+rapor credential veya provider çıktısı içermez. Bu kontrol VDS backup/restore
+tatbikatının yerine geçmez; release öncesi gerçek staging hedefinde tekrar
+uygulanmalıdır.
 
-GerÃ§ek VDS kanÄ±tÄ± iÃ§in backup/restore koÅŸucusu dÃ¶rt baÄŸÄ±msÄ±z kapÄ± ister:
+Gerçek VDS kanıtı için backup/restore koşucusu dört bağımsız kapı ister:
 
     ARELBOT_VDS_BACKUP_LIVE=1 python scripts/vds_backup_restore_staging.py --live --confirm-live --confirm-destructive --mongo-uri "$MONGODB_URI" --redis-url "$REDIS_URL" --restore-mongo-uri "$STAGING_MONGODB_URI" --restore-redis-target /var/lib/redis-staging/dump.rdb --restore-chroma-target /opt/arel/staging/chroma_db --mongo-source-database arel_bot --mongo-target-database arel_bot_restore --report deploy/evidence/vds-backup-restore.json --json
 
-Ãœretim Compose topolojisinde host iÅŸletim sistemine Mongo/Redis CLI kurmak
-gerekmez. `scripts/vds_backup_restore_remote.py` aynÄ± tatbikatÄ± SSH Ã¼zerinden
-Ã§alÄ±ÅŸan Mongo, Redis ve worker container'larÄ±nda yÃ¼rÃ¼tÃ¼r; Mongo hedef namespace'i
-benzersiz ve geÃ§icidir, Redis ayrÄ± bir disposable container'da aÃ§Ä±lÄ±r, Chroma
-geÃ§ici dizine Ã§Ä±karÄ±lÄ±r. Ãœretim servisi durdurulmaz. Komut parola deÄŸerini
-komut satÄ±rÄ±na yazmaz; parola yalnÄ±zca `AREL_SSH_PASSWORD` ortam deÄŸiÅŸkeninden
-okunur ve rapora alÄ±nmaz:
+Üretim Compose topolojisinde host işletim sistemine Mongo/Redis CLI kurmak
+gerekmez. `scripts/vds_backup_restore_remote.py` aynı tatbikatı SSH üzerinden
+çalışan Mongo, Redis ve worker container'larında yürütür; Mongo hedef namespace'i
+benzersiz ve geçicidir, Redis ayrı bir disposable container'da açılır, Chroma
+geçici dizine çıkarılır. Üretim servisi durdurulmaz. Komut parola değerini
+komut satırına yazmaz; parola yalnızca `AREL_SSH_PASSWORD` ortam değişkeninden
+okunur ve rapora alınmaz:
 
     AREL_SSH_PASSWORD='***' ARELBOT_VDS_BACKUP_LIVE=1 python scripts/vds_backup_restore_remote.py --host <vds-host> --user root --live --confirm-live --confirm-destructive --report deploy/evidence/vds-backup-restore.json --json
 
-Bu komut yalnÄ±zca operatÃ¶rÃ¼n aÃ§Ä±kÃ§a belirttiÄŸi disposable staging hedefinde
-Ã§alÄ±ÅŸtÄ±rÄ±lÄ±r. Restore hedefi aynÄ± Mongo namespace olamaz; Redis servisi hedef
-RDB yerleÅŸtirilmeden Ã¶nce durdurulmalÄ± ve sonrasÄ±nda yeniden baÅŸlatÄ±lmalÄ±dÄ±r.
-Rapor URI, parola, host yolu veya komut Ã§Ä±ktÄ±sÄ± iÃ§ermez; artifact iÃ§eriÄŸinin
-SHA-256 Ã¶zetiyle birlikte backup manifesti, checksum ve restore adÄ±mlarÄ±nÄ±
-kanÄ±tlar. Rollback tatbikatÄ± iÃ§in Ã¶nce aynÄ± hedefe ayrÄ± bir geri dÃ¶nÃ¼ÅŸ backup'Ä±
-alÄ±nÄ±r; bu koÅŸucu bunu kendiliÄŸinden Ã¼retim verisine uygulamaz.
+Bu komut yalnızca operatörün açıkça belirttiği disposable staging hedefinde
+çalıştırılır. Restore hedefi aynı Mongo namespace olamaz; Redis servisi hedef
+RDB yerleştirilmeden önce durdurulmalı ve sonrasında yeniden başlatılmalıdır.
+Rapor URI, parola, host yolu veya komut çıktısı içermez; artifact içeriğinin
+SHA-256 özetiyle birlikte backup manifesti, checksum ve restore adımlarını
+kanıtlar. Rollback tatbikatı için önce aynı hedefe ayrı bir geri dönüş backup'ı
+alınır; bu koşucu bunu kendiliğinden üretim verisine uygulamaz.
 
 ## Migration ve rollback
 
-Migration runner ileri ve geri yÃ¼rÃ¼tÃ¼lebilir; mevcut schema v14'tÃ¼r.
+Migration runner ileri ve geri yürütülebilir; mevcut schema v14'tür.
 
     python scripts/migrate.py
     python scripts/mongo_migration_smoke.py
 
-Production rollback Ã¶ncesi backup alÄ±nÄ±r. Migration rollback sonrasÄ± index,
-TTL ve unique constraint'ler tekrar smoke ile doÄŸrulanÄ±r.
+Production rollback öncesi backup alınır. Migration rollback sonrası index,
+TTL ve unique constraint'ler tekrar smoke ile doğrulanır.
 
-## Worker kuyruklarÄ±
+## Worker kuyrukları
 
 Media, document, attachment, quote, speech, sticker tagging, market chart ve
-image iÅŸleri Telegram handler iÃ§inde Ã§alÄ±ÅŸmaz. Redis taÅŸÄ±ma katmanÄ±,
-Mongo job kaydÄ± gerÃ§ek durum kaynaÄŸÄ±dÄ±r. Worker yeniden baÅŸladÄ±ÄŸÄ±nda
-queued/downloading/processing iÅŸler recovery politikasÄ±yla yeniden
-deÄŸerlendirilir. Delivery ledger sending sonrasÄ± belirsiz sonucu duplicate
-gÃ¶nderimden korur.
+image işleri Telegram handler içinde çalışmaz. Redis taşıma katmanı,
+Mongo job kaydı gerçek durum kaynağıdır. Worker yeniden başladığında
+queued/downloading/processing işler recovery politikasıyla yeniden
+değerlendirilir. Delivery ledger sending sonrası belirsiz sonucu duplicate
+gönderimden korur.
 
-ProviderRuntime stale-while-revalidate gÃ¶revleri shutdown sÄ±rasÄ±nda ayrÄ±ca
-iptal edilir. Feature executor Ã¶nce health yazma iÅŸlerini boÅŸaltÄ±r, sonra
+ProviderRuntime stale-while-revalidate görevleri shutdown sırasında ayrıca
+iptal edilir. Feature executor önce health yazma işlerini boşaltır, sonra
 refresh task'lerini durdurup cache/inflight state'ini temizler; provider HTTP
-istemcileri ancak bundan sonra kapanÄ±r. BÃ¶ylece restart sonrasÄ±nda eski bir
-task'in kapanmÄ±ÅŸ istemci Ã¼zerinden yeni network Ã§aÄŸrÄ±sÄ± baÅŸlatmasÄ± engellenir.
+istemcileri ancak bundan sonra kapanır. Böylece restart sonrasında eski bir
+task'in kapanmış istemci üzerinden yeni network çağrısı başlatması engellenir.
 
-## Replay ve kalite kapÄ±larÄ±
+## Replay ve kalite kapıları
 
     python scripts/release_gate.py --docker --requests 20 --concurrency 10
     python scripts/security_replay.py
@@ -296,72 +309,72 @@ task'in kapanmÄ±ÅŸ istemci Ã¼zerinden yeni network Ã§aÄŸrÄ±sÄ± ba�
 
 Release gate; architecture, provider metadata, compileall, pytest, Docker
 build/test, health, migration, provider matrix, Mongo ledger, security replay
-ve media delivery replay kontrollerini birlikte Ã§alÄ±ÅŸtÄ±rÄ±r. CanlÄ±
-Telegram, VDS webhook ve platform medya matrisi bu deterministic kapÄ±nÄ±n
-yerine geÃ§mez; staging kimlik bilgileriyle ayrÄ± yÃ¼rÃ¼tÃ¼lÃ¼r.
+ve media delivery replay kontrollerini birlikte çalıştırır. Canlı
+Telegram, VDS webhook ve platform medya matrisi bu deterministic kapının
+yerine geçmez; staging kimlik bilgileriyle ayrı yürütülür.
 
 ## Monitoring profile
 
-Prometheus ve Grafana yalnÄ±zca `monitoring` profiliyle aÃ§Ä±lÄ±r; ikisi de
-host'ta loopback'e bind edilir. Production'da bot ve worker gÃ¶zlem endpoint'i
-iÃ§in `OBSERVABILITY_ENABLED=true`, `OBSERVABILITY_LISTEN=0.0.0.0` ve
-`ARELBOT_OBSERVABILITY_TOKEN_FILE` tanÄ±mlanÄ±r. AynÄ± token dosyasÄ± Prometheus'a
-secret olarak mount edilir; token `.env`, dashboard veya loglara yazÄ±lmaz.
-Monitoring profili aÃ§Ä±lacaksa MONITORING_ENABLED=true ayarlanÄ±r; preflight aynÄ± anda observability'nin etkin olduÄŸunu ve GRAFANA_ADMIN_PASSWORD_FILE dosyasÄ±nÄ±n 0600 izinli, gerÃ§ek bir parola iÃ§erdiÄŸini kontrol eder.
+Prometheus ve Grafana yalnızca `monitoring` profiliyle açılır; ikisi de
+host'ta loopback'e bind edilir. Production'da bot ve worker gözlem endpoint'i
+için `OBSERVABILITY_ENABLED=true`, `OBSERVABILITY_LISTEN=0.0.0.0` ve
+`ARELBOT_OBSERVABILITY_TOKEN_FILE` tanımlanır. Aynı token dosyası Prometheus'a
+secret olarak mount edilir; token `.env`, dashboard veya loglara yazılmaz.
+Monitoring profili açılacaksa MONITORING_ENABLED=true ayarlanır; preflight aynı anda observability'nin etkin olduğunu ve GRAFANA_ADMIN_PASSWORD_FILE dosyasının 0600 izinli, gerçek bir parola içerdiğini kontrol eder.
 
     docker compose --profile prod --profile monitoring up -d
 
-Grafana admin parolasÄ± `GRAFANA_ADMIN_PASSWORD_FILE` ile dÄ±ÅŸarÄ±dan secret
-olarak verilir. VarsayÄ±lan placeholder ile production monitoring baÅŸlatÄ±lmaz;
-gerÃ§ek secret dosyalarÄ± deployment host'unda 0600 izinli tutulur. Dashboard
-Prometheus kurallarÄ± `deploy/monitoring/alerts.yml` iÃ§inde bot/worker scrape
-kesintisi, medya kuyruk backlog'u, workersÄ±z kuyruk ve dÃ¼ÅŸen provider health
-telemetrisi iÃ§in alarm Ã¼retir.
-`deploy/monitoring/grafana/dashboards/arelbot-overview.json` kuyruk derinliÄŸi,
-medya p95 gecikmesi, iÅŸ baÅŸarÄ±/baÅŸarÄ±sÄ±zlÄ±k oranÄ± ve AI kullanÄ±mÄ±nÄ± gÃ¶sterir.
+Grafana admin parolası `GRAFANA_ADMIN_PASSWORD_FILE` ile dışarıdan secret
+olarak verilir. Varsayılan placeholder ile production monitoring başlatılmaz;
+gerçek secret dosyaları deployment host'unda 0600 izinli tutulur. Dashboard
+Prometheus kuralları `deploy/monitoring/alerts.yml` içinde bot/worker scrape
+kesintisi, medya kuyruk backlog'u, workersız kuyruk ve düşen provider health
+telemetrisi için alarm üretir.
+`deploy/monitoring/grafana/dashboards/arelbot-overview.json` kuyruk derinliği,
+medya p95 gecikmesi, iş başarı/başarısızlık oranı ve AI kullanımını gösterir.
 
-Alertmanager aynÄ± `monitoring` profiline dahildir ve Prometheus'un beÅŸ kuralÄ±nÄ±
-`deploy/monitoring/alertmanager.yml` Ã¼zerinden tek bir HTTPS webhook alÄ±cÄ±sÄ±na
-iletir. AlÄ±cÄ± URL'si `ARELBOT_ALERT_WEBHOOK_URL_FILE` ile 0600 izinli secret
-dosyasÄ±ndan okunur; production preflight HTTP, private/loopback host, kimlik
-bilgisi ve query-string iÃ§eren hedefleri reddeder.
+Alertmanager aynı `monitoring` profiline dahildir ve Prometheus'un beş kuralını
+`deploy/monitoring/alertmanager.yml` üzerinden tek bir HTTPS webhook alıcısına
+iletir. Alıcı URL'si `ARELBOT_ALERT_WEBHOOK_URL_FILE` ile 0600 izinli secret
+dosyasından okunur; production preflight HTTP, private/loopback host, kimlik
+bilgisi ve query-string içeren hedefleri reddeder.
 
-Disposable staging teslimatÄ± iÃ§in yalnÄ±zca loopback Alertmanager API'sine
-canary gÃ¶nderilir:
+Disposable staging teslimatı için yalnızca loopback Alertmanager API'sine
+canary gönderilir:
 
     ARELBOT_MONITORING_LIVE=1 python scripts/monitoring_alert_staging.py --live --confirm-live --confirm-notification --alertmanager-url http://127.0.0.1:9093 --report deploy/evidence/monitoring-alert-delivery.json --json
 
-KoÅŸucu `/-/ready`, `/metrics` ve `/api/v2/alerts` akÄ±ÅŸÄ±nÄ± Ã¶lÃ§er; webhook
-entegrasyon sayacÄ± artmadan baÅŸarÄ±lÄ± rapor Ã¼retmez. VarsayÄ±lan Ã§alÄ±ÅŸtÄ±rma
-offline'dÄ±r ve hiÃ§bir alÄ±cÄ±ya istek gÃ¶ndermez.
+Koşucu `/-/ready`, `/metrics` ve `/api/v2/alerts` akışını ölçer; webhook
+entegrasyon sayacı artmadan başarılı rapor üretmez. Varsayılan çalıştırma
+offline'dır ve hiçbir alıcıya istek göndermez.
 
 Alert rule replay is pinned in `deploy/monitoring/alerts.test.yml`; the Docker
 release gate runs `promtool test rules` for all five rules, including exact
 labels and annotations. Live Alertmanager/webhook delivery remains a VDS-stage
 check.
 
-## Source ve secret politikasÄ±
+## Source ve secret politikası
 
-Her typed provider docs/DATA_SOURCES.md ve licenses.json iÃ§inde lisans,
-attribution, terms, rate limit, freshness ve fallback kaydÄ± taÅŸÄ±r. Token,
-cookie, tam URL, credential, kullanÄ±cÄ± metni ve medya path'i loglanmaz.
-Provider terms onayÄ± olmayan adapter feature flag/kill-switch arkasÄ±nda
+Her typed provider docs/DATA_SOURCES.md ve licenses.json içinde lisans,
+attribution, terms, rate limit, freshness ve fallback kaydı taşır. Token,
+cookie, tam URL, credential, kullanıcı metni ve medya path'i loglanmaz.
+Provider terms onayı olmayan adapter feature flag/kill-switch arkasında
 tutulur.
 
-Public HTML provider transportu HTTPS kaynak hostu, redirect kapatÄ±lmasÄ±,
-content-type ve 2 MiB response sÄ±nÄ±rÄ±nÄ± ortak uygular. `PROVIDER_RESPONSE_TOO_LARGE`,
-`PROVIDER_CONTENT_TYPE_INVALID` ve `PROVIDER_HOST_NOT_ALLOWED` hatalarÄ± sabit
-kullanÄ±cÄ± hata kodlarÄ±na dÃ¶nÃ¼ÅŸÃ¼r; upstream yanÄ±tÄ± cache'e veya loga aktarÄ±lmaz.
+Public HTML provider transportu HTTPS kaynak hostu, redirect kapatılması,
+content-type ve 2 MiB response sınırını ortak uygular. `PROVIDER_RESPONSE_TOO_LARGE`,
+`PROVIDER_CONTENT_TYPE_INVALID` ve `PROVIDER_HOST_NOT_ALLOWED` hataları sabit
+kullanıcı hata kodlarına dönüşür; upstream yanıtı cache'e veya loga aktarılmaz.
 
-Ãœretim operasyon kanalÄ±nda `LOG_CHANNEL_ERRORS_ONLY=true` kullanÄ±lÄ±r. Bu ayar
-normal kullanÄ±cÄ± mesajÄ± ve bot yanÄ±tÄ± kayÄ±tlarÄ±nÄ± Telegram log konusuna
-gÃ¶ndermez; yalnÄ±zca gÃ¼venli hata sÄ±nÄ±rÄ±ndan Ã¼retilen hata olaylarÄ± gÃ¶nderilir.
+Üretim operasyon kanalında `LOG_CHANNEL_ERRORS_ONLY=true` kullanılır. Bu ayar
+normal kullanıcı mesajı ve bot yanıtı kayıtlarını Telegram log konusuna
+göndermez; yalnızca güvenli hata sınırından üretilen hata olayları gönderilir.
 
-`APP_ENV=production` iÃ§in `REQUIRE_PROVIDER_APPROVAL` varsayÄ±lan olarak aÃ§Ä±ktÄ±r.
-Bu runtime guard, preflight atlanÄ±p Compose elle baÅŸlatÄ±lsa bile `pending` veya
-`disabled` dÄ±ÅŸ provider'Ä±n aÄŸ Ã§aÄŸrÄ±sÄ±ndan Ã¶nce `FEATURE_DISABLED` dÃ¶nmesini
-saÄŸlar. Development/replay iÃ§in Ã¶rnek `.env` dosyasÄ± bunu aÃ§Ä±kÃ§a `false` yapar;
-Ã¼retimde kapatÄ±lmasÄ± Ã¶nerilmez ve release kanÄ±tÄ± olmadan yapÄ±lmamalÄ±dÄ±r.
+`APP_ENV=production` için `REQUIRE_PROVIDER_APPROVAL` varsayılan olarak açıktır.
+Bu runtime guard, preflight atlanıp Compose elle başlatılsa bile `pending` veya
+`disabled` dış provider'ın ağ çağrısından önce `FEATURE_DISABLED` dönmesini
+sağlar. Development/replay için örnek `.env` dosyası bunu açıkça `false` yapar;
+üretimde kapatılması önerilmez ve release kanıtı olmadan yapılmamalıdır.
 
 ### Provider kill-switch
 
@@ -385,87 +398,87 @@ MEDIA_COMPLETION_SLO_SECONDS controls the latency budget and bounded progress up
 
 ## Provider governance preflight
 
-Provider adapter'larÄ±nÄ±n teknik olarak cevap vermesi, kaynaÄŸÄ±n kullanÄ±m
-ÅŸartlarÄ±nÄ±n onaylandÄ±ÄŸÄ± anlamÄ±na gelmez. Release gate pending kaynaklarÄ± gÃ¶rÃ¼nÃ¼r
-tutar; VDS aÃ§Ä±lÄ±ÅŸÄ±nda sign-off zorunlu hale getirmek iÃ§in aÅŸaÄŸÄ±daki komut
-kullanÄ±lÄ±r:
+Provider adapter'larının teknik olarak cevap vermesi, kaynağın kullanım
+şartlarının onaylandığı anlamına gelmez. Release gate pending kaynakları görünür
+tutar; VDS açılışında sign-off zorunlu hale getirmek için aşağıdaki komut
+kullanılır:
 
     python scripts/provider_governance.py --require-approved
     python scripts/production_preflight.py --env-file .env --require-provider-approval --nginx-config /etc/nginx/sites-enabled/arelbot.conf
 
-Bu kontrol canlÄ± kaynaÄŸa Ã§aÄŸrÄ± yapmaz ve Ã§Ä±ktÄ±da source URL, credential veya kullanÄ±cÄ± verisi yazmaz. OnaylanmamÄ±ÅŸ kaynaklar feature kill-switch ile kapalÄ±
-tutulmalÄ±; manifestte `source_governance`, `robots_policy`, `terms_review` ve
-`production_signoff` alanlarÄ± birlikte gÃ¼ncellenmeden aÃ§Ä±lmamalÄ±dÄ±r.
+Bu kontrol canlı kaynağa çağrı yapmaz ve çıktıda source URL, credential veya kullanıcı verisi yazmaz. Onaylanmamış kaynaklar feature kill-switch ile kapalı
+tutulmalı; manifestte `source_governance`, `robots_policy`, `terms_review` ve
+`production_signoff` alanları birlikte güncellenmeden açılmamalıdır.
 
-Ãœretim baÅŸlangÄ±cÄ±nda henÃ¼z incelenmemiÅŸ kaynaklarla birlikte Ã§ekirdek botu
-Ã§alÄ±ÅŸtÄ±rmak gerekiyorsa, bekleyen provider'lar `.env` iÃ§indeki
-`DISABLED_FEATURES` listesine feature key olarak aÃ§Ä±kÃ§a yazÄ±lÄ±r. Preflight bu
-listeyi governance kontrolÃ¼ne taÅŸÄ±r; listede olmayan aktif provider hÃ¢lÃ¢
+Üretim başlangıcında henüz incelenmemiş kaynaklarla birlikte çekirdek botu
+çalıştırmak gerekiyorsa, bekleyen provider'lar `.env` içindeki
+`DISABLED_FEATURES` listesine feature key olarak açıkça yazılır. Preflight bu
+listeyi governance kontrolüne taşır; listede olmayan aktif provider hâlâ
 fingerprint-bound approval ister. Bilinmeyen bir feature key fail-closed
-sonuÃ§lanÄ±r ve runtime aynÄ± kaynaÄŸÄ± aÄŸ Ã§aÄŸrÄ±sÄ±ndan Ã¶nce `FEATURE_DISABLED` ile
-durdurur. Devre dÄ±ÅŸÄ± bÄ±rakÄ±lan feature'lar approval raporunda `disabled` olarak
-gÃ¶rÃ¼nÃ¼r; bu mekanizma hukuki/terms onayÄ±nÄ±n yerine geÃ§mez.
+sonuçlanır ve runtime aynı kaynağı ağ çağrısından önce `FEATURE_DISABLED` ile
+durdurur. Devre dışı bırakılan feature'lar approval raporunda `disabled` olarak
+görünür; bu mekanizma hukuki/terms onayının yerine geçmez.
 
-Ã–rnek (yalnÄ±zca kaynak incelemesi tamamlanana kadar geÃ§ici kapatma):
+Örnek (yalnızca kaynak incelemesi tamamlanana kadar geçici kapatma):
 
     DISABLED_FEATURES=pharmacy,fuel,currency,crypto,market,earthquakes,bim_deals,breaking_news,weather,air_quality,prayer_times,culture_recommendation,lyrics,image_generation
     python scripts/production_preflight.py --env-file .env --require-provider-approval --nginx-config /etc/nginx/sites-enabled/arelbot.conf
 
-Ä°lk VDS kurulumunda public domain henÃ¼z hazÄ±r deÄŸilse `TELEGRAM_MODE=polling`
-aÃ§Ä±kÃ§a seÃ§ilebilir. Bu modda `WEBHOOK_URL`, `WEBHOOK_SECRET` ve Nginx
-gerektirilmez; deploy scripti proxy kontrolÃ¼nÃ¼ otomatik olarak atlar. KalÄ±cÄ±
-Ã¼retim modeli iÃ§in HTTPS webhook Ã¶nerilir ve polling yalnÄ±zca eriÅŸim modeli
-olarak bilinÃ§li biÃ§imde seÃ§ildiÄŸinde Ã§alÄ±ÅŸÄ±r.
+İlk VDS kurulumunda public domain henüz hazır değilse `TELEGRAM_MODE=polling`
+açıkça seçilebilir. Bu modda `WEBHOOK_URL`, `WEBHOOK_SECRET` ve Nginx
+gerektirilmez; deploy scripti proxy kontrolünü otomatik olarak atlar. Kalıcı
+üretim modeli için HTTPS webhook önerilir ve polling yalnızca erişim modeli
+olarak bilinçli biçimde seçildiğinde çalışır.
 
 ### Staging core profili
 
-Kaynak incelemesi tamamlanmadan botun Telegram, AI, yerel veri ve yÃ¶netim
-yÃ¼zeylerini test etmek iÃ§in bekleyen provider'larÄ±n tamamÄ±nÄ± aÃ§Ä±kÃ§a kapatan
-secret'sÄ±z bir profil Ã¼retilebilir:
+Kaynak incelemesi tamamlanmadan botun Telegram, AI, yerel veri ve yönetim
+yüzeylerini test etmek için bekleyen provider'ların tamamını açıkça kapatan
+secret'sız bir profil üretilebilir:
 
     python scripts/staging_profile.py \
       --template deploy/evidence/provider-approval-review-template.json \
       --report deploy/evidence/staging-core-profile.json
 
-Komut dÄ±ÅŸ aÄŸa Ã§Ä±kmaz, onay vermez ve approval evidence Ã¼retmez. Raporun
-`disabled_features_csv` alanÄ± staging `.env` dosyasÄ±nda
-`DISABLED_FEATURES` olarak kullanÄ±labilir. `REQUIRE_PROVIDER_APPROVAL=true`
-korunmalÄ±dÄ±r; bilinmeyen bir feature anahtarÄ± preflight ve governance
-kontrolÃ¼nde fail-closed olur. Bu profil Ã¼retim onayÄ±nÄ±n yerine geÃ§mez ve
-canlÄ± deployment evidence sayÄ±lmaz.
+Komut dış ağa çıkmaz, onay vermez ve approval evidence üretmez. Raporun
+`disabled_features_csv` alanı staging `.env` dosyasında
+`DISABLED_FEATURES` olarak kullanılabilir. `REQUIRE_PROVIDER_APPROVAL=true`
+korunmalıdır; bilinmeyen bir feature anahtarı preflight ve governance
+kontrolünde fail-closed olur. Bu profil üretim onayının yerine geçmez ve
+canlı deployment evidence sayılmaz.
 
-Runtime profilini doÄŸrudan baÄŸlamak iÃ§in staging ortamÄ±nda
+Runtime profilini doğrudan bağlamak için staging ortamında
 `STAGING_PROFILE_PATH=deploy/evidence/staging-core-profile.json` verilebilir.
-Uygulama profili baÅŸlangÄ±Ã§ta doÄŸrular ve bekleyen provider'larÄ± registry'ye
-ekler; aynÄ± dosya `APP_ENV=production` ile kullanÄ±lÄ±rsa fail-closed olarak
-baÅŸlamaz.
+Uygulama profili başlangıçta doğrular ve bekleyen provider'ları registry'ye
+ekler; aynı dosya `APP_ENV=production` ile kullanılırsa fail-closed olarak
+başlamaz.
 
-### Kaynak inceleme Ã§alÄ±ÅŸma kÃ¢ÄŸÄ±dÄ±
+### Kaynak inceleme çalışma kâğıdı
 
-Onay dosyasÄ± doldurulmadan Ã¶nce, mevcut feature/provider kimliÄŸine baÄŸlÄ±
-fingerprint'leri ve inceleme durumunu iÃ§eren gÃ¼venli bir Ã§alÄ±ÅŸma kÃ¢ÄŸÄ±dÄ±
-Ã¼retilebilir:
+Onay dosyası doldurulmadan önce, mevcut feature/provider kimliğine bağlı
+fingerprint'leri ve inceleme durumunu içeren güvenli bir çalışma kâğıdı
+üretilebilir:
 
     python scripts/provider_governance.py --review-template --report deploy/evidence/provider-approval-review-template.json
 
-Bu Ã§Ä±ktÄ± bir approval manifesti deÄŸildir; approval ID, reviewer ve geÃ§erlilik
-penceresi iÃ§ermediÄŸi iÃ§in production tarafÄ±ndan yÃ¼klenemez. URL'ler rapora
-kopyalanmaz. Ä°nceleme tamamlandÄ±ÄŸÄ±nda operatÃ¶r, `docs/DATA_SOURCES.md` ve
-provider'Ä±n gÃ¼ncel terms/robots kayÄ±tlarÄ±nÄ± kontrol ederek ayrÄ± approval
-manifestini oluÅŸturur. Fingerprint deÄŸiÅŸmiÅŸse eski onay kullanÄ±lmaz.
+Bu çıktı bir approval manifesti değildir; approval ID, reviewer ve geçerlilik
+penceresi içermediği için production tarafından yüklenemez. URL'ler rapora
+kopyalanmaz. İnceleme tamamlandığında operatör, `docs/DATA_SOURCES.md` ve
+provider'ın güncel terms/robots kayıtlarını kontrol ederek ayrı approval
+manifestini oluşturur. Fingerprint değişmişse eski onay kullanılmaz.
 
 ### Fingerprint-bound approval manifest
 
-Kod manifestindeki dÃ¶rt alanÄ± elle deÄŸiÅŸtirerek kaynak aÃ§mak yerine, gerÃ§ek
-inceleme tamamlandÄ±ÄŸÄ±nda `PROVIDER_APPROVAL_MANIFEST` ile makine tarafÄ±ndan
-doÄŸrulanan bir operator kanÄ±tÄ± yÃ¼klenebilir. Dosya yalnÄ±zca public kaynak
-kimliÄŸinin SHA-256 fingerprint'ini, inceleyen kiÅŸiyi, approval ID ve en fazla
-366 gÃ¼nlÃ¼k geÃ§erlilik penceresini taÅŸÄ±r; URL veya secret release raporuna
-kopyalanmaz. Fingerprint; feature, provider, kaynak adÄ±, kaynak URL'si, lisans
-ve terms URL'sinden Ã¼retilir. Bu alanlardan biri deÄŸiÅŸirse onay otomatik olarak
-geÃ§ersiz kalÄ±r.
+Kod manifestindeki dört alanı elle değiştirerek kaynak açmak yerine, gerçek
+inceleme tamamlandığında `PROVIDER_APPROVAL_MANIFEST` ile makine tarafından
+doğrulanan bir operator kanıtı yüklenebilir. Dosya yalnızca public kaynak
+kimliğinin SHA-256 fingerprint'ini, inceleyen kişiyi, approval ID ve en fazla
+366 günlük geçerlilik penceresini taşır; URL veya secret release raporuna
+kopyalanmaz. Fingerprint; feature, provider, kaynak adı, kaynak URL'si, lisans
+ve terms URL'sinden üretilir. Bu alanlardan biri değişirse onay otomatik olarak
+geçersiz kalır.
 
-Åema Ã¶rneÄŸi (gerÃ§ek onay bilgisi iÃ§ermez):
+Şema örneği (gerçek onay bilgisi içermez):
 
     {
       "schema_version": 1,
@@ -473,7 +486,7 @@ geÃ§ersiz kalÄ±r.
         {
           "feature_key": "weather",
           "approval_id": "review-2026-001",
-          "source_fingerprint": "<64 kÃ¼Ã§Ã¼k harf hex karakteri>",
+          "source_fingerprint": "<64 küçük harf hex karakteri>",
           "reviewer": "platform-governance",
           "issued_at": "2026-10-07T09:00:00+00:00",
           "expires_at": "2027-01-07T09:00:00+00:00",
@@ -485,28 +498,28 @@ geÃ§ersiz kalÄ±r.
       ]
     }
 
-Dosya path'i production `.env` iÃ§inde belirtilir ve preflight aynÄ± dosyayÄ±
-feature manifestiyle karÅŸÄ±laÅŸtÄ±rÄ±r:
+Dosya path'i production `.env` içinde belirtilir ve preflight aynı dosyayı
+feature manifestiyle karşılaştırır:
 
     PROVIDER_APPROVAL_MANIFEST=/etc/arelbot/provider-approvals.json
     python scripts/provider_governance.py --require-approved --approval-manifest /etc/arelbot/provider-approvals.json
     python scripts/production_preflight.py --env-file .env --require-provider-approval --provider-approval-manifest /etc/arelbot/provider-approvals.json
     python scripts/provider_governance.py --require-approved --approval-manifest /etc/arelbot/provider-approvals.json --approval-evidence --report deploy/evidence/provider-governance-approval.json
 
-Dosya yoksa, sÃ¼resi dolmuÅŸsa, fingerprint uyuÅŸmuyorsa veya dÃ¶rt onay alanÄ±
-tamamlanmamÄ±ÅŸsa production provider yine fail-closed kalÄ±r. Approval dosyasÄ±
-kaynak terms incelemesinin yerine geÃ§mez; yalnÄ±zca tamamlanmÄ±ÅŸ incelemenin
-deploy sÄ±rasÄ±nda tekrar Ã¼retilebilir biÃ§imde uygulanmasÄ±nÄ± saÄŸlar.
+Dosya yoksa, süresi dolmuşsa, fingerprint uyuşmuyorsa veya dört onay alanı
+tamamlanmamışsa production provider yine fail-closed kalır. Approval dosyası
+kaynak terms incelemesinin yerine geçmez; yalnızca tamamlanmış incelemenin
+deploy sırasında tekrar üretilebilir biçimde uygulanmasını sağlar.
 
 
-### Grup yanÄ±tÄ± rollout ve gÃ¶zlem
+### Grup yanıtı rollout ve gözlem
 
-`GROUP_TARGETED_REPLIES_ENABLED=true` varsayÄ±lan olarak aÃ§Ä±k olsa da rollout
-Ã¶ncesinde `GROUP_TARGETED_REPLIES_SHADOW=true` ile yalnÄ±zca plan ve validation
-metrikleri gÃ¶zlemlenir; Telegram'a gÃ¶nderim yapÄ±lmaz. Owner test grubunda
-`group_targeted_replies` Ã¶zelliÄŸi doÄŸrulanmadan canary aÃ§Ä±lÄ±mÄ± yapÄ±lmaz.
+`GROUP_TARGETED_REPLIES_ENABLED=true` varsayılan olarak açık olsa da rollout
+öncesinde `GROUP_TARGETED_REPLIES_SHADOW=true` ile yalnızca plan ve validation
+metrikleri gözlemlenir; Telegram'a gönderim yapılmaz. Owner test grubunda
+`group_targeted_replies` özelliği doğrulanmadan canary açılımı yapılmaz.
 
-Ä°zlenecek metrikler kullanÄ±cÄ± adÄ± veya mesaj metni iÃ§ermez:
+İzlenecek metrikler kullanıcı adı veya mesaj metni içermez:
 
 ```text
 group_reply_requests_total
@@ -520,9 +533,10 @@ group_reply_plan_seconds
 group_reply_send_seconds
 ```
 
-Ã‡apraz kullanÄ±cÄ± reply'i, duplicate gÃ¶nderim veya yanlÄ±ÅŸ forum konusu
-gÃ¶rÃ¼lÃ¼rse `GROUP_TARGETED_REPLIES_ENABLED=false` ile kill switch uygulanÄ±r.
-Mongo v15 migration'Ä± geri alÄ±nabilir indekslerden oluÅŸur; migration rollback
-mesaj kayÄ±tlarÄ±nÄ± silmez. Redis yeniden baÅŸlatÄ±ldÄ±ÄŸÄ±nda aday index'i Mongo'dan
+Çapraz kullanıcı reply'i, duplicate gönderim veya yanlış forum konusu
+görülürse `GROUP_TARGETED_REPLIES_ENABLED=false` ile kill switch uygulanır.
+Mongo v15 migration'ı geri alınabilir indekslerden oluşur; migration rollback
+mesaj kayıtlarını silmez. Redis yeniden başlatıldığında aday index'i Mongo'dan
 yeniden okunur, delivery ledger ise Mongo'daki claim durumuyla duplicate
-gÃ¶nderimi engeller.
+gönderimi engeller.
+

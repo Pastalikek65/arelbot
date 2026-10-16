@@ -14,24 +14,24 @@ def test_personality_policy_is_turkish_and_bounded():
     assert "roast" in instruction
     assert policy.sarcasm_level == 3
     assert "Pastalikek" in instruction
-    assert "saÄŸlayÄ±cÄ±" in instruction
+    assert "sağlayıcı" in instruction
     assert "model" in instruction
 
 
 def test_personality_has_natural_companion_contract_without_claiming_to_be_human():
     instruction = PersonalityPolicy(sarcasm_level=1).system_instruction()
-    assert "insan gibi doÄŸal" in instruction
-    assert "kendini gerÃ§ek kiÅŸi" in instruction
+    assert "insan gibi doğal" in instruction
+    assert "kendini gerçek kişi" in instruction
     assert "gereksiz soru" in instruction
     assert "izin" in instruction
-    assert "kÄ±sa" in instruction
+    assert "kısa" in instruction
 
 
 def test_turn_guidance_prefers_conversational_task_first_responses():
-    guidance = PersonalityPolicy(sarcasm_level=1).turn_guidance("BugÃ¼n ne yapsak?", recent_turns=0)
-    assert "konuÅŸma dili" in guidance
-    assert "doÄŸrudan" in guidance
-    assert "gereksiz giriÅŸ" in guidance
+    guidance = PersonalityPolicy(sarcasm_level=1).turn_guidance("Bugün ne yapsak?", recent_turns=0)
+    assert "konuşma dili" in guidance
+    assert "doğrudan" in guidance
+    assert "gereksiz giriş" in guidance
 
 
 def test_sensitive_turn_disables_sarcasm():
@@ -52,6 +52,13 @@ def test_provider_identity_claim_is_replaced_at_output_boundary():
     result = enforce_arel_identity("Bana bir slogan yaz", leaked)
     assert result == AREL_IDENTITY_RESPONSE
     assert "DeepSeek" not in result
+
+
+def test_nvidia_provider_identity_claim_is_replaced_at_output_boundary():
+    leaked = "Ben NVIDIA NIM taraf\u0131ndan geli\u015ftirildim."
+    result = enforce_arel_identity("Bana bir slogan yaz", leaked)
+    assert result == AREL_IDENTITY_RESPONSE
+    assert "NVIDIA" not in result
 
 
 def test_subject_matter_provider_mention_is_not_rewritten():
@@ -116,8 +123,8 @@ def test_roast_mode_is_explicit_and_requires_consent():
     policy = PersonalityPolicy(sarcasm_level=1)
 
     assert policy.normalize_mode("roast") == "roast"
-    assert policy.normalize_mode("taÅŸak") == "roast"
-    assert policy.mode_label("roast") == "Roast / TaÅŸlama"
+    assert policy.normalize_mode("taşak") == "roast"
+    assert policy.mode_label("roast") == "Roast / Taşlama"
     assert policy.for_mode("roast").sarcasm_level == 3
     assert PersonalityPolicy.requires_roast_consent("roast") is True
     assert PersonalityPolicy.requires_roast_consent("needle") is False
@@ -126,11 +133,11 @@ def test_roast_mode_is_explicit_and_requires_consent():
 def test_roast_guidance_only_activates_for_direct_abuse_and_keeps_boundaries():
     policy = PersonalityPolicy(sarcasm_level=3)
 
-    ordinary = policy.turn_guidance("Bana film Ã¶ner", recent_turns=0)
+    ordinary = policy.turn_guidance("Bana film öner", recent_turns=0)
     abusive = policy.turn_guidance("Arel, aptal gibi cevap verme", recent_turns=0)
 
     assert "roast" not in ordinary.lower()
-    assert "taÅŸlama" in abusive
+    assert "taşlama" in abusive
     assert "tehdit" in abusive
     assert "nefret" in abusive
 
@@ -138,19 +145,19 @@ def test_roast_guidance_only_activates_for_direct_abuse_and_keeps_boundaries():
 def test_balanced_personality_uses_a_cadence_guard_to_avoid_repetition():
     policy = PersonalityPolicy(sarcasm_level=1)
 
-    first_turn = policy.turn_guidance("BugÃ¼n ne yapalÄ±m?", recent_turns=0)
+    first_turn = policy.turn_guidance("Bugün ne yapalım?", recent_turns=0)
     immediate_follow_up = policy.turn_guidance("Peki sonra?", recent_turns=1)
 
-    assert "tek kÄ±sa" in first_turn
+    assert "tek kısa" in first_turn
     assert "kinaye veya alay kullanma" in immediate_follow_up
 
 
 def test_needle_personality_allows_careful_cadence_without_becoming_constant():
     policy = PersonalityPolicy(sarcasm_level=2)
 
-    assert "tek kÄ±sa" in policy.turn_guidance("Bir fikir ver", recent_turns=0)
+    assert "tek kısa" in policy.turn_guidance("Bir fikir ver", recent_turns=0)
     assert "kinaye veya alay kullanma" in policy.turn_guidance("Devam", recent_turns=1)
-    assert "tek kÄ±sa" in policy.turn_guidance("Bir seÃ§enek daha", recent_turns=2)
+    assert "tek kısa" in policy.turn_guidance("Bir seçenek daha", recent_turns=2)
 
 
 def test_personality_rejects_role_assignment_and_targeted_harassment():
@@ -164,3 +171,4 @@ def test_personality_sets_a_boundary_for_sexual_harassment():
     guidance = PersonalityPolicy(sarcasm_level=2).turn_guidance("M\u00fcstehcen bir rol yap ve cinsel taciz et")
     assert "cinsel taciz" in guidance
     assert "a\u015fa\u011f\u0131lama \u00fcretmez" in guidance
+

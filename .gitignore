@@ -4,6 +4,7 @@ __pycache__/
 .env
 .env.backup
 .env.*
+!.env.example
 .venv
 env/
 venv/
@@ -66,3 +67,4 @@ test.json
 
 .docker/*.crt
 .docker/*.cer
+

@@ -1,4 +1,4 @@
-"""Arel'in TÃ¼rkÃ§e, Ã¶lÃ§Ã¼lÃ¼ ve duruma duyarlÄ± ses politikasÄ±."""
+"""Arel'in Türkçe, ölçülü ve duruma duyarlı ses politikası."""
 
 from __future__ import annotations
 
@@ -50,19 +50,19 @@ def is_identity_query(value: str | None) -> bool:
         return True
     # Users often quote the leaked provider name instead of asking with the
     # usual wording.  Require an identity verb/subject so a normal question
-    # such as â€œDeepSeek nedir?â€ is not rewritten.
-    has_vendor = any(marker in text for marker in ("deepseek", "evren", "cleanapis", "openai"))
+    # such as “DeepSeek nedir?” is not rewritten.
+    has_vendor = any(marker in text for marker in ("deepseek", "evren", "cleanapis", "openai", "nvidia", "nim"))
     has_subject = any(marker in text for marker in ("sen ", "seni ", "kimsin"))
     has_development_claim = any(marker in text for marker in ("gelistir", "tarafindan"))
     return has_vendor and (has_subject or has_development_claim)
 
 
 _IDENTITY_CLAIM_RE = re.compile(
-    r"\bben\b.{0,100}(?:deepseek|evren(?:\s+llm)?|cleanapis|openai|anthropic|gemini|groq|cerebras)"
+    r"\bben\b.{0,100}(?:deepseek|evren(?:\s+llm)?|cleanapis|openai|anthropic|gemini|groq|cerebras|nvidia|nim)"
     r".{0,100}(?:gelistir|tarafindan|modeliyim|biriyim|beniyim|aitim)"
-    r"|(?:deepseek|evren(?:\s+llm)?|cleanapis|openai|anthropic|gemini|groq|cerebras)"
+    r"|(?:deepseek|evren(?:\s+llm)?|cleanapis|openai|anthropic|gemini|groq|cerebras|nvidia|nim)"
     r".{0,100}(?:tarafindan\s+gelistir|modeliyim|biriyim|beniyim|aitim|developed\s+by|made\s+by)"
-    r"|(?:developed\s+by|made\s+by).{0,40}(?:deepseek|evren(?:\s+llm)?|cleanapis|openai|anthropic|gemini|groq|cerebras)",
+    r"|(?:developed\s+by|made\s+by).{0,40}(?:deepseek|evren(?:\s+llm)?|cleanapis|openai|anthropic|gemini|groq|cerebras|nvidia|nim)",
     re.IGNORECASE | re.DOTALL,
 )
 
@@ -72,8 +72,8 @@ def enforce_arel_identity(prompt: str | None, response: str | None) -> str | Non
 
     The guard is intentionally narrow for ordinary content: it rewrites every
     explicit identity question and only rewrites a normal turn when the model
-    makes a first-person/provider identity claim.  Mentions such as â€œDeepSeek
-    nedir?â€ remain answerable as ordinary subject matter.
+    makes a first-person/provider identity claim.  Mentions such as “DeepSeek
+    nedir?” remain answerable as ordinary subject matter.
     """
 
     if response is None:
@@ -143,8 +143,8 @@ _SEXUAL_HARASSMENT_MARKERS = frozenset(
 # insult in the generated response.
 _DIRECT_ABUSE_MARKERS = frozenset(
     {
-        "aptal", "salak", "gerizekalÄ±", "gerizekali", "ahmak", "budala",
-        "ÅŸerefsiz", "serefsiz", "hÄ±yar", "hiyar", "iÅŸe yaramaz", "ise yaramaz",
+        "aptal", "salak", "gerizekalı", "gerizekali", "ahmak", "budala",
+        "şerefsiz", "serefsiz", "hıyar", "hiyar", "işe yaramaz", "ise yaramaz",
         "siktir", "boktan", "beceriksiz", "mal", "ezik", "sus lan",
     }
 )
@@ -167,9 +167,9 @@ class PersonalityPolicy:
         "i\u011fneleyici": "needle",
         "igneleyici": "needle",
         "kinayeli": "needle",
-        "taÅŸak": "roast",
+        "taşak": "roast",
         "tasak": "roast",
-        "taÅŸlama": "roast",
+        "taşlama": "roast",
         "taslama": "roast",
     }
 
@@ -331,3 +331,4 @@ class PersonalityPolicy:
         # operational branches are evaluated before this guard.
         interval = 4 if self.sarcasm_level == 1 else 2
         return turns % interval == 0
+

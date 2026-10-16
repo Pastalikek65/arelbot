@@ -10,6 +10,7 @@ from logging import Filter, LogRecord
 
 _PATTERNS = (
     (re.compile(r"(?i)(bot\d{6,}:[a-z0-9_-]{20,})"), "<telegram-token>"),
+    (re.compile(r"(?i)nvapi-[a-z0-9_-]{20,}"), "<nvidia-api-key>"),
     (re.compile(r"(?i)(bearer\s+)[a-z0-9._-]+"), r"\1<redacted>"),
     (re.compile(r"(?i)(cookie(?:file|_vault)?\s*[=:]\s*)[^\s,]+"), r"\1<redacted>"),
     (re.compile(r"(?i)https?://(?:www\.)?(?:instagram|instagr\.am|tiktok|youtube|youtu\.be|twitter|x\.com|facebook|fb\.watch|reddit|redd\.it)[^\s\"']*"), "<media-url>"),
@@ -92,3 +93,4 @@ class RedactionFilter(Filter):
             else:
                 record.args = _redact_argument(record.args)
         return True
+

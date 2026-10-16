@@ -59,7 +59,7 @@
       "production_signoff": "approved"
     },
     {
-      "name": "Anadolu AjansÄ± RSS",
+      "name": "Anadolu Ajansı RSS",
       "kind": "public-rss",
       "license": "Public RSS feed; source terms and attribution apply",
       "url": "https://www.aa.com.tr/tr/rss/default?cat=guncel",
@@ -139,7 +139,7 @@
       "terms_review": "approved"
     },
     {
-      "name": "NÃ¶betÃ§i Eczaneler public pages",
+      "name": "Nöbetçi Eczaneler public pages",
       "kind": "public-web",
       "license": "Public web data; bounded access, source attribution and terms review recorded",
       "url": "https://www.nobetcieczaneler.org/",
@@ -149,7 +149,7 @@
       "terms_review": "approved"
     },
     {
-      "name": "DÃ¶viz.com public pages",
+      "name": "Döviz.com public pages",
       "kind": "public-web",
       "license": "Public web data; bounded access, source attribution and terms review recorded",
       "url": "https://www.doviz.com/",
@@ -159,7 +159,7 @@
       "terms_review": "approved"
     },
     {
-      "name": "TRT Haber + Anadolu AjansÄ± RSS",
+      "name": "TRT Haber + Anadolu Ajansı RSS",
       "kind": "public-rss",
       "license": "Public RSS feed; source terms and attribution review required",
       "url": "https://www.trthaber.com/sondakika_articles.rss",
@@ -169,7 +169,7 @@
       "terms_review": "review_required"
     },
     {
-      "name": "BÄ°M official aktÃ¼el page",
+      "name": "BİM official aktüel page",
       "kind": "official-public-page",
       "license": "Official public page; bounded access and source attribution",
       "url": "https://www.bim.com.tr/Categories/100/aktuel-urunler.aspx",
@@ -179,7 +179,7 @@
       "terms_review": "approved"
     },
     {
-      "name": "HabertÃ¼rk prayer times page",
+      "name": "Habertürk prayer times page",
       "kind": "public-web",
       "license": "Source terms, robots and attribution review required",
       "url": "https://www.haberturk.com/namaz-vakitleri",
@@ -255,6 +255,17 @@
       "license": "EVREN provider terms, quota, retention and attribution requirements",
       "url": "https://evren-llmapi.ssyz.org.tr/v1",
       "docs_url": "https://llmtr.com/docs/en/gateway/evren/",
+      "source_governance": "pending",
+      "robots_policy": "not_applicable",
+      "terms_review": "review_required",
+      "production_signoff": "required"
+    },
+    {
+      "name": "NVIDIA NIM OpenAI-compatible API",
+      "kind": "ai-provider",
+      "license": "NVIDIA API terms, model license, quota and attribution requirements",
+      "url": "https://integrate.api.nvidia.com/v1",
+      "docs_url": "https://docs.api.nvidia.com/nim/reference/overview",
       "source_governance": "pending",
       "robots_policy": "not_applicable",
       "terms_review": "review_required",
@@ -399,3 +410,4 @@
     }
   ]
 }
+

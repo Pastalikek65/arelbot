@@ -209,7 +209,7 @@ class Config:
         "true" if APP_ENV == "production" else "false",
     ).strip().lower() in {"1", "true", "yes", "on"}
     # Optional, operator-reviewed source approval evidence.  An empty value
-    # deliberately means â€œno external approvalsâ€; production then remains
+    # deliberately means "no external approvals"; production then remains
     # fail-closed for every pending provider.
     PROVIDER_APPROVAL_MANIFEST = os.getenv("PROVIDER_APPROVAL_MANIFEST", "").strip()
     FREEMODEL_URL = os.getenv("FREEMODEL_URL", "https://api.freemodel.dev/v1").rstrip("/")
@@ -227,17 +227,17 @@ class Config:
     except (TypeError, ValueError):
         AI_COST_RATES = {}
     try:
-        # EVREN is the sole production text route. ChatEngine filters this
-        # allowlist against providers that actually have a key; compatibility
-        # providers remain available only when an operator explicitly pins
-        # them in a route manifest.
+        # NVIDIA NIM is preferred when its key is configured, with EVREN as a
+        # compatible failover. ChatEngine filters this allowlist against
+        # providers that actually have a key, so existing EVREN-only
+        # deployments keep working without a route change.
         _default_ai_routes = json.dumps(
             {
-                "chat": ["evren"],
-                "fast": ["evren"],
-                "analysis": ["evren"],
-                "summary": ["evren"],
-                "sticker_tagging": ["evren"],
+                "chat": ["nvidia", "evren"],
+                "fast": ["nvidia", "evren"],
+                "analysis": ["nvidia", "evren"],
+                "summary": ["nvidia", "evren"],
+                "sticker_tagging": ["nvidia", "evren"],
             }
         )
         AI_PROVIDER_ROUTES = json.loads(os.getenv("AI_PROVIDER_ROUTES", _default_ai_routes))
@@ -287,6 +287,13 @@ class Config:
     # EVREN's Mimo model accepts image input and returns text analysis. It is
     # intentionally separate from the image-generation provider setting.
     EVREN_VISION_MODEL = os.getenv("EVREN_VISION_MODEL", "mimo-v2.6-pro")
+    # NVIDIA NIM OpenAI-compatible settings. Keep this provider opt-in: it is
+    # only eligible for routing when NVIDIA_API_KEY is present. The default
+    # route includes NVIDIA first and EVREN as the compatible failover.
+    NVIDIA_URL = os.getenv("NVIDIA_URL", "https://integrate.api.nvidia.com/v1").rstrip("/")
+    NVIDIA_KEY = os.getenv("NVIDIA_API_KEY") or os.getenv("NVIDIA_KEY")
+    NVIDIA_MODEL = os.getenv("NVIDIA_MODEL", "deepseek-ai/deepseek-v4.1-flash")
+    NVIDIA_VISION_MODEL = os.getenv("NVIDIA_VISION_MODEL") or None
     # Legacy compatibility values are intentionally not populated from EVREN.
     # This prevents an EVREN key from being mislabeled as Clean APIs in logs,
     # metrics, health output, or provider routing.
@@ -306,6 +313,7 @@ class Config:
         has_ai_provider_key = bool(
             cls.FREEMODEL_KEY or cls.GROQ_KEYS or cls.GEMINI_KEYS or cls.CEREBRAS_KEYS
             or cls.IAMHC_KEY or cls.CLEANAPIS_KEY or cls.EVREN_KEY or cls.NINEROUTER_KEY
+            or cls.NVIDIA_KEY
         )
         if not has_ai_provider_key and cls.APP_ROLE != "worker":
             missing.append("at least one AI provider key")
@@ -397,3 +405,4 @@ class Config:
 
 # Canonical validated settings name; Config remains backwards compatible.
 Settings = Config
+

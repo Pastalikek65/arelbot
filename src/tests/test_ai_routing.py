@@ -5,6 +5,7 @@ import pytest
 from src.ai.router import AIProviderRouter
 from src.ai.provider_base import AIProviderRequestError, CompletionRequest, CompletionResponse
 from src.chat_engine import ChatEngine
+from src.key_manager import ServiceType
 from config import Config
 
 
@@ -66,7 +67,7 @@ def test_chat_engine_applies_configured_task_routes(monkeypatch):
     assert router.routes["transcribe"] == ["cerebras"]
     # Tasks without an explicit preference retain the configured provider set.
     assert set(router.routes["summary"]) == {
-        "freemodel", "groq", "gemini", "cerebras", "iamhc", "evren", "cleanapis", "ninerouter"
+        "freemodel", "groq", "gemini", "cerebras", "iamhc", "evren", "nvidia", "cleanapis", "ninerouter"
     }
 
 
@@ -84,7 +85,7 @@ def test_chat_engine_drops_explicit_route_without_a_provider_key(monkeypatch):
     assert router.routes["vision"] == ["freemodel"]
 
 
-def test_chat_engine_defaults_text_tasks_to_evren_when_route_is_empty(monkeypatch):
+def test_chat_engine_defaults_text_tasks_to_nvidia_then_evren_when_route_is_empty(monkeypatch):
     monkeypatch.setattr(Config, "AI_PROVIDER_ROUTES", {})
     engine = ChatEngine.__new__(ChatEngine)
     engine.key_manager = SimpleNamespace(
@@ -94,11 +95,11 @@ def test_chat_engine_defaults_text_tasks_to_evren_when_route_is_empty(monkeypatc
 
     router = engine._build_ai_router()
 
-    assert router.routes["chat"] == ["evren"]
-    assert router.routes["fast"] == ["evren"]
-    assert router.routes["analysis"] == ["evren"]
-    assert router.routes["summary"] == ["evren"]
-    assert router.routes["sticker_tagging"] == ["evren"]
+    assert router.routes["chat"] == ["nvidia", "evren"]
+    assert router.routes["fast"] == ["nvidia", "evren"]
+    assert router.routes["analysis"] == ["nvidia", "evren"]
+    assert router.routes["summary"] == ["nvidia", "evren"]
+    assert router.routes["sticker_tagging"] == ["nvidia", "evren"]
 
 
 def test_chat_engine_migrates_stale_cleanapis_route_to_evren(monkeypatch):
@@ -132,6 +133,66 @@ def test_chat_engine_exposes_cleanapis_as_an_openai_compatible_provider(monkeypa
     provider = router.providers["cleanapis"]
     assert provider.base_url == "https://cleanapis.com/v1"
     assert provider.model == "deepseek-v4-flash-0731"
+
+
+def test_chat_engine_exposes_nvidia_nim_provider_without_relabeling_evren(monkeypatch):
+    monkeypatch.setattr(Config, "NVIDIA_URL", "https://integrate.api.nvidia.com/v1")
+    monkeypatch.setattr(Config, "NVIDIA_MODEL", "deepseek-ai/deepseek-v4.1-flash")
+    monkeypatch.setattr(Config, "NVIDIA_VISION_MODEL", "nvidia-vision-fixture")
+    monkeypatch.setattr(Config, "AI_PROVIDER_ROUTES", {"chat": ["nvidia"], "vision": ["nvidia"]})
+    engine = ChatEngine.__new__(ChatEngine)
+    engine.key_manager = SimpleNamespace(
+        keys={service: (["test-key"] if service is ServiceType.NVIDIA else [])
+              for service in ChatEngine.SERVICE_PRIORITY + ChatEngine.SECONDARY_PROVIDERS}
+    )
+    engine.http_client = SimpleNamespace()
+
+    router = engine._build_ai_router()
+
+    assert router.routes["chat"] == ["nvidia"]
+    assert router.routes["vision"] == ["nvidia"]
+    provider = router.providers["nvidia"]
+    assert provider.base_url == "https://integrate.api.nvidia.com/v1"
+    assert provider.model == "deepseek-ai/deepseek-v4.1-flash"
+    assert provider.vision_model == "nvidia-vision-fixture"
+    assert router.providers["nvidia"].name == "nvidia"
+
+
+def test_chat_engine_uses_nvidia_as_safe_default_when_evren_is_unconfigured(monkeypatch):
+    monkeypatch.setattr(Config, "AI_PROVIDER_ROUTES", {})
+    monkeypatch.setattr(Config, "EVREN_KEY", None)
+    monkeypatch.setattr(Config, "NVIDIA_KEY", "fixture-nvidia-key")
+    engine = ChatEngine.__new__(ChatEngine)
+    engine.key_manager = SimpleNamespace(
+        keys={service: (["fixture-nvidia-key"] if service is ServiceType.NVIDIA else [])
+              for service in ChatEngine.SERVICE_PRIORITY + ChatEngine.SECONDARY_PROVIDERS}
+    )
+    engine.http_client = SimpleNamespace()
+
+    router = engine._build_ai_router()
+
+    assert router.routes["chat"] == ["nvidia"]
+    assert router.routes["fast"] == ["nvidia"]
+
+
+def test_chat_engine_prefers_nvidia_then_evren_when_both_keys_are_configured(monkeypatch):
+    monkeypatch.setattr(Config, "AI_PROVIDER_ROUTES", {})
+    monkeypatch.setattr(Config, "EVREN_KEY", "fixture-evren-key")
+    monkeypatch.setattr(Config, "NVIDIA_KEY", "fixture-nvidia-key")
+    engine = ChatEngine.__new__(ChatEngine)
+    engine.key_manager = SimpleNamespace(
+        keys={
+            service: (["fixture-nvidia-key"] if service is ServiceType.NVIDIA
+                      else (["fixture-evren-key"] if service is ServiceType.EVREN else []))
+            for service in ChatEngine.SERVICE_PRIORITY + ChatEngine.SECONDARY_PROVIDERS
+        }
+    )
+    engine.http_client = SimpleNamespace()
+
+    router = engine._build_ai_router()
+
+    assert router.routes["chat"] == ["nvidia", "evren"]
+    assert router.routes["fast"] == ["nvidia", "evren"]
 
 
 @pytest.mark.asyncio
@@ -178,3 +239,4 @@ async def test_deterministic_ai_request_error_does_not_fallback_or_open_circuit(
     assert snapshot["counters"]["ai_provider_validation_errors_total_primary"] == 1
     assert snapshot["counters"].get("ai_provider_success_total_fallback", 0) == 0
     assert snapshot["counters"].get("ai_provider_errors_total_primary", 0) == 0
+
