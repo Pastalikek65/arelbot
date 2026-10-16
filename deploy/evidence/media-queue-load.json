@@ -1,0 +1,16 @@
+{
+  "ok": true,
+  "mode": "fixture-replay",
+  "jobs": 100,
+  "workers": 10,
+  "active_chats": 100,
+  "completed": 100,
+  "failed": 0,
+  "max_active_workers": 10,
+  "queue_depth": 0,
+  "latency_ms": {
+    "p50": 0.31,
+    "p95": 0.79
+  },
+  "secret_free": true
+}

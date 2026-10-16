@@ -1,0 +1,30 @@
+# Production dependency lock points. Update deliberately and run the full test suite.
+python-telegram-bot==22.6
+APScheduler==3.11.0
+httpx==0.28.1
+motor==3.7.1
+pymongo==4.13.2
+redis==8.1.0
+cryptography==44.0.2
+# Instagram's extractor receives frequent upstream fixes. Keep the pinned
+# production version current enough to include the latest public/cookie
+# extraction fixes while retaining reproducible builds.
+yt-dlp==2026.08.19
+pytest==8.3.4
+pytest-asyncio==0.25.3
+pytest-mock==3.14.0
+# Direct application dependencies not already listed above.
+groq==1.7.0
+google-generativeai==0.8.6
+python-dotenv==1.2.4
+Pillow==11.3.0
+chromadb==1.5.9
+pypdf==6.19.0
+edge-tts==7.2.8
+beautifulsoup4==4.15.0
+python-dateutil==2.9.0.post0
+mcp==2.3.0
+moviepy==2.2.1
+matplotlib==3.11.2
+instaloader==4.15.3
+uvloop==0.23.0

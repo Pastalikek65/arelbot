@@ -1,0 +1,170 @@
+{
+  "ok": true,
+  "mode": "live-download",
+  "case_count": 10,
+  "requested_jobs": 10,
+  "concurrency_limit": 10,
+  "max_active_jobs": 10,
+  "chat_count": 100,
+  "chat_scope_mode": "synthetic_slot_mapping_only",
+  "unique_chat_slots": 10,
+  "latency_scope": "provider_probe_and_download_only",
+  "passed": 10,
+  "failed": 0,
+  "latency_ms": {
+    "p50": 5239.21,
+    "p95": 9612.84,
+    "p99": 9612.84
+  },
+  "completion_slo": {
+    "target_ms": 10000.0,
+    "applicable": true,
+    "p95_ms": 9612.84,
+    "met": true
+  },
+  "platforms": {
+    "youtube": {
+      "jobs": 5,
+      "passed": 5,
+      "failed": 0
+    },
+    "tiktok": {
+      "jobs": 5,
+      "passed": 5,
+      "failed": 0
+    }
+  },
+  "results": [
+    {
+      "case_id": "youtube_shorts_public_fixture",
+      "run_index": 0,
+      "platform": "youtube",
+      "chat_slot": 0,
+      "source_host": "www.youtube.com",
+      "ok": true,
+      "mode": "download",
+      "error_code": null,
+      "duration_ms": 5104.4,
+      "media_duration_seconds": 10.0,
+      "file_size_bytes": 553942
+    },
+    {
+      "case_id": "tiktok_public",
+      "run_index": 1,
+      "platform": "tiktok",
+      "chat_slot": 1,
+      "source_host": "www.tiktok.com",
+      "ok": true,
+      "mode": "download",
+      "error_code": null,
+      "duration_ms": 6137.57,
+      "media_duration_seconds": 10.0,
+      "file_size_bytes": 2004627
+    },
+    {
+      "case_id": "youtube_shorts_public_fixture",
+      "run_index": 2,
+      "platform": "youtube",
+      "chat_slot": 2,
+      "source_host": "www.youtube.com",
+      "ok": true,
+      "mode": "download",
+      "error_code": null,
+      "duration_ms": 5187.73,
+      "media_duration_seconds": 10.0,
+      "file_size_bytes": 553942
+    },
+    {
+      "case_id": "tiktok_public",
+      "run_index": 3,
+      "platform": "tiktok",
+      "chat_slot": 3,
+      "source_host": "www.tiktok.com",
+      "ok": true,
+      "mode": "download",
+      "error_code": null,
+      "duration_ms": 9612.84,
+      "media_duration_seconds": 10.0,
+      "file_size_bytes": 2004627
+    },
+    {
+      "case_id": "youtube_shorts_public_fixture",
+      "run_index": 4,
+      "platform": "youtube",
+      "chat_slot": 4,
+      "source_host": "www.youtube.com",
+      "ok": true,
+      "mode": "download",
+      "error_code": null,
+      "duration_ms": 5239.96,
+      "media_duration_seconds": 10.0,
+      "file_size_bytes": 553942
+    },
+    {
+      "case_id": "tiktok_public",
+      "run_index": 5,
+      "platform": "tiktok",
+      "chat_slot": 5,
+      "source_host": "www.tiktok.com",
+      "ok": true,
+      "mode": "download",
+      "error_code": null,
+      "duration_ms": 5239.21,
+      "media_duration_seconds": 10.0,
+      "file_size_bytes": 2004627
+    },
+    {
+      "case_id": "youtube_shorts_public_fixture",
+      "run_index": 6,
+      "platform": "youtube",
+      "chat_slot": 6,
+      "source_host": "www.youtube.com",
+      "ok": true,
+      "mode": "download",
+      "error_code": null,
+      "duration_ms": 3838.4,
+      "media_duration_seconds": 10.0,
+      "file_size_bytes": 553942
+    },
+    {
+      "case_id": "tiktok_public",
+      "run_index": 7,
+      "platform": "tiktok",
+      "chat_slot": 7,
+      "source_host": "www.tiktok.com",
+      "ok": true,
+      "mode": "download",
+      "error_code": null,
+      "duration_ms": 7601.16,
+      "media_duration_seconds": 10.0,
+      "file_size_bytes": 2004627
+    },
+    {
+      "case_id": "youtube_shorts_public_fixture",
+      "run_index": 8,
+      "platform": "youtube",
+      "chat_slot": 8,
+      "source_host": "www.youtube.com",
+      "ok": true,
+      "mode": "download",
+      "error_code": null,
+      "duration_ms": 5106.44,
+      "media_duration_seconds": 10.0,
+      "file_size_bytes": 553942
+    },
+    {
+      "case_id": "tiktok_public",
+      "run_index": 9,
+      "platform": "tiktok",
+      "chat_slot": 9,
+      "source_host": "www.tiktok.com",
+      "ok": true,
+      "mode": "download",
+      "error_code": null,
+      "duration_ms": 7664.13,
+      "media_duration_seconds": 10.0,
+      "file_size_bytes": 2004627
+    }
+  ],
+  "secret_free": true
+}

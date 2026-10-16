@@ -1,0 +1,66 @@
+{
+  "ok": true,
+  "mode": "live-download",
+  "case_count": 2,
+  "requested_jobs": 2,
+  "concurrency_limit": 2,
+  "max_active_jobs": 2,
+  "chat_count": 100,
+  "chat_scope_mode": "synthetic_slot_mapping_only",
+  "unique_chat_slots": 2,
+  "latency_scope": "provider_probe_and_download_only",
+  "passed": 2,
+  "failed": 0,
+  "latency_ms": {
+    "p50": 3189.46,
+    "p95": 3882.0,
+    "p99": 3882.0
+  },
+  "completion_slo": {
+    "target_ms": 10000.0,
+    "applicable": true,
+    "p95_ms": 3882.0,
+    "met": true
+  },
+  "platforms": {
+    "youtube": {
+      "jobs": 1,
+      "passed": 1,
+      "failed": 0
+    },
+    "tiktok": {
+      "jobs": 1,
+      "passed": 1,
+      "failed": 0
+    }
+  },
+  "results": [
+    {
+      "case_id": "youtube_shorts_public_fixture",
+      "run_index": 0,
+      "platform": "youtube",
+      "chat_slot": 0,
+      "source_host": "www.youtube.com",
+      "ok": true,
+      "mode": "download",
+      "error_code": null,
+      "duration_ms": 3189.46,
+      "media_duration_seconds": 10.0,
+      "file_size_bytes": 553942
+    },
+    {
+      "case_id": "tiktok_public",
+      "run_index": 1,
+      "platform": "tiktok",
+      "chat_slot": 1,
+      "source_host": "www.tiktok.com",
+      "ok": true,
+      "mode": "download",
+      "error_code": null,
+      "duration_ms": 3882.0,
+      "media_duration_seconds": 10.0,
+      "file_size_bytes": 2004627
+    }
+  ],
+  "secret_free": true
+}

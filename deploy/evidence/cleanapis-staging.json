@@ -1,0 +1,11 @@
+{
+  "scope": "cleanapis-staging",
+  "ok": true,
+  "provider": "cleanapis",
+  "model": "deepseek-v4-flash-0731",
+  "latency_ms": 2018.29,
+  "response_chars": 1,
+  "usage_present": true,
+  "secret_free": true,
+  "mode": "live-completion"
+}

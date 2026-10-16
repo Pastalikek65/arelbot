@@ -1,0 +1,103 @@
+{
+  "ok": true,
+  "mode": "deterministic-replay",
+  "case_count": 6,
+  "passed": 6,
+  "failed": 0,
+  "platforms": {
+    "instagram": {
+      "cases": 1,
+      "passed": 1,
+      "failed": 0
+    },
+    "tiktok": {
+      "cases": 1,
+      "passed": 1,
+      "failed": 0
+    },
+    "youtube": {
+      "cases": 1,
+      "passed": 1,
+      "failed": 0
+    },
+    "x": {
+      "cases": 1,
+      "passed": 1,
+      "failed": 0
+    },
+    "facebook": {
+      "cases": 1,
+      "passed": 1,
+      "failed": 0
+    },
+    "reddit": {
+      "cases": 1,
+      "passed": 1,
+      "failed": 0
+    }
+  },
+  "results": [
+    {
+      "case_id": "instagram_reel",
+      "platform": "instagram",
+      "provider": "replay-instagram",
+      "metadata_duration_seconds": 2.0,
+      "artifact_extension": ".mp4",
+      "artifact_size_bytes": 29,
+      "cleanup": true,
+      "ok": true
+    },
+    {
+      "case_id": "tiktok_video",
+      "platform": "tiktok",
+      "provider": "replay-tiktok",
+      "metadata_duration_seconds": 2.0,
+      "artifact_extension": ".mp4",
+      "artifact_size_bytes": 29,
+      "cleanup": true,
+      "ok": true
+    },
+    {
+      "case_id": "youtube_shorts",
+      "platform": "youtube",
+      "provider": "replay-youtube",
+      "metadata_duration_seconds": 2.0,
+      "artifact_extension": ".mp4",
+      "artifact_size_bytes": 29,
+      "cleanup": true,
+      "ok": true
+    },
+    {
+      "case_id": "x_status",
+      "platform": "x",
+      "provider": "replay-x",
+      "metadata_duration_seconds": 2.0,
+      "artifact_extension": ".mp4",
+      "artifact_size_bytes": 29,
+      "cleanup": true,
+      "ok": true
+    },
+    {
+      "case_id": "facebook_reel",
+      "platform": "facebook",
+      "provider": "replay-facebook",
+      "metadata_duration_seconds": 2.0,
+      "artifact_extension": ".mp4",
+      "artifact_size_bytes": 29,
+      "cleanup": true,
+      "ok": true
+    },
+    {
+      "case_id": "reddit_video",
+      "platform": "reddit",
+      "provider": "replay-reddit",
+      "metadata_duration_seconds": 2.0,
+      "artifact_extension": ".mp4",
+      "artifact_size_bytes": 29,
+      "cleanup": true,
+      "ok": true
+    }
+  ],
+  "secret_free": true,
+  "network_calls": 0
+}
