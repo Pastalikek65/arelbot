@@ -151,11 +151,64 @@ Telegram unless all three command flags and the environment gate are present:
 
     ARELBOT_TELEGRAM_MUTATION_LIVE=1 python scripts/telegram_mutation_staging.py --env-file staging.env --live --confirm-live --allow-mutation --chat-id <staging-chat-id> --thread-id <forum-thread-id> --video-file-id <staging-video-file-id> --sticker-file-id <staging-sticker-file-id> --file-id <staging-file-id> --callback-query-id <callback-id> --json --report deploy/evidence/telegram-mutation-live.json
 
-The chat, forum thread and Telegram file/callback identifiers are supplied by
-the operator and are never written to the report. Missing identifiers fail
-closed; the report records only operation names, bounded success counts and
-exception types. The runner sends bounded staging messages and therefore must
-target a disposable staging chat, never a production group.
+The chat, optional forum thread, and Telegram file/callback identifiers are
+supplied by the operator and are never written to the report. Missing media or
+callback identifiers fail closed. A normal supergroup has no forum topic; when
+`--thread-id` is omitted, the forum operation is skipped and the remaining
+operations are still checked. The runner sends bounded staging messages and
+therefore must target a disposable staging chat, never a production group.
+
+#### Kimliklerin güvenli şekilde toplanması
+
+`chat_id` tek başına tam mutation kanıtı için yeterli değildir. Telegram Bot
+API, bir `file_id` veya callback kimliğini yalnızca ilgili güncellemenin içinde
+verir; bunlar URL'den, grup kullanıcı arayüzünden veya `getChat` çağrısından
+çıkarılamaz. Aşağıdaki değerler operatör tarafından ayrı ayrı sağlanır:
+
+- `thread_id`: yalnızca forum grubu kullanılıyorsa, test mesajının ait olduğu
+  konu kök mesajının `message_thread_id` değeridir. Normal süpergrupta boş
+  bırakılır.
+- `video_file_id`: test grubuna gönderilmiş kısa bir videonun
+  `message.video.file_id` değeri.
+- `sticker_file_id`: test grubuna gönderilmiş statik veya video sticker'ın
+  `message.sticker.file_id` değeri.
+- `file_id`: test grubuna gönderilmiş desteklenen bir belgenin
+  `message.document.file_id` değeri. Aynı değer `getFile` ve
+  `sendDocument` smoke adımlarında kullanılır.
+- `callback_query_id`: test grubunda botun inline düğmesine basıldığı anda
+  oluşan `callback_query.id` değeri. Bu değer kısa ömürlüdür; callback
+  alındıktan hemen sonra kullanılmalıdır.
+
+Çalışan polling veya webhook sürecinin yanında `getUpdates` çağırarak bu
+değerleri toplamaya çalışmayın. Polling güncellemeyi yarışta tüketebilir,
+webhook modunda ise Telegram `getUpdates` çağrısını reddeder. Bu yüzden canlı
+uygulamanın güncelleme akışını durdurmadan kimlikleri otomatik çekmek güvenli
+değildir. Botun güncelleme işleyicisinde bu değerleri raporlamak için kalıcı
+bir debug özelliği de üretimde açılmamalıdır; file ID ve callback ID hassas
+transport kimlikleridir.
+
+Önerilen disposable staging akışı:
+
+1. `-1003896362491` grubunun gerçekten disposable olduğunu, botun yönetici
+   olduğunu ve owner test hesabının bulunduğunu doğrulayın. Üretim grubunda
+   mutation çalıştırmayın.
+2. Botun güncelleme akışı çalışırken gruba kısa bir video, bir sticker ve
+   küçük bir `.txt`/`.pdf` belge gönderin. Forum kullanılıyorsa aynı topic'te
+   gönderin; `thread_id` değerini uygulamanın güvenli staging çıktısından veya
+   Telegram update inspector'ından alın.
+3. Her medya türünün `file_id` değerini deployment secret store'a yazın;
+   komut satırına, Git'e, rapora veya sohbete kopyalamayın. Callback için
+   düğmeye basıldığı update'in `callback_query.id` değerini hemen kullanın.
+4. Önce yalnızca dosya/kimlik şekli doğrulamasını çalıştırın. Sonra üç canlı
+   kapıyı (`--live`, `--confirm-live`, `--allow-mutation`) ve
+   `ARELBOT_TELEGRAM_MUTATION_LIVE=1` ortam kapısını aynı anda vererek runner'ı
+   çalıştırın. Rapor dosyası yalnızca disposable staging kanıtı olarak
+   saklanmalıdır.
+
+Bu bilgilerin hiçbiri kullanıcıdan parolası, cookie'si veya Telegram token'ı
+istemeyi gerektirmez. Yalnızca test grubunun `chat_id` değeri biliniyorsa,
+read-only Telegram probe çalıştırılabilir; tam mutation kanıtı fail-closed
+kalır ve `telegram-mutation-live.json` üretim kanıtı sayılmaz.
 
 ## Live medya staging matrisi
 

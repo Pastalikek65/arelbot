@@ -127,17 +127,19 @@ async def run_live(
                 lambda: bot.edit_message_text(
                     chat_id=chat_id,
                     message_id=int(message.message_id),
-                    text="Arelbot staging mutation probe tamamlandÄ±",
+                    text="Arelbot staging mutation probe tamamlandı",
                 ),
             )
         else:
             operations["editMessageText"] = False
             errors["editMessageText"] = "send_message_failed"
 
-        if thread_id is None:
-            operations["sendMessageForum"] = False
-            errors["sendMessageForum"] = "thread_id_required"
-        else:
+        # A normal supergroup has no forum topic.  In that case there is no
+        # valid ``message_thread_id`` to probe, so omit the forum operation
+        # rather than manufacturing a failure for an unrelated transport
+        # surface.  Forum staging still exercises the operation whenever the
+        # operator supplies an explicit topic id.
+        if thread_id is not None:
             await _attempt(
                 operations,
                 errors,
@@ -289,3 +291,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
