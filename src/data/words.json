@@ -1,0 +1,1322 @@
+[
+  {
+    "word": "FERASET",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "AnlayÄ±ÅŸ, sezgi, zeka ve kavrayÄ±ÅŸ yeteneÄŸi.",
+    "hints": [
+      "7 harflidir ve F ile baÅŸlar.",
+      "2. harfi 'E' ÅŸeklindedir.",
+      "Ä°Ã§inde 3 sesli harf bulunur.",
+      "T harfi ile biter.",
+      "Toplam 4 sessiz harf iÃ§erir."
+    ]
+  },
+  {
+    "word": "MÃœSTAHZAR",
+    "category": "Eski Kelimeler",
+    "description": "HazÄ±r duruma getirilmiÅŸ, hazÄ±rlanmÄ±ÅŸ (ilaÃ§ vb).",
+    "hints": [
+      "Toplam 6 sessiz harf iÃ§erir.",
+      "Eski dilde (OsmanlÄ±ca) sÄ±kÃ§a kullanÄ±lan bir yapÄ±sÄ± vardÄ±r.",
+      "R harfi ile biter.",
+      "Ä°Ã§inde 3 sesli harf bulunur.",
+      "5. harfi 'A' ÅŸeklindedir."
+    ]
+  },
+  {
+    "word": "TEZAHÃœRAT",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "Bir topluluÄŸun duygularÄ±nÄ± hep bir aÄŸÄ±zdan baÄŸÄ±rarak belirtmesi.",
+    "hints": [
+      "T harfi ile biter.",
+      "9 harflidir ve T ile baÅŸlar.",
+      "7. harfi 'R' ÅŸeklindedir.",
+      "Toplam 5 sessiz harf iÃ§erir.",
+      "Ä°Ã§inde 4 sesli harf bulunur."
+    ]
+  },
+  {
+    "word": "MÃœNEVVER",
+    "category": "Eski Kelimeler",
+    "description": "AydÄ±nlatÄ±lmÄ±ÅŸ, Ä±ÅŸÄ±klÄ±, bilgi ve kÃ¼ltÃ¼rce zengin kimse.",
+    "hints": [
+      "Ä°Ã§inde 3 sesli harf bulunur.",
+      "4. harfi 'E' ÅŸeklindedir.",
+      "R harfi ile biter.",
+      "Toplam 5 sessiz harf iÃ§erir.",
+      "Eski dilde (OsmanlÄ±ca) sÄ±kÃ§a kullanÄ±lan bir yapÄ±sÄ± vardÄ±r."
+    ]
+  },
+  {
+    "word": "MERAKLI",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "Bir ÅŸeyi Ã¶ÄŸrenmeye, gÃ¶rmeye veya yapmaya aÅŸÄ±rÄ± istek duyan kimse.",
+    "hints": [
+      "Toplam 4 sessiz harf iÃ§erir.",
+      "7 harflidir ve M ile baÅŸlar.",
+      "3. harfi 'R' ÅŸeklindedir.",
+      "Ä°Ã§inde 3 sesli harf bulunur.",
+      "I harfi ile biter."
+    ]
+  },
+  {
+    "word": "ALAMETÄ°FARÄ°KA",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "AyÄ±rt edici nitelik, onu diÄŸerlerinden ayÄ±ran Ã¶zellik.",
+    "hints": [
+      "13 harflidir ve A ile baÅŸlar.",
+      "A harfi ile biter.",
+      "10. harfi 'R' ÅŸeklindedir.",
+      "Ä°Ã§inde 7 sesli harf bulunur.",
+      "Toplam 6 sessiz harf iÃ§erir."
+    ]
+  },
+  {
+    "word": "BÄ°LUMUM",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "BÃ¼tÃ¼n, hep, tamamÄ±, hepsi anlamÄ±nda eskimiÅŸ bir sÃ¶z.",
+    "hints": [
+      "Toplam 4 sessiz harf iÃ§erir.",
+      "Ä°Ã§inde 3 sesli harf bulunur.",
+      "5. harfi 'M' ÅŸeklindedir.",
+      "7 harflidir ve B ile baÅŸlar.",
+      "M harfi ile biter."
+    ]
+  },
+  {
+    "word": "ZANAATKAR",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "El ustalÄ±ÄŸÄ± isteyen iÅŸlerde Ã§alÄ±ÅŸan, hÃ¼nerli kiÅŸi.",
+    "hints": [
+      "3. harfi 'N' ÅŸeklindedir.",
+      "Ä°Ã§inde 4 sesli harf bulunur.",
+      "R harfi ile biter.",
+      "Toplam 5 sessiz harf iÃ§erir.",
+      "9 harflidir ve Z ile baÅŸlar."
+    ]
+  },
+  {
+    "word": "KADÄ°NAÅÄ°NAS",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "DeÄŸer bilen, kÄ±ymet takdir eden kimse.",
+    "hints": [
+      "6. harfi 'A' ÅŸeklindedir.",
+      "11 harflidir ve K ile baÅŸlar.",
+      "Ä°Ã§inde 5 sesli harf bulunur.",
+      "Toplam 6 sessiz harf iÃ§erir.",
+      "S harfi ile biter."
+    ]
+  },
+  {
+    "word": "SAFODERM",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "AÅŸÄ±rÄ± saf, her ÅŸeye inanan, kolayca kandÄ±rÄ±labilen.",
+    "hints": [
+      "8 harflidir ve S ile baÅŸlar.",
+      "M harfi ile biter.",
+      "Toplam 5 sessiz harf iÃ§erir.",
+      "Ä°Ã§inde 3 sesli harf bulunur.",
+      "7. harfi 'R' ÅŸeklindedir."
+    ]
+  },
+  {
+    "word": "HEZEYAN",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "SaÃ§malama, abuk subuk konuÅŸma, sayÄ±klama.",
+    "hints": [
+      "Ä°Ã§inde 3 sesli harf bulunur.",
+      "N harfi ile biter.",
+      "7 harflidir ve H ile baÅŸlar.",
+      "4. harfi 'E' ÅŸeklindedir.",
+      "Toplam 4 sessiz harf iÃ§erir."
+    ]
+  },
+  {
+    "word": "MÃœTEÅEKKÄ°R",
+    "category": "Eski Kelimeler",
+    "description": "Bir iyilik gÃ¶rdÃ¼ÄŸÃ¼ iÃ§in teÅŸekkÃ¼r etme durumunda olan, minnettar.",
+    "hints": [
+      "Ä°Ã§inde 4 sesli harf bulunur.",
+      "Toplam 6 sessiz harf iÃ§erir.",
+      "Eski dilde (OsmanlÄ±ca) sÄ±kÃ§a kullanÄ±lan bir yapÄ±sÄ± vardÄ±r.",
+      "7. harfi 'K' ÅŸeklindedir.",
+      "R harfi ile biter."
+    ]
+  },
+  {
+    "word": "Ä°STÄ°RAHAT",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "Dinlenme, yorgunluk giderme, rahat etme.",
+    "hints": [
+      "9 harflidir ve Ä° ile baÅŸlar.",
+      "Ä°Ã§inde 4 sesli harf bulunur.",
+      "T harfi ile biter.",
+      "6. harfi 'A' ÅŸeklindedir.",
+      "Toplam 5 sessiz harf iÃ§erir."
+    ]
+  },
+  {
+    "word": "MÃœZAYEDE",
+    "category": "Eski Kelimeler",
+    "description": "AÃ§Ä±k artÄ±rma ile satÄ±ÅŸ yapÄ±lan yer veya etkinlik.",
+    "hints": [
+      "2. harfi 'Ãœ' ÅŸeklindedir.",
+      "Ä°Ã§inde 4 sesli harf bulunur.",
+      "Eski dilde (OsmanlÄ±ca) sÄ±kÃ§a kullanÄ±lan bir yapÄ±sÄ± vardÄ±r.",
+      "Toplam 4 sessiz harf iÃ§erir.",
+      "E harfi ile biter."
+    ]
+  },
+  {
+    "word": "VELESPÄ°T",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "Bisiklet kelimesinin eski ve halk aÄŸzÄ±ndaki sÃ¶yleniÅŸi.",
+    "hints": [
+      "8 harflidir ve V ile baÅŸlar.",
+      "T harfi ile biter.",
+      "Toplam 5 sessiz harf iÃ§erir.",
+      "Ä°Ã§inde 3 sesli harf bulunur.",
+      "5. harfi 'S' ÅŸeklindedir."
+    ]
+  },
+  {
+    "word": "YAKAMOZ",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "Denizde balÄ±klarÄ±n veya kÃ¼reklerin kÄ±mÄ±ldanÄ±ÅŸÄ±yla oluÅŸan parÄ±ltÄ±.",
+    "hints": [
+      "7 harflidir ve Y ile baÅŸlar.",
+      "Z harfi ile biter.",
+      "Toplam 4 sessiz harf iÃ§erir.",
+      "5. harfi 'M' ÅŸeklindedir.",
+      "Ä°Ã§inde 3 sesli harf bulunur."
+    ]
+  },
+  {
+    "word": "SAÄDIÃ‡",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "DÃ¼ÄŸÃ¼nde damadÄ±n veya gelinin en yakÄ±n yardÄ±mcÄ±sÄ± olan kiÅŸi.",
+    "hints": [
+      "Toplam 4 sessiz harf iÃ§erir.",
+      "Ä°Ã§inde 2 sesli harf bulunur.",
+      "Ã‡ harfi ile biter.",
+      "5. harfi 'I' ÅŸeklindedir.",
+      "6 harflidir ve S ile baÅŸlar."
+    ]
+  },
+  {
+    "word": "Ä°HTÄ°ÅAM",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "GÃ¶rÃ¼nÃ¼ÅŸteki bÃ¼yÃ¼klÃ¼k, gÃ¶steriÅŸ, gÃ¶rkem.",
+    "hints": [
+      "7 harflidir ve Ä° ile baÅŸlar.",
+      "Toplam 4 sessiz harf iÃ§erir.",
+      "6. harfi 'A' ÅŸeklindedir.",
+      "M harfi ile biter.",
+      "Ä°Ã§inde 3 sesli harf bulunur."
+    ]
+  },
+  {
+    "word": "MAHREMÄ°YET",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "Gizlilik, Ã¶zel hayatÄ±n dokunulmazlÄ±ÄŸÄ±.",
+    "hints": [
+      "10 harflidir ve M ile baÅŸlar.",
+      "Toplam 6 sessiz harf iÃ§erir.",
+      "T harfi ile biter.",
+      "Ä°Ã§inde 4 sesli harf bulunur.",
+      "2. harfi 'A' ÅŸeklindedir."
+    ]
+  },
+  {
+    "word": "TEVECCÃœH",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "Birine yakÄ±nlÄ±k duyma, hoÅŸlanma, sevme, ilgi gÃ¶sterme.",
+    "hints": [
+      "Ä°Ã§inde 3 sesli harf bulunur.",
+      "8 harflidir ve T ile baÅŸlar.",
+      "H harfi ile biter.",
+      "5. harfi 'C' ÅŸeklindedir.",
+      "Toplam 5 sessiz harf iÃ§erir."
+    ]
+  },
+  {
+    "word": "MÃœSABAKA",
+    "category": "Eski Kelimeler",
+    "description": "YarÄ±ÅŸma, karÅŸÄ±laÅŸma, rekabet etme.",
+    "hints": [
+      "Eski dilde (OsmanlÄ±ca) sÄ±kÃ§a kullanÄ±lan bir yapÄ±sÄ± vardÄ±r.",
+      "Ä°Ã§inde 4 sesli harf bulunur.",
+      "8 harflidir ve M ile baÅŸlar.",
+      "Toplam 4 sessiz harf iÃ§erir.",
+      "6. harfi 'A' ÅŸeklindedir."
+    ]
+  },
+  {
+    "word": "Ä°STÄ°KRAR",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "AynÄ± kararda veya biÃ§imde sÃ¼rme, dengelilik, kararlÄ±lÄ±k.",
+    "hints": [
+      "3. harfi 'T' ÅŸeklindedir.",
+      "R harfi ile biter.",
+      "Ä°Ã§inde 3 sesli harf bulunur.",
+      "Toplam 5 sessiz harf iÃ§erir.",
+      "8 harflidir ve Ä° ile baÅŸlar."
+    ]
+  },
+  {
+    "word": "ESARET",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "KÃ¶lelik, tutsaklÄ±k, Ã¶zgÃ¼rlÃ¼ÄŸÃ¼nden yoksun olma.",
+    "hints": [
+      "3. harfi 'A' ÅŸeklindedir.",
+      "Ä°Ã§inde 3 sesli harf bulunur.",
+      "T harfi ile biter.",
+      "6 harflidir ve E ile baÅŸlar.",
+      "Toplam 3 sessiz harf iÃ§erir."
+    ]
+  },
+  {
+    "word": "KABÄ°LÄ°YET",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "Yetenek, bir iÅŸi yapabilme gÃ¼cÃ¼, kapasite.",
+    "hints": [
+      "Ä°Ã§inde 4 sesli harf bulunur.",
+      "3. harfi 'B' ÅŸeklindedir.",
+      "Toplam 5 sessiz harf iÃ§erir.",
+      "9 harflidir ve K ile baÅŸlar.",
+      "T harfi ile biter."
+    ]
+  },
+  {
+    "word": "MELANKOLÄ°",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "HÃ¼zÃ¼n, kara sevda, iÃ§e kapanÄ±klÄ±k hali.",
+    "hints": [
+      "9 harflidir ve M ile baÅŸlar.",
+      "Toplam 5 sessiz harf iÃ§erir.",
+      "Ä° harfi ile biter.",
+      "Ä°Ã§inde 4 sesli harf bulunur.",
+      "8. harfi 'L' ÅŸeklindedir."
+    ]
+  },
+  {
+    "word": "MÃœGE",
+    "category": "Eski Kelimeler",
+    "description": "Ä°nci Ã§iÃ§eÄŸi olarak da bilinen, gÃ¼zel kokulu bir Ã§iÃ§ek.",
+    "hints": [
+      "4 harflidir ve M ile baÅŸlar.",
+      "2. harfi 'Ãœ' ÅŸeklindedir.",
+      "Ä°Ã§inde 2 sesli harf bulunur.",
+      "Eski dilde (OsmanlÄ±ca) sÄ±kÃ§a kullanÄ±lan bir yapÄ±sÄ± vardÄ±r.",
+      "Toplam 2 sessiz harf iÃ§erir."
+    ]
+  },
+  {
+    "word": "ZÃœMRÃœT",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "Koyu yeÅŸil renkli, deÄŸerli bir sÃ¼s taÅŸÄ±.",
+    "hints": [
+      "6 harflidir ve Z ile baÅŸlar.",
+      "Toplam 4 sessiz harf iÃ§erir.",
+      "5. harfi 'Ãœ' ÅŸeklindedir.",
+      "Ä°Ã§inde 2 sesli harf bulunur.",
+      "T harfi ile biter."
+    ]
+  },
+  {
+    "word": "FÄ°RUZE",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "GÃ¶k mavisi ile yeÅŸilimsi mavi arasÄ±nda deÄŸiÅŸen sÃ¼s taÅŸÄ±.",
+    "hints": [
+      "Toplam 3 sessiz harf iÃ§erir.",
+      "6 harflidir ve F ile baÅŸlar.",
+      "E harfi ile biter.",
+      "2. harfi 'Ä°' ÅŸeklindedir.",
+      "Ä°Ã§inde 3 sesli harf bulunur."
+    ]
+  },
+  {
+    "word": "YAPRAK",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "Bitkilerde fotosentez yapan, genelde yeÅŸil renkli organ.",
+    "hints": [
+      "Ä°Ã§inde 2 sesli harf bulunur.",
+      "Toplam 4 sessiz harf iÃ§erir.",
+      "2. harfi 'A' ÅŸeklindedir.",
+      "6 harflidir ve Y ile baÅŸlar.",
+      "K harfi ile biter."
+    ]
+  },
+  {
+    "word": "GÃœNEÅ",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "DÃ¼nya'ya en yakÄ±n yÄ±ldÄ±z ve yaÅŸam kaynaÄŸÄ±mÄ±z.",
+    "hints": [
+      "Ä°Ã§inde 2 sesli harf bulunur.",
+      "3. harfi 'N' ÅŸeklindedir.",
+      "5 harflidir ve G ile baÅŸlar.",
+      "Å harfi ile biter.",
+      "Toplam 3 sessiz harf iÃ§erir."
+    ]
+  },
+  {
+    "word": "KÄ°TAP",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "YazÄ±lÄ± veya basÄ±lÄ± kaÄŸÄ±tlarÄ±n ciltlenmesiyle oluÅŸan eser.",
+    "hints": [
+      "Toplam 3 sessiz harf iÃ§erir.",
+      "Ä°Ã§inde 2 sesli harf bulunur.",
+      "4. harfi 'A' ÅŸeklindedir.",
+      "P harfi ile biter.",
+      "5 harflidir ve K ile baÅŸlar."
+    ]
+  },
+  {
+    "word": "KALEM",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "YazÄ± yazmaya, resim yapmaya yarayan araÃ§.",
+    "hints": [
+      "M harfi ile biter.",
+      "2. harfi 'A' ÅŸeklindedir.",
+      "Ä°Ã§inde 2 sesli harf bulunur.",
+      "Toplam 3 sessiz harf iÃ§erir.",
+      "5 harflidir ve K ile baÅŸlar."
+    ]
+  },
+  {
+    "word": "DEFTER",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "Ãœzerine yazÄ± yazÄ±lan, Ã§izgili veya karesiz kaÄŸÄ±t destesi.",
+    "hints": [
+      "6 harflidir ve D ile baÅŸlar.",
+      "R harfi ile biter.",
+      "Ä°Ã§inde 2 sesli harf bulunur.",
+      "Toplam 4 sessiz harf iÃ§erir.",
+      "3. harfi 'F' ÅŸeklindedir."
+    ]
+  },
+  {
+    "word": "SÄ°LGÄ°",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "YazÄ±lan veya Ã§izilen ÅŸeyleri temizlemeye yarayan gereÃ§.",
+    "hints": [
+      "Ä° harfi ile biter.",
+      "2. harfi 'Ä°' ÅŸeklindedir.",
+      "5 harflidir ve S ile baÅŸlar.",
+      "Ä°Ã§inde 2 sesli harf bulunur.",
+      "Toplam 3 sessiz harf iÃ§erir."
+    ]
+  },
+  {
+    "word": "OKUL",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "EÄŸitim ve Ã¶ÄŸretim verilen kurum, mektep.",
+    "hints": [
+      "Ä°Ã§inde 2 sesli harf bulunur.",
+      "L harfi ile biter.",
+      "3. harfi 'U' ÅŸeklindedir.",
+      "4 harflidir ve O ile baÅŸlar.",
+      "Toplam 2 sessiz harf iÃ§erir."
+    ]
+  },
+  {
+    "word": "SINIF",
+    "category": "EÄŸitim",
+    "description": "Okulda ders yapÄ±lan oda, derslik.",
+    "hints": [
+      "Ä°Ã§inde 2 sesli harf bulunur.",
+      "Toplam 3 sessiz harf iÃ§erir.",
+      "F harfi ile biter.",
+      "4. harfi 'I' ÅŸeklindedir.",
+      "5 harflidir ve S ile baÅŸlar."
+    ]
+  },
+  {
+    "word": "TENEFFÃœS",
+    "category": "EÄŸitim",
+    "description": "Ders aralarÄ±nda verilen dinlenme molasÄ±.",
+    "hints": [
+      "Ä°Ã§inde 3 sesli harf bulunur.",
+      "Toplam 5 sessiz harf iÃ§erir.",
+      "8 harflidir ve T ile baÅŸlar.",
+      "3. harfi 'N' ÅŸeklindedir.",
+      "S harfi ile biter."
+    ]
+  },
+  {
+    "word": "Ã–ÄRETMEN",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "Bilgi Ã¶ÄŸreten, yol gÃ¶steren, eÄŸiten kimse.",
+    "hints": [
+      "Toplam 5 sessiz harf iÃ§erir.",
+      "N harfi ile biter.",
+      "Ä°Ã§inde 3 sesli harf bulunur.",
+      "4. harfi 'E' ÅŸeklindedir.",
+      "8 harflidir ve Ã– ile baÅŸlar."
+    ]
+  },
+  {
+    "word": "Ã–ÄRENCÄ°",
+    "category": "EÄŸitim",
+    "description": "Bilgi almak iÃ§in okula giden kimse, talebe.",
+    "hints": [
+      "7 harflidir ve Ã– ile baÅŸlar.",
+      "Ä° harfi ile biter.",
+      "Toplam 4 sessiz harf iÃ§erir.",
+      "2. harfi 'Ä' ÅŸeklindedir.",
+      "Ä°Ã§inde 3 sesli harf bulunur."
+    ]
+  },
+  {
+    "word": "MÃœDÃœR",
+    "category": "Eski Kelimeler",
+    "description": "Bir kurumu yÃ¶neten, idare eden kimse.",
+    "hints": [
+      "5 harflidir ve M ile baÅŸlar.",
+      "Ä°Ã§inde 2 sesli harf bulunur.",
+      "Toplam 3 sessiz harf iÃ§erir.",
+      "Eski dilde (OsmanlÄ±ca) sÄ±kÃ§a kullanÄ±lan bir yapÄ±sÄ± vardÄ±r.",
+      "2. harfi 'Ãœ' ÅŸeklindedir."
+    ]
+  },
+  {
+    "word": "DOKTOR",
+    "category": "SaÄŸlÄ±k",
+    "description": "HastalÄ±klarÄ± teÅŸhis ve tedavi eden tÄ±p uzmanÄ±.",
+    "hints": [
+      "Toplam 4 sessiz harf iÃ§erir.",
+      "R harfi ile biter.",
+      "2. harfi 'O' ÅŸeklindedir.",
+      "6 harflidir ve D ile baÅŸlar.",
+      "Ä°Ã§inde 2 sesli harf bulunur."
+    ]
+  },
+  {
+    "word": "HEMÅÄ°RE",
+    "category": "SaÄŸlÄ±k",
+    "description": "Hastalara bakan, doktora yardÄ±mcÄ± olan saÄŸlÄ±k Ã§alÄ±ÅŸanÄ±.",
+    "hints": [
+      "Ä°Ã§inde 3 sesli harf bulunur.",
+      "7 harflidir ve H ile baÅŸlar.",
+      "E harfi ile biter.",
+      "Toplam 4 sessiz harf iÃ§erir.",
+      "2. harfi 'E' ÅŸeklindedir."
+    ]
+  },
+  {
+    "word": "HASTANE",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "HastalarÄ±n yattÄ±ÄŸÄ±, tedavi olduÄŸu saÄŸlÄ±k kuruluÅŸu.",
+    "hints": [
+      "E harfi ile biter.",
+      "7 harflidir ve H ile baÅŸlar.",
+      "6. harfi 'N' ÅŸeklindedir.",
+      "Ä°Ã§inde 3 sesli harf bulunur.",
+      "Toplam 4 sessiz harf iÃ§erir."
+    ]
+  },
+  {
+    "word": "ECZANE",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "Ä°laÃ§larÄ±n hazÄ±rlandÄ±ÄŸÄ± ve satÄ±ldÄ±ÄŸÄ± dÃ¼kkan.",
+    "hints": [
+      "6 harflidir ve E ile baÅŸlar.",
+      "5. harfi 'N' ÅŸeklindedir.",
+      "Ä°Ã§inde 3 sesli harf bulunur.",
+      "E harfi ile biter.",
+      "Toplam 3 sessiz harf iÃ§erir."
+    ]
+  },
+  {
+    "word": "POLÄ°S",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "Åehirde asayiÅŸi ve dÃ¼zeni saÄŸlayan emniyet gÃ¶revlisi.",
+    "hints": [
+      "S harfi ile biter.",
+      "Toplam 3 sessiz harf iÃ§erir.",
+      "2. harfi 'O' ÅŸeklindedir.",
+      "5 harflidir ve P ile baÅŸlar.",
+      "Ä°Ã§inde 2 sesli harf bulunur."
+    ]
+  },
+  {
+    "word": "ASKER",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "Ãœlkeyi savunmakla gÃ¶revli silahlÄ± devlet memuru.",
+    "hints": [
+      "4. harfi 'E' ÅŸeklindedir.",
+      "Toplam 3 sessiz harf iÃ§erir.",
+      "R harfi ile biter.",
+      "Ä°Ã§inde 2 sesli harf bulunur.",
+      "5 harflidir ve A ile baÅŸlar."
+    ]
+  },
+  {
+    "word": "Ä°TFAÄ°YE",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "YangÄ±n sÃ¶ndÃ¼rme kuruluÅŸu ve Ã§alÄ±ÅŸanlarÄ±.",
+    "hints": [
+      "Ä°Ã§inde 4 sesli harf bulunur.",
+      "E harfi ile biter.",
+      "7 harflidir ve Ä° ile baÅŸlar.",
+      "4. harfi 'A' ÅŸeklindedir.",
+      "Toplam 3 sessiz harf iÃ§erir."
+    ]
+  },
+  {
+    "word": "POSTACI",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "Mektup ve paketleri adreslere daÄŸÄ±tan gÃ¶revli.",
+    "hints": [
+      "I harfi ile biter.",
+      "6. harfi 'C' ÅŸeklindedir.",
+      "Toplam 4 sessiz harf iÃ§erir.",
+      "7 harflidir ve P ile baÅŸlar.",
+      "Ä°Ã§inde 3 sesli harf bulunur."
+    ]
+  },
+  {
+    "word": "PÄ°LOT",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "UÃ§ak veya helikopter kullanan kiÅŸi.",
+    "hints": [
+      "4. harfi 'O' ÅŸeklindedir.",
+      "5 harflidir ve P ile baÅŸlar.",
+      "T harfi ile biter.",
+      "Ä°Ã§inde 2 sesli harf bulunur.",
+      "Toplam 3 sessiz harf iÃ§erir."
+    ]
+  },
+  {
+    "word": "KAPTAN",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "Gemi veya uÃ§aÄŸÄ± yÃ¶neten en yetkili kiÅŸi.",
+    "hints": [
+      "N harfi ile biter.",
+      "Ä°Ã§inde 2 sesli harf bulunur.",
+      "6 harflidir ve K ile baÅŸlar.",
+      "2. harfi 'A' ÅŸeklindedir.",
+      "Toplam 4 sessiz harf iÃ§erir."
+    ]
+  },
+  {
+    "word": "ÅOFÃ–R",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "Kara taÅŸÄ±tlarÄ±nÄ± kullanan meslek sahibi.",
+    "hints": [
+      "2. harfi 'O' ÅŸeklindedir.",
+      "5 harflidir ve Å ile baÅŸlar.",
+      "Ä°Ã§inde 2 sesli harf bulunur.",
+      "Toplam 3 sessiz harf iÃ§erir.",
+      "R harfi ile biter."
+    ]
+  },
+  {
+    "word": "TERZÄ°",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "KumaÅŸÄ± biÃ§ip diken, giysi yapan zanaatkar.",
+    "hints": [
+      "Ä° harfi ile biter.",
+      "Toplam 3 sessiz harf iÃ§erir.",
+      "5 harflidir ve T ile baÅŸlar.",
+      "2. harfi 'E' ÅŸeklindedir.",
+      "Ä°Ã§inde 2 sesli harf bulunur."
+    ]
+  },
+  {
+    "word": "BERBER",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "Erkek saÃ§Ä± kesen ve sakal tÄ±raÅŸÄ± yapan esnaf.",
+    "hints": [
+      "5. harfi 'E' ÅŸeklindedir.",
+      "6 harflidir ve B ile baÅŸlar.",
+      "R harfi ile biter.",
+      "Ä°Ã§inde 2 sesli harf bulunur.",
+      "Toplam 4 sessiz harf iÃ§erir."
+    ]
+  },
+  {
+    "word": "FIRIN",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "Ekmek, pasta vb. piÅŸirilen ocaklÄ± dÃ¼kkan.",
+    "hints": [
+      "N harfi ile biter.",
+      "Ä°Ã§inde 2 sesli harf bulunur.",
+      "Toplam 3 sessiz harf iÃ§erir.",
+      "5 harflidir ve F ile baÅŸlar.",
+      "3. harfi 'R' ÅŸeklindedir."
+    ]
+  },
+  {
+    "word": "MANAV",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "Sebze ve meyve satan dÃ¼kkan veya kiÅŸi.",
+    "hints": [
+      "V harfi ile biter.",
+      "5 harflidir ve M ile baÅŸlar.",
+      "Ä°Ã§inde 2 sesli harf bulunur.",
+      "Toplam 3 sessiz harf iÃ§erir.",
+      "2. harfi 'A' ÅŸeklindedir."
+    ]
+  },
+  {
+    "word": "KASAP",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "Et ve et Ã¼rÃ¼nleri satan esnaf.",
+    "hints": [
+      "P harfi ile biter.",
+      "Ä°Ã§inde 2 sesli harf bulunur.",
+      "2. harfi 'A' ÅŸeklindedir.",
+      "Toplam 3 sessiz harf iÃ§erir.",
+      "5 harflidir ve K ile baÅŸlar."
+    ]
+  },
+  {
+    "word": "BAKKAL",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "Mahalle aralarÄ±nda gÄ±da ve temizlik malzemesi satan kÃ¼Ã§Ã¼k dÃ¼kkan.",
+    "hints": [
+      "Ä°Ã§inde 2 sesli harf bulunur.",
+      "L harfi ile biter.",
+      "5. harfi 'A' ÅŸeklindedir.",
+      "6 harflidir ve B ile baÅŸlar.",
+      "Toplam 4 sessiz harf iÃ§erir."
+    ]
+  },
+  {
+    "word": "RÄ°YAKAR",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "Ä°kiyÃ¼zlÃ¼ davranan, Ã¶zÃ¼ sÃ¶zÃ¼ bir olmayan kimse.",
+    "hints": [
+      "Toplam 4 sessiz harf iÃ§erir.",
+      "R harfi ile biter.",
+      "3. harfi 'Y' ÅŸeklindedir.",
+      "Ä°Ã§inde 3 sesli harf bulunur.",
+      "7 harflidir ve R ile baÅŸlar."
+    ]
+  },
+  {
+    "word": "MÃœTEVAZI",
+    "category": "Eski Kelimeler",
+    "description": "AlÃ§ak gÃ¶nÃ¼llÃ¼, gÃ¶steriÅŸsiz, iddiasÄ±z.",
+    "hints": [
+      "7. harfi 'Z' ÅŸeklindedir.",
+      "8 harflidir ve M ile baÅŸlar.",
+      "Toplam 4 sessiz harf iÃ§erir.",
+      "Ä°Ã§inde 4 sesli harf bulunur.",
+      "Eski dilde (OsmanlÄ±ca) sÄ±kÃ§a kullanÄ±lan bir yapÄ±sÄ± vardÄ±r."
+    ]
+  },
+  {
+    "word": "TEÅEKKÃœL",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "Belli bir biÃ§ime girme, oluÅŸma, kurulma.",
+    "hints": [
+      "Toplam 5 sessiz harf iÃ§erir.",
+      "Ä°Ã§inde 3 sesli harf bulunur.",
+      "8 harflidir ve T ile baÅŸlar.",
+      "6. harfi 'K' ÅŸeklindedir.",
+      "L harfi ile biter."
+    ]
+  },
+  {
+    "word": "MÃœNAZARA",
+    "category": "Eski Kelimeler",
+    "description": "Bir konuda karÅŸÄ±t gÃ¶rÃ¼ÅŸleri savunanlarÄ±n tartÄ±ÅŸmasÄ±.",
+    "hints": [
+      "A harfi ile biter.",
+      "Eski dilde (OsmanlÄ±ca) sÄ±kÃ§a kullanÄ±lan bir yapÄ±sÄ± vardÄ±r.",
+      "Toplam 4 sessiz harf iÃ§erir.",
+      "Ä°Ã§inde 4 sesli harf bulunur.",
+      "8 harflidir ve M ile baÅŸlar."
+    ]
+  },
+  {
+    "word": "Ä°MTÄ°YAZ",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "BaÅŸkalarÄ±ndan ayrÄ± tutulma, ayrÄ±calÄ±k, Ã¼stÃ¼nlÃ¼k.",
+    "hints": [
+      "Z harfi ile biter.",
+      "2. harfi 'M' ÅŸeklindedir.",
+      "Ä°Ã§inde 3 sesli harf bulunur.",
+      "7 harflidir ve Ä° ile baÅŸlar.",
+      "Toplam 4 sessiz harf iÃ§erir."
+    ]
+  },
+  {
+    "word": "MUKAVEMET",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "Dayanma, karÅŸÄ± koyma, direnÃ§ gÃ¶sterme.",
+    "hints": [
+      "Ä°Ã§inde 4 sesli harf bulunur.",
+      "Toplam 5 sessiz harf iÃ§erir.",
+      "8. harfi 'E' ÅŸeklindedir.",
+      "9 harflidir ve M ile baÅŸlar.",
+      "T harfi ile biter."
+    ]
+  },
+  {
+    "word": "Ä°STÄ°HZA",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "Biriyle gizliden gizliye alay etme, eÄŸlenme.",
+    "hints": [
+      "Toplam 4 sessiz harf iÃ§erir.",
+      "Ä°Ã§inde 3 sesli harf bulunur.",
+      "3. harfi 'T' ÅŸeklindedir.",
+      "7 harflidir ve Ä° ile baÅŸlar.",
+      "A harfi ile biter."
+    ]
+  },
+  {
+    "word": "MÃœPHEM",
+    "category": "Eski Kelimeler",
+    "description": "Belirsiz, ne olduÄŸu anlaÅŸÄ±lmayan, flu.",
+    "hints": [
+      "4. harfi 'H' ÅŸeklindedir.",
+      "M harfi ile biter.",
+      "Toplam 4 sessiz harf iÃ§erir.",
+      "6 harflidir ve M ile baÅŸlar.",
+      "Eski dilde (OsmanlÄ±ca) sÄ±kÃ§a kullanÄ±lan bir yapÄ±sÄ± vardÄ±r."
+    ]
+  },
+  {
+    "word": "BÄ°LHAKÄ°S",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "Aksine, tersine, tam tersi olarak.",
+    "hints": [
+      "Toplam 5 sessiz harf iÃ§erir.",
+      "S harfi ile biter.",
+      "2. harfi 'Ä°' ÅŸeklindedir.",
+      "Ä°Ã§inde 3 sesli harf bulunur.",
+      "8 harflidir ve B ile baÅŸlar."
+    ]
+  },
+  {
+    "word": "MÃœSTESNA",
+    "category": "Eski Kelimeler",
+    "description": "Benzerlerinden ayrÄ± olan, kural dÄ±ÅŸÄ±, istisna.",
+    "hints": [
+      "7. harfi 'N' ÅŸeklindedir.",
+      "A harfi ile biter.",
+      "Ä°Ã§inde 3 sesli harf bulunur.",
+      "Toplam 5 sessiz harf iÃ§erir.",
+      "Eski dilde (OsmanlÄ±ca) sÄ±kÃ§a kullanÄ±lan bir yapÄ±sÄ± vardÄ±r."
+    ]
+  },
+  {
+    "word": "HAYSÄ°YET",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "Onur, ÅŸeref, saygÄ±nlÄ±k, itibar.",
+    "hints": [
+      "Toplam 5 sessiz harf iÃ§erir.",
+      "8 harflidir ve H ile baÅŸlar.",
+      "7. harfi 'E' ÅŸeklindedir.",
+      "Ä°Ã§inde 3 sesli harf bulunur.",
+      "T harfi ile biter."
+    ]
+  },
+  {
+    "word": "TEVEKKÃœL",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "Herhangi bir iÅŸte elinden geleni yapÄ±p sonucunu Allah'a bÄ±rakma.",
+    "hints": [
+      "Ä°Ã§inde 3 sesli harf bulunur.",
+      "L harfi ile biter.",
+      "8 harflidir ve T ile baÅŸlar.",
+      "4. harfi 'E' ÅŸeklindedir.",
+      "Toplam 5 sessiz harf iÃ§erir."
+    ]
+  },
+  {
+    "word": "MÃœÅKÃœLPESENT",
+    "category": "Eski Kelimeler",
+    "description": "Bir ÅŸeyi beÄŸenmekte gÃ¼Ã§lÃ¼k Ã§eken, zor beÄŸenen.",
+    "hints": [
+      "Eski dilde (OsmanlÄ±ca) sÄ±kÃ§a kullanÄ±lan bir yapÄ±sÄ± vardÄ±r.",
+      "T harfi ile biter.",
+      "Toplam 8 sessiz harf iÃ§erir.",
+      "12 harflidir ve M ile baÅŸlar.",
+      "3. harfi 'Å' ÅŸeklindedir."
+    ]
+  },
+  {
+    "word": "Ä°KTÄ°SAT",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "Ekonomi, tutum, tasarruf.",
+    "hints": [
+      "Ä°Ã§inde 3 sesli harf bulunur.",
+      "T harfi ile biter.",
+      "Toplam 4 sessiz harf iÃ§erir.",
+      "4. harfi 'Ä°' ÅŸeklindedir.",
+      "7 harflidir ve Ä° ile baÅŸlar."
+    ]
+  },
+  {
+    "word": "BEÅERÄ°YET",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "Ä°nsanlÄ±k, insanoÄŸlunun bÃ¼tÃ¼nÃ¼.",
+    "hints": [
+      "T harfi ile biter.",
+      "Toplam 5 sessiz harf iÃ§erir.",
+      "6. harfi 'Ä°' ÅŸeklindedir.",
+      "Ä°Ã§inde 4 sesli harf bulunur.",
+      "9 harflidir ve B ile baÅŸlar."
+    ]
+  },
+  {
+    "word": "MÃœNECCÄ°M",
+    "category": "Eski Kelimeler",
+    "description": "YÄ±ldÄ±zlara bakarak gelecekten haber verdiÄŸine inanÄ±lan kimse.",
+    "hints": [
+      "Ä°Ã§inde 3 sesli harf bulunur.",
+      "8 harflidir ve M ile baÅŸlar.",
+      "Eski dilde (OsmanlÄ±ca) sÄ±kÃ§a kullanÄ±lan bir yapÄ±sÄ± vardÄ±r.",
+      "6. harfi 'C' ÅŸeklindedir.",
+      "M harfi ile biter."
+    ]
+  },
+  {
+    "word": "Ä°HTÄ°RAS",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "AÅŸÄ±rÄ± gÃ¼Ã§lÃ¼ istek, tutku, arzu.",
+    "hints": [
+      "S harfi ile biter.",
+      "6. harfi 'A' ÅŸeklindedir.",
+      "Toplam 4 sessiz harf iÃ§erir.",
+      "Ä°Ã§inde 3 sesli harf bulunur.",
+      "7 harflidir ve Ä° ile baÅŸlar."
+    ]
+  },
+  {
+    "word": "MUKADDERAT",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "YazgÄ±, alÄ±n yazÄ±sÄ±, kader.",
+    "hints": [
+      "T harfi ile biter.",
+      "Toplam 6 sessiz harf iÃ§erir.",
+      "10 harflidir ve M ile baÅŸlar.",
+      "8. harfi 'R' ÅŸeklindedir.",
+      "Ä°Ã§inde 4 sesli harf bulunur."
+    ]
+  },
+  {
+    "word": "Ä°STÄ°ÅARE",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "DanÄ±ÅŸma, fikir alÄ±ÅŸveriÅŸinde bulunma.",
+    "hints": [
+      "Ä°Ã§inde 4 sesli harf bulunur.",
+      "Toplam 4 sessiz harf iÃ§erir.",
+      "2. harfi 'S' ÅŸeklindedir.",
+      "E harfi ile biter.",
+      "8 harflidir ve Ä° ile baÅŸlar."
+    ]
+  },
+  {
+    "word": "MÃœTEVEKÄ°L",
+    "category": "Eski Kelimeler",
+    "description": "TevekkÃ¼l eden, kaderine razÄ± olan.",
+    "hints": [
+      "Eski dilde (OsmanlÄ±ca) sÄ±kÃ§a kullanÄ±lan bir yapÄ±sÄ± vardÄ±r.",
+      "Toplam 5 sessiz harf iÃ§erir.",
+      "9 harflidir ve M ile baÅŸlar.",
+      "Ä°Ã§inde 4 sesli harf bulunur.",
+      "2. harfi 'Ãœ' ÅŸeklindedir."
+    ]
+  },
+  {
+    "word": "HÃœSNÃœKURUNTU",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "Bir ÅŸeyi aslÄ±ndan daha iyi veya gÃ¼zel sanma, iyiye yorma.",
+    "hints": [
+      "U harfi ile biter.",
+      "12 harflidir ve H ile baÅŸlar.",
+      "Toplam 7 sessiz harf iÃ§erir.",
+      "OldukÃ§a uzun ve gÃ¶steriÅŸli bir kelimedir.",
+      "Ä°Ã§inde 5 sesli harf bulunur."
+    ]
+  },
+  {
+    "word": "TEVAZU",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "AlÃ§ak gÃ¶nÃ¼llÃ¼lÃ¼k, kibirsizlik.",
+    "hints": [
+      "2. harfi 'E' ÅŸeklindedir.",
+      "6 harflidir ve T ile baÅŸlar.",
+      "Ä°Ã§inde 3 sesli harf bulunur.",
+      "U harfi ile biter.",
+      "Toplam 3 sessiz harf iÃ§erir."
+    ]
+  },
+  {
+    "word": "MÃœESSESE",
+    "category": "Eski Kelimeler",
+    "description": "Kurum, kuruluÅŸ, iÅŸletme.",
+    "hints": [
+      "Ä°Ã§inde 4 sesli harf bulunur.",
+      "Toplam 4 sessiz harf iÃ§erir.",
+      "3. harfi 'E' ÅŸeklindedir.",
+      "8 harflidir ve M ile baÅŸlar.",
+      "Eski dilde (OsmanlÄ±ca) sÄ±kÃ§a kullanÄ±lan bir yapÄ±sÄ± vardÄ±r."
+    ]
+  },
+  {
+    "word": "Ä°RTÄ°CALEN",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "DoÄŸaÃ§lama, hazÄ±rlÄ±ksÄ±z olarak (konuÅŸma vb.)",
+    "hints": [
+      "3. harfi 'T' ÅŸeklindedir.",
+      "9 harflidir ve Ä° ile baÅŸlar.",
+      "N harfi ile biter.",
+      "Ä°Ã§inde 4 sesli harf bulunur.",
+      "Toplam 5 sessiz harf iÃ§erir."
+    ]
+  },
+  {
+    "word": "MÃœSAMAHA",
+    "category": "Eski Kelimeler",
+    "description": "HoÅŸgÃ¶rÃ¼, gÃ¶rmezden gelme, katlanma.",
+    "hints": [
+      "3. harfi 'S' ÅŸeklindedir.",
+      "Toplam 4 sessiz harf iÃ§erir.",
+      "Eski dilde (OsmanlÄ±ca) sÄ±kÃ§a kullanÄ±lan bir yapÄ±sÄ± vardÄ±r.",
+      "8 harflidir ve M ile baÅŸlar.",
+      "A harfi ile biter."
+    ]
+  },
+  {
+    "word": "Ä°ZZETÄ°NEFÄ°S",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "KiÅŸinin kendine duyduÄŸu saygÄ±, onur.",
+    "hints": [
+      "OldukÃ§a uzun ve gÃ¶steriÅŸli bir kelimedir.",
+      "11 harflidir ve Ä° ile baÅŸlar.",
+      "S harfi ile biter.",
+      "Ä°Ã§inde 5 sesli harf bulunur.",
+      "Toplam 6 sessiz harf iÃ§erir."
+    ]
+  },
+  {
+    "word": "TECELLÄ°",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "Belirme, gÃ¶rÃ¼nme, ortaya Ã§Ä±kma (kader vb.)",
+    "hints": [
+      "Ä°Ã§inde 3 sesli harf bulunur.",
+      "Ä° harfi ile biter.",
+      "5. harfi 'L' ÅŸeklindedir.",
+      "7 harflidir ve T ile baÅŸlar.",
+      "Toplam 4 sessiz harf iÃ§erir."
+    ]
+  },
+  {
+    "word": "MÃœSTEAR",
+    "category": "Eski Kelimeler",
+    "description": "Takma, eÄŸreti, Ã¶dÃ¼nÃ§ (isim vb.)",
+    "hints": [
+      "Eski dilde (OsmanlÄ±ca) sÄ±kÃ§a kullanÄ±lan bir yapÄ±sÄ± vardÄ±r.",
+      "4. harfi 'T' ÅŸeklindedir.",
+      "Toplam 4 sessiz harf iÃ§erir.",
+      "7 harflidir ve M ile baÅŸlar.",
+      "Ä°Ã§inde 3 sesli harf bulunur."
+    ]
+  },
+  {
+    "word": "Ä°LTÄ°FAT",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "GÃ¶nÃ¼l alÄ±cÄ±, okÅŸayÄ±cÄ± sÃ¶z veya davranÄ±ÅŸ.",
+    "hints": [
+      "T harfi ile biter.",
+      "Ä°Ã§inde 3 sesli harf bulunur.",
+      "2. harfi 'L' ÅŸeklindedir.",
+      "Toplam 4 sessiz harf iÃ§erir.",
+      "7 harflidir ve Ä° ile baÅŸlar."
+    ]
+  },
+  {
+    "word": "MÃœTEMADÄ°YEN",
+    "category": "Eski Kelimeler",
+    "description": "Ara vermeden, sÃ¼rekli olarak, devamlÄ±.",
+    "hints": [
+      "Ä°Ã§inde 5 sesli harf bulunur.",
+      "11 harflidir ve M ile baÅŸlar.",
+      "Eski dilde (OsmanlÄ±ca) sÄ±kÃ§a kullanÄ±lan bir yapÄ±sÄ± vardÄ±r.",
+      "N harfi ile biter.",
+      "Toplam 6 sessiz harf iÃ§erir."
+    ]
+  },
+  {
+    "word": "Ä°STÄ°KRARLI",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "KararlÄ±, dengeli, deÄŸiÅŸmeyen.",
+    "hints": [
+      "4. harfi 'Ä°' ÅŸeklindedir.",
+      "10 harflidir ve Ä° ile baÅŸlar.",
+      "Ä°Ã§inde 4 sesli harf bulunur.",
+      "I harfi ile biter.",
+      "Toplam 6 sessiz harf iÃ§erir."
+    ]
+  },
+  {
+    "word": "MÃœNASEBET",
+    "category": "Eski Kelimeler",
+    "description": "Ä°liÅŸki, ilgi, baÄŸ, uygunluk.",
+    "hints": [
+      "T harfi ile biter.",
+      "Ä°Ã§inde 4 sesli harf bulunur.",
+      "9 harflidir ve M ile baÅŸlar.",
+      "Toplam 5 sessiz harf iÃ§erir.",
+      "5. harfi 'S' ÅŸeklindedir."
+    ]
+  },
+  {
+    "word": "Ä°HTÄ°MAL",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "OlasÄ±lÄ±k, olabilir olma durumu.",
+    "hints": [
+      "Toplam 4 sessiz harf iÃ§erir.",
+      "Ä°Ã§inde 3 sesli harf bulunur.",
+      "7 harflidir ve Ä° ile baÅŸlar.",
+      "3. harfi 'T' ÅŸeklindedir.",
+      "L harfi ile biter."
+    ]
+  },
+  {
+    "word": "MÃœREKKEP",
+    "category": "Eski Kelimeler",
+    "description": "YazÄ± yazmakta kullanÄ±lan boyalÄ± sÄ±vÄ±.",
+    "hints": [
+      "Toplam 5 sessiz harf iÃ§erir.",
+      "Ä°Ã§inde 3 sesli harf bulunur.",
+      "3. harfi 'R' ÅŸeklindedir.",
+      "8 harflidir ve M ile baÅŸlar.",
+      "Eski dilde (OsmanlÄ±ca) sÄ±kÃ§a kullanÄ±lan bir yapÄ±sÄ± vardÄ±r."
+    ]
+  },
+  {
+    "word": "Ä°STÄ°KLAL",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "BaÄŸÄ±msÄ±zlÄ±k, Ã¶zgÃ¼rlÃ¼k.",
+    "hints": [
+      "L harfi ile biter.",
+      "8 harflidir ve Ä° ile baÅŸlar.",
+      "7. harfi 'A' ÅŸeklindedir.",
+      "Ä°Ã§inde 3 sesli harf bulunur.",
+      "Toplam 5 sessiz harf iÃ§erir."
+    ]
+  },
+  {
+    "word": "MÃœHÄ°MMAT",
+    "category": "Eski Kelimeler",
+    "description": "SavaÅŸ gereÃ§leri, cephane.",
+    "hints": [
+      "Toplam 5 sessiz harf iÃ§erir.",
+      "T harfi ile biter.",
+      "Eski dilde (OsmanlÄ±ca) sÄ±kÃ§a kullanÄ±lan bir yapÄ±sÄ± vardÄ±r.",
+      "8 harflidir ve M ile baÅŸlar.",
+      "Ä°Ã§inde 3 sesli harf bulunur."
+    ]
+  },
+  {
+    "word": "Ä°HTÄ°YAÃ‡",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "Gereksinim, muhtaÃ§ olma durumu.",
+    "hints": [
+      "7 harflidir ve Ä° ile baÅŸlar.",
+      "Ã‡ harfi ile biter.",
+      "Ä°Ã§inde 3 sesli harf bulunur.",
+      "5. harfi 'Y' ÅŸeklindedir.",
+      "Toplam 4 sessiz harf iÃ§erir."
+    ]
+  },
+  {
+    "word": "MÃœDAHALE",
+    "category": "Eski Kelimeler",
+    "description": "KarÄ±ÅŸma, araya girme.",
+    "hints": [
+      "Ä°Ã§inde 4 sesli harf bulunur.",
+      "3. harfi 'D' ÅŸeklindedir.",
+      "Toplam 4 sessiz harf iÃ§erir.",
+      "8 harflidir ve M ile baÅŸlar.",
+      "Eski dilde (OsmanlÄ±ca) sÄ±kÃ§a kullanÄ±lan bir yapÄ±sÄ± vardÄ±r."
+    ]
+  },
+  {
+    "word": "Ä°STÄ°FA",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "Kendi isteÄŸiyle gÃ¶revden Ã§ekilme.",
+    "hints": [
+      "Ä°Ã§inde 3 sesli harf bulunur.",
+      "Toplam 3 sessiz harf iÃ§erir.",
+      "A harfi ile biter.",
+      "6 harflidir ve Ä° ile baÅŸlar.",
+      "4. harfi 'Ä°' ÅŸeklindedir."
+    ]
+  },
+  {
+    "word": "MÃœFETTÄ°Å",
+    "category": "Eski Kelimeler",
+    "description": "TeftiÅŸ eden, denetleyen yetkili.",
+    "hints": [
+      "Ä°Ã§inde 3 sesli harf bulunur.",
+      "Eski dilde (OsmanlÄ±ca) sÄ±kÃ§a kullanÄ±lan bir yapÄ±sÄ± vardÄ±r.",
+      "8 harflidir ve M ile baÅŸlar.",
+      "Å harfi ile biter.",
+      "Toplam 5 sessiz harf iÃ§erir."
+    ]
+  },
+  {
+    "word": "Ä°HTÄ°LAL",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "Devrim, kÃ¶klÃ¼ deÄŸiÅŸiklik, ayaklanma.",
+    "hints": [
+      "5. harfi 'L' ÅŸeklindedir.",
+      "Ä°Ã§inde 3 sesli harf bulunur.",
+      "Toplam 4 sessiz harf iÃ§erir.",
+      "L harfi ile biter.",
+      "7 harflidir ve Ä° ile baÅŸlar."
+    ]
+  },
+  {
+    "word": "MÃœHENDÄ°S",
+    "category": "Eski Kelimeler",
+    "description": "Ä°nsanlarÄ±n her tÃ¼rlÃ¼ ihtiyacÄ±nÄ± karÅŸÄ±lamaya dayalÄ± yol, kÃ¶prÃ¼, bina yapan kimse.",
+    "hints": [
+      "8 harflidir ve M ile baÅŸlar.",
+      "Ä°Ã§inde 3 sesli harf bulunur.",
+      "S harfi ile biter.",
+      "Toplam 5 sessiz harf iÃ§erir.",
+      "Eski dilde (OsmanlÄ±ca) sÄ±kÃ§a kullanÄ±lan bir yapÄ±sÄ± vardÄ±r."
+    ]
+  },
+  {
+    "word": "Ä°STÄ°KAMET",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "YÃ¶n, doÄŸrultu.",
+    "hints": [
+      "3. harfi 'T' ÅŸeklindedir.",
+      "Toplam 5 sessiz harf iÃ§erir.",
+      "Ä°Ã§inde 4 sesli harf bulunur.",
+      "9 harflidir ve Ä° ile baÅŸlar.",
+      "T harfi ile biter."
+    ]
+  },
+  {
+    "word": "MÃœDAFAA",
+    "category": "Eski Kelimeler",
+    "description": "Savunma, koruma.",
+    "hints": [
+      "7 harflidir ve M ile baÅŸlar.",
+      "Ä°Ã§inde 4 sesli harf bulunur.",
+      "Eski dilde (OsmanlÄ±ca) sÄ±kÃ§a kullanÄ±lan bir yapÄ±sÄ± vardÄ±r.",
+      "Toplam 3 sessiz harf iÃ§erir.",
+      "A harfi ile biter."
+    ]
+  },
+  {
+    "word": "Ä°HTÄ°RAM",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "SaygÄ± gÃ¶sterme, hÃ¼rmet etme.",
+    "hints": [
+      "4. harfi 'Ä°' ÅŸeklindedir.",
+      "Ä°Ã§inde 3 sesli harf bulunur.",
+      "7 harflidir ve Ä° ile baÅŸlar.",
+      "Toplam 4 sessiz harf iÃ§erir.",
+      "M harfi ile biter."
+    ]
+  },
+  {
+    "word": "MÃœMKÃœN",
+    "category": "Eski Kelimeler",
+    "description": "Olabilir, imkan dahilinde olan.",
+    "hints": [
+      "3. harfi 'M' ÅŸeklindedir.",
+      "Ä°Ã§inde 2 sesli harf bulunur.",
+      "6 harflidir ve M ile baÅŸlar.",
+      "Eski dilde (OsmanlÄ±ca) sÄ±kÃ§a kullanÄ±lan bir yapÄ±sÄ± vardÄ±r.",
+      "N harfi ile biter."
+    ]
+  },
+  {
+    "word": "Ä°STÄ°RAHAM",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "Merhamet dileme, yalvarma.",
+    "hints": [
+      "2. harfi 'S' ÅŸeklindedir.",
+      "9 harflidir ve Ä° ile baÅŸlar.",
+      "M harfi ile biter.",
+      "Ä°Ã§inde 4 sesli harf bulunur.",
+      "Toplam 5 sessiz harf iÃ§erir."
+    ]
+  },
+  {
+    "word": "MÃœELLÄ°F",
+    "category": "Eski Kelimeler",
+    "description": "Yazar, kitap yazan kimse.",
+    "hints": [
+      "Ä°Ã§inde 3 sesli harf bulunur.",
+      "Toplam 4 sessiz harf iÃ§erir.",
+      "6. harfi 'Ä°' ÅŸeklindedir.",
+      "F harfi ile biter.",
+      "7 harflidir ve M ile baÅŸlar."
+    ]
+  },
+  {
+    "word": "Ä°HTÄ°SAS",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "UzmanlÄ±k, bir konuda derinleÅŸme.",
+    "hints": [
+      "Ä°Ã§inde 3 sesli harf bulunur.",
+      "7 harflidir ve Ä° ile baÅŸlar.",
+      "Toplam 4 sessiz harf iÃ§erir.",
+      "S harfi ile biter.",
+      "3. harfi 'T' ÅŸeklindedir."
+    ]
+  },
+  {
+    "word": "MÃœDRÄ°K",
+    "category": "Eski Kelimeler",
+    "description": "Ä°drak eden, anlayan, kavrayan.",
+    "hints": [
+      "6 harflidir ve M ile baÅŸlar.",
+      "3. harfi 'D' ÅŸeklindedir.",
+      "Eski dilde (OsmanlÄ±ca) sÄ±kÃ§a kullanÄ±lan bir yapÄ±sÄ± vardÄ±r.",
+      "Toplam 4 sessiz harf iÃ§erir.",
+      "K harfi ile biter."
+    ]
+  },
+  {
+    "word": "Ä°STÄ°DAT",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "Yetenek, kabiliyet.",
+    "hints": [
+      "Ä°Ã§inde 3 sesli harf bulunur.",
+      "2. harfi 'S' ÅŸeklindedir.",
+      "T harfi ile biter.",
+      "Toplam 4 sessiz harf iÃ§erir.",
+      "7 harflidir ve Ä° ile baÅŸlar."
+    ]
+  },
+  {
+    "word": "MÃœYESSER",
+    "category": "Eski Kelimeler",
+    "description": "Kolay gelen, nasip olan.",
+    "hints": [
+      "Toplam 5 sessiz harf iÃ§erir.",
+      "Ä°Ã§inde 3 sesli harf bulunur.",
+      "8 harflidir ve M ile baÅŸlar.",
+      "Eski dilde (OsmanlÄ±ca) sÄ±kÃ§a kullanÄ±lan bir yapÄ±sÄ± vardÄ±r.",
+      "3. harfi 'Y' ÅŸeklindedir."
+    ]
+  },
+  {
+    "word": "ABAKÃœS",
+    "category": "Genel KÃ¼ltÃ¼r",
+    "description": "SayÄ± boncuÄŸu, aritmetik hesaplarÄ±nda kullanÄ±lan basit alet.",
+    "hints": [
+      "4. harfi 'K' ÅŸeklindedir.",
+      "S harfi ile biter.",
+      "Ä°Ã§inde 3 sesli harf bulunur.",
+      "Toplam 3 sessiz harf iÃ§erir.",
+      "6 harflidir ve A ile baÅŸlar."
+    ]
+  }
+]

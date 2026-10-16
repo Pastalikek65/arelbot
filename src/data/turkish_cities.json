@@ -1,0 +1,2121 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-10-04",
+  "source": {
+    "administrative": "https://github.com/mumeyyizbuyuk/turkiye-data",
+    "administrative_license": "MIT",
+    "phone_codes": "https://www.btk.gov.tr/en/national-numbering-plan"
+  },
+  "cities": [
+    {
+      "id": "TR-01",
+      "name": "Adana",
+      "plate": 1,
+      "phone": [
+        322
+      ],
+      "region": "Akdeniz",
+      "districts": [
+        "AladaÄŸ",
+        "Ceyhan",
+        "Feke",
+        "Ä°mamoÄŸlu",
+        "KaraisalÄ±",
+        "KarataÅŸ",
+        "Kozan",
+        "PozantÄ±",
+        "Saimbeyli",
+        "SarÄ±Ã§am",
+        "Seyhan",
+        "Tufanbeyli",
+        "YumurtalÄ±k",
+        "YÃ¼reÄŸir",
+        "Ã‡ukurova"
+      ],
+      "latitude": 36.9863599,
+      "longitude": 35.3252861,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-02",
+      "name": "AdÄ±yaman",
+      "plate": 2,
+      "phone": [
+        416
+      ],
+      "region": "GÃ¼neydoÄŸu Anadolu",
+      "districts": [
+        "Besni",
+        "Gerger",
+        "GÃ¶lbaÅŸÄ±",
+        "Kahta",
+        "Merkez",
+        "Samsat",
+        "Sincik",
+        "Tut",
+        "Ã‡elikhan"
+      ],
+      "latitude": 37.7602985,
+      "longitude": 38.2772986,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-03",
+      "name": "Afyonkarahisar",
+      "plate": 3,
+      "phone": [
+        272
+      ],
+      "region": "Ege",
+      "districts": [
+        "Bayat",
+        "BaÅŸmakÃ§Ä±",
+        "Bolvadin",
+        "DazkÄ±rÄ±",
+        "Dinar",
+        "EmirdaÄŸ",
+        "Evciler",
+        "Hocalar",
+        "Ä°hsaniye",
+        "Ä°scehisar",
+        "KÄ±zÄ±lÃ¶ren",
+        "Merkez",
+        "SandÄ±klÄ±",
+        "SinanpaÅŸa",
+        "SultandaÄŸÄ±",
+        "Ã‡ay",
+        "Ã‡obanlar",
+        "Åuhut"
+      ],
+      "latitude": 38.7568597,
+      "longitude": 30.5387044,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-04",
+      "name": "AÄŸrÄ±",
+      "plate": 4,
+      "phone": [
+        472
+      ],
+      "region": "DoÄŸu Anadolu",
+      "districts": [
+        "Diyadin",
+        "DoÄŸubayazÄ±t",
+        "EleÅŸkirt",
+        "Hamur",
+        "Merkez",
+        "Patnos",
+        "TaÅŸlÄ±Ã§ay",
+        "Tutak"
+      ],
+      "latitude": 39.719125,
+      "longitude": 43.0504894,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-05",
+      "name": "Amasya",
+      "plate": 5,
+      "phone": [
+        358
+      ],
+      "region": "Karadeniz",
+      "districts": [
+        "GÃ¶ynÃ¼cek",
+        "GÃ¼mÃ¼ÅŸhacÄ±kÃ¶y",
+        "HamamÃ¶zÃ¼",
+        "Merkez",
+        "Merzifon",
+        "Suluova",
+        "TaÅŸova"
+      ],
+      "latitude": 40.6503248,
+      "longitude": 35.8329148,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-06",
+      "name": "Ankara",
+      "plate": 6,
+      "phone": [
+        312
+      ],
+      "region": "Ä°Ã§ Anadolu",
+      "districts": [
+        "Akyurt",
+        "AltÄ±ndaÄŸ",
+        "AyaÅŸ",
+        "Bala",
+        "BeypazarÄ±",
+        "ElmadaÄŸ",
+        "Etimesgut",
+        "Evren",
+        "GÃ¶lbaÅŸÄ±",
+        "GÃ¼dÃ¼l",
+        "Haymana",
+        "Kahramankazan",
+        "Kalecik",
+        "KeÃ§iÃ¶ren",
+        "KÄ±zÄ±lcahamam",
+        "Mamak",
+        "NallÄ±han",
+        "PolatlÄ±",
+        "Pursaklar",
+        "Sincan",
+        "Yenimahalle",
+        "Ã‡amlÄ±dere",
+        "Ã‡ankaya",
+        "Ã‡ubuk",
+        "ÅereflikoÃ§hisar"
+      ],
+      "latitude": 39.9207759,
+      "longitude": 32.8540497,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-07",
+      "name": "Antalya",
+      "plate": 7,
+      "phone": [
+        242
+      ],
+      "region": "Akdeniz",
+      "districts": [
+        "Akseki",
+        "Aksu",
+        "Alanya",
+        "Demre",
+        "DÃ¶ÅŸemealtÄ±",
+        "ElmalÄ±",
+        "Finike",
+        "GazipaÅŸa",
+        "GÃ¼ndoÄŸmuÅŸ",
+        "Ä°bradÄ±",
+        "KaÅŸ",
+        "Kemer",
+        "Kepez",
+        "KonyaaltÄ±",
+        "Korkuteli",
+        "Kumluca",
+        "Manavgat",
+        "MuratpaÅŸa",
+        "Serik"
+      ],
+      "latitude": 36.8865728,
+      "longitude": 30.7030242,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-08",
+      "name": "Artvin",
+      "plate": 8,
+      "phone": [
+        466
+      ],
+      "region": "Karadeniz",
+      "districts": [
+        "ArdanuÃ§",
+        "Arhavi",
+        "BorÃ§ka",
+        "Hopa",
+        "KemalpaÅŸa",
+        "Merkez",
+        "Murgul",
+        "Yusufeli",
+        "ÅavÅŸat"
+      ],
+      "latitude": 41.1830811,
+      "longitude": 41.8287448,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-09",
+      "name": "AydÄ±n",
+      "plate": 9,
+      "phone": [
+        256
+      ],
+      "region": "Ege",
+      "districts": [
+        "BozdoÄŸan",
+        "Buharkent",
+        "Didim",
+        "Efeler",
+        "Germencik",
+        "Ä°ncirliova",
+        "Karacasu",
+        "Karpuzlu",
+        "KoÃ§arlÄ±",
+        "Kuyucak",
+        "KuÅŸadasÄ±",
+        "KÃ¶ÅŸk",
+        "Nazilli",
+        "Sultanhisar",
+        "SÃ¶ke",
+        "Yenipazar",
+        "Ã‡ine"
+      ],
+      "latitude": 37.8483767,
+      "longitude": 27.8435878,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-10",
+      "name": "BalÄ±kesir",
+      "plate": 10,
+      "phone": [
+        266
+      ],
+      "region": "Marmara",
+      "districts": [
+        "AltÄ±eylÃ¼l",
+        "AyvalÄ±k",
+        "Balya",
+        "BandÄ±rma",
+        "BigadiÃ§",
+        "Burhaniye",
+        "Dursunbey",
+        "Edremit",
+        "Erdek",
+        "GÃ¶meÃ§",
+        "GÃ¶nen",
+        "Havran",
+        "Ä°vrindi",
+        "Karesi",
+        "Kepsut",
+        "Manyas",
+        "Marmara",
+        "SavaÅŸtepe",
+        "Susurluk",
+        "SÄ±ndÄ±rgÄ±"
+      ],
+      "latitude": 39.6473917,
+      "longitude": 27.8879787,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-11",
+      "name": "Bilecik",
+      "plate": 11,
+      "phone": [
+        228
+      ],
+      "region": "Marmara",
+      "districts": [
+        "BozÃ¼yÃ¼k",
+        "GÃ¶lpazarÄ±",
+        "Ä°nhisar",
+        "Merkez",
+        "Osmaneli",
+        "Pazaryeri",
+        "SÃ¶ÄŸÃ¼t",
+        "Yenipazar"
+      ],
+      "latitude": 40.1435101,
+      "longitude": 29.9752911,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-12",
+      "name": "BingÃ¶l",
+      "plate": 12,
+      "phone": [
+        426
+      ],
+      "region": "DoÄŸu Anadolu",
+      "districts": [
+        "AdaklÄ±",
+        "GenÃ§",
+        "KarlÄ±ova",
+        "KiÄŸÄ±",
+        "Merkez",
+        "Solhan",
+        "Yayladere",
+        "Yedisu"
+      ],
+      "latitude": 38.8861265,
+      "longitude": 40.4972333,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-13",
+      "name": "Bitlis",
+      "plate": 13,
+      "phone": [
+        434
+      ],
+      "region": "DoÄŸu Anadolu",
+      "districts": [
+        "Adilcevaz",
+        "Ahlat",
+        "GÃ¼roymak",
+        "Hizan",
+        "Merkez",
+        "Mutki",
+        "Tatvan"
+      ],
+      "latitude": 38.4020539,
+      "longitude": 42.1084568,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-14",
+      "name": "Bolu",
+      "plate": 14,
+      "phone": [
+        374
+      ],
+      "region": "Karadeniz",
+      "districts": [
+        "DÃ¶rtdivan",
+        "Gerede",
+        "GÃ¶ynÃ¼k",
+        "KÄ±brÄ±scÄ±k",
+        "Mengen",
+        "Merkez",
+        "Mudurnu",
+        "Seben",
+        "YeniÃ§aÄŸa"
+      ],
+      "latitude": 40.7332953,
+      "longitude": 31.6110479,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-15",
+      "name": "Burdur",
+      "plate": 15,
+      "phone": [
+        248
+      ],
+      "region": "Akdeniz",
+      "districts": [
+        "AltÄ±nyayla",
+        "AÄŸlasun",
+        "Bucak",
+        "GÃ¶lhisar",
+        "KaramanlÄ±",
+        "Kemer",
+        "Merkez",
+        "Tefenni",
+        "YeÅŸilova",
+        "Ã‡avdÄ±r",
+        "Ã‡eltikÃ§i"
+      ],
+      "latitude": 37.7248394,
+      "longitude": 30.2887286,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-16",
+      "name": "Bursa",
+      "plate": 16,
+      "phone": [
+        224
+      ],
+      "region": "Marmara",
+      "districts": [
+        "BÃ¼yÃ¼korhan",
+        "Gemlik",
+        "GÃ¼rsu",
+        "HarmancÄ±k",
+        "Ä°negÃ¶l",
+        "Ä°znik",
+        "Karacabey",
+        "Keles",
+        "Kestel",
+        "Mudanya",
+        "MustafakemalpaÅŸa",
+        "NilÃ¼fer",
+        "Orhaneli",
+        "Orhangazi",
+        "Osmangazi",
+        "YeniÅŸehir",
+        "YÄ±ldÄ±rÄ±m"
+      ],
+      "latitude": 40.1825734,
+      "longitude": 29.0675039,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-17",
+      "name": "Ã‡anakkale",
+      "plate": 17,
+      "phone": [
+        286
+      ],
+      "region": "Marmara",
+      "districts": [
+        "AyvacÄ±k",
+        "BayramiÃ§",
+        "Biga",
+        "Bozcaada",
+        "Eceabat",
+        "Ezine",
+        "Gelibolu",
+        "GÃ¶kÃ§eada",
+        "Lapseki",
+        "Merkez",
+        "Yenice",
+        "Ã‡an"
+      ],
+      "latitude": 40.146271,
+      "longitude": 26.4028892,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-18",
+      "name": "Ã‡ankÄ±rÄ±",
+      "plate": 18,
+      "phone": [
+        376
+      ],
+      "region": "Ä°Ã§ Anadolu",
+      "districts": [
+        "Atkaracalar",
+        "BayramÃ¶ren",
+        "Eldivan",
+        "Ilgaz",
+        "Korgun",
+        "KurÅŸunlu",
+        "KÄ±zÄ±lÄ±rmak",
+        "Merkez",
+        "Orta",
+        "YapraklÄ±",
+        "Ã‡erkeÅŸ",
+        "ÅabanÃ¶zÃ¼"
+      ],
+      "latitude": 40.5971947,
+      "longitude": 33.6212704,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-19",
+      "name": "Ã‡orum",
+      "plate": 19,
+      "phone": [
+        364
+      ],
+      "region": "Karadeniz",
+      "districts": [
+        "Alaca",
+        "Bayat",
+        "BoÄŸazkale",
+        "Dodurga",
+        "Ä°skilip",
+        "KargÄ±",
+        "LaÃ§in",
+        "MecitÃ¶zÃ¼",
+        "Merkez",
+        "OrtakÃ¶y",
+        "OsmancÄ±k",
+        "OÄŸuzlar",
+        "Sungurlu",
+        "UÄŸurludaÄŸ"
+      ],
+      "latitude": 40.5499106,
+      "longitude": 34.9537344,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-20",
+      "name": "Denizli",
+      "plate": 20,
+      "phone": [
+        258
+      ],
+      "region": "Ege",
+      "districts": [
+        "AcÄ±payam",
+        "BabadaÄŸ",
+        "Baklan",
+        "Bekilli",
+        "BeyaÄŸaÃ§",
+        "Bozkurt",
+        "Buldan",
+        "GÃ¼ney",
+        "Honaz",
+        "Kale",
+        "Merkezefendi",
+        "Pamukkale",
+        "SaraykÃ¶y",
+        "Serinhisar",
+        "Tavas",
+        "Ã‡al",
+        "Ã‡ameli",
+        "Ã‡ardak",
+        "Ã‡ivril"
+      ],
+      "latitude": 37.7827875,
+      "longitude": 29.0966476,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-21",
+      "name": "DiyarbakÄ±r",
+      "plate": 21,
+      "phone": [
+        412
+      ],
+      "region": "GÃ¼neydoÄŸu Anadolu",
+      "districts": [
+        "BaÄŸlar",
+        "Bismil",
+        "Dicle",
+        "Ergani",
+        "EÄŸil",
+        "Hani",
+        "Hazro",
+        "KayapÄ±nar",
+        "KocakÃ¶y",
+        "Kulp",
+        "Lice",
+        "Silvan",
+        "Sur",
+        "YeniÅŸehir",
+        "Ã‡ermik",
+        "Ã‡Ã¼ngÃ¼ÅŸ",
+        "Ã‡Ä±nar"
+      ],
+      "latitude": 37.9162222,
+      "longitude": 40.2363542,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-22",
+      "name": "Edirne",
+      "plate": 22,
+      "phone": [
+        284
+      ],
+      "region": "Marmara",
+      "districts": [
+        "Enez",
+        "Havsa",
+        "Ä°psala",
+        "KeÅŸan",
+        "LalapaÅŸa",
+        "MeriÃ§",
+        "Merkez",
+        "SÃ¼loÄŸlu",
+        "UzunkÃ¶prÃ¼"
+      ],
+      "latitude": 41.6759327,
+      "longitude": 26.5587225,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-23",
+      "name": "ElazÄ±ÄŸ",
+      "plate": 23,
+      "phone": [
+        424
+      ],
+      "region": "DoÄŸu Anadolu",
+      "districts": [
+        "Alacakaya",
+        "ArÄ±cak",
+        "AÄŸÄ±n",
+        "Baskil",
+        "KarakoÃ§an",
+        "Keban",
+        "KovancÄ±lar",
+        "Maden",
+        "Merkez",
+        "Palu",
+        "Sivrice"
+      ],
+      "latitude": 38.6747164,
+      "longitude": 39.2227135,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-24",
+      "name": "Erzincan",
+      "plate": 24,
+      "phone": [
+        446
+      ],
+      "region": "DoÄŸu Anadolu",
+      "districts": [
+        "Ä°liÃ§",
+        "Kemah",
+        "Kemaliye",
+        "Merkez",
+        "Otlukbeli",
+        "Refahiye",
+        "Tercan",
+        "Ã‡ayÄ±rlÄ±",
+        "ÃœzÃ¼mlÃ¼"
+      ],
+      "latitude": 39.7467552,
+      "longitude": 39.49103,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-25",
+      "name": "Erzurum",
+      "plate": 25,
+      "phone": [
+        442
+      ],
+      "region": "DoÄŸu Anadolu",
+      "districts": [
+        "Aziziye",
+        "AÅŸkale",
+        "Horasan",
+        "HÄ±nÄ±s",
+        "Ä°spir",
+        "KarayazÄ±",
+        "KaraÃ§oban",
+        "KÃ¶prÃ¼kÃ¶y",
+        "Narman",
+        "Oltu",
+        "Olur",
+        "PalandÃ¶ken",
+        "Pasinler",
+        "Pazaryolu",
+        "Tekman",
+        "Tortum",
+        "Uzundere",
+        "Yakutiye",
+        "Ã‡at",
+        "Åenkaya"
+      ],
+      "latitude": 39.90632,
+      "longitude": 41.2727715,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-26",
+      "name": "EskiÅŸehir",
+      "plate": 26,
+      "phone": [
+        222
+      ],
+      "region": "Ä°Ã§ Anadolu",
+      "districts": [
+        "Alpu",
+        "Beylikova",
+        "GÃ¼nyÃ¼zÃ¼",
+        "Han",
+        "Ä°nÃ¶nÃ¼",
+        "Mahmudiye",
+        "Mihalgazi",
+        "MihalÄ±Ã§Ã§Ä±k",
+        "OdunpazarÄ±",
+        "SarÄ±cakaya",
+        "Seyitgazi",
+        "Sivrihisar",
+        "TepebaÅŸÄ±",
+        "Ã‡ifteler"
+      ],
+      "latitude": 39.7743941,
+      "longitude": 30.519116,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-27",
+      "name": "Gaziantep",
+      "plate": 27,
+      "phone": [
+        342
+      ],
+      "region": "GÃ¼neydoÄŸu Anadolu",
+      "districts": [
+        "Araban",
+        "Ä°slahiye",
+        "KarkamÄ±ÅŸ",
+        "Nizip",
+        "NurdaÄŸÄ±",
+        "OÄŸuzeli",
+        "Yavuzeli",
+        "Åahinbey",
+        "Åehitkamil"
+      ],
+      "latitude": 37.0628317,
+      "longitude": 37.3792617,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-28",
+      "name": "Giresun",
+      "plate": 28,
+      "phone": [
+        454
+      ],
+      "region": "Karadeniz",
+      "districts": [
+        "Alucra",
+        "Bulancak",
+        "Dereli",
+        "DoÄŸankent",
+        "Espiye",
+        "Eynesil",
+        "GÃ¶rele",
+        "GÃ¼ce",
+        "KeÅŸap",
+        "Merkez",
+        "Piraziz",
+        "Tirebolu",
+        "YaÄŸlÄ±dere",
+        "Ã‡amoluk",
+        "Ã‡anakÃ§Ä±",
+        "Åebinkarahisar"
+      ],
+      "latitude": 40.9174453,
+      "longitude": 38.3847864,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-29",
+      "name": "GÃ¼mÃ¼ÅŸhane",
+      "plate": 29,
+      "phone": [
+        456
+      ],
+      "region": "Karadeniz",
+      "districts": [
+        "Kelkit",
+        "KÃ¶se",
+        "KÃ¼rtÃ¼n",
+        "Merkez",
+        "Torul",
+        "Åiran"
+      ],
+      "latitude": 40.4617844,
+      "longitude": 39.4757339,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-30",
+      "name": "Hakkari",
+      "plate": 30,
+      "phone": [
+        438
+      ],
+      "region": "DoÄŸu Anadolu",
+      "districts": [
+        "Derecik",
+        "Merkez",
+        "YÃ¼ksekova",
+        "Ã‡ukurca",
+        "Åemdinli"
+      ],
+      "latitude": 37.5766959,
+      "longitude": 43.7377862,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-31",
+      "name": "Hatay",
+      "plate": 31,
+      "phone": [
+        326
+      ],
+      "region": "Akdeniz",
+      "districts": [
+        "AltÄ±nÃ¶zÃ¼",
+        "Antakya",
+        "Arsuz",
+        "Belen",
+        "Defne",
+        "DÃ¶rtyol",
+        "Erzin",
+        "Hassa",
+        "Ä°skenderun",
+        "Kumlu",
+        "KÄ±rÄ±khan",
+        "Payas",
+        "ReyhanlÄ±",
+        "SamandaÄŸ",
+        "YayladaÄŸÄ±"
+      ],
+      "latitude": 36.2025471,
+      "longitude": 36.1602908,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-32",
+      "name": "Isparta",
+      "plate": 32,
+      "phone": [
+        246
+      ],
+      "region": "Akdeniz",
+      "districts": [
+        "Aksu",
+        "Atabey",
+        "EÄŸirdir",
+        "Gelendost",
+        "GÃ¶nen",
+        "KeÃ§iborlu",
+        "Merkez",
+        "Senirkent",
+        "SÃ¼tÃ§Ã¼ler",
+        "Uluborlu",
+        "YalvaÃ§",
+        "YeniÅŸarbademli",
+        "ÅarkikaraaÄŸaÃ§"
+      ],
+      "latitude": 37.7636722,
+      "longitude": 30.5550569,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-33",
+      "name": "Mersin",
+      "plate": 33,
+      "phone": [
+        324
+      ],
+      "region": "Akdeniz",
+      "districts": [
+        "Akdeniz",
+        "Anamur",
+        "AydÄ±ncÄ±k",
+        "BozyazÄ±",
+        "Erdemli",
+        "GÃ¼lnar",
+        "Mezitli",
+        "Mut",
+        "Silifke",
+        "Tarsus",
+        "Toroslar",
+        "YeniÅŸehir",
+        "Ã‡amlÄ±yayla"
+      ],
+      "latitude": 36.7978381,
+      "longitude": 34.6298391,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-34",
+      "name": "Ä°stanbul",
+      "plate": 34,
+      "phone": [
+        212,
+        216
+      ],
+      "region": "Marmara",
+      "districts": [
+        "Adalar",
+        "ArnavutkÃ¶y",
+        "AtaÅŸehir",
+        "AvcÄ±lar",
+        "BahÃ§elievler",
+        "BakÄ±rkÃ¶y",
+        "BayrampaÅŸa",
+        "BaÄŸcÄ±lar",
+        "BaÅŸakÅŸehir",
+        "Beykoz",
+        "BeylikdÃ¼zÃ¼",
+        "BeyoÄŸlu",
+        "BeÅŸiktaÅŸ",
+        "BÃ¼yÃ¼kÃ§ekmece",
+        "Esenler",
+        "Esenyurt",
+        "EyÃ¼psultan",
+        "Fatih",
+        "GaziosmanpaÅŸa",
+        "GÃ¼ngÃ¶ren",
+        "KadÄ±kÃ¶y",
+        "Kartal",
+        "KaÄŸÄ±thane",
+        "KÃ¼Ã§Ã¼kÃ§ekmece",
+        "Maltepe",
+        "Pendik",
+        "Sancaktepe",
+        "SarÄ±yer",
+        "Silivri",
+        "Sultanbeyli",
+        "Sultangazi",
+        "Tuzla",
+        "Zeytinburnu",
+        "Ã‡atalca",
+        "Ã‡ekmekÃ¶y",
+        "Ãœmraniye",
+        "ÃœskÃ¼dar",
+        "Åile",
+        "ÅiÅŸli"
+      ],
+      "latitude": 41.006381,
+      "longitude": 28.9758715,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-35",
+      "name": "Ä°zmir",
+      "plate": 35,
+      "phone": [
+        232
+      ],
+      "region": "Ege",
+      "districts": [
+        "AliaÄŸa",
+        "BalÃ§ova",
+        "BayraklÄ±",
+        "BayÄ±ndÄ±r",
+        "Bergama",
+        "BeydaÄŸ",
+        "Bornova",
+        "Buca",
+        "Dikili",
+        "FoÃ§a",
+        "Gaziemir",
+        "GÃ¼zelbahÃ§e",
+        "KarabaÄŸlar",
+        "Karaburun",
+        "KarÅŸÄ±yaka",
+        "KemalpaÅŸa",
+        "Kiraz",
+        "Konak",
+        "KÄ±nÄ±k",
+        "Menderes",
+        "Menemen",
+        "NarlÄ±dere",
+        "Seferihisar",
+        "SelÃ§uk",
+        "Tire",
+        "TorbalÄ±",
+        "Urla",
+        "Ã‡eÅŸme",
+        "Ã‡iÄŸli",
+        "Ã–demiÅŸ"
+      ],
+      "latitude": 38.4192537,
+      "longitude": 27.128469,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-36",
+      "name": "Kars",
+      "plate": 36,
+      "phone": [
+        474
+      ],
+      "region": "DoÄŸu Anadolu",
+      "districts": [
+        "Akyaka",
+        "ArpaÃ§ay",
+        "Digor",
+        "KaÄŸÄ±zman",
+        "Merkez",
+        "SarÄ±kamÄ±ÅŸ",
+        "Selim",
+        "Susuz"
+      ],
+      "latitude": 40.6070761,
+      "longitude": 43.0947521,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-37",
+      "name": "Kastamonu",
+      "plate": 37,
+      "phone": [
+        366
+      ],
+      "region": "Karadeniz",
+      "districts": [
+        "Abana",
+        "AraÃ§",
+        "Azdavay",
+        "AÄŸlÄ±",
+        "Bozkurt",
+        "Cide",
+        "Daday",
+        "Devrekani",
+        "DoÄŸanyurt",
+        "HanÃ¶nÃ¼",
+        "Ä°hsangazi",
+        "Ä°nebolu",
+        "KÃ¼re",
+        "Merkez",
+        "PÄ±narbaÅŸÄ±",
+        "Seydiler",
+        "TaÅŸkÃ¶prÃ¼",
+        "Tosya",
+        "Ã‡atalzeytin",
+        "Åenpazar"
+      ],
+      "latitude": 41.3765359,
+      "longitude": 33.7770087,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-38",
+      "name": "Kayseri",
+      "plate": 38,
+      "phone": [
+        352
+      ],
+      "region": "Ä°Ã§ Anadolu",
+      "districts": [
+        "AkkÄ±ÅŸla",
+        "BÃ¼nyan",
+        "Develi",
+        "Felahiye",
+        "HacÄ±lar",
+        "Ä°ncesu",
+        "Kocasinan",
+        "Melikgazi",
+        "PÄ±narbaÅŸÄ±",
+        "SarÄ±oÄŸlan",
+        "SarÄ±z",
+        "Talas",
+        "Tomarza",
+        "YahyalÄ±",
+        "YeÅŸilhisar",
+        "Ã–zvatan"
+      ],
+      "latitude": 38.7219011,
+      "longitude": 35.4873214,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-39",
+      "name": "KÄ±rklareli",
+      "plate": 39,
+      "phone": [
+        288
+      ],
+      "region": "Marmara",
+      "districts": [
+        "Babaeski",
+        "DemirkÃ¶y",
+        "KofÃ§az",
+        "LÃ¼leburgaz",
+        "Merkez",
+        "PehlivankÃ¶y",
+        "PÄ±narhisar",
+        "Vize"
+      ],
+      "latitude": 41.7370223,
+      "longitude": 27.2235523,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-40",
+      "name": "KÄ±rÅŸehir",
+      "plate": 40,
+      "phone": [
+        386
+      ],
+      "region": "Ä°Ã§ Anadolu",
+      "districts": [
+        "AkpÄ±nar",
+        "AkÃ§akent",
+        "Boztepe",
+        "Kaman",
+        "Merkez",
+        "Mucur",
+        "Ã‡iÃ§ekdaÄŸÄ±"
+      ],
+      "latitude": 39.1461142,
+      "longitude": 34.1605587,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-41",
+      "name": "Kocaeli",
+      "plate": 41,
+      "phone": [
+        262
+      ],
+      "region": "Marmara",
+      "districts": [
+        "BaÅŸiskele",
+        "DarÄ±ca",
+        "Derince",
+        "DilovasÄ±",
+        "Gebze",
+        "GÃ¶lcÃ¼k",
+        "Ä°zmit",
+        "KandÄ±ra",
+        "KaramÃ¼rsel",
+        "Kartepe",
+        "KÃ¶rfez",
+        "Ã‡ayÄ±rova"
+      ],
+      "latitude": 40.7653892,
+      "longitude": 29.9407361,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-42",
+      "name": "Konya",
+      "plate": 42,
+      "phone": [
+        332
+      ],
+      "region": "Ä°Ã§ Anadolu",
+      "districts": [
+        "AhÄ±rlÄ±",
+        "AkÃ¶ren",
+        "AkÅŸehir",
+        "AltÄ±nekin",
+        "BeyÅŸehir",
+        "BozkÄ±r",
+        "Cihanbeyli",
+        "Derbent",
+        "Derebucak",
+        "DoÄŸanhisar",
+        "Emirgazi",
+        "EreÄŸli",
+        "GÃ¼neysÄ±nÄ±r",
+        "Hadim",
+        "HalkapÄ±nar",
+        "HÃ¼yÃ¼k",
+        "IlgÄ±n",
+        "KadÄ±nhanÄ±",
+        "KarapÄ±nar",
+        "Karatay",
+        "Kulu",
+        "Meram",
+        "SarayÃ¶nÃ¼",
+        "SelÃ§uklu",
+        "SeydiÅŸehir",
+        "TaÅŸkent",
+        "TuzlukÃ§u",
+        "YalÄ±hÃ¼yÃ¼k",
+        "Yunak",
+        "Ã‡eltik",
+        "Ã‡umra"
+      ],
+      "latitude": 37.872734,
+      "longitude": 32.4924376,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-43",
+      "name": "KÃ¼tahya",
+      "plate": 43,
+      "phone": [
+        274
+      ],
+      "region": "Ege",
+      "districts": [
+        "AltÄ±ntaÅŸ",
+        "Aslanapa",
+        "DomaniÃ§",
+        "DumlupÄ±nar",
+        "Emet",
+        "Gediz",
+        "HisarcÄ±k",
+        "Merkez",
+        "Pazarlar",
+        "Simav",
+        "TavÅŸanlÄ±",
+        "Ã‡avdarhisar",
+        "Åaphane"
+      ],
+      "latitude": 39.4199106,
+      "longitude": 29.9857886,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-44",
+      "name": "Malatya",
+      "plate": 44,
+      "phone": [
+        422
+      ],
+      "region": "DoÄŸu Anadolu",
+      "districts": [
+        "AkÃ§adaÄŸ",
+        "Arapgir",
+        "Arguvan",
+        "Battalgazi",
+        "Darende",
+        "DoÄŸanyol",
+        "DoÄŸanÅŸehir",
+        "Hekimhan",
+        "Kale",
+        "Kuluncak",
+        "PÃ¼tÃ¼rge",
+        "YazÄ±han",
+        "YeÅŸilyurt"
+      ],
+      "latitude": 38.3487153,
+      "longitude": 38.3190674,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-45",
+      "name": "Manisa",
+      "plate": 45,
+      "phone": [
+        236
+      ],
+      "region": "Ege",
+      "districts": [
+        "Ahmetli",
+        "Akhisar",
+        "AlaÅŸehir",
+        "Demirci",
+        "GÃ¶lmarmara",
+        "GÃ¶rdes",
+        "Kula",
+        "KÃ¶prÃ¼baÅŸÄ±",
+        "KÄ±rkaÄŸaÃ§",
+        "Salihli",
+        "SaruhanlÄ±",
+        "SarÄ±gÃ¶l",
+        "Selendi",
+        "Soma",
+        "Turgutlu",
+        "Yunusemre",
+        "Åehzadeler"
+      ],
+      "latitude": 38.6125793,
+      "longitude": 27.4333969,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-46",
+      "name": "KahramanmaraÅŸ",
+      "plate": 46,
+      "phone": [
+        344
+      ],
+      "region": "Akdeniz",
+      "districts": [
+        "AfÅŸin",
+        "AndÄ±rÄ±n",
+        "DulkadiroÄŸlu",
+        "EkinÃ¶zÃ¼",
+        "Elbistan",
+        "GÃ¶ksun",
+        "Nurhak",
+        "OnikiÅŸubat",
+        "PazarcÄ±k",
+        "TÃ¼rkoÄŸlu",
+        "Ã‡aÄŸlayancerit"
+      ],
+      "latitude": 37.5812744,
+      "longitude": 36.927509,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-47",
+      "name": "Mardin",
+      "plate": 47,
+      "phone": [
+        482
+      ],
+      "region": "GÃ¼neydoÄŸu Anadolu",
+      "districts": [
+        "Artuklu",
+        "DargeÃ§it",
+        "Derik",
+        "KÄ±zÄ±ltepe",
+        "MazÄ±daÄŸÄ±",
+        "Midyat",
+        "Nusaybin",
+        "Savur",
+        "YeÅŸilli",
+        "Ã–merli"
+      ],
+      "latitude": 37.3132581,
+      "longitude": 40.7354383,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-48",
+      "name": "MuÄŸla",
+      "plate": 48,
+      "phone": [
+        252
+      ],
+      "region": "Ege",
+      "districts": [
+        "Bodrum",
+        "Dalaman",
+        "DatÃ§a",
+        "Fethiye",
+        "KavaklÄ±dere",
+        "KÃ¶yceÄŸiz",
+        "Marmaris",
+        "MenteÅŸe",
+        "Milas",
+        "Ortaca",
+        "Seydikemer",
+        "Ula",
+        "YataÄŸan"
+      ],
+      "latitude": 37.2151784,
+      "longitude": 28.363733,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-49",
+      "name": "MuÅŸ",
+      "plate": 49,
+      "phone": [
+        436
+      ],
+      "region": "DoÄŸu Anadolu",
+      "districts": [
+        "BulanÄ±k",
+        "HaskÃ¶y",
+        "Korkut",
+        "Malazgirt",
+        "Merkez",
+        "Varto"
+      ],
+      "latitude": 38.7322221,
+      "longitude": 41.4898925,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-50",
+      "name": "NevÅŸehir",
+      "plate": 50,
+      "phone": [
+        384
+      ],
+      "region": "Ä°Ã§ Anadolu",
+      "districts": [
+        "AcÄ±gÃ¶l",
+        "Avanos",
+        "Derinkuyu",
+        "GÃ¼lÅŸehir",
+        "HacÄ±bektaÅŸ",
+        "KozaklÄ±",
+        "Merkez",
+        "ÃœrgÃ¼p"
+      ],
+      "latitude": 38.6250389,
+      "longitude": 34.7150685,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-51",
+      "name": "NiÄŸde",
+      "plate": 51,
+      "phone": [
+        388
+      ],
+      "region": "Ä°Ã§ Anadolu",
+      "districts": [
+        "Altunhisar",
+        "Bor",
+        "Merkez",
+        "UlukÄ±ÅŸla",
+        "Ã‡amardÄ±",
+        "Ã‡iftlik"
+      ],
+      "latitude": 37.969849,
+      "longitude": 34.6764495,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-52",
+      "name": "Ordu",
+      "plate": 52,
+      "phone": [
+        452
+      ],
+      "region": "Karadeniz",
+      "districts": [
+        "AkkuÅŸ",
+        "AltÄ±nordu",
+        "AybastÄ±",
+        "Fatsa",
+        "GÃ¶lkÃ¶y",
+        "GÃ¼lyalÄ±",
+        "GÃ¼rgentepe",
+        "Ä°kizce",
+        "KabadÃ¼z",
+        "KabataÅŸ",
+        "Korgan",
+        "Kumru",
+        "Mesudiye",
+        "PerÅŸembe",
+        "Ulubey",
+        "Ã‡amaÅŸ",
+        "Ã‡atalpÄ±nar",
+        "Ã‡aybaÅŸÄ±",
+        "Ãœnye"
+      ],
+      "latitude": 40.9852301,
+      "longitude": 37.8797732,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-53",
+      "name": "Rize",
+      "plate": 53,
+      "phone": [
+        464
+      ],
+      "region": "Karadeniz",
+      "districts": [
+        "ArdeÅŸen",
+        "DerepazarÄ±",
+        "FÄ±ndÄ±klÄ±",
+        "GÃ¼neysu",
+        "HemÅŸin",
+        "Ä°kizdere",
+        "Ä°yidere",
+        "Kalkandere",
+        "Merkez",
+        "Pazar",
+        "Ã‡amlÄ±hemÅŸin",
+        "Ã‡ayeli"
+      ],
+      "latitude": 41.0248249,
+      "longitude": 40.5199142,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-54",
+      "name": "Sakarya",
+      "plate": 54,
+      "phone": [
+        264
+      ],
+      "region": "Marmara",
+      "districts": [
+        "AdapazarÄ±",
+        "AkyazÄ±",
+        "Arifiye",
+        "Erenler",
+        "Ferizli",
+        "Geyve",
+        "Hendek",
+        "KarapÃ¼rÃ§ek",
+        "Karasu",
+        "Kaynarca",
+        "Kocaali",
+        "Pamukova",
+        "Sapanca",
+        "Serdivan",
+        "SÃ¶ÄŸÃ¼tlÃ¼",
+        "TaraklÄ±"
+      ],
+      "latitude": 40.7726291,
+      "longitude": 30.4038575,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-55",
+      "name": "Samsun",
+      "plate": 55,
+      "phone": [
+        362
+      ],
+      "region": "Karadeniz",
+      "districts": [
+        "19 MayÄ±s",
+        "AlaÃ§am",
+        "AsarcÄ±k",
+        "Atakum",
+        "AyvacÄ±k",
+        "Bafra",
+        "Canik",
+        "Havza",
+        "Ä°lkadÄ±m",
+        "Kavak",
+        "Ladik",
+        "SalÄ±pazarÄ±",
+        "TekkekÃ¶y",
+        "Terme",
+        "VezirkÃ¶prÃ¼",
+        "Yakakent",
+        "Ã‡arÅŸamba"
+      ],
+      "latitude": 41.2946149,
+      "longitude": 36.3320596,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-56",
+      "name": "Siirt",
+      "plate": 56,
+      "phone": [
+        484
+      ],
+      "region": "GÃ¼neydoÄŸu Anadolu",
+      "districts": [
+        "Baykan",
+        "Eruh",
+        "Kurtalan",
+        "Merkez",
+        "Pervari",
+        "Tillo",
+        "Åirvan"
+      ],
+      "latitude": 37.9273623,
+      "longitude": 41.94218,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-57",
+      "name": "Sinop",
+      "plate": 57,
+      "phone": [
+        368
+      ],
+      "region": "Karadeniz",
+      "districts": [
+        "AyancÄ±k",
+        "Boyabat",
+        "Dikmen",
+        "DuraÄŸan",
+        "Erfelek",
+        "Gerze",
+        "Merkez",
+        "SaraydÃ¼zÃ¼",
+        "TÃ¼rkeli"
+      ],
+      "latitude": 42.0265798,
+      "longitude": 35.1511512,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-58",
+      "name": "Sivas",
+      "plate": 58,
+      "phone": [
+        346
+      ],
+      "region": "Ä°Ã§ Anadolu",
+      "districts": [
+        "AkÄ±ncÄ±lar",
+        "AltÄ±nyayla",
+        "DivriÄŸi",
+        "DoÄŸanÅŸar",
+        "Gemerek",
+        "GÃ¶lova",
+        "GÃ¼rÃ¼n",
+        "Hafik",
+        "Ä°mranlÄ±",
+        "Kangal",
+        "Koyulhisar",
+        "Merkez",
+        "SuÅŸehri",
+        "UlaÅŸ",
+        "YÄ±ldÄ±zeli",
+        "Zara",
+        "ÅarkÄ±ÅŸla"
+      ],
+      "latitude": 39.7503574,
+      "longitude": 37.0145173,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-59",
+      "name": "TekirdaÄŸ",
+      "plate": 59,
+      "phone": [
+        282
+      ],
+      "region": "Marmara",
+      "districts": [
+        "Ergene",
+        "Hayrabolu",
+        "KapaklÄ±",
+        "Malkara",
+        "MarmaraereÄŸlisi",
+        "MuratlÄ±",
+        "Saray",
+        "SÃ¼leymanpaÅŸa",
+        "Ã‡erkezkÃ¶y",
+        "Ã‡orlu",
+        "ÅarkÃ¶y"
+      ],
+      "latitude": 40.9781214,
+      "longitude": 27.5107799,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-60",
+      "name": "Tokat",
+      "plate": 60,
+      "phone": [
+        356
+      ],
+      "region": "Karadeniz",
+      "districts": [
+        "Almus",
+        "Artova",
+        "BaÅŸÃ§iftlik",
+        "Erbaa",
+        "Merkez",
+        "Niksar",
+        "Pazar",
+        "ReÅŸadiye",
+        "Sulusaray",
+        "Turhal",
+        "YeÅŸilyurt",
+        "Zile"
+      ],
+      "latitude": 40.3233534,
+      "longitude": 36.552162,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-61",
+      "name": "Trabzon",
+      "plate": 61,
+      "phone": [
+        462
+      ],
+      "region": "Karadeniz",
+      "districts": [
+        "AkÃ§aabat",
+        "AraklÄ±",
+        "Arsin",
+        "BeÅŸikdÃ¼zÃ¼",
+        "DernekpazarÄ±",
+        "DÃ¼zkÃ¶y",
+        "Hayrat",
+        "KÃ¶prÃ¼baÅŸÄ±",
+        "MaÃ§ka",
+        "Of",
+        "Ortahisar",
+        "SÃ¼rmene",
+        "Tonya",
+        "VakfÄ±kebir",
+        "Yomra",
+        "Ã‡arÅŸÄ±baÅŸÄ±",
+        "Ã‡aykara",
+        "ÅalpazarÄ±"
+      ],
+      "latitude": 41.0054605,
+      "longitude": 39.7301463,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-62",
+      "name": "Tunceli",
+      "plate": 62,
+      "phone": [
+        428
+      ],
+      "region": "DoÄŸu Anadolu",
+      "districts": [
+        "Hozat",
+        "Mazgirt",
+        "Merkez",
+        "NazÄ±miye",
+        "OvacÄ±k",
+        "Pertek",
+        "PÃ¼lÃ¼mÃ¼r",
+        "Ã‡emiÅŸgezek"
+      ],
+      "latitude": 39.1060641,
+      "longitude": 39.5482693,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-63",
+      "name": "ÅanlÄ±urfa",
+      "plate": 63,
+      "phone": [
+        414
+      ],
+      "region": "GÃ¼neydoÄŸu Anadolu",
+      "districts": [
+        "AkÃ§akale",
+        "Birecik",
+        "Bozova",
+        "CeylanpÄ±nar",
+        "EyyÃ¼biye",
+        "Halfeti",
+        "Haliliye",
+        "Harran",
+        "Hilvan",
+        "KarakÃ¶prÃ¼",
+        "Siverek",
+        "SuruÃ§",
+        "ViranÅŸehir"
+      ],
+      "latitude": 37.1596239,
+      "longitude": 38.791929,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-64",
+      "name": "UÅŸak",
+      "plate": 64,
+      "phone": [
+        276
+      ],
+      "region": "Ege",
+      "districts": [
+        "Banaz",
+        "EÅŸme",
+        "KarahallÄ±",
+        "Merkez",
+        "SivaslÄ±",
+        "Ulubey"
+      ],
+      "latitude": 38.6740401,
+      "longitude": 29.4058419,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-65",
+      "name": "Van",
+      "plate": 65,
+      "phone": [
+        432
+      ],
+      "region": "DoÄŸu Anadolu",
+      "districts": [
+        "BahÃ§esaray",
+        "BaÅŸkale",
+        "Edremit",
+        "ErciÅŸ",
+        "GevaÅŸ",
+        "GÃ¼rpÄ±nar",
+        "Ä°pekyolu",
+        "Muradiye",
+        "Saray",
+        "TuÅŸba",
+        "Ã‡aldÄ±ran",
+        "Ã‡atak",
+        "Ã–zalp"
+      ],
+      "latitude": 38.500875,
+      "longitude": 43.3946051,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-66",
+      "name": "Yozgat",
+      "plate": 66,
+      "phone": [
+        354
+      ],
+      "region": "Ä°Ã§ Anadolu",
+      "districts": [
+        "AkdaÄŸmadeni",
+        "AydÄ±ncÄ±k",
+        "BoÄŸazlÄ±yan",
+        "KadÄ±ÅŸehri",
+        "Merkez",
+        "Saraykent",
+        "SarÄ±kaya",
+        "Sorgun",
+        "YenifakÄ±lÄ±",
+        "YerkÃ¶y",
+        "Ã‡andÄ±r",
+        "Ã‡ayÄ±ralan",
+        "Ã‡ekerek",
+        "Åefaatli"
+      ],
+      "latitude": 39.8221974,
+      "longitude": 34.8080972,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-67",
+      "name": "Zonguldak",
+      "plate": 67,
+      "phone": [
+        372
+      ],
+      "region": "Karadeniz",
+      "districts": [
+        "AlaplÄ±",
+        "Devrek",
+        "EreÄŸli",
+        "GÃ¶kÃ§ebey",
+        "Kilimli",
+        "Kozlu",
+        "Merkez",
+        "Ã‡aycuma"
+      ],
+      "latitude": 41.4526765,
+      "longitude": 31.787598,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-68",
+      "name": "Aksaray",
+      "plate": 68,
+      "phone": [
+        382
+      ],
+      "region": "Ä°Ã§ Anadolu",
+      "districts": [
+        "AÄŸaÃ§Ã¶ren",
+        "Eskil",
+        "GÃ¼laÄŸaÃ§",
+        "GÃ¼zelyurt",
+        "Merkez",
+        "OrtakÃ¶y",
+        "SarÄ±yahÅŸi",
+        "SultanhanÄ±"
+      ],
+      "latitude": 38.3705416,
+      "longitude": 34.026907,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-69",
+      "name": "Bayburt",
+      "plate": 69,
+      "phone": [
+        458
+      ],
+      "region": "Karadeniz",
+      "districts": [
+        "AydÄ±ntepe",
+        "DemirÃ¶zÃ¼",
+        "Merkez"
+      ],
+      "latitude": 40.2551608,
+      "longitude": 40.2205036,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-70",
+      "name": "Karaman",
+      "plate": 70,
+      "phone": [
+        338
+      ],
+      "region": "Ä°Ã§ Anadolu",
+      "districts": [
+        "AyrancÄ±",
+        "BaÅŸyayla",
+        "Ermenek",
+        "KazÄ±mkarabekir",
+        "Merkez",
+        "SarÄ±veliler"
+      ],
+      "latitude": 37.1808502,
+      "longitude": 33.2194554,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-71",
+      "name": "KÄ±rÄ±kkale",
+      "plate": 71,
+      "phone": [
+        318
+      ],
+      "region": "Ä°Ã§ Anadolu",
+      "districts": [
+        "BahÅŸÄ±lÄ±",
+        "BalÄ±ÅŸeyh",
+        "Delice",
+        "KarakeÃ§ili",
+        "Keskin",
+        "Merkez",
+        "Sulakyurt",
+        "YahÅŸihan",
+        "Ã‡elebi"
+      ],
+      "latitude": 39.84104835,
+      "longitude": 33.5058536,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-72",
+      "name": "Batman",
+      "plate": 72,
+      "phone": [
+        488
+      ],
+      "region": "GÃ¼neydoÄŸu Anadolu",
+      "districts": [
+        "BeÅŸiri",
+        "GercÃ¼ÅŸ",
+        "Hasankeyf",
+        "Kozluk",
+        "Merkez",
+        "Sason"
+      ],
+      "latitude": 37.8835738,
+      "longitude": 41.1277565,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-73",
+      "name": "ÅÄ±rnak",
+      "plate": 73,
+      "phone": [
+        486
+      ],
+      "region": "GÃ¼neydoÄŸu Anadolu",
+      "districts": [
+        "BeytÃ¼ÅŸÅŸebap",
+        "Cizre",
+        "GÃ¼Ã§lÃ¼konak",
+        "Ä°dil",
+        "Merkez",
+        "Silopi",
+        "Uludere"
+      ],
+      "latitude": 37.5219577,
+      "longitude": 42.4570311,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-74",
+      "name": "BartÄ±n",
+      "plate": 74,
+      "phone": [
+        378
+      ],
+      "region": "Karadeniz",
+      "districts": [
+        "Amasra",
+        "KurucaÅŸile",
+        "Merkez",
+        "Ulus"
+      ],
+      "latitude": 41.6350461,
+      "longitude": 32.3366205,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-75",
+      "name": "Ardahan",
+      "plate": 75,
+      "phone": [
+        478
+      ],
+      "region": "DoÄŸu Anadolu",
+      "districts": [
+        "Damal",
+        "GÃ¶le",
+        "Hanak",
+        "Merkez",
+        "Posof",
+        "Ã‡Ä±ldÄ±r"
+      ],
+      "latitude": 41.1102966,
+      "longitude": 42.7035585,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-76",
+      "name": "IÄŸdÄ±r",
+      "plate": 76,
+      "phone": [
+        476
+      ],
+      "region": "DoÄŸu Anadolu",
+      "districts": [
+        "AralÄ±k",
+        "Karakoyunlu",
+        "Merkez",
+        "Tuzluca"
+      ],
+      "latitude": 39.9218784,
+      "longitude": 44.0467957,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-77",
+      "name": "Yalova",
+      "plate": 77,
+      "phone": [
+        226
+      ],
+      "region": "Marmara",
+      "districts": [
+        "AltÄ±nova",
+        "Armutlu",
+        "Merkez",
+        "Termal",
+        "Ã‡iftlikkÃ¶y",
+        "Ã‡Ä±narcÄ±k"
+      ],
+      "latitude": 40.6582529,
+      "longitude": 29.2699916,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-78",
+      "name": "KarabÃ¼k",
+      "plate": 78,
+      "phone": [
+        370
+      ],
+      "region": "Karadeniz",
+      "districts": [
+        "Eflani",
+        "Eskipazar",
+        "Merkez",
+        "OvacÄ±k",
+        "Safranbolu",
+        "Yenice"
+      ],
+      "latitude": 41.1955402,
+      "longitude": 32.6231154,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-79",
+      "name": "Kilis",
+      "plate": 79,
+      "phone": [
+        348
+      ],
+      "region": "GÃ¼neydoÄŸu Anadolu",
+      "districts": [
+        "Elbeyli",
+        "Merkez",
+        "Musabeyli",
+        "Polateli"
+      ],
+      "latitude": 36.7165552,
+      "longitude": 37.1146069,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-80",
+      "name": "Osmaniye",
+      "plate": 80,
+      "phone": [
+        328
+      ],
+      "region": "Akdeniz",
+      "districts": [
+        "BahÃ§e",
+        "DÃ¼ziÃ§i",
+        "Hasanbeyli",
+        "Kadirli",
+        "Merkez",
+        "Sumbas",
+        "Toprakkale"
+      ],
+      "latitude": 37.0733588,
+      "longitude": 36.2507673,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    },
+    {
+      "id": "TR-81",
+      "name": "DÃ¼zce",
+      "plate": 81,
+      "phone": [
+        380
+      ],
+      "region": "Karadeniz",
+      "districts": [
+        "AkÃ§akoca",
+        "Cumayeri",
+        "GÃ¶lyaka",
+        "GÃ¼mÃ¼ÅŸova",
+        "KaynaÅŸlÄ±",
+        "Merkez",
+        "YÄ±ÄŸÄ±lca",
+        "Ã‡ilimli"
+      ],
+      "latitude": 40.8391531,
+      "longitude": 31.1595361,
+      "source": "turkiye-data (MIT) / BTK National Numbering Plan"
+    }
+  ],
+  "snapshot_version": "2026-10-04",
+  "checksum_sha256": "eadf841bba8297dc0fa98deae46c8e4098e63ec2a55e3d70c3c462cd8264ba12"
+}
