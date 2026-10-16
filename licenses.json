@@ -1,0 +1,401 @@
+{
+  "sources": [
+    {
+      "name": "turkiye-data",
+      "kind": "data",
+      "license": "MIT",
+      "url": "https://github.com/mumeyyizbuyuk/turkiye-data"
+    },
+    {
+      "name": "BTK National Numbering Plan",
+      "kind": "official-data",
+      "license": "public-official-source",
+      "url": "https://www.btk.gov.tr/en/national-numbering-plan",
+      "source_governance": "pending",
+      "robots_policy": "review_required",
+      "terms_review": "review_required",
+      "production_signoff": "required"
+    },
+    {
+      "name": "KekikSpatula",
+      "kind": "reference",
+      "license": "GPL-3.0-or-later",
+      "url": "https://github.com/keyiflerolsun/KekikSpatula"
+    },
+    {
+      "name": "TRSehirler",
+      "kind": "reference",
+      "license": "GPL-3.0-or-later",
+      "url": "https://github.com/keyiflerolsun/TRSehirler"
+    },
+    {
+      "name": "CoinGecko API",
+      "kind": "public-api",
+      "license": "CoinGecko API terms and attribution requirements",
+      "url": "https://docs.coingecko.com/reference/simple-price",
+      "source_governance": "pending",
+      "robots_policy": "review_required",
+      "terms_review": "review_required",
+      "production_signoff": "required"
+    },
+    {
+      "name": "Yahoo Finance market data",
+      "kind": "public-market-data",
+      "license": "Yahoo Finance terms; yfinance client terms apply",
+      "url": "https://legal.yahoo.com/us/en/yahoo/terms/otos/index.html",
+      "source_governance": "pending",
+      "robots_policy": "review_required",
+      "terms_review": "review_required",
+      "production_signoff": "required"
+    },
+    {
+      "name": "TRT Haber RSS",
+      "kind": "public-rss",
+      "license": "Official public RSS feed; source attribution required",
+      "url": "https://www.trthaber.com/sondakika_articles.rss",
+      "source_governance": "approved",
+      "robots_policy": "allowed",
+      "terms_review": "approved",
+      "production_signoff": "approved"
+    },
+    {
+      "name": "Anadolu AjansÄ± RSS",
+      "kind": "public-rss",
+      "license": "Public RSS feed; source terms and attribution apply",
+      "url": "https://www.aa.com.tr/tr/rss/default?cat=guncel",
+      "source_governance": "pending",
+      "robots_policy": "review_required",
+      "terms_review": "review_required",
+      "production_signoff": "required"
+    },
+    {
+      "name": "Open Library Search API",
+      "kind": "public-api",
+      "license": "Open Library API usage guidelines and database licensing",
+      "url": "https://openlibrary.org/developers/api",
+      "source_governance": "approved",
+      "robots_policy": "allowed",
+      "terms_review": "approved",
+      "production_signoff": "approved"
+    },
+    {
+      "name": "TVmaze Search API",
+      "kind": "public-api",
+      "license": "CC BY-SA (TVmaze API data; attribution/share-alike)",
+      "url": "https://www.tvmaze.com/api",
+      "source_governance": "approved",
+      "robots_policy": "allowed",
+      "terms_review": "approved",
+      "production_signoff": "approved"
+    },
+    {
+      "name": "Apple iTunes Search API",
+      "kind": "public-api",
+      "license": "Apple iTunes Search API terms (link-only metadata policy)",
+      "url": "https://performance-partners.apple.com/search-api",
+      "source_governance": "approved",
+      "robots_policy": "allowed",
+      "terms_review": "approved",
+      "production_signoff": "approved"
+    },
+    {
+      "name": "Open-Meteo Air Quality API",
+      "kind": "public-api",
+      "license": "Open-Meteo terms and attribution requirements",
+      "url": "https://open-meteo.com/en/terms",
+      "source_governance": "pending",
+      "robots_policy": "review_required",
+      "terms_review": "review_required",
+      "production_signoff": "required"
+    },
+    {
+      "name": "Telegram Bot API",
+      "kind": "platform-api",
+      "license": "Telegram Bot API terms; attribution and platform limits apply",
+      "url": "https://core.telegram.org/bots/api",
+      "production_signoff": "required",
+      "source_governance": "pending",
+      "robots_policy": "review_required",
+      "terms_review": "review_required"
+    },
+    {
+      "name": "AFAD Event Service",
+      "kind": "official-data",
+      "license": "Official public service; source attribution required",
+      "url": "https://servisnet.afad.gov.tr/apigateway/deprem/apiv2/event/filter",
+      "production_signoff": "approved",
+      "source_governance": "approved",
+      "robots_policy": "allowed",
+      "terms_review": "approved"
+    },
+    {
+      "name": "wttr.in weather service",
+      "kind": "public-api",
+      "license": "Public service; attribution and fair-use review recorded",
+      "url": "https://wttr.in/",
+      "production_signoff": "approved",
+      "source_governance": "approved",
+      "robots_policy": "allowed",
+      "terms_review": "approved"
+    },
+    {
+      "name": "NÃ¶betÃ§i Eczaneler public pages",
+      "kind": "public-web",
+      "license": "Public web data; bounded access, source attribution and terms review recorded",
+      "url": "https://www.nobetcieczaneler.org/",
+      "production_signoff": "approved",
+      "source_governance": "approved",
+      "robots_policy": "allowed",
+      "terms_review": "approved"
+    },
+    {
+      "name": "DÃ¶viz.com public pages",
+      "kind": "public-web",
+      "license": "Public web data; bounded access, source attribution and terms review recorded",
+      "url": "https://www.doviz.com/",
+      "production_signoff": "approved",
+      "source_governance": "approved",
+      "robots_policy": "allowed",
+      "terms_review": "approved"
+    },
+    {
+      "name": "TRT Haber + Anadolu AjansÄ± RSS",
+      "kind": "public-rss",
+      "license": "Public RSS feed; source terms and attribution review required",
+      "url": "https://www.trthaber.com/sondakika_articles.rss",
+      "production_signoff": "required",
+      "source_governance": "pending",
+      "robots_policy": "review_required",
+      "terms_review": "review_required"
+    },
+    {
+      "name": "BÄ°M official aktÃ¼el page",
+      "kind": "official-public-page",
+      "license": "Official public page; bounded access and source attribution",
+      "url": "https://www.bim.com.tr/Categories/100/aktuel-urunler.aspx",
+      "production_signoff": "approved",
+      "source_governance": "approved",
+      "robots_policy": "allowed",
+      "terms_review": "approved"
+    },
+    {
+      "name": "HabertÃ¼rk prayer times page",
+      "kind": "public-web",
+      "license": "Source terms, robots and attribution review required",
+      "url": "https://www.haberturk.com/namaz-vakitleri",
+      "production_signoff": "required",
+      "source_governance": "pending",
+      "robots_policy": "review_required",
+      "terms_review": "review_required"
+    },
+    {
+      "name": "Open-Meteo weather API",
+      "kind": "public-api",
+      "license": "Open-Meteo terms and attribution requirements",
+      "url": "https://open-meteo.com/en/terms",
+      "production_signoff": "required",
+      "source_governance": "pending",
+      "robots_policy": "review_required",
+      "terms_review": "review_required"
+    },
+    {
+      "name": "Prometheus Docker image",
+      "kind": "monitoring",
+      "license": "Apache-2.0",
+      "url": "https://github.com/prometheus/prometheus",
+      "production_signoff": "image tag pinned; review releases before upgrade"
+    },
+    {
+      "name": "Prometheus Alertmanager Docker image",
+      "kind": "monitoring",
+      "license": "Apache-2.0",
+      "url": "https://github.com/prometheus/alertmanager",
+      "production_signoff": "image tag pinned; review releases before upgrade"
+    },
+    {
+      "name": "Grafana OSS Docker image",
+      "kind": "monitoring",
+      "license": "AGPL-3.0-or-later",
+      "url": "https://github.com/grafana/grafana",
+      "production_signoff": "image tag pinned; review releases before upgrade"
+    },
+    {
+      "name": "Cloudflare Workers AI",
+      "kind": "ai-provider",
+      "license": "Cloudflare Workers AI terms; account authorization and policy restrictions apply",
+      "url": "https://developers.cloudflare.com/workers-ai/",
+      "source_governance": "pending",
+      "robots_policy": "allowed",
+      "terms_review": "review_required",
+      "production_signoff": "required"
+    },
+    {
+      "name": "Tavily Search API",
+      "kind": "public-api",
+      "license": "Tavily API terms and attribution requirements",
+      "url": "https://docs.tavily.com/",
+      "source_governance": "approved",
+      "robots_policy": "not_applicable",
+      "terms_review": "approved",
+      "production_signoff": "approved"
+    },
+    {
+      "name": "Permitted lyrics public pages",
+      "kind": "public-web",
+      "license": "Source-specific terms; bounded excerpt and attribution review required",
+      "url": "https://genius.com/",
+      "source_governance": "pending",
+      "robots_policy": "review_required",
+      "terms_review": "review_required",
+      "production_signoff": "required"
+    },
+    {
+      "name": "EVREN OpenAI-compatible API",
+      "kind": "ai-provider",
+      "license": "EVREN provider terms, quota, retention and attribution requirements",
+      "url": "https://evren-llmapi.ssyz.org.tr/v1",
+      "docs_url": "https://llmtr.com/docs/en/gateway/evren/",
+      "source_governance": "pending",
+      "robots_policy": "not_applicable",
+      "terms_review": "review_required",
+      "production_signoff": "required"
+    },
+    {
+      "name": "EPDK / G?ncel Akaryak?t Fiyatlar? JSON",
+      "kind": "derived-public-data",
+      "license": "EPDK public data; derived snapshot attribution required",
+      "url": "https://guncelakaryakitfiyatlari.com/acik-veri/",
+      "source_governance": "approved",
+      "robots_policy": "allowed",
+      "terms_review": "approved",
+      "production_signoff": "approved"
+    }
+  ],
+  "packages": [
+    {
+      "name": "python-telegram-bot",
+      "license": "LGPL-3.0-or-later",
+      "url": "https://github.com/python-telegram-bot/python-telegram-bot"
+    },
+    {
+      "name": "APScheduler",
+      "license": "MIT",
+      "url": "https://github.com/agronholm/apscheduler"
+    },
+    {
+      "name": "httpx",
+      "license": "BSD-3-Clause",
+      "url": "https://github.com/encode/httpx"
+    },
+    {
+      "name": "motor",
+      "license": "Apache-2.0",
+      "url": "https://github.com/mongodb/motor"
+    },
+    {
+      "name": "pymongo",
+      "license": "Apache-2.0",
+      "url": "https://github.com/mongodb/mongo-python-driver"
+    },
+    {
+      "name": "redis",
+      "license": "MIT",
+      "url": "https://github.com/redis/redis-py"
+    },
+    {
+      "name": "cryptography",
+      "license": "Apache-2.0 OR BSD-3-Clause",
+      "url": "https://github.com/pyca/cryptography"
+    },
+    {
+      "name": "yt-dlp",
+      "license": "Unlicense",
+      "url": "https://github.com/yt-dlp/yt-dlp"
+    },
+    {
+      "name": "pytest",
+      "license": "MIT",
+      "url": "https://github.com/pytest-dev/pytest"
+    },
+    {
+      "name": "pytest-asyncio",
+      "license": "Apache-2.0",
+      "url": "https://github.com/pytest-dev/pytest-asyncio"
+    },
+    {
+      "name": "pytest-mock",
+      "license": "MIT",
+      "url": "https://github.com/pytest-dev/pytest-mock"
+    },
+    {
+      "name": "groq",
+      "license": "Apache-2.0",
+      "url": "https://github.com/groq/groq-python"
+    },
+    {
+      "name": "google-generativeai",
+      "license": "Apache-2.0",
+      "url": "https://github.com/google-gemini/generative-ai-python"
+    },
+    {
+      "name": "python-dotenv",
+      "license": "BSD-3-Clause",
+      "url": "https://github.com/theskumar/python-dotenv"
+    },
+    {
+      "name": "Pillow",
+      "license": "HPND",
+      "url": "https://github.com/python-pillow/Pillow"
+    },
+    {
+      "name": "chromadb",
+      "license": "Apache-2.0",
+      "url": "https://github.com/chroma-core/chroma"
+    },
+    {
+      "name": "pypdf",
+      "license": "BSD-3-Clause",
+      "url": "https://github.com/py-pdf/pypdf"
+    },
+    {
+      "name": "edge-tts",
+      "license": "MIT",
+      "url": "https://github.com/rany2/edge-tts"
+    },
+    {
+      "name": "beautifulsoup4",
+      "license": "MIT",
+      "url": "https://www.crummy.com/software/BeautifulSoup/"
+    },
+    {
+      "name": "python-dateutil",
+      "license": "Apache-2.0 OR BSD-3-Clause",
+      "url": "https://github.com/dateutil/dateutil"
+    },
+    {
+      "name": "mcp",
+      "license": "MIT",
+      "url": "https://github.com/modelcontextprotocol/python-sdk"
+    },
+    {
+      "name": "moviepy",
+      "license": "MIT",
+      "url": "https://github.com/Zulko/moviepy"
+    },
+    {
+      "name": "matplotlib",
+      "license": "PSF-based",
+      "url": "https://github.com/matplotlib/matplotlib"
+    },
+    {
+      "name": "instaloader",
+      "license": "MIT",
+      "url": "https://github.com/instaloader/instaloader"
+    },
+    {
+      "name": "uvloop",
+      "license": "MIT",
+      "url": "https://github.com/MagicStack/uvloop"
+    }
+  ]
+}

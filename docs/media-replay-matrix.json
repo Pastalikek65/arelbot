@@ -1,0 +1,34 @@
+{
+  "cases": [
+    {
+      "id": "instagram_reel",
+      "platform": "instagram",
+      "url": "https://www.instagram.com/reel/replay-fixture"
+    },
+    {
+      "id": "tiktok_video",
+      "platform": "tiktok",
+      "url": "https://www.tiktok.com/@arel/video/replay-fixture"
+    },
+    {
+      "id": "youtube_shorts",
+      "platform": "youtube",
+      "url": "https://www.youtube.com/shorts/replay-fixture"
+    },
+    {
+      "id": "x_status",
+      "platform": "x",
+      "url": "https://x.com/arel/status/replay-fixture"
+    },
+    {
+      "id": "facebook_reel",
+      "platform": "facebook",
+      "url": "https://www.facebook.com/reel/replay-fixture"
+    },
+    {
+      "id": "reddit_video",
+      "platform": "reddit",
+      "url": "https://www.reddit.com/r/arelbot/comments/replay-fixture/video"
+    }
+  ]
+}

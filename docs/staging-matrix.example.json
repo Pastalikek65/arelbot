@@ -1,0 +1,32 @@
+{
+  "cases": [
+    {
+      "id": "weather_istanbul",
+      "feature": "weather",
+      "params": {"city": "Ä°stanbul", "days": 3},
+      "expect_source": "wttr.in",
+      "repeat": true
+    },
+    {
+      "id": "air_quality_ankara",
+      "feature": "air_quality",
+      "params": {"city": "Ankara"},
+      "expect_source": "open-meteo.com",
+      "repeat": true
+    },
+    {
+      "id": "earthquake_feed",
+      "feature": "earthquakes",
+      "params": {},
+      "expect_source": "afad.gov.tr",
+      "repeat": false
+    },
+    {
+      "id": "currency_rates",
+      "feature": "currency",
+      "params": {},
+      "expect_source": "doviz.com",
+      "repeat": true
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+-c constraints.txt
+python-telegram-bot[job-queue,webhooks]==22.6
+groq
+google-generativeai
+python-dotenv
+httpx
+Pillow
+chromadb
+pypdf
+edge-tts
+beautifulsoup4
+APScheduler
+python-dateutil
+redis>=5.0.0
+moviepy
+matplotlib
+yt-dlp[default]>=2025.01.0
+instaloader
+uvloop; sys_platform != "win32"
+motor
+pymongo
+cryptography>=42.0.0
+pytest==8.3.4
+pytest-asyncio==0.25.3
+pytest-mock==3.14.0
