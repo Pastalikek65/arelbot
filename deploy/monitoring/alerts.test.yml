@@ -1,0 +1,84 @@
+rule_files:
+  - /etc/prometheus/alerts.yml
+
+evaluation_interval: 30s
+
+tests:
+  - interval: 30s
+    input_series:
+      - series: 'up{job="arelbot-bot"}'
+        values: '0 0 0 0 0 0 0'
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: ArelbotBotScrapeDown
+        exp_alerts:
+          - exp_labels:
+              job: arelbot-bot
+              severity: critical
+              service: bot
+            exp_annotations:
+              summary: Arelbot bot observability endpoint is unavailable
+              description: Prometheus cannot scrape the bot metrics endpoint for two minutes.
+
+  - interval: 30s
+    input_series:
+      - series: 'up{job="arelbot-worker"}'
+        values: '0 0 0 0 0 0 0'
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: ArelbotWorkerScrapeDown
+        exp_alerts:
+          - exp_labels:
+              job: arelbot-worker
+              severity: critical
+              service: worker
+            exp_annotations:
+              summary: Arelbot worker observability endpoint is unavailable
+              description: Prometheus cannot scrape the worker metrics endpoint for two minutes.
+
+  - interval: 30s
+    input_series:
+      - series: 'arelbot_media_queue_depth'
+        values: '21 21 21 21 21 21 21 21 21 21 21 21'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: ArelbotMediaQueueBacklog
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              service: media
+            exp_annotations:
+              summary: Arelbot media queue backlog is growing
+              description: The media queue has stayed above 20 jobs for five minutes.
+
+  - interval: 30s
+    input_series:
+      - series: 'arelbot_media_queue_depth'
+        values: '1 1 1 1 1 1'
+      - series: 'arelbot_media_workers'
+        values: '0 0 0 0 0 0'
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: ArelbotWorkerHasNoCapacity
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              service: worker
+            exp_annotations:
+              summary: Arelbot media worker has no active capacity
+              description: Queued media jobs exist while no media worker is active.
+
+  - interval: 30s
+    input_series:
+      - series: 'arelbot_feature_persistence_dropped_health_writes'
+        values: '1 1 1 1 1 1 1 1 1 1 1 1'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: ArelbotHealthWritesDropped
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              service: bot
+            exp_annotations:
+              summary: Arelbot provider health telemetry is being dropped
+              description: The bounded health persistence queue is dropping writes.

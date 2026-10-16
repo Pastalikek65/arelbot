@@ -1,0 +1,265 @@
+services:
+  mongo:
+    image: mongo:8.0
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_DATABASE: arel_bot
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet --eval 'db.adminCommand({ ping: 1 }).ok' | grep 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--save", "60", "1"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  bot:
+    build:
+      context: .
+      secrets:
+        - arelbot_ca
+    # Monitoring depends on the production bot endpoint; including the
+    # monitoring profile here makes `--profile monitoring` a valid Compose
+    # graph instead of leaving Prometheus with an undefined dependency.
+    profiles: ["prod", "monitoring"]
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      APP_ROLE: bot
+      APP_ENV: production
+      MONGODB_URI: mongodb://mongo:27017/arel_bot
+      REDIS_URL: redis://redis:6379/0
+      MEDIA_REDIS_REQUIRED: "true"
+      MONGODB_REQUIRED: "true"
+      ARELBOT_EXTRA_CA_CERT: /run/secrets/arelbot_ca
+      OBSERVABILITY_ENABLED: ${OBSERVABILITY_ENABLED:-false}
+      OBSERVABILITY_LISTEN: ${OBSERVABILITY_LISTEN:-127.0.0.1}
+      OBSERVABILITY_PORT: ${OBSERVABILITY_PORT:-9108}
+      OBSERVABILITY_WORKER_PORT: ${OBSERVABILITY_WORKER_PORT:-9109}
+      OBSERVABILITY_TOKEN_FILE: /run/secrets/arelbot_observability_token
+    # Bind only to the VDS loopback; an HTTPS reverse proxy terminates TLS.
+    # WEBHOOK_PORT is intentionally shared by host and container so the
+    # operator can change it without an undocumented second setting.
+    ports:
+      - "127.0.0.1:${WEBHOOK_PORT:-8443}:${WEBHOOK_PORT:-8443}"
+    depends_on:
+      mongo: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "python", "scripts/healthcheck.py"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    volumes:
+      - arel_data:/app/data
+      - arel_downloads:/app/downloads
+      - chroma_data:/app/chroma_db
+    secrets:
+      - arelbot_ca
+      - arelbot_observability_token
+
+  dev:
+    build:
+      context: .
+      args:
+        PIP_TRUSTED_HOSTS: "pypi.org files.pythonhosted.org"
+      secrets:
+        - arelbot_ca
+    profiles: ["dev"]
+    env_file: .env
+    environment:
+      APP_ROLE: combined
+      APP_ENV: development
+      MONGODB_URI: mongodb://mongo:27017/arel_bot
+      REDIS_URL: redis://redis:6379/0
+      MONGODB_REQUIRED: "true"
+      MEDIA_REDIS_REQUIRED: "false"
+      ARELBOT_EXTRA_CA_CERT: /run/secrets/arelbot_ca
+      OBSERVABILITY_ENABLED: ${OBSERVABILITY_ENABLED:-false}
+      OBSERVABILITY_LISTEN: ${OBSERVABILITY_LISTEN:-127.0.0.1}
+      OBSERVABILITY_PORT: ${OBSERVABILITY_PORT:-9108}
+      OBSERVABILITY_WORKER_PORT: ${OBSERVABILITY_WORKER_PORT:-9109}
+      OBSERVABILITY_TOKEN_FILE: /run/secrets/arelbot_observability_token
+    depends_on:
+      mongo: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "python", "scripts/healthcheck.py"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    volumes:
+      - arel_data:/app/data
+      - arel_downloads:/app/downloads
+      - chroma_data:/app/chroma_db
+    secrets:
+      - arelbot_ca
+      - arelbot_observability_token
+
+  worker:
+    build:
+      context: .
+      secrets:
+        - arelbot_ca
+    # See the bot service: Prometheus scrapes both processes and Compose must
+    # include both when only the monitoring profile is selected.
+    profiles: ["prod", "monitoring"]
+    restart: unless-stopped
+    command: ["python", "-m", "src.worker"]
+    env_file: .env
+    environment:
+      APP_ROLE: worker
+      APP_ENV: production
+      MONGODB_URI: mongodb://mongo:27017/arel_bot
+      REDIS_URL: redis://redis:6379/0
+      MEDIA_REDIS_REQUIRED: "true"
+      MONGODB_REQUIRED: "true"
+      ARELBOT_EXTRA_CA_CERT: /run/secrets/arelbot_ca
+      OBSERVABILITY_ENABLED: ${OBSERVABILITY_ENABLED:-false}
+      OBSERVABILITY_LISTEN: ${OBSERVABILITY_LISTEN:-127.0.0.1}
+      OBSERVABILITY_PORT: ${OBSERVABILITY_PORT:-9108}
+      OBSERVABILITY_WORKER_PORT: ${OBSERVABILITY_WORKER_PORT:-9109}
+      OBSERVABILITY_TOKEN_FILE: /run/secrets/arelbot_observability_token
+    depends_on:
+      mongo: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "python", "scripts/healthcheck.py"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    volumes:
+      - arel_data:/app/data
+      - arel_downloads:/app/downloads
+      - chroma_data:/app/chroma_db
+    secrets:
+      - arelbot_observability_token
+
+  alertmanager:
+    image: prom/alertmanager:v0.34.1
+    profiles: ["monitoring"]
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+    ports:
+      - "127.0.0.1:${ALERTMANAGER_PORT:-9093}:9093"
+    volumes:
+      - alertmanager_data:/alertmanager
+      - ./deploy/monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    secrets:
+      - arelbot_alert_webhook_url
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:9093/-/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  test:
+    build:
+      context: .
+      args:
+        PIP_TRUSTED_HOSTS: "pypi.org files.pythonhosted.org"
+      secrets:
+        - arelbot_ca
+    profiles: ["test"]
+    command: ["pytest", "-q"]
+    env_file: .env
+    environment:
+      APP_ROLE: test
+      APP_ENV: test
+      MONGODB_URI: mongodb://mongo:27017/arel_bot_test
+      REDIS_URL: redis://redis:6379/1
+      MONGODB_REQUIRED: "false"
+      MEDIA_REDIS_REQUIRED: "false"
+      ARELBOT_EXTRA_CA_CERT: /run/secrets/arelbot_ca
+    depends_on:
+      mongo: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    volumes:
+      - arel_test_chroma:/app/chroma_db
+    secrets:
+      - arelbot_ca
+
+  prometheus:
+    image: prom/prometheus:v3.13.4
+    profiles: ["monitoring"]
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-15d}
+    ports:
+      - "127.0.0.1:${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - prometheus_data:/prometheus
+      - ./deploy/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./deploy/monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+    secrets:
+      - arelbot_observability_token
+    depends_on:
+      bot: { condition: service_healthy }
+      worker: { condition: service_healthy }
+      alertmanager: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/-/healthy", "http://127.0.0.1:9090/-/healthy"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  grafana:
+    image: grafana/grafana:13.0.9
+    profiles: ["monitoring"]
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${GRAFANA_PORT:-3000}:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/grafana_admin_password
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_PATHS_PROVISIONING: /etc/grafana/provisioning
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./deploy/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./deploy/monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    secrets:
+      - grafana_admin_password
+    depends_on:
+      prometheus: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:3000/api/health | grep -q 'ok'"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mongo_data:
+  redis_data:
+  arel_data:
+  arel_downloads:
+  chroma_data:
+  arel_test_chroma:
+  prometheus_data:
+  grafana_data:
+  alertmanager_data:
+
+secrets:
+  arelbot_ca:
+    file: ${ARELBOT_BUILD_CA_FILE:-./.docker/empty-ca.pem}
+  arelbot_observability_token:
+    file: ${ARELBOT_OBSERVABILITY_TOKEN_FILE:-./.docker/empty-ca.pem}
+  arelbot_alert_webhook_url:
+    file: ${ARELBOT_ALERT_WEBHOOK_URL_FILE:-./.docker/empty-ca.pem}
+  grafana_admin_password:
+    file: ${GRAFANA_ADMIN_PASSWORD_FILE:-./.docker/empty-ca.pem}

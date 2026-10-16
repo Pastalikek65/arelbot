@@ -1,0 +1,53 @@
+{
+  "annotations": {"list": []},
+  "editable": false,
+  "graphTooltip": 1,
+  "panels": [
+    {
+      "datasource": {"type": "prometheus", "uid": "arelbot-prometheus"},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "id": 1,
+      "title": "Kuyruk derinliÄŸi",
+      "type": "timeseries",
+      "targets": [{"expr": "arelbot_media_queue_depth", "refId": "A", "legendFormat": "media"}, {"expr": "arelbot_documents_queue_depth", "refId": "B", "legendFormat": "documents"}, {"expr": "arelbot_images_queue_depth", "refId": "C", "legendFormat": "images"}]
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "arelbot-prometheus"},
+      "fieldConfig": {"defaults": {"unit": "ms"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "id": 2,
+      "title": "Medya iÅŸ gecikmesi p95",
+      "type": "timeseries",
+      "targets": [{"expr": "arelbot_media_latency_media_job_seconds_p95 * 1000", "refId": "A", "legendFormat": "p95"}]
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "arelbot-prometheus"},
+      "fieldConfig": {"defaults": {"unit": "reqps"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "id": 3,
+      "title": "Ä°ÅŸ sonuÃ§larÄ±",
+      "type": "timeseries",
+      "targets": [{"expr": "rate(arelbot_media_counters_media_jobs_completed[5m])", "refId": "A", "legendFormat": "completed"}, {"expr": "rate(arelbot_media_counters_media_jobs_failed[5m])", "refId": "B", "legendFormat": "failed"}]
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "arelbot-prometheus"},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+      "id": 4,
+      "title": "AI istek ve token kullanÄ±mÄ±",
+      "type": "timeseries",
+      "targets": [{"expr": "arelbot_ai_requests", "refId": "A", "legendFormat": "requests"}, {"expr": "arelbot_ai_input_tokens + arelbot_ai_output_tokens", "refId": "B", "legendFormat": "tokens"}]
+    }
+  ],
+  "refresh": "15s",
+  "schemaVersion": 39,
+  "tags": ["arelbot", "operations"],
+  "templating": {"list": []},
+  "time": {"from": "now-6h", "to": "now"},
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Arelbot Operasyon",
+  "uid": "arelbot-ops",
+  "version": 1
+}

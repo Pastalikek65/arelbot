@@ -1,0 +1,53 @@
+groups:
+  - name: arelbot-availability
+    interval: 30s
+    rules:
+      - alert: ArelbotBotScrapeDown
+        expr: up{job="arelbot-bot"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: bot
+        annotations:
+          summary: "Arelbot bot observability endpoint is unavailable"
+          description: "Prometheus cannot scrape the bot metrics endpoint for two minutes."
+      - alert: ArelbotWorkerScrapeDown
+        expr: up{job="arelbot-worker"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: worker
+        annotations:
+          summary: "Arelbot worker observability endpoint is unavailable"
+          description: "Prometheus cannot scrape the worker metrics endpoint for two minutes."
+
+  - name: arelbot-queues
+    interval: 30s
+    rules:
+      - alert: ArelbotMediaQueueBacklog
+        expr: arelbot_media_queue_depth > 20
+        for: 5m
+        labels:
+          severity: warning
+          service: media
+        annotations:
+          summary: "Arelbot media queue backlog is growing"
+          description: "The media queue has stayed above 20 jobs for five minutes."
+      - alert: ArelbotWorkerHasNoCapacity
+        expr: arelbot_media_queue_depth > 0 and arelbot_media_workers == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: worker
+        annotations:
+          summary: "Arelbot media worker has no active capacity"
+          description: "Queued media jobs exist while no media worker is active."
+      - alert: ArelbotHealthWritesDropped
+        expr: arelbot_feature_persistence_dropped_health_writes > 0
+        for: 5m
+        labels:
+          severity: warning
+          service: bot
+        annotations:
+          summary: "Arelbot provider health telemetry is being dropped"
+          description: "The bounded health persistence queue is dropping writes."
