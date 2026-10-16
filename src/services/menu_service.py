@@ -253,7 +253,7 @@ class MenuService:
         ]
         return (
             "⚙️ <b>GRUP AYARLARI</b>\n\n"
-            "Bu panel yalnızca bu grubun yöneticileri için geçerlidir. "
+            "Bu ayarlar yalnızca bu grubun yöneticileri için geçerlidir. "
             "Bir ayarı değiştirmek için ilgili düğmeye dokun.\n"
             f"Aktif Kişilik: <b>{persona_label}</b>",
             InlineKeyboardMarkup(keyboard),

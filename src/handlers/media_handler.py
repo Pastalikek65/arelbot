@@ -1,7 +1,7 @@
 """
-Media Handler - FotoÄŸraf, Ses, DokÃ¼man iÅŸleyicileri
+Media Handler - Fotoğraf, Ses, Doküman işleyicileri
 
-Orchestrator'dan ayrÄ±lmÄ±ÅŸ medya mantÄ±ÄŸÄ±.
+Orchestrator'dan ayrılmış medya mantığı.
 """
 import logging
 from datetime import datetime, timezone
@@ -50,11 +50,11 @@ class MediaHandler:
             return
 
         if not self.attachment_service:
-            await update.message.reply_text("GÃ¶rsel iÅŸleme servisi bu ortamda etkin deÄŸil.")
+            await update.message.reply_text("Görsel işleme servisi bu ortamda etkin değil.")
             return
         photo = update.message.photo[-1]
         if intent_state.get("state") == "awaiting_intent_photo":
-            status = await update.message.reply_text("Ä°ÅŸlemi kuyruÄŸa alÄ±yorum; gÃ¶rseli kendi kendine yorumlamaya kalkmÄ±yorum.")
+            status = await update.message.reply_text("İşlemi kuyruğa alıyorum; görseli kendi kendine yorumlamaya kalkmıyorum.")
             state = {
                 "source_file_id": photo.file_id,
                 "source_key": getattr(photo, "file_unique_id", None) or photo.file_id,
@@ -75,22 +75,22 @@ class MediaHandler:
                     action=str(intent_state.get("action") or "vision"),
                 )
                 await status.edit_text(
-                    f"â³ {'Bu gÃ¶rsel iÃ§in aktif iÅŸ zaten var' if duplicate else 'GÃ¶rsel iÅŸlemi kuyruÄŸa alÄ±ndÄ±'}: <code>{job_id}</code>",
+                    f"⏳ {'Bu görsel için aktif iş zaten var' if duplicate else 'Görsel işlemi kuyruğa alındı'}: <code>{job_id}</code>",
                     parse_mode="HTML",
                 )
             except Exception as exc:
                 logger.warning("Explicit photo intent enqueue failed: %s", summarize_exception(exc, label="photo_intent_enqueue"))
-                await status.edit_text("GÃ¶rsel iÅŸlemi baÅŸlatÄ±lamadÄ±; biraz sonra tekrar dene.")
+                await status.edit_text("Görsel işlemi başlatılamadı; biraz sonra tekrar dene.")
             pop_scoped_state(self.user_states, user_id=update.effective_user.id, chat_id=update.effective_chat.id)
             return
         status = await update.message.reply_text(
-            "ğŸ–¼ï¸ <b>GÃ¶rseli nasÄ±l iÅŸleyelim?</b>\n\n"
-            "Arel kendi kafasÄ±na gÃ¶re sticker yapmaya baÅŸlamÄ±yor; seÃ§imi sen yapÄ±yorsun.",
+            "🖼️ <b>Görseli nasıl işleyelim?</b>\n\n"
+            "Arel kendi kafasına göre sticker yapmaya başlamıyor; seçimi sen yapıyorsun.",
             reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("ğŸ” GÃ¶rseli analiz et", callback_data=f"photo_action:{update.effective_user.id}:vision"),
-                 InlineKeyboardButton("ğŸ”¤ Metni oku", callback_data=f"photo_action:{update.effective_user.id}:ocr")],
-                [InlineKeyboardButton("âœ¨ Sticker yap", callback_data=f"photo_action:{update.effective_user.id}:sticker"),
-                 InlineKeyboardButton("Ä°ptal", callback_data=f"photo_action:{update.effective_user.id}:cancel")],
+                [InlineKeyboardButton("🔎 Görseli analiz et", callback_data=f"photo_action:{update.effective_user.id}:vision"),
+                 InlineKeyboardButton("🔤 Metni oku", callback_data=f"photo_action:{update.effective_user.id}:ocr")],
+                [InlineKeyboardButton("✨ Sticker yap", callback_data=f"photo_action:{update.effective_user.id}:sticker"),
+                 InlineKeyboardButton("İptal", callback_data=f"photo_action:{update.effective_user.id}:cancel")],
             ]),
             parse_mode="HTML",
         )
@@ -121,7 +121,7 @@ class MediaHandler:
         caption = (getattr(message, "caption", None) or "").strip().casefold()
         if caption:
             first_token = caption.split(maxsplit=1)[0].split("@", 1)[0]
-            if first_token in {"/sticker", "/incele", "/gorsel", "/gÃ¶rsel", "/ocr", "/analiz"}:
+            if first_token in {"/sticker", "/incele", "/gorsel", "/görsel", "/ocr", "/analiz"}:
                 return True
             if "arel" in caption:
                 return True
@@ -146,8 +146,8 @@ class MediaHandler:
         caption = str(state.get("caption") or "")
         if action == "ocr":
             caption = (
-                "Bu gÃ¶rseldeki yazÄ±larÄ± oku. YalnÄ±zca gÃ¶rselde gerÃ§ekten gÃ¶rdÃ¼ÄŸÃ¼n metni yaz; "
-                "okunamayan bÃ¶lÃ¼mleri [belirsiz] olarak belirt."
+                "Bu görseldeki yazıları oku. Yalnızca görselde gerçekten gördüğün metni yaz; "
+                "okunamayan bölümleri [belirsiz] olarak belirt."
             )
         return await self.attachment_service.submit(
             job_type=job_type,
@@ -170,14 +170,15 @@ class MediaHandler:
         if not update.message or not update.message.document:
             return
 
-        if not await self._should_respond(update, context):
-            return
-
         doc = update.message.document
-        if not doc.file_name:
+        file_name = str(getattr(doc, "file_name", "") or "").strip()
+        if not file_name:
+            # Telegram can deliver documents without a filename.  There is no
+            # safe way to infer an ingestion intent from those updates, so
+            # keep them passive and avoid touching group/AI routing entirely.
             return
 
-        file_name = doc.file_name.lower()
+        file_name = file_name.casefold()
 
         # Administrator cookie upload flow. The document is consumed once and
         # never copied to a public or predictable path.
@@ -197,10 +198,10 @@ class MediaHandler:
                 )
                 await update.message.reply_text(f"Cookie encrypted vaulta kaydedildi: {platform}.")
             except CookieVaultError:
-                await update.message.reply_text("Cookie kaydedilemedi; dosya biÃ§imini ve yÃ¶netici yetkisini kontrol et.")
+                await update.message.reply_text("Cookie kaydedilemedi; dosya biçimini ve yönetici yetkisini kontrol et.")
             except Exception as exc:
                 logger.error("Media cookie upload failed: %s", summarize_exception(exc, label="media_cookie_upload"))
-                await update.message.reply_text("Cookie dosyasÄ± iÅŸlenemedi.")
+                await update.message.reply_text("Cookie dosyası işlenemedi.")
             return
 
         # Animated GIFs are passive media.  Sending one must not silently
@@ -220,13 +221,20 @@ class MediaHandler:
             logger.debug("Ignoring unsupported passive Telegram document")
             return
 
+        # Do this check only after the passive-file gates above. In a group,
+        # _should_respond may need to call Telegram's getMe endpoint and an
+        # unrelated forwarded file must never enter that path (or produce a
+        # global error reply) merely because it has a document attachment.
+        if not await self._should_respond(update, context):
+            return
+
         if not self.document_service:
-            await update.message.reply_text("Belge kuyruÄŸu bu ortamda etkin deÄŸil (DOCUMENT_QUEUE_UNAVAILABLE).")
+            await update.message.reply_text("Belge kuyruğu bu ortamda etkin değil (DOCUMENT_QUEUE_UNAVAILABLE).")
             return
 
         # Only metadata validation and a durable enqueue happen in the update
         # handler. Telegram download and RAG parsing run in a worker.
-        status_msg = await update.message.reply_text("ğŸ“¥ Belge kuyruÄŸa alÄ±nÄ±yorâ€¦")
+        status_msg = await update.message.reply_text("📥 Belge kuyruğa alınıyor…")
         try:
             job_id, duplicate = await self.document_service.submit(
                 chat_id=update.effective_chat.id,
@@ -240,17 +248,17 @@ class MediaHandler:
             )
             if duplicate:
                 await status_msg.edit_text(
-                    f"â³ Bu belge iÃ§in aktif bir iÅŸ zaten var.\nÄ°ÅŸ: <code>{job_id}</code>",
+                    f"⏳ Bu belge için aktif bir iş zaten var.\nİş: <code>{job_id}</code>",
                     parse_mode="HTML",
                 )
             else:
                 await status_msg.edit_text(
-                    f"â³ Belge kuyruÄŸa alÄ±ndÄ±.\nÄ°ÅŸ: <code>{job_id}</code>",
+                    f"⏳ Belge kuyruğa alındı.\nİş: <code>{job_id}</code>",
                     parse_mode="HTML",
                 )
         except Exception as exc:
             logger.warning("Document enqueue failed: %s", summarize_exception(exc, label="document_enqueue"))
-            await status_msg.edit_text("âŒ Belge kuyruÄŸa alÄ±namadÄ±; dosya sÄ±nÄ±rlarÄ±nÄ± kontrol edip tekrar dene.", parse_mode="HTML")
+            await status_msg.edit_text("❌ Belge kuyruğa alınamadı; dosya sınırlarını kontrol edip tekrar dene.", parse_mode="HTML")
 
     async def handle_voice(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not update.message or not update.message.voice:
@@ -263,9 +271,9 @@ class MediaHandler:
         chat_id = update.effective_chat.id
 
         if not self.attachment_service:
-            await update.message.reply_text("Ses iÅŸleme servisi bu ortamda etkin deÄŸil.")
+            await update.message.reply_text("Ses işleme servisi bu ortamda etkin değil.")
             return
-        status = await update.message.reply_text("ğŸ§ Ses kuyruÄŸa alÄ±nÄ±yorâ€¦")
+        status = await update.message.reply_text("🎧 Ses kuyruğa alınıyor…")
         voice = update.message.voice
         try:
             job_id, duplicate = await self.attachment_service.submit(
@@ -276,24 +284,24 @@ class MediaHandler:
                 reply_to_message_id=update.message.message_id, user_name=update.effective_user.full_name,
                 username=update.effective_user.username,
             )
-            await status.edit_text((f"â³ Bu ses iÃ§in aktif iÅŸ zaten var.\nÄ°ÅŸ: <code>{job_id}</code>" if duplicate else f"â³ Ses kuyruÄŸa alÄ±ndÄ±.\nÄ°ÅŸ: <code>{job_id}</code>"), parse_mode="HTML")
+            await status.edit_text((f"⏳ Bu ses için aktif iş zaten var.\nİş: <code>{job_id}</code>" if duplicate else f"⏳ Ses kuyruğa alındı.\nİş: <code>{job_id}</code>"), parse_mode="HTML")
         except Exception as exc:
             logger.warning("Voice enqueue failed: %s", summarize_exception(exc, label="voice_enqueue"))
-            await status.edit_text("âŒ Ses kuyruÄŸa alÄ±namadÄ±; biraz sonra tekrar dene.")
+            await status.edit_text("❌ Ses kuyruğa alınamadı; biraz sonra tekrar dene.")
 
     async def handle_sticker_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         msg = update.message.reply_to_message
         if not msg or not (msg.photo or msg.document or msg.video or msg.animation or msg.video_note):
             await update.message.reply_text(
-                "<b>ğŸ–¼ï¸/ğŸ“¹ LÃ¼tfen bir resim veya kÄ±sa videoya yanÄ±t vererek /sticker yazÄ±n.</b>",
+                "<b>🖼️/📹 Lütfen bir resim veya kısa videoya yanıt vererek /sticker yazın.</b>",
                 parse_mode='HTML'
             )
             return
 
         if not self.attachment_service:
-            await update.message.reply_text("Sticker iÅŸleme servisi bu ortamda etkin deÄŸil.")
+            await update.message.reply_text("Sticker işleme servisi bu ortamda etkin değil.")
             return
-        status_msg = await update.message.reply_text("<b>âœ¨ Sticker kuyruÄŸa alÄ±nÄ±yorâ€¦</b>", parse_mode="HTML")
+        status_msg = await update.message.reply_text("<b>✨ Sticker kuyruğa alınıyor…</b>", parse_mode="HTML")
         try:
             source = msg.photo[-1] if msg.photo else (msg.document or msg.video or msg.animation or msg.video_note)
             is_video = bool(msg.video or msg.animation or msg.video_note)
@@ -306,10 +314,10 @@ class MediaHandler:
                 reply_to_message_id=msg.message_id, user_name=update.effective_user.full_name,
                 username=update.effective_user.username, sticker_kind="video" if is_video else "static",
             )
-            await status_msg.edit_text((f"â³ Bu medya iÃ§in aktif iÅŸ zaten var.\nÄ°ÅŸ: <code>{job_id}</code>" if duplicate else f"â³ Sticker kuyruÄŸa alÄ±ndÄ±.\nÄ°ÅŸ: <code>{job_id}</code>"), parse_mode="HTML")
+            await status_msg.edit_text((f"⏳ Bu medya için aktif iş zaten var.\nİş: <code>{job_id}</code>" if duplicate else f"⏳ Sticker kuyruğa alındı.\nİş: <code>{job_id}</code>"), parse_mode="HTML")
         except Exception as exc:
             logger.warning("Sticker enqueue failed: %s", summarize_exception(exc, label="sticker_enqueue"))
-            await status_msg.edit_text("âŒ Sticker kuyruÄŸa alÄ±namadÄ±; biraz sonra tekrar dene.")
+            await status_msg.edit_text("❌ Sticker kuyruğa alınamadı; biraz sonra tekrar dene.")
 
     async def _should_respond(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
         if not update.effective_chat:
@@ -345,4 +353,5 @@ class MediaHandler:
             return True
 
         return False
+
 

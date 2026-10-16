@@ -117,6 +117,43 @@ async def test_unsupported_document_is_ignored_without_error_message():
 
 
 @pytest.mark.asyncio
+async def test_passive_group_document_does_not_enter_response_router():
+    """Forwarded arbitrary files must stay silent even if routing is unavailable."""
+    replies = []
+
+    class Message:
+        document = SimpleNamespace(file_name="forwarded.zip", mime_type="application/zip")
+        text = None
+        caption = None
+        reply_to_message = None
+
+        async def reply_text(self, text, **kwargs):
+            replies.append(text)
+
+    handler = MediaHandler(
+        chat_engine=None,
+        sudo_manager=SimpleNamespace(is_blacklisted=lambda *_: False),
+        tool_manager=None,
+        document_service=SimpleNamespace(submit=pytest.fail),
+    )
+
+    async def should_not_be_called(*_args, **_kwargs):
+        pytest.fail("passive documents must not enter group response routing")
+
+    handler._should_respond = should_not_be_called
+    update = SimpleNamespace(
+        message=Message(),
+        effective_message=Message(),
+        effective_chat=SimpleNamespace(id=-100, type="supergroup"),
+        effective_user=SimpleNamespace(id=42),
+    )
+
+    await handler.handle_document(update, SimpleNamespace())
+
+    assert replies == []
+
+
+@pytest.mark.asyncio
 async def test_group_enqueue_failure_deletes_status_without_error_message():
     status = _Status()
     replies = []
@@ -141,7 +178,7 @@ async def test_group_enqueue_failure_deletes_status_without_error_message():
 
     await orchestrator._queue_media_download(update, "https://www.youtube.com/shorts/fixture")
 
-    assert replies == ["ğŸ” BaÄŸlantÄ± analiz ediliyorâ€¦"]
+    assert replies == ["🔎 Bağlantı analiz ediliyor…"]
     assert status.deleted is True
 
 
@@ -171,7 +208,7 @@ async def test_group_worker_failure_is_neutral_during_retry_and_cleared_after_fi
         "attempt": 0,
     }
     await service._report_failure(payload, "source_rate_limited", RuntimeError("secret upstream detail"))
-    assert service.bot.edits == ["Medya kaynaÄŸÄ± yanÄ±t vermedi; baÅŸka bir yÃ¶ntem deneniyorâ€¦"]
+    assert service.bot.edits == ["Medya kaynağı yanıt vermedi; başka bir yöntem deneniyor…"]
     assert service.bot.deleted == []
 
     payload["attempt"] = 2
@@ -210,3 +247,29 @@ async def test_global_error_handler_does_not_echo_animation_failure_to_group():
 
     assert replies == []
     ErrorHandler.reset_stats()
+
+
+@pytest.mark.asyncio
+async def test_global_error_handler_does_not_echo_passive_document_failure_to_group():
+    ErrorHandler.reset_stats()
+    replies = []
+
+    class Message:
+        document = SimpleNamespace(file_name="forwarded.zip", mime_type="application/zip")
+
+        async def reply_text(self, text, **kwargs):
+            replies.append(text)
+
+    update = SimpleNamespace(
+        update_id=8,
+        effective_message=Message(),
+        effective_chat=SimpleNamespace(id=-100, type="supergroup"),
+        effective_user=SimpleNamespace(id=42),
+    )
+    context = SimpleNamespace(error=RuntimeError("passive document failure"), bot=None)
+
+    await ErrorHandler.handle_telegram_error(update, context)
+
+    assert replies == []
+    ErrorHandler.reset_stats()
+

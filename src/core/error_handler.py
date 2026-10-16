@@ -1,10 +1,10 @@
 """
-Hata YÃ¶netim Sistemi â€” HiyerarÅŸik Hata SÄ±nÄ±flarÄ± + Global Error Handler
+Hata Yönetim Sistemi — Hiyerarşik Hata Sınıfları + Global Error Handler
 
-TÃ¼m hatalar yakalanÄ±r, loglanÄ±r ve kullanÄ±cÄ±ya mesajlarla iletilir.
+Tüm hatalar yakalanır, loglanır ve kullanıcıya mesajlarla iletilir.
 
-KullanÄ±m:
-    raise AIApiError("DeepSeek yanÄ±t vermedi", service="iamhc", status_code=503)
+Kullanım:
+    raise AIApiError("DeepSeek yanıt vermedi", service="iamhc", status_code=503)
     ErrorHandler.handle(exception, context)
 """
 import logging
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 # ============================================
 
 class ArelError(Exception):
-    """TÃ¼m Ã¶zel hatalarÄ±n base sÄ±nÄ±fÄ±."""
+    """Tüm özel hataların base sınıfı."""
     def __init__(
         self,
         message: str,
@@ -32,7 +32,7 @@ class ArelError(Exception):
         self.message = message
         self.code = code
         self.details = details or {}
-        self.user_message = user_message or "Bir hata oluÅŸtu. LÃ¼tfen tekrar deneyin."
+        self.user_message = user_message or "Bir hata oluştu. Lütfen tekrar deneyin."
         self.timestamp = datetime.now(timezone.utc)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -45,7 +45,7 @@ class ArelError(Exception):
 
 
 class AIApiError(ArelError):
-    """AI API (IAMHC, FreeModel, NineRouter) hatalarÄ±."""
+    """AI API (IAMHC, FreeModel, NineRouter) hataları."""
     def __init__(
         self,
         message: str,
@@ -54,8 +54,8 @@ class AIApiError(ArelError):
         details: Optional[Dict[str, Any]] = None
     ):
         user_msg = (
-            f"ğŸ˜” {service} servisi ÅŸu an yanÄ±t vermiyor. "
-            f"DiÄŸer servislere yÃ¶nlendiriyorum..."
+            f"😔 {service} servisi şu an yanıt vermiyor. "
+            f"Diğer servislere yönlendiriyorum..."
         )
         super().__init__(
             message=message,
@@ -68,7 +68,7 @@ class AIApiError(ArelError):
 
 
 class RateLimitError(ArelError):
-    """Rate limit / kota aÅŸÄ±mÄ± hatalarÄ±."""
+    """Rate limit / kota aşımı hataları."""
     def __init__(
         self,
         message: str,
@@ -77,7 +77,7 @@ class RateLimitError(ArelError):
         details: Optional[Dict[str, Any]] = None
     ):
         retry_msg = f" {retry_after} saniye sonra tekrar dene." if retry_after else ""
-        user_msg = f"â³ {service} servisi ÅŸu an yoÄŸun.{retry_msg}"
+        user_msg = f"⏳ {service} servisi şu an yoğun.{retry_msg}"
         super().__init__(
             message=message,
             code="RATE_LIMIT",
@@ -89,7 +89,7 @@ class RateLimitError(ArelError):
 
 
 class ToolExecutionError(ArelError):
-    """Tool Ã§alÄ±ÅŸtÄ±rma hatalarÄ±."""
+    """Tool çalıştırma hataları."""
     def __init__(
         self,
         message: str,
@@ -101,13 +101,13 @@ class ToolExecutionError(ArelError):
             message=message,
             code="TOOL_EXECUTION_ERROR",
             details={"tool": tool_name, "args": args, **(details or {})},
-            user_message=f"ğŸ”§ '{tool_name}' Ã§alÄ±ÅŸÄ±rken bir sorun Ã§Ä±ktÄ±. LÃ¼tfen tekrar dene."
+            user_message=f"🔧 '{tool_name}' çalışırken bir sorun çıktı. Lütfen tekrar dene."
         )
         self.tool_name = tool_name
 
 
 class DatabaseError(ArelError):
-    """VeritabanÄ± (MongoDB/Redis) hatalarÄ±."""
+    """Veritabanı (MongoDB/Redis) hataları."""
     def __init__(
         self,
         message: str,
@@ -119,14 +119,14 @@ class DatabaseError(ArelError):
             message=message,
             code="DATABASE_ERROR",
             details={"db": db_name, "operation": operation, **(details or {})},
-            user_message=f"ğŸ—„ï¸ VeritabanÄ± iÅŸlemi sÄ±rasÄ±nda bir sorun oluÅŸtu. LÃ¼tfen tekrar dene."
+            user_message=f"🗄️ Veritabanı işlemi sırasında bir sorun oluştu. Lütfen tekrar dene."
         )
         self.db_name = db_name
         self.operation = operation
 
 
 class InputValidationError(ArelError):
-    """KullanÄ±cÄ± girdisi doÄŸrulama hatalarÄ±."""
+    """Kullanıcı girdisi doğrulama hataları."""
     def __init__(
         self,
         message: str,
@@ -137,23 +137,23 @@ class InputValidationError(ArelError):
             message=message,
             code="INPUT_VALIDATION_ERROR",
             details={"field": field, **(details or {})},
-            user_message=f"âš ï¸ GeÃ§ersiz girdi: {message}"
+            user_message=f"⚠️ Geçersiz girdi: {message}"
         )
         self.field = field
 
 
-# Geriye dÃ¶nÃ¼k uyumluluk: bazÄ± eski importlar ValidationError adÄ±nÄ± bekliyor.
+# Geriye dönük uyumluluk: bazı eski importlar ValidationError adını bekliyor.
 ValidationError = InputValidationError
 
 
 class ConfigurationError(ArelError):
-    """YapÄ±landÄ±rma eksik/hatalÄ± olduÄŸunda."""
+    """Yapılandırma eksik/hatalı olduğunda."""
     def __init__(self, message: str, missing_keys: Optional[list] = None):
         super().__init__(
             message=message,
             code="CONFIG_ERROR",
             details={"missing_keys": missing_keys or []},
-            user_message="âš™ï¸ Bot yapÄ±landÄ±rmasÄ±nda bir sorun var. LÃ¼tfen yÃ¶neticiye baÅŸvurun."
+            user_message="⚙️ Bot yapılandırmasında bir sorun var. Lütfen yöneticiye başvurun."
         )
         self.missing_keys = missing_keys or []
 
@@ -164,12 +164,12 @@ class ConfigurationError(ArelError):
 
 class ErrorHandler:
     """
-    Global hata yÃ¶netim merkezi.
+    Global hata yönetim merkezi.
 
-    - HatalarÄ± log kanalÄ±na iletir
-    - Ä°statistik tutar
-    - Retry decorator saÄŸlar
-    - Telegram error handler olarak kullanÄ±labilir
+    - Hataları log kanalına iletir
+    - İstatistik tutar
+    - Retry decorator sağlar
+    - Telegram error handler olarak kullanılabilir
     """
 
     _stats = {
@@ -190,17 +190,17 @@ class ErrorHandler:
         chat_id: Optional[int] = None
     ) -> str:
         """
-        Bir hatayÄ± iÅŸler, loglar ve kullanÄ±cÄ± mesajÄ± dÃ¶ndÃ¼rÃ¼r.
+        Bir hatayı işler, loglar ve kullanıcı mesajı döndürür.
 
         Args:
             error: Yakalanan exception
-            context: Ek baÄŸlam bilgisi (Ã¶rn: {"user_id": 123, "command": "/test"})
-            notify: Log kanalÄ±na bildirim gÃ¶nderilsin mi?
+            context: Ek bağlam bilgisi (örn: {"user_id": 123, "command": "/test"})
+            notify: Log kanalına bildirim gönderilsin mi?
             bot: telegram.Bot instance (notify=True ise gerekli)
-            chat_id: Bildirimin gideceÄŸi chat ID
+            chat_id: Bildirimin gideceği chat ID
 
         Returns:
-            KullanÄ±cÄ±ya gÃ¶sterilecek mesaj
+            Kullanıcıya gösterilecek mesaj
         """
         cls._stats["total_errors"] += 1
         error_type = type(error).__name__
@@ -215,7 +215,7 @@ class ErrorHandler:
             log_msg = f"[{code}] {error_type}"
         else:
             code = "UNHANDLED"
-            user_msg = "Beklenmedik bir hata oluÅŸtu. LÃ¼tfen tekrar deneyin."
+            user_msg = "Beklenmedik bir hata oluştu. Lütfen tekrar deneyin."
             log_msg = f"[UNHANDLED] {error_type}"
 
         logger.error("%s (%s)", log_msg, summarize_exception(error, label="handled_error"))
@@ -223,7 +223,7 @@ class ErrorHandler:
         if notify and bot and chat_id:
             try:
                 error_text = (
-                    f"ğŸš¨ <b>HATA</b>\n\n"
+                    f"🚨 <b>HATA</b>\n\n"
                     f"<b>Tip:</b> {error_type}\n"
                     f"<b>Kod:</b> {code}\n"
                     f"<b>Mesaj:</b> {user_msg[:200]}\\n"
@@ -241,12 +241,12 @@ class ErrorHandler:
 
     @classmethod
     def get_stats(cls) -> Dict[str, Any]:
-        """Hata istatistiklerini dÃ¶ndÃ¼rÃ¼r."""
+        """Hata istatistiklerini döndürür."""
         return dict(cls._stats)
 
     @classmethod
     def reset_stats(cls):
-        """Ä°statistikleri sÄ±fÄ±rlar."""
+        """İstatistikleri sıfırlar."""
         for key in cls._stats:
             if isinstance(cls._stats[key], (int, float)):
                 cls._stats[key] = 0
@@ -263,17 +263,17 @@ class ErrorHandler:
         exceptions: tuple = (Exception,)
     ) -> Callable:
         """
-        Decorator: Bir fonksiyonu hata durumunda belirtilen sayÄ±da tekrar dener.
+        Decorator: Bir fonksiyonu hata durumunda belirtilen sayıda tekrar dener.
 
-        KullanÄ±m:
+        Kullanım:
             @ErrorHandler.retry(max_retries=5, delay=2, exceptions=(AIApiError,))
             async def get_ai_response(prompt):
                 ...
 
         Args:
-            max_retries: Maksimum deneme sayÄ±sÄ±
-            delay: Ä°lk bekleme sÃ¼resi (saniye)
-            backoff: Her denemede delay Ã§arpanÄ±
+            max_retries: Maksimum deneme sayısı
+            delay: İlk bekleme süresi (saniye)
+            backoff: Her denemede delay çarpanı
             exceptions: Yakalanacak exception tipleri
 
         Returns:
@@ -317,7 +317,7 @@ class ErrorHandler:
 
     @staticmethod
     async def handle_telegram_error(update, context):
-        """python-telegram-bot iÃ§in global error handler callback."""
+        """python-telegram-bot için global error handler callback."""
         error = context.error
         update_info = {}
 
@@ -342,11 +342,18 @@ class ErrorHandler:
                 chat = getattr(update, "effective_chat", None)
                 is_group = getattr(chat, "type", None) in {"group", "supergroup"}
                 is_animation = bool(getattr(message, "animation", None))
+                is_document = bool(getattr(message, "document", None))
                 caption_or_text = getattr(message, "caption", None) or getattr(message, "text", None) or ""
                 # Passive GIFs and media-link updates must never turn an
                 # internal exception into a public group error message.
-                is_media_update = is_animation or "http://" in caption_or_text or "https://" in caption_or_text
+                is_media_update = (
+                    is_animation
+                    or is_document
+                    or "http://" in caption_or_text
+                    or "https://" in caption_or_text
+                )
                 if not (is_group and is_media_update):
                     await message.reply_text(user_msg, parse_mode='HTML')
         except Exception:
             pass
+

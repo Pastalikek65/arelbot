@@ -111,6 +111,7 @@ class TestCommandHandler:
         ]
         assert "ayar_q_toggle" in callbacks
         assert "ayar_media_toggle" in callbacks
+        assert "panel" not in message.sent[0].casefold()
 
     @pytest.mark.asyncio
     async def test_lyrics_command_uses_typed_feature_and_supports_artist_separator(self):
