@@ -1,5 +1,5 @@
 """
-Handler'lar iÃ§in birim testleri.
+Handler'lar için birim testleri.
 """
 import pytest
 from types import SimpleNamespace
@@ -29,6 +29,90 @@ class TestCommandHandler:
         assert handler is not None
 
     @pytest.mark.asyncio
+    async def test_ayar_command_opens_personal_button_panel_in_private_chat(self):
+        from src.handlers.command_handler import CommandHandler
+        from src.services.menu_service import MenuService
+
+        class DB:
+            async def get_chat_settings(self, chat_id):
+                return {"q_enabled": True, "media_enabled": False}
+
+        class Message:
+            def __init__(self):
+                self.sent = None
+
+            async def reply_text(self, text, **kwargs):
+                self.sent = (text, kwargs)
+
+        message = Message()
+        update = SimpleNamespace(
+            effective_message=message,
+            message=message,
+            effective_user=SimpleNamespace(id=42),
+            effective_chat=SimpleNamespace(id=42, type="private"),
+        )
+        handler = CommandHandler(
+            SimpleNamespace(), SimpleNamespace(owner_id=1), None, None,
+            menu_service=MenuService(), data_port=DB(),
+        )
+
+        await handler.handle_ayar_command(update, SimpleNamespace(args=[]))
+
+        assert message.sent is not None
+        assert message.sent[1]["reply_markup"].inline_keyboard
+        callbacks = [
+            button.callback_data
+            for row in message.sent[1]["reply_markup"].inline_keyboard
+            for button in row
+        ]
+        assert "settings_media_toggle" in callbacks
+        assert "daily_brief:42" in callbacks
+
+    @pytest.mark.asyncio
+    async def test_ayar_command_opens_group_admin_button_panel(self):
+        from src.handlers.command_handler import CommandHandler
+        from src.services.menu_service import MenuService
+
+        class DB:
+            async def get_chat_settings(self, chat_id):
+                return {"media_enabled": True, "q_enabled": False}
+
+        class Bot:
+            async def get_chat_member(self, chat_id, user_id):
+                return SimpleNamespace(status="administrator")
+
+        class Message:
+            def __init__(self):
+                self.sent = None
+
+            async def reply_text(self, text, **kwargs):
+                self.sent = (text, kwargs)
+
+        message = Message()
+        update = SimpleNamespace(
+            effective_message=message,
+            message=message,
+            effective_user=SimpleNamespace(id=42),
+            effective_chat=SimpleNamespace(id=-100, type="supergroup"),
+        )
+        context = SimpleNamespace(args=[], bot=Bot())
+        handler = CommandHandler(
+            SimpleNamespace(), SimpleNamespace(owner_id=1), None, None,
+            menu_service=MenuService(), data_port=DB(),
+        )
+
+        await handler.handle_ayar_command(update, context)
+
+        assert message.sent is not None
+        callbacks = [
+            button.callback_data
+            for row in message.sent[1]["reply_markup"].inline_keyboard
+            for button in row
+        ]
+        assert "ayar_q_toggle" in callbacks
+        assert "ayar_media_toggle" in callbacks
+
+    @pytest.mark.asyncio
     async def test_lyrics_command_uses_typed_feature_and_supports_artist_separator(self):
         from src.handlers.command_handler import CommandHandler
         from src.features.contracts import FeatureResult
@@ -43,7 +127,7 @@ class TestCommandHandler:
             class Executor:
                 async def execute(self, feature_key, params):
                     assert feature_key == "lyrics"
-                    assert params == {"song": "ÅarkÄ±", "artist": "SanatÃ§Ä±"}
+                    assert params == {"song": "Şarkı", "artist": "Sanatçı"}
                     return FeatureResult.success(
                         {"content": "<b>Kaynak</b>"},
                         display_blocks=("<b>Kaynak</b>",),
@@ -55,7 +139,7 @@ class TestCommandHandler:
             effective_user=SimpleNamespace(id=1),
             effective_chat=SimpleNamespace(id=1, type="private"),
         )
-        context = SimpleNamespace(args=["ÅarkÄ±", "|", "SanatÃ§Ä±"])
+        context = SimpleNamespace(args=["Şarkı", "|", "Sanatçı"])
         handler = CommandHandler(Engine(), SimpleNamespace(owner_id=1), None, None)
 
         await handler.handle_lyrics_command(update, context)
@@ -77,14 +161,14 @@ class TestCommandHandler:
         class Executor:
             async def execute(self, feature_key, params):
                 assert feature_key == "web_search"
-                assert params["query"] == "gÃ¼ncel haber"
+                assert params["query"] == "güncel haber"
                 return FeatureResult.success(
-                    {"content": "<b>SonuÃ§</b>"},
-                    display_blocks=("<b>SonuÃ§</b>",),
+                    {"content": "<b>Sonuç</b>"},
+                    display_blocks=("<b>Sonuç</b>",),
                 )
 
         update = SimpleNamespace(effective_message=Message())
-        context = SimpleNamespace(args=["gÃ¼ncel", "haber"])
+        context = SimpleNamespace(args=["güncel", "haber"])
         handler = CommandHandler(
             SimpleNamespace(feature_executor=Executor()),
             SimpleNamespace(owner_id=1),
@@ -94,7 +178,7 @@ class TestCommandHandler:
 
         await handler.handle_search_command(update, context)
 
-        assert sent and "SonuÃ§" in sent[0][0]
+        assert sent and "Sonuç" in sent[0][0]
         assert sent[0][1]["parse_mode"] == "HTML"
 
     @pytest.mark.asyncio
@@ -112,7 +196,7 @@ class TestCommandHandler:
             async def execute(self, feature_key, params):
                 assert feature_key == "breaking_news"
                 assert params == {"category": "dunya"}
-                return FeatureResult.success({}, display_blocks=("<b>DÃ¼nya</b>",))
+                return FeatureResult.success({}, display_blocks=("<b>Dünya</b>",))
 
         update = SimpleNamespace(effective_message=Message())
         handler = CommandHandler(
@@ -121,8 +205,8 @@ class TestCommandHandler:
             None,
             None,
         )
-        await handler.handle_haber_command(update, SimpleNamespace(args=["dÃ¼nya"]))
-        assert sent and "DÃ¼nya" in sent[0][0]
+        await handler.handle_haber_command(update, SimpleNamespace(args=["dünya"]))
+        assert sent and "Dünya" in sent[0][0]
 
     @pytest.mark.asyncio
     async def test_news_command_rejects_unknown_category_without_provider_call(self):
@@ -148,7 +232,7 @@ class TestCommandHandler:
             SimpleNamespace(effective_message=Message()),
             SimpleNamespace(args=["magazin"]),
         )
-        assert sent and "Kategori bulunamadÄ±" in sent[0]
+        assert sent and "Kategori bulunamadı" in sent[0]
 
     @pytest.mark.asyncio
     async def test_unified_culture_command_shows_category_picker_without_provider_call(self):
@@ -172,7 +256,7 @@ class TestCommandHandler:
         )
         handler = CommandHandler(Engine(), SimpleNamespace(owner_id=1), None, None)
         await handler.handle_culture_command(update, SimpleNamespace(args=[]))
-        assert sent and "KÃ¼ltÃ¼r Ã¶nerileri" in sent[0][0]
+        assert sent and "Kültür önerileri" in sent[0][0]
         assert sent[0][1]["reply_markup"].inline_keyboard[0][0].callback_data == "culture:9:movie"
 
     @pytest.mark.asyncio
@@ -238,7 +322,7 @@ class TestCommandHandler:
             MockEngine(), MockManager(), None, None, subscription_service=object()
         )
         await handler.handle_subscription_command(update, context)
-        assert replies and "yalnÄ±zca grup yÃ¶neticileri" in replies[0]
+        assert replies and "yalnızca grup yöneticileri" in replies[0]
 
     @pytest.mark.asyncio
     async def test_group_admin_can_list_shared_schedules(self):
@@ -259,7 +343,7 @@ class TestCommandHandler:
                 return [{
                     "subscription_id": "weather-job-123",
                     "feature_key": "weather",
-                    "params": {"city": "Ä°stanbul"},
+                    "params": {"city": "İstanbul"},
                     "schedule_kind": "daily",
                     "local_time": "10:00",
                     "enabled": True,
@@ -297,7 +381,7 @@ class TestCommandHandler:
             effective_chat=SimpleNamespace(id=7, type="private"),
             effective_message=Message(),
         )
-        context = SimpleNamespace(args=["kur", "usd", "40", "Ã¼stÃ¼"])
+        context = SimpleNamespace(args=["kur", "usd", "40", "üstü"])
         handler = CommandHandler(
             SimpleNamespace(), SimpleNamespace(), None, None,
             subscription_service=SubscriptionService(SubscriptionStore()),
@@ -559,15 +643,15 @@ class TestCallbackHandler:
             None,
             data_port=HandlerDataPort(db),
         )
-        await handler.handle_ayar_command(update, SimpleNamespace(args=["kiÅŸilik", "iÄŸneleyici"]))
+        await handler.handle_ayar_command(update, SimpleNamespace(args=["kişilik", "iğneleyici"]))
         assert db.settings["persona_mode"] == "needle"
-        assert "Ä°ÄŸneleyici" in message.reply[0]
-        await handler.handle_ayar_command(update, SimpleNamespace(args=["kiÅŸilik", "Ä°ÄNELEYÄ°CÄ°"]))
+        assert "İğneleyici" in message.reply[0]
+        await handler.handle_ayar_command(update, SimpleNamespace(args=["kişilik", "İĞNELEYİCİ"]))
         assert db.settings["persona_mode"] == "needle"
-        await handler.handle_ayar_command(update, SimpleNamespace(args=["KÄ°ÅÄ°LÄ°K", "CÄ°DDÄ°"]))
+        await handler.handle_ayar_command(update, SimpleNamespace(args=["KİŞİLİK", "CİDDİ"]))
         assert db.settings["persona_mode"] == "serious"
         await handler.handle_ayar_command(update, SimpleNamespace(args=[]))
-        assert "KiÅŸilik" in message.reply[0]
+        assert "Kişilik" in message.reply[0]
         assert "Ciddi" in message.reply[0]
 
     @pytest.mark.asyncio
@@ -592,7 +676,7 @@ class TestCallbackHandler:
         db = DB()
         message = Message()
         update = SimpleNamespace(
-            effective_user=SimpleNamespace(id=42, full_name="Arel KullanÄ±cÄ±"),
+            effective_user=SimpleNamespace(id=42, full_name="Arel Kullanıcı"),
             effective_chat=SimpleNamespace(id=42, type="private"),
             effective_message=message,
             message=message,
@@ -604,9 +688,9 @@ class TestCallbackHandler:
             None,
             data_port=HandlerDataPort(db),
         )
-        await handler.handle_personality_command(update, SimpleNamespace(args=["Ä°ÄNELEYÄ°CÄ°"]))
+        await handler.handle_personality_command(update, SimpleNamespace(args=["İĞNELEYİCİ"]))
         assert db.user["persona_mode"] == "needle"
-        assert "Ä°ÄŸneleyici" in message.reply[0]
+        assert "İğneleyici" in message.reply[0]
         await handler.handle_personality_command(update, SimpleNamespace(args=[]))
         buttons = message.reply[1]["reply_markup"].inline_keyboard
         assert any(button.callback_data == "persona_user:needle" for row in buttons for button in row)
@@ -645,7 +729,7 @@ class TestCallbackHandler:
         query = Query()
         await handler._handle_persona_user_callback(update, query, "persona_user:needle")
         assert db.user["persona_mode"] == "needle"
-        assert "Ä°ÄŸneleyici" in query.text
+        assert "İğneleyici" in query.text
 
         update.effective_user.id = 99
         update.effective_chat.id = 99
@@ -723,9 +807,9 @@ class TestCallbackHandler:
             None,
             data_port=HandlerDataPort(DB()),
         )
-        await handler.handle_ayar_command(update, SimpleNamespace(args=["kiÅŸilik", "iÄŸneleyici"]))
+        await handler.handle_ayar_command(update, SimpleNamespace(args=["kişilik", "iğneleyici"]))
         assert "kaydedilemedi" in message.reply[0]
-        assert "Grup kiÅŸilik modu" not in message.reply[0]
+        assert "Grup kişilik modu" not in message.reply[0]
 
     @pytest.mark.asyncio
     async def test_weather_forecast_callback_is_owner_scoped_and_passes_days(self):
@@ -736,7 +820,7 @@ class TestCallbackHandler:
 
         class Directory:
             def by_plate(self, plate):
-                return SimpleNamespace(plate=plate, name="Ä°stanbul")
+                return SimpleNamespace(plate=plate, name="İstanbul")
 
         class Executor:
             async def execute(self, feature_key, params):
@@ -772,7 +856,7 @@ class TestCallbackHandler:
             "weather_forecast:456:34:7",
         )
 
-        assert calls == [("weather", {"city": "Ä°stanbul", "days": 7})]
+        assert calls == [("weather", {"city": "İstanbul", "days": 7})]
         assert query.text.startswith("<b>Tahmin</b>")
 
     def test_feature_result_marks_data_outside_freshness_sla(self):
@@ -792,7 +876,7 @@ class TestCallbackHandler:
 
         formatted = CommandHandler(None, None, None, None)._format_feature_result(result, "fallback")
 
-        assert "tazelik hedefinin dÄ±ÅŸÄ±nda" in formatted
+        assert "tazelik hedefinin dışında" in formatted
         assert "Kaynak: <a href=\"https://example.test/rates\">Fixture provider</a>" in formatted
 
 
@@ -812,7 +896,7 @@ class TestMessageHandler:
 
         bot = SimpleNamespace(send_message=AsyncMock())
         context = SimpleNamespace(bot=bot)
-        user = SimpleNamespace(is_bot=False, full_name="Yeni KullanÄ±cÄ±", username="yeni")
+        user = SimpleNamespace(is_bot=False, full_name="Yeni Kullanıcı", username="yeni")
         event = SimpleNamespace(
             chat=SimpleNamespace(id=-100, type="supergroup", title="Arel Grubu"),
             old_chat_member=SimpleNamespace(status="left"),
@@ -825,7 +909,7 @@ class TestMessageHandler:
         await handler.handle_chat_member_update(update, context)
 
         bot.send_message.assert_awaited_once()
-        assert "Yeni KullanÄ±cÄ±" in bot.send_message.await_args.kwargs["text"]
+        assert "Yeni Kullanıcı" in bot.send_message.await_args.kwargs["text"]
 
 
     @pytest.mark.asyncio
@@ -860,11 +944,11 @@ class TestMessageHandler:
         handler._log_event = AsyncMock()
         message = Message()
         update = SimpleNamespace(
-            effective_user=SimpleNamespace(id=42, full_name="Arel KullanÄ±cÄ±", username="arel"),
+            effective_user=SimpleNamespace(id=42, full_name="Arel Kullanıcı", username="arel"),
             effective_chat=SimpleNamespace(id=42, type="private"),
             effective_message=message,
         )
-        await handler.process_chat_request(update, 42, "KÄ±sa bir cevap ver", SimpleNamespace())
+        await handler.process_chat_request(update, 42, "Kısa bir cevap ver", SimpleNamespace())
         assert engine.calls[0]["persona_mode"] == "needle"
         assert message.reply[0] == "Tamam."
 
@@ -914,3 +998,4 @@ class TestMediaHandler:
     async def test_imports(self):
         from src.handlers.media_handler import MediaHandler
         assert MediaHandler is not None
+
