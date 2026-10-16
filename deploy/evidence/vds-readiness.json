@@ -1,0 +1,28 @@
+{
+  "scope": "vds-readiness",
+  "ok": true,
+  "mode": "live-read-only",
+  "mutation": false,
+  "checks": {
+    "ssh_authenticated": true,
+    "host_key_verified": true,
+    "linux_host": true,
+    "docker_available": true,
+    "compose_available": true,
+    "app_root_present": true,
+    "app_root_writable": true,
+    "shared_env_present": true
+  },
+  "release_count": 3,
+  "free_space_kb": 51124660,
+  "target_container_count": 4,
+  "nginx_active": false,
+  "listening_ports": [
+    80,
+    443,
+    8443
+  ],
+  "existing_container_count": 12,
+  "blockers": [],
+  "secret_free": true
+}

@@ -1,0 +1,17 @@
+{
+  "scope": "vds-backup-restore",
+  "ok": true,
+  "mode": "live-disposable-staging",
+  "checks": {
+    "backup_created": true,
+    "manifest_verified": true,
+    "artifact_checksum_verified": true,
+    "mongo_restore_verified": true,
+    "redis_restore_verified": true,
+    "chroma_restore_verified": true,
+    "cleanup_verified": true
+  },
+  "archive_sha256": "5e9dbf7ed8edfc4351fd340c48da48bdaaccff1f1bb31b6ea2197f07845d8ad2",
+  "artifact_count": 3,
+  "secret_free": true
+}

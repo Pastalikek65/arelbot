@@ -1,0 +1,81 @@
+{
+  "ok": true,
+  "case_count": 4,
+  "passed": 4,
+  "failed": 0,
+  "latency_ms": {
+    "p50": 419.19,
+    "p95": 551.47
+  },
+  "repeat_latency_ms": {
+    "p50": 0.07,
+    "p95": 0.07
+  },
+  "results": [
+    {
+      "case_id": "weather_istanbul",
+      "feature": "weather",
+      "ok": true,
+      "first_ok": true,
+      "second_ok": true,
+      "first_cache_hit": false,
+      "second_cache_hit": true,
+      "stale": false,
+      "source": "wttr.in",
+      "source_host": "wttr.in",
+      "latency_ms": 551.47,
+      "second_latency_ms": 0.07,
+      "error_code": null,
+      "detail": null
+    },
+    {
+      "case_id": "air_quality_ankara",
+      "feature": "air_quality",
+      "ok": true,
+      "first_ok": true,
+      "second_ok": true,
+      "first_cache_hit": false,
+      "second_cache_hit": true,
+      "stale": false,
+      "source": "Open-Meteo Air Quality",
+      "source_host": "open-meteo.com",
+      "latency_ms": 419.19,
+      "second_latency_ms": 0.06,
+      "error_code": null,
+      "detail": null
+    },
+    {
+      "case_id": "earthquake_feed",
+      "feature": "earthquakes",
+      "ok": true,
+      "first_ok": true,
+      "second_ok": null,
+      "first_cache_hit": false,
+      "second_cache_hit": null,
+      "stale": false,
+      "source": "AFAD",
+      "source_host": "deprem.afad.gov.tr",
+      "latency_ms": 276.35,
+      "second_latency_ms": null,
+      "error_code": null,
+      "detail": null
+    },
+    {
+      "case_id": "currency_rates",
+      "feature": "currency",
+      "ok": true,
+      "first_ok": true,
+      "second_ok": true,
+      "first_cache_hit": false,
+      "second_cache_hit": true,
+      "stale": false,
+      "source": "DÃ¶viz.com",
+      "source_host": "www.doviz.com",
+      "latency_ms": 729.47,
+      "second_latency_ms": 0.11,
+      "error_code": null,
+      "detail": null
+    }
+  ],
+  "mode": "live-staging"
+}

@@ -1,0 +1,416 @@
+{
+  "ok": true,
+  "governance": {
+    "ok": true,
+    "features": [
+      {
+        "feature_key": "pharmacy",
+        "provider_key": "get_pharmacies",
+        "source_name": "NÃ¶betÃ§i Eczaneler",
+        "status": "pending",
+        "robots_policy": "review_required",
+        "terms_review": "review_required",
+        "production_signoff": "required"
+      },
+      {
+        "feature_key": "fuel",
+        "provider_key": "get_fuel_prices",
+        "source_name": "DÃ¶viz.com",
+        "status": "pending",
+        "robots_policy": "review_required",
+        "terms_review": "review_required",
+        "production_signoff": "required"
+      },
+      {
+        "feature_key": "currency",
+        "provider_key": "get_currency_rates",
+        "source_name": "DÃ¶viz.com",
+        "status": "pending",
+        "robots_policy": "review_required",
+        "terms_review": "review_required",
+        "production_signoff": "required"
+      },
+      {
+        "feature_key": "crypto",
+        "provider_key": "get_crypto_prices",
+        "source_name": "CoinGecko",
+        "status": "pending",
+        "robots_policy": "review_required",
+        "terms_review": "review_required",
+        "production_signoff": "required"
+      },
+      {
+        "feature_key": "market",
+        "provider_key": "get_market_quote",
+        "source_name": "Yahoo Finance",
+        "status": "pending",
+        "robots_policy": "review_required",
+        "terms_review": "review_required",
+        "production_signoff": "required"
+      },
+      {
+        "feature_key": "earthquakes",
+        "provider_key": "get_recent_earthquakes",
+        "source_name": "AFAD",
+        "status": "pending",
+        "robots_policy": "review_required",
+        "terms_review": "review_required",
+        "production_signoff": "required"
+      },
+      {
+        "feature_key": "bim_deals",
+        "provider_key": "get_bim_deals",
+        "source_name": "BÄ°M",
+        "status": "pending",
+        "robots_policy": "review_required",
+        "terms_review": "review_required",
+        "production_signoff": "required"
+      },
+      {
+        "feature_key": "breaking_news",
+        "provider_key": "get_breaking_news",
+        "source_name": "TRT Haber + AA RSS",
+        "status": "pending",
+        "robots_policy": "review_required",
+        "terms_review": "review_required",
+        "production_signoff": "required"
+      },
+      {
+        "feature_key": "weather",
+        "provider_key": "get_weather",
+        "source_name": "wttr.in",
+        "status": "pending",
+        "robots_policy": "review_required",
+        "terms_review": "review_required",
+        "production_signoff": "required"
+      },
+      {
+        "feature_key": "air_quality",
+        "provider_key": "get_air_quality",
+        "source_name": "Open-Meteo Air Quality",
+        "status": "pending",
+        "robots_policy": "review_required",
+        "terms_review": "review_required",
+        "production_signoff": "required"
+      },
+      {
+        "feature_key": "prayer_times",
+        "provider_key": "get_prayer_times",
+        "source_name": "HabertÃ¼rk",
+        "status": "pending",
+        "robots_policy": "review_required",
+        "terms_review": "review_required",
+        "production_signoff": "required"
+      },
+      {
+        "feature_key": "culture_recommendation",
+        "provider_key": "culture_tool",
+        "source_name": "Open Library / TVmaze / iTunes",
+        "status": "pending",
+        "robots_policy": "review_required",
+        "terms_review": "review_required",
+        "production_signoff": "required"
+      },
+      {
+        "feature_key": "lyrics",
+        "provider_key": "lyrics_tool",
+        "source_name": "Tavily + permitted lyrics sources",
+        "status": "pending",
+        "robots_policy": "review_required",
+        "terms_review": "review_required",
+        "production_signoff": "required"
+      },
+      {
+        "feature_key": "image_generation",
+        "provider_key": null,
+        "source_name": "Cloudflare Workers AI",
+        "status": "pending",
+        "robots_policy": "review_required",
+        "terms_review": "review_required",
+        "production_signoff": "required"
+      },
+      {
+        "feature_key": "web_reader",
+        "provider_key": "web_reader",
+        "source_name": "Public web page requested by user",
+        "status": "pending",
+        "robots_policy": "review_required",
+        "terms_review": "review_required",
+        "production_signoff": "required"
+      },
+      {
+        "feature_key": "web_search",
+        "provider_key": "web_search",
+        "source_name": "Tavily Search",
+        "status": "pending",
+        "robots_policy": "review_required",
+        "terms_review": "review_required",
+        "production_signoff": "required"
+      },
+      {
+        "feature_key": "market_chart_render",
+        "provider_key": "get_market_quote",
+        "source_name": "Typed market provider rows",
+        "status": "pending",
+        "robots_policy": "review_required",
+        "terms_review": "review_required",
+        "production_signoff": "required"
+      },
+      {
+        "feature_key": "news_digest",
+        "provider_key": "rss_news_digest",
+        "source_name": "RSS haber akÄ±ÅŸlarÄ±",
+        "status": "pending",
+        "robots_policy": "review_required",
+        "terms_review": "review_required",
+        "production_signoff": "required"
+      }
+    ],
+    "feature_count": 18,
+    "pending_count": 18,
+    "disabled_count": 0,
+    "errors": []
+  },
+  "links": {
+    "ok": true,
+    "scope": "live-link-health",
+    "link_count": 29,
+    "passed": 29,
+    "failed": 0,
+    "approval_unchanged": true,
+    "results": [
+      {
+        "feature_key": "pharmacy",
+        "link_kind": "source",
+        "source_host": "www.nobetcieczaneler.org",
+        "status_code": 200,
+        "outcome": "ok",
+        "latency_ms": 1799.62
+      },
+      {
+        "feature_key": "pharmacy",
+        "link_kind": "terms",
+        "source_host": "www.nobetcieczaneler.org",
+        "status_code": 200,
+        "outcome": "ok",
+        "latency_ms": 1707.04
+      },
+      {
+        "feature_key": "fuel",
+        "link_kind": "source",
+        "source_host": "www.doviz.com",
+        "status_code": 200,
+        "outcome": "ok",
+        "latency_ms": 311.42
+      },
+      {
+        "feature_key": "fuel",
+        "link_kind": "terms",
+        "source_host": "www.doviz.com",
+        "status_code": 200,
+        "outcome": "ok",
+        "latency_ms": 193.8
+      },
+      {
+        "feature_key": "currency",
+        "link_kind": "source",
+        "source_host": "www.doviz.com",
+        "status_code": 200,
+        "outcome": "ok",
+        "latency_ms": 41.5
+      },
+      {
+        "feature_key": "currency",
+        "link_kind": "terms",
+        "source_host": "www.doviz.com",
+        "status_code": 200,
+        "outcome": "ok",
+        "latency_ms": 40.61
+      },
+      {
+        "feature_key": "crypto",
+        "link_kind": "source",
+        "source_host": "www.coingecko.com",
+        "status_code": 200,
+        "outcome": "ok",
+        "latency_ms": 566.38
+      },
+      {
+        "feature_key": "crypto",
+        "link_kind": "terms",
+        "source_host": "www.coingecko.com",
+        "status_code": 200,
+        "outcome": "ok",
+        "latency_ms": 488.42
+      },
+      {
+        "feature_key": "market",
+        "link_kind": "source",
+        "source_host": "finance.yahoo.com",
+        "status_code": 200,
+        "outcome": "ok",
+        "latency_ms": 539.64
+      },
+      {
+        "feature_key": "market",
+        "link_kind": "terms",
+        "source_host": "legal.yahoo.com",
+        "status_code": 200,
+        "outcome": "ok",
+        "latency_ms": 596.98
+      },
+      {
+        "feature_key": "earthquakes",
+        "link_kind": "source",
+        "source_host": "deprem.afad.gov.tr",
+        "status_code": 200,
+        "outcome": "ok",
+        "latency_ms": 204.11
+      },
+      {
+        "feature_key": "earthquakes",
+        "link_kind": "terms",
+        "source_host": "deprem.afad.gov.tr",
+        "status_code": 200,
+        "outcome": "ok",
+        "latency_ms": 166.95
+      },
+      {
+        "feature_key": "bim_deals",
+        "link_kind": "source",
+        "source_host": "www.bim.com.tr",
+        "status_code": 200,
+        "outcome": "ok",
+        "latency_ms": 370.06
+      },
+      {
+        "feature_key": "bim_deals",
+        "link_kind": "terms",
+        "source_host": "www.bim.com.tr",
+        "status_code": 200,
+        "outcome": "ok",
+        "latency_ms": 368.45
+      },
+      {
+        "feature_key": "breaking_news",
+        "link_kind": "source",
+        "source_host": "www.trthaber.com",
+        "status_code": 200,
+        "outcome": "ok",
+        "latency_ms": 290.33
+      },
+      {
+        "feature_key": "breaking_news",
+        "link_kind": "terms",
+        "source_host": "www.trthaber.com",
+        "status_code": 200,
+        "outcome": "ok",
+        "latency_ms": 257.56
+      },
+      {
+        "feature_key": "weather",
+        "link_kind": "source",
+        "source_host": "wttr.in",
+        "status_code": 200,
+        "outcome": "ok",
+        "latency_ms": 380.28
+      },
+      {
+        "feature_key": "weather",
+        "link_kind": "terms",
+        "source_host": "wttr.in",
+        "status_code": 200,
+        "outcome": "ok",
+        "latency_ms": 296.12
+      },
+      {
+        "feature_key": "air_quality",
+        "link_kind": "source",
+        "source_host": "open-meteo.com",
+        "status_code": 200,
+        "outcome": "ok",
+        "latency_ms": 403.25
+      },
+      {
+        "feature_key": "air_quality",
+        "link_kind": "terms",
+        "source_host": "open-meteo.com",
+        "status_code": 200,
+        "outcome": "ok",
+        "latency_ms": 330.14
+      },
+      {
+        "feature_key": "prayer_times",
+        "link_kind": "source",
+        "source_host": "www.haberturk.com",
+        "status_code": 200,
+        "outcome": "ok",
+        "latency_ms": 218.26
+      },
+      {
+        "feature_key": "prayer_times",
+        "link_kind": "terms",
+        "source_host": "www.haberturk.com",
+        "status_code": 200,
+        "outcome": "ok",
+        "latency_ms": 138.53
+      },
+      {
+        "feature_key": "culture_recommendation",
+        "link_kind": "terms",
+        "source_host": "openlibrary.org",
+        "status_code": 200,
+        "outcome": "ok",
+        "latency_ms": 846.37
+      },
+      {
+        "feature_key": "lyrics",
+        "link_kind": "terms",
+        "source_host": "www.tavily.com",
+        "status_code": 200,
+        "outcome": "ok",
+        "latency_ms": 1059.43
+      },
+      {
+        "feature_key": "image_generation",
+        "link_kind": "source",
+        "source_host": "developers.cloudflare.com",
+        "status_code": 200,
+        "outcome": "ok",
+        "latency_ms": 172.8
+      },
+      {
+        "feature_key": "image_generation",
+        "link_kind": "terms",
+        "source_host": "www.cloudflare.com",
+        "status_code": 200,
+        "outcome": "ok",
+        "latency_ms": 621.71
+      },
+      {
+        "feature_key": "web_search",
+        "link_kind": "source",
+        "source_host": "docs.tavily.com",
+        "status_code": 200,
+        "outcome": "ok",
+        "latency_ms": 354.11
+      },
+      {
+        "feature_key": "web_search",
+        "link_kind": "terms",
+        "source_host": "www.tavily.com",
+        "status_code": 200,
+        "outcome": "ok",
+        "latency_ms": 453.96
+      },
+      {
+        "feature_key": "news_digest",
+        "link_kind": "terms",
+        "source_host": "www.trthaber.com",
+        "status_code": 200,
+        "outcome": "ok",
+        "latency_ms": 85.32
+      }
+    ]
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "ok": true,
+  "mode": "validation-only",
+  "case_count": 2,
+  "disabled_count": 2,
+  "platforms": [
+    "tiktok",
+    "youtube"
+  ],
+  "secret_free": true
+}

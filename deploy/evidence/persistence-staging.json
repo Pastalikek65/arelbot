@@ -1,0 +1,10 @@
+{
+  "ok": true,
+  "mode": "compose-smoke",
+  "checks": {
+    "mongo_dump_restore": true,
+    "redis_snapshot_restore": true,
+    "cleanup": true
+  },
+  "secret_free": true
+}

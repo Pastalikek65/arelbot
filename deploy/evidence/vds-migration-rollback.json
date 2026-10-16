@@ -1,0 +1,13 @@
+{
+  "scope": "vds-migration-rollback",
+  "ok": true,
+  "mode": "live-disposable-staging",
+  "checks": {
+    "rollback_to_v3": true,
+    "forward_to_v14": true,
+    "index_contract_verified": true,
+    "disposable_database_cleaned": true,
+    "production_namespace_untouched": true
+  },
+  "secret_free": true
+}

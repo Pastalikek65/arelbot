@@ -1,0 +1,35 @@
+{
+  "ok": true,
+  "mode": "live-probe",
+  "case_count": 2,
+  "passed": 2,
+  "failed": 0,
+  "latency_ms": {
+    "p95": 1971.85
+  },
+  "results": [
+    {
+      "case_id": "youtube_shorts_public",
+      "platform": "youtube",
+      "source_host": "www.youtube.com",
+      "ok": true,
+      "mode": "probe",
+      "error_code": null,
+      "duration_ms": 2409.23,
+      "media_duration_seconds": 213.0,
+      "file_size_bytes": null
+    },
+    {
+      "case_id": "tiktok_public",
+      "platform": "tiktok",
+      "source_host": "www.tiktok.com",
+      "ok": true,
+      "mode": "probe",
+      "error_code": null,
+      "duration_ms": 1971.85,
+      "media_duration_seconds": 10.0,
+      "file_size_bytes": null
+    }
+  ],
+  "secret_free": true
+}

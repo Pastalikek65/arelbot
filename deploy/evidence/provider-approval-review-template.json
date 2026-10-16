@@ -1,0 +1,205 @@
+{
+  "schema_version": 1,
+  "kind": "provider-approval-review-template",
+  "ok": true,
+  "features": [
+    {
+      "feature_key": "air_quality",
+      "provider_key": "get_air_quality",
+      "source_name": "Open-Meteo Air Quality",
+      "source_fingerprint": "d4b496312455aa5c38bd07de1b2c593bd1b631e7cd6223dddad63805956e857f",
+      "current_source_governance": "pending",
+      "current_robots_policy": "review_required",
+      "current_terms_review": "review_required",
+      "current_production_signoff": "required",
+      "review_required": true
+    },
+    {
+      "feature_key": "bim_deals",
+      "provider_key": "get_bim_deals",
+      "source_name": "BÄ°M",
+      "source_fingerprint": "ae736bec2574db5ce586f679f31d690ca4300b0f998b635da904b927b5eac305",
+      "current_source_governance": "approved",
+      "current_robots_policy": "allowed",
+      "current_terms_review": "approved",
+      "current_production_signoff": "approved",
+      "review_required": false
+    },
+    {
+      "feature_key": "breaking_news",
+      "provider_key": "get_breaking_news",
+      "source_name": "TRT Haber + AA RSS",
+      "source_fingerprint": "777df41b88234f61f549e15c4b3e6e4276e1ef460969659cbf01dc80dd5f9aae",
+      "current_source_governance": "approved",
+      "current_robots_policy": "allowed",
+      "current_terms_review": "approved",
+      "current_production_signoff": "approved",
+      "review_required": false
+    },
+    {
+      "feature_key": "crypto",
+      "provider_key": "get_crypto_prices",
+      "source_name": "CoinGecko",
+      "source_fingerprint": "b58bd0d2cbf8b7885d05dafbea6a2aa285ec8f19289dbc951f79fc38ea56a9b6",
+      "current_source_governance": "pending",
+      "current_robots_policy": "review_required",
+      "current_terms_review": "review_required",
+      "current_production_signoff": "required",
+      "review_required": true
+    },
+    {
+      "feature_key": "culture_recommendation",
+      "provider_key": "culture_tool",
+      "source_name": "Open Library / TVmaze / iTunes",
+      "source_fingerprint": "01da6f9502c19ea519b34ada25b2c4184b2e18ab3ad9b0707a65a3438805bca2",
+      "current_source_governance": "approved",
+      "current_robots_policy": "allowed",
+      "current_terms_review": "approved",
+      "current_production_signoff": "approved",
+      "review_required": false
+    },
+    {
+      "feature_key": "currency",
+      "provider_key": "get_currency_rates",
+      "source_name": "DÃ¶viz.com",
+      "source_fingerprint": "fc911d71aad7e0e42d3eb23f76b625a3d58f225cdf185acab764effd3e01e41c",
+      "current_source_governance": "approved",
+      "current_robots_policy": "allowed",
+      "current_terms_review": "approved",
+      "current_production_signoff": "approved",
+      "review_required": false
+    },
+    {
+      "feature_key": "earthquakes",
+      "provider_key": "get_recent_earthquakes",
+      "source_name": "AFAD",
+      "source_fingerprint": "ea390d24d543d6f914040732e6c9347de7278252b924cc5897fa657bc612fc75",
+      "current_source_governance": "approved",
+      "current_robots_policy": "allowed",
+      "current_terms_review": "approved",
+      "current_production_signoff": "approved",
+      "review_required": false
+    },
+    {
+      "feature_key": "fuel",
+      "provider_key": "get_fuel_prices",
+      "source_name": "DÃ¶viz.com",
+      "source_fingerprint": "ea7a27d58e6e5e816e62e81746e257e1071ec5d3c9a4ef911362462c5c693471",
+      "current_source_governance": "approved",
+      "current_robots_policy": "allowed",
+      "current_terms_review": "approved",
+      "current_production_signoff": "approved",
+      "review_required": false
+    },
+    {
+      "feature_key": "image_generation",
+      "provider_key": null,
+      "source_name": "Cloudflare Workers AI",
+      "source_fingerprint": "ab1e777bd337d04dd09ac049cee24a91a75803a03899e8521df89e7a5eec8e69",
+      "current_source_governance": "pending",
+      "current_robots_policy": "review_required",
+      "current_terms_review": "review_required",
+      "current_production_signoff": "required",
+      "review_required": true
+    },
+    {
+      "feature_key": "lyrics",
+      "provider_key": "lyrics_tool",
+      "source_name": "Tavily + permitted lyrics sources",
+      "source_fingerprint": "c68063ad7c9cbe5b791eb61a257f69a72b3be2ed2ab56c6c2a18be9b82f00307",
+      "current_source_governance": "pending",
+      "current_robots_policy": "review_required",
+      "current_terms_review": "review_required",
+      "current_production_signoff": "required",
+      "review_required": true
+    },
+    {
+      "feature_key": "market",
+      "provider_key": "get_market_quote",
+      "source_name": "Yahoo Finance",
+      "source_fingerprint": "f4abf2a1b6fdc97ee2e93bfaf69bf89fdbc42227cc9f9cc70ad0e1af8c1fb2c6",
+      "current_source_governance": "pending",
+      "current_robots_policy": "review_required",
+      "current_terms_review": "review_required",
+      "current_production_signoff": "required",
+      "review_required": true
+    },
+    {
+      "feature_key": "market_chart_render",
+      "provider_key": "get_market_quote",
+      "source_name": "Typed market provider rows",
+      "source_fingerprint": "6ca6cfaf4c2d5e4eed7c86ca9a8e1106a312f2b23b564ee4afa8567b73439558",
+      "current_source_governance": "pending",
+      "current_robots_policy": "review_required",
+      "current_terms_review": "review_required",
+      "current_production_signoff": "required",
+      "review_required": true
+    },
+    {
+      "feature_key": "news_digest",
+      "provider_key": "rss_news_digest",
+      "source_name": "RSS haber akÄ±ÅŸlarÄ±",
+      "source_fingerprint": "5cf9d6da0b0dc057bcaa248a1c1d291e7a3c0bd9bbc0c78dd393b5941122e8c4",
+      "current_source_governance": "approved",
+      "current_robots_policy": "allowed",
+      "current_terms_review": "approved",
+      "current_production_signoff": "approved",
+      "review_required": false
+    },
+    {
+      "feature_key": "pharmacy",
+      "provider_key": "get_pharmacies",
+      "source_name": "NÃ¶betÃ§i Eczaneler",
+      "source_fingerprint": "6e296b20527b544b63ca969f4af3f412fa173fbd37423f06c2ce3c1e96e56ea1",
+      "current_source_governance": "approved",
+      "current_robots_policy": "allowed",
+      "current_terms_review": "approved",
+      "current_production_signoff": "approved",
+      "review_required": false
+    },
+    {
+      "feature_key": "prayer_times",
+      "provider_key": "get_prayer_times",
+      "source_name": "HabertÃ¼rk",
+      "source_fingerprint": "5659d34ebd52679c6efa1d012692ff0787ea6a737d68da72e26de9531c3f375a",
+      "current_source_governance": "pending",
+      "current_robots_policy": "review_required",
+      "current_terms_review": "review_required",
+      "current_production_signoff": "required",
+      "review_required": true
+    },
+    {
+      "feature_key": "weather",
+      "provider_key": "get_weather",
+      "source_name": "wttr.in",
+      "source_fingerprint": "5878e819e7214218b587724653db6ff3413b525fbe5ad21aee8cdd8ce2118b68",
+      "current_source_governance": "approved",
+      "current_robots_policy": "allowed",
+      "current_terms_review": "approved",
+      "current_production_signoff": "approved",
+      "review_required": false
+    },
+    {
+      "feature_key": "web_reader",
+      "provider_key": "web_reader",
+      "source_name": "Public web page requested by user",
+      "source_fingerprint": "e237f86d274432b094d0b825e9b9fc0adb04b47ade7faf920a1c01f244668cb2",
+      "current_source_governance": "pending",
+      "current_robots_policy": "review_required",
+      "current_terms_review": "review_required",
+      "current_production_signoff": "required",
+      "review_required": true
+    },
+    {
+      "feature_key": "web_search",
+      "provider_key": "web_search",
+      "source_name": "Tavily Search",
+      "source_fingerprint": "077055e9db8f289064b31d6a3e04f0799725cf363bd35be82e700eb6a8c25bcb",
+      "current_source_governance": "approved",
+      "current_robots_policy": "allowed",
+      "current_terms_review": "approved",
+      "current_production_signoff": "approved",
+      "review_required": false
+    }
+  ]
+}
