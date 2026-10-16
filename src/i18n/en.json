@@ -1,0 +1,11 @@
+{
+  "menu.title": "ğŸ  <b>AREL MAIN MENU</b>",
+  "menu.subtitle": "Choose one of the hubs below to continue quickly.",
+  "games.title": "ğŸ® <b>AREL GAME LOUNGE</b>",
+  "games.subtitle": "Pick a game, create a lobby, or view the leaderboard.",
+  "leaderboard.empty": "ğŸ† No leaderboard records for this chat yet.",
+  "leaderboard.title": "ğŸ† <b>LEADERBOARD</b>",
+  "reminder.usage": "ğŸ”” Usage: <code>/remind 10m Drink water</code>",
+  "reminder.ok": "âœ… Done! I will remind you in {when}: {text}",
+  "language.changed": "âœ… Language preference changed to English."
+}
