@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "project": "arelbot",
+  "purpose": "Machine-readable phase contract for release and coding agents.",
+  "phases": [
+    {
+      "id": "0",
+      "name": "stabilization",
+      "required_checks": ["architecture", "pytest", "compose_profiles", "docker_pytest", "docker_health"]
+    },
+    {
+      "id": "1",
+      "name": "typed_media_and_providers",
+      "required_checks": ["provider_matrix", "provider_load", "media_replay_matrix", "media_delivery_replay"]
+    },
+    {
+      "id": "2",
+      "name": "durable_state_and_persistence",
+      "required_checks": ["mongo_migration_smoke", "mongo_ledger_smoke"],
+      "required_evidence": ["persistence-staging.json"]
+    },
+    {
+      "id": "3",
+      "name": "quote_and_sticker_platform",
+      "required_checks": ["mongo_sticker_operation_smoke", "pytest"]
+    },
+    {
+      "id": "4",
+      "name": "ai_and_rag",
+      "required_checks": ["pytest", "docker_pytest"]
+    },
+    {
+      "id": "5",
+      "name": "groups_and_automation",
+      "required_checks": ["pytest", "docker_pytest"]
+    },
+    {
+      "id": "6",
+      "name": "games_and_economy",
+      "required_checks": ["pytest", "mongo_ledger_smoke"]
+    },
+    {
+      "id": "7",
+      "name": "observability_and_operations",
+      "required_checks": ["monitoring_config", "monitoring_alert_replay", "monitoring_alert_delivery_replay", "evidence_audit"]
+    },
+    {
+      "id": "8",
+      "name": "telegram_surfaces",
+      "required_checks": ["architecture", "pytest"],
+      "required_live_files": ["telegram-staging.json"]
+    },
+    {
+      "id": "9",
+      "name": "live_deployment_validation",
+      "required_live_files": [
+        "vds-readiness.json",
+        "telegram-mutation-live.json",
+        "media-staging-full-matrix.json",
+        "vds-backup-restore.json",
+        "monitoring-alert-delivery.json",
+        "provider-governance-approval.json",
+        "cleanapis-staging.json"
+      ]
+    }
+  ]
+}

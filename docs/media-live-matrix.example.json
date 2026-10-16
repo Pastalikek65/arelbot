@@ -1,0 +1,28 @@
+{
+  "cases": [
+    {
+      "id": "youtube_shorts_public_fixture",
+      "platform": "youtube",
+      "url": "https://www.youtube.com/shorts/BpAtghLqGDQ",
+      "enabled": true
+    },
+    {
+      "id": "tiktok_public",
+      "platform": "tiktok",
+      "url": "https://www.tiktok.com/@scout2015/video/6718335390845095173",
+      "enabled": true
+    },
+    {
+      "id": "instagram_public",
+      "platform": "instagram",
+      "url": "",
+      "enabled": false
+    },
+    {
+      "id": "x_public",
+      "platform": "x",
+      "url": "",
+      "enabled": false
+    }
+  ]
+}
