@@ -1,8 +1,8 @@
 # Arel — özellikler ve komut rehberi
 
-Bu rehber 18 Ekim 2026 tarihinde incelenen kaynak ağacının kullanıcı ve yönetici yüzeylerini açıklar. Komut adları `main.py` kayıtlarından, davranışlar handler/servis kodu ile registry tanımlarından alınmıştır.
+Bu rehber 18 Ekim 2026 tarihinde incelenen iki kaynak ağacının kullanıcı ve yönetici yüzeylerini açıklar. İlk 13 bölüm GitHub uygulama kaynağındaki tanımları, “Güncel yerel ve sunucu sürümündeki ekler” bölümü ise `dbcc3bc` sürümündeki ilave yüzeyleri anlatır. Komut adları `main.py` kayıtlarından, davranışlar handler/servis kodu ile registry tanımlarından alınmıştır.
 
-> **Bilinen engel:** İncelenen `242a1ec` commit'inde `src/handlers/command_handler.py` kesilmiş çıktı metni içeriyor ve Python tarafından ayrıştırılamıyor. Ayrıca şehir dizinindeki geçersiz karakter eşleme tablosu import sırasında hata verir. Bu engeller giderilmeden uygulama çalışır kabul edilemez. Aşağıdaki tablo, kaynakta bulunan tanımları ve akışları belgelendirir; her satırın tamamlanmış, erişilebilir veya canlıda başarılı olduğunu iddia etmez. Sunucudaki farklı dağıtım ayrıca incelenmelidir.
+> **GitHub uygulama kaynağındaki bilinen engel:** İncelenen `242a1ec` commit'inde `src/handlers/command_handler.py` kesilmiş çıktı metni içeriyor ve Python tarafından ayrıştırılamıyor. Ayrıca şehir dizinindeki geçersiz karakter eşleme tablosu import sırasında hata verir. Bu engeller giderilmeden uygulama çalışır kabul edilemez. Aşağıdaki tablo, kaynakta bulunan tanımları ve akışları belgelendirir; her satırın tamamlanmış, erişilebilir veya canlıda başarılı olduğunu iddia etmez. Sunucudaki farklı dağıtım ayrıca incelenmelidir.
 
 **Durumları okuma:** Bütün satırlar **kaynakta tanımlı** anlamındadır. **AI**, yapılandırılmış uygun model bağlantısı; **dış veri**, kaynak erişimi ve üretimde gerekli kaynak onayı; **worker**, çalışan kuyruk işleyicisi; **kalıcılık**, ilgili MongoDB/Redis/Chroma bağlantıları gerektirir. Bu rehber için tek tek canlı özellik kabulü **NOT_RUN** durumundadır. Test, kaynak inceleme ve canlı kabul ayrı kanıt türleridir.
 
@@ -277,3 +277,244 @@ Kaynaklar: [`orchestrator.py`](../src/orchestrator.py), [`sudo_manager.py`](../s
 Tam alanlar için [`.env.example`](../.env.example) ve [`config.py`](../config.py), teknik registry için [FEATURE_CATALOG.md](FEATURE_CATALOG.md) incelenmelidir. Katalogdaki “aktif” ifadesi canlı test sonucu değildir. Kaynak onayı, AI anahtarı, servis sağlığı ve Telegram teslim kanıtı ayrı koşullardır.
 
 Yeni özellik eklerken komut kaydını, gerçek handler/servis akışını ve yapılandırma gereksinimini doğrulayın. Ölçülmemiş gecikme, kullanıcı kapasitesi veya üretim kararlılığı iddiası eklemeyin.
+
+## Güncel yerel ve sunucu sürümündeki ekler
+
+**Sürüm sınırı:** Aşağıdaki ekler salt okunur incelenen `C:\Vscode\arelbot` ağacının `dbcc3bcf31f136536eadcb9926f331821b919218` commit'ine dayanır. Sunucunun RELEASE kaydı aynı commit kimliğini bildirir; bu, bütün dosyaların ve çalışma ayarlarının eşitliği veya canlı kabul anlamına gelmez. Bu ek uygulama değişiklikleri mevcut GitHub uygulama koduna senkronize edilmemiştir. GitHub'da dokümantasyonun güncellenmesi kod senkronizasyonu değildir. Aşağıdaki özellikler için canlı uçtan uca kabul **NOT_RUN** durumundadır.
+
+### Ek oyunlar ve kart altyapısı
+
+| Yetenek | Komut/yüzey | Kaynakta tanımlanan davranış |
+|---|---|---|
+| Connect Four | `/connect4` | İki oyunculu lobi, 6×7 tahta, dört taşı birleştirme, sıra ve callback kontrolleri, kalıcı durum |
+| XOX | `/xox`, `/tictactoe` | İki oyunculu lobi; mevcut komut başlangıcında 6×6 tahta ve dört taşlık kazanım; durum ve eski panel kimliği kontrolleri |
+| Gomoku | `/gomoku`, `/besli` | İki oyunculu lobi; varsayılan 10×10 tahta, beş taşlık kazanım; 6/7/8/10/12/15 boyut seçimi ve forum konusu kapsamı |
+| Ek oyun adları | `/trivia`, `/dogruluk`, `/cesaret` | Mevcut quiz ve doğruluk/cesaret handler'larına açık eşleme |
+| Toplu oyun bitirme adları | `/oyunbitir`, `/oyundur`, `/oyunlardur` | Kayıtlı oyun sonlandırma yüzeyine eşleme; oyuncu/yönetici koşulları ilgili handler'dadır |
+| Ortak kart motoru | Dahili `card_engine.py` | Kart/deck değer nesneleri, seed'li karıştırma, snapshot serileştirme, blackjack el değeri ve action-ID tekilleştirme |
+
+Kart motoru ayrı bir kullanıcı komutu değildir ve mevcut kart oyunlarının tümünün bu motora geçirildiği iddia edilmez. İncelenen sürümde `CardAction` dataclass'ının `MappingProxyType({})` varsayılanı import/test toplama hatası oluşturur; kart altyapısı ve tüm test paketi başarılı kabul edilemez.
+
+Kaynak dosyaları (`dbcc3bc` ağacı): `src/features/catalog.py`, `src/handlers/command_handler.py`, `src/services/word_game_ui.py`, `src/services/tictactoe_ui.py`, `src/services/gomoku_ui.py`, `src/games/gomoku.py`, `src/games/card_engine.py`, `src/handlers/callback_handler.py`. Bu yollar burada sürüm kaynağı olarak yazılmıştır; GitHub'da bulunmayan dosyalara yanıltıcı bağlantı verilmez.
+
+### Grup moderasyonu ve Guardian yüzeyi
+
+Guardian, Arel'in Telegram taşıma ve repository katmanlarına bağlanan moderasyon uyumluluk katmanıdır. Ayrı bir Telegram botunun veya bütün upstream özelliklerin çalıştırıldığı anlamına gelmez. Komut sözlüğü; domain ayarı, Telegram eylemi ve bazı açıkça kullanılamayan özellikleri birlikte içerir.
+
+| Alan | Komut örnekleri | Kaynak davranışı / koşul |
+|---|---|---|
+| Kurulum ve yardım | `/ghelp`, `/hizlikur`, `/kurulum` | Kategori yardımı ve yönetici kontrollü grup koruma varsayılanları |
+| Üye yönetimi | `/mute`, `/unmute`, `/ban`, `/unban`, `/kick`, `/tban`, `/tmute` | Hedef ve süre ayrıştırma; Telegram eylem/yetki katmanı gerekir |
+| Yönetici yetkileri | `/promote`, `/demote`, `/admin`, `/deadmin`, `/yoneticiler`, `/yetkipaneli` | Üye/yönetici sorguları ve yetki düzenleme; botun Telegram yetkileri ayrıca aranır |
+| Uyarı akışı | `/warn`, `/warns`, `/resetwarn`, `/setwarnlimit`, `/setwarnmode` | Kalıcı uyarı kayıtları ve eşik/ceza tercihi |
+| Sessiz/özel eylemler | `/sban`, `/skick`, `/smute`, `/swarn`, `/adminmute`, `/adminunmute` | Sessiz eylem metadata'sı; yönetici hedefli varyantlarda ayrı owner/sudo sınırı |
+| Mesaj/grup yönetimi | `/purge`, `/pin`, `/unpin`, `/unpinall`, `/settitle`, `/setdesc`, `/setpic` | Mesaj ve grup bilgisi için taşıma eylemleri |
+| İçerik/flood koruması | `/antilink`, `/antibotlink`, `/setflood`, `/setfloodmode`, `/addblock`, `/rmblock`, `/blocklistmode` | Link, reklam, yoğunluk ve engelli kelime politikaları |
+| Katılım/doğrulama | `/antiraid`, `/captcha`, `/captchatype`, `/fsub` | Katılım koruması, doğrulama ve zorunlu abonelik akışları; kalıcı challenge ve zaman/sahiplik kontrolleri |
+| Medya koruması | `/lock`, `/unlock`, `/locks`, `/mban`, `/munban`, `/fakekoruma`, `/gorselkoruma`, `/editkoruma` | Medya türü, sahte katılım, görsel ve düzenlenen mesaj kontrolleri; uygun işleme/ayar gerekir |
+| Paket/GIF listeleri | `/packengelle`, `/packizinver`, `/packlistesi`, `/gifengelle`, `/gifizinver`, `/giflistesi` | Grup kapsamlı engel/izin kayıtları |
+| Grup içeriği | `/rules`, `/setrules`, `/save`, `/get`, `/notes`, `/filter`, `/filters`, `/stop` | Grup kuralı, not ve otomatik filtre yanıtları; kişisel `/not` kayıtlarından ayrıdır |
+| Karşılama/gece | `/setwelcome`, `/welcome`, `/setgoodbye`, `/goodbye`, `/nightmode`, `/nighttime` | Grup mesajları ve gece saati politikaları; her alt seçenek aynı uygulama düzeyinde değildir |
+| Kullanıcı bilgisi | `/info`, `/id`, `/afk`, `/userinfo`, `/firstmsg`, `/memberlog`, `/zombies`, `/report` | Kimlik, AFK, kayıt ve rapor yüzeyleri; kapsam/yetki sınırlamaları |
+| Grup ekibi/istisnalar | `/staff`, `/free`, `/unfree`, `/unmod`, `/approve`, `/disapprove`, `/approved` | Grup rollerini ve koruma istisnalarını kaydetme |
+| Tekrarlı içerik | `/recurring`, `/stoprecurring` | Mevcut duyuru servisi üzerinden aralıklı grup mesajı planlama/durdurma |
+| Federasyon | `/newfed`, `/joinfed`, `/leavefed`, `/fedinfo`, `/fedadmins`, `/fban`, `/funban`, `/fedbanlist` | Federasyon kimliği, üyelik/yasak kayıtları ve ilgili eylemler; bütün gruplara canlı yayılım doğrulanmış değildir |
+| Federasyon ayrıntıları | `/fedchats`, `/fednotes`, `/fnote`, `/fedtransfer`, `/feddelete`, `/subfed`, `/unsubfed`, `/fedsubs`, `/importfbans` | Üyelik, not, sahiplik ve yasak aktarım yüzeyleri |
+| Risk ve genel kayıtlar | `/gban`, `/ungban`, `/whois`, `/toprisk`, `/shadowstats`, `/analytics` | Genel yasak/risk kayıtları ve özetler; çalışma kapsamı ayrı doğrulanmalıdır |
+| Komut/ayar yönetimi | `/alias`, `/aliases`, `/delalias`, `/disable`, `/enable`, `/disabled`, `/export`, `/import`, `/reload`, `/stats` | Grup alias'ları, komut kapıları ve sınırlı ayar aktarımı |
+| Bot sahibi merkezi/yayın | `/arelmerkez`, `/panel`, `/broadcastpin` | Owner merkez ekranı; duyuruyu gönderip sabitleme; teslim ve izinler ayrıca doğrulanır |
+
+**Açık kullanılamayan yüzeyler:** `GuardianSurface._UNWIRED_FEATURES` içinde `/banlimit`, `/promotelimit`, `/grupinfolimit`, `/privaterules`, `/language`, `/connect`, `/disconnect`, `/logchannel`, `/setappeallog`, `/setfedlog`, `/cleanservice`, `/cleanwelcome`, `/welcomemute` tanımları vardır. Bu yollar ilgili işlemde ayarı değiştirmeden `guardian_feature_unavailable` döndürür. `/grupdili`, `/dil`, `/kayitkanali` ve `/logkanal` gibi karşılıkları da bu sınırlamalarla okunmalıdır; bir menü açıklaması bu özelliği etkin yapmaz.
+
+**Yönlendirme sınırı:** `/del` ve `/mesajisil` komutları kayıt/alias yüzeyinde bulunmasına rağmen `del` hedefi `GuardianSurface.COMMANDS` içinde yoktur. Handler'ın başlangıç kabul kontrolü bu yolu sessizce durdurabilir. Bu kayıtlar işlevsel mesaj silme kanıtı değildir; canlı test **NOT_RUN**.
+
+Kaynak dosyaları (`dbcc3bc` ağacı): `src/moderation/guardian_surface.py`, `src/moderation/guardian_commands.py`, `src/moderation/guardian_enforcement.py`, `src/moderation/telegram_guardian_service.py`, `src/handlers/command_handler.py`, `src/handlers/message_handler.py`, `src/orchestrator.py`.
+
+### Komut kayıt sistemi ve dinamik komutlar
+
+`src/telegram/command_registry.py`, canonical komutu, uyumluluk alias'larını, açıklamayı, handler adını ve public/group-admin/owner menü kapsamını tek sözleşmede tutar. Çakışma kontrolü vardır. `main.py` önce bu kayıtları bağlar, ardından eski statik kayıtların aynı adla ikinci kez eklenmesini engeller. Eksik handler için açık “bu kurulumda henüz etkin değil” yanıtı üreten fallback bulunur.
+
+Menü kapsamı yetkilendirme yerine geçmez. Guardian komutları tasarım gereği slash picker yerine düğmeli yardım üzerinden sunulur. Telegram komut menüsü ayrıca filtre ve sayı sınırı uygular; kayıtlı bir adın menüde görünmesi veya gerçekten çalışması garanti edilmez. `/alias` ile oluşturulan gruba özel adlar `filters.COMMAND` catch-all yolu ve repository'deki alias çözümlemesiyle ele alınır. `#not_adı` grup notu kısayolu da ayrı mesaj yüzeyidir. Kullanıcı tarafından tanımlanabilecek adlar sonlu bir sabit listeyle sayılmaz.
+
+Aşağıdaki indeks yalnızca bu commit'in **kayıtlı ad ve alias sözlüğüdür**. Açıklamalar kaynak kaydının niyetini aktarır; etkinlik/izin/teslim sonucu değildir. Yukarıdaki kullanılamayan ve yönlendirme kusurlu yollar indeks içinde de yer alır.
+
+### Güncel kaynak komut indeksi
+
+| Canonical kayıt | Uyumluluk adları | Kayıt açıklaması | Menü kapsamı |
+|---|---|---|---|
+| `/broadcastpin` | — | Duyuruyu tüm sohbetlere gönder ve sabitle | Bot sahibi |
+| `/arelmerkez` | `/panel` | Arel yönetim merkezi | Bot sahibi |
+| `/hizlikur` | `/kurulum` | Grubu adım adım kur | Grup yöneticisi |
+| `/kayitkanali` | `/logkanal` | Moderasyon kayıt kanalını ayarla | Grup yöneticisi |
+| `/grupayari` | `/ayarlar` | Bu grubun Arel ayarları | Grup yöneticisi |
+| `/grupkurallari` | `/rules`, `/setrules`, `/kurallar`, `/chatkurallari` | Grup kurallarını göster | Genel |
+| `/sustur` | `/sus`, `/mute` | Bir üyeyi süreli sustur | Grup yöneticisi |
+| `/tmute` | — | Bir üyeyi süreli sustur | Grup yöneticisi |
+| `/susturac` | `/sesiac`, `/unmute` | Bir üyenin susturmasını kaldır | Grup yöneticisi |
+| `/yasakla` | `/ban` | Bir üyeyi gruptan uzaklaştır | Grup yöneticisi |
+| `/yasagiac` | `/unban` | Üyenin grup yasağını kaldır | Grup yöneticisi |
+| `/yetkiver` | `/admin`, `/promote` | Üyeye yönetici yetkisi ver | Grup yöneticisi |
+| `/yetkial` | `/deadmin`, `/demote` | Yönetici yetkisini kaldır | Grup yöneticisi |
+| `/yoneticiler` | `/adminler` | Gruptaki yöneticileri listele | Genel |
+| `/yetkipaneli` | `/yetkiler` | Yönetici yetkilerini düzenle | Grup yöneticisi |
+| `/uyar` | `/warn` | Bir üyeye uyarı ver | Grup yöneticisi |
+| `/uyarlar` | `/warns` | Üyenin uyarılarını göster | Grup yöneticisi |
+| `/uyarisifirla` | `/resetwarn` | Üyenin uyarılarını sıfırla | Grup yöneticisi |
+| `/tekme` | `/kick` | Üyeyi gruptan çıkar | Grup yöneticisi |
+| `/geciciyasa` | `/tban` | Süreli grup yasağı uygula | Grup yöneticisi |
+| `/hayalet` | `/hayaletban`, `/sban` | Gruba girmeden önce yasakla | Grup yöneticisi |
+| `/mesajisil` | `/del` | Yanıtlanan mesajı sil | Grup yöneticisi |
+| `/mesajtemizle` | `/purge`, `/temizle` | Son mesajları topluca sil | Grup yöneticisi |
+| `/sabitle` | `/pin` | Yanıtlanan mesajı sabitle | Grup yöneticisi |
+| `/sabitlekaldir` | `/unpin` | Mesaj sabitlemesini kaldır | Grup yöneticisi |
+| `/rapor` | `/report` | Mesajı yöneticilere raporla | Genel |
+| `/yasaklikelimeler` | `/yasakkelime`, `/blocklist` | Yasaklı kelimeleri yönet | Grup yöneticisi |
+| `/iznilinkler` | `/guvenlilink`, `/whitelist` | İzinli alan adlarını yönet | Grup yöneticisi |
+| `/linkkoruma` | — | Link korumasını aç veya kapat | Grup yöneticisi |
+| `/reklamkoruma` | — | Reklam korumasını aç veya kapat | Grup yöneticisi |
+| `/floodlimiti` | `/floodlimit`, `/setflood` | Flood eşiğini ayarla | Grup yöneticisi |
+| `/floodcezasi` | `/floodmod`, `/setfloodmode` | Flood cezasını seç | Grup yöneticisi |
+| `/raidkoruma` | `/joinraidac`, `/raidbitti` | Katılım saldırısı korumasını yönet | Grup yöneticisi |
+| `/dogrulama` | — | Yeni üyeler için doğrulama ayarla | Grup yöneticisi |
+| `/hosgeldin` | `/welcome` | Hoş geldin mesajını yönet | Grup yöneticisi |
+| `/veda` | `/goodbye` | Veda mesajını yönet | Grup yöneticisi |
+| `/gecemodu` | — | Gece modunu yönet | Grup yöneticisi |
+| `/grupdili` | `/dil`, `/language` | Grup dilini değiştir | Grup yöneticisi |
+| `/grupistatistik` | `/istatistik` | Grup istatistiklerini göster | Grup yöneticisi |
+| `/sohbetmodu` | `/chatmod` | Arel sohbet modunu yönet | Grup yöneticisi |
+| `/areluslubu` | `/stil` | Arel üslubunu seç | Grup yöneticisi |
+| `/notekle` | `/not_ekle` | Gruba not ekle | Grup yöneticisi |
+| `/notsil` | `/not_sil` | Grup notunu sil | Grup yöneticisi |
+| `/filtre` | `/filter` | Kelime filtresi oluştur | Grup yöneticisi |
+| `/filtreler` | `/filters` | Aktif filtreleri listele | Genel |
+| `/filtresil` | `/stop` | Kelime filtresini sil | Grup yöneticisi |
+| `/lock` | — | Bir medya türünü kilitle | Grup yöneticisi |
+| `/unlock` | — | Bir medya türünün kilidini aç | Grup yöneticisi |
+| `/locks` | — | Aktif medya kilitlerini göster | Genel |
+| `/oyunbitir` | `/oyundur`, `/oyunlardur` | Aktif oyunları bitir | Grup yöneticisi |
+| `/trivia` | — | Bilgi yarışması başlat | Genel |
+| `/dogruluk` | — | Doğruluk turu başlat | Genel |
+| `/cesaret` | — | Cesaret turu başlat | Genel |
+| `/agkur` | `/newfed`, `/fed_olustur` | Federasyon ağı oluştur | Grup yöneticisi |
+| `/agaekle` | `/joinfed`, `/fed_katil` | Grubu federasyona bağla | Grup yöneticisi |
+| `/agdanayril` | `/leavefed` | Federasyondan ayrıl | Grup yöneticisi |
+| `/agdurum` | `/fedstat` | Federasyon durumunu göster | Genel |
+| `/agban` | `/fban` | Federasyon yasağı uygula | Grup yöneticisi |
+| `/agbanac` | `/unfban`, `/funban` | Federasyon yasağını kaldır | Grup yöneticisi |
+| `/agbanlar` | `/fedbanlist` | Federasyon yasaklarını listele | Genel |
+| `/golgeban` | `/shadowban` | Gölge yasağı uygula | Grup yöneticisi |
+| `/golgeac` | `/unshadowban`, `/unsban` | Gölge yasağı kaldır | Grup yöneticisi |
+| `/risk` | `/whois` | Kullanıcı risk kartını göster | Grup yöneticisi |
+| `/riskraporu` | `/analytics` | Federasyon risk raporu | Grup yöneticisi |
+| `/guvenliliste` | `/fedapprove`, `/fedunapprove` | Güvenilir kullanıcıları yönet | Grup yöneticisi |
+| `/info` | — | Sohbet ve kullanıcı kimliğini gösterir | Genel |
+| `/id` | — | Sohbet ve kullanıcı kimliğini gösterir | Genel |
+| `/afk` | — | Geçici olarak uzakta olduğunu bildirir | Genel |
+| `/ghelp` | — | Guardian ghelp komutu | Grup yöneticisi |
+| `/muter` | — | Guardian muter komutu | Grup yöneticisi |
+| `/unmuter` | — | Guardian unmuter komutu | Grup yöneticisi |
+| `/settitle` | — | Guardian settitle komutu | Grup yöneticisi |
+| `/setdesc` | — | Guardian setdesc komutu | Grup yöneticisi |
+| `/setpic` | — | Guardian setpic komutu | Grup yöneticisi |
+| `/ytban` | — | Guardian ytban komutu | Grup yöneticisi |
+| `/zombies` | — | Uzun süredir pasif üyeleri listeler | Grup yöneticisi |
+| `/reload` | — | Guardian ayarlarını yeniden yükler | Grup yöneticisi |
+| `/echo` | — | Metni geri gönderir | Genel |
+| `/skick` | — | Guardian skick komutu | Grup yöneticisi |
+| `/smute` | — | Guardian smute komutu | Grup yöneticisi |
+| `/swarn` | — | Guardian swarn komutu | Grup yöneticisi |
+| `/unmod` | — | Guardian moderatör rolünü kaldırır | Grup yöneticisi |
+| `/free` | — | Kullanıcıyı koruma istisnasına alır | Grup yöneticisi |
+| `/unfree` | — | Koruma istisnasını kaldırır | Grup yöneticisi |
+| `/staff` | — | Grup ekibini listeler | Grup yöneticisi |
+| `/recurring` | — | Tekrarlı mesaj planlar | Grup yöneticisi |
+| `/stoprecurring` | — | Tekrarlı mesajı durdurur | Grup yöneticisi |
+| `/unpinall` | — | Guardian unpinall komutu | Grup yöneticisi |
+| `/banlimit` | — | Guardian banlimit komutu | Grup yöneticisi |
+| `/promotelimit` | — | Guardian promotelimit komutu | Grup yöneticisi |
+| `/grupinfolimit` | — | Guardian grupinfolimit komutu | Grup yöneticisi |
+| `/reaksiyon` | — | Guardian reaksiyon komutu | Grup yöneticisi |
+| `/fakekoruma` | — | Guardian fakekoruma komutu | Grup yöneticisi |
+| `/gorselkoruma` | — | Guardian gorselkoruma komutu | Grup yöneticisi |
+| `/packengelle` | — | Guardian packengelle komutu | Grup yöneticisi |
+| `/packizinver` | — | Guardian packizinver komutu | Grup yöneticisi |
+| `/packlistesi` | — | Guardian packlistesi komutu | Grup yöneticisi |
+| `/gifengelle` | — | Guardian gifengelle komutu | Grup yöneticisi |
+| `/gifizinver` | — | Guardian gifizinver komutu | Grup yöneticisi |
+| `/giflistesi` | — | Guardian giflistesi komutu | Grup yöneticisi |
+| `/editkoruma` | — | Guardian editkoruma komutu | Grup yöneticisi |
+| `/alias` | — | Grup komut takma adı ekler | Grup yöneticisi |
+| `/delalias` | — | Grup komut takma adını siler | Grup yöneticisi |
+| `/aliases` | — | Grup takma adlarını listeler | Grup yöneticisi |
+| `/setwarnlimit` | — | Uyarı sınırını ayarlar | Grup yöneticisi |
+| `/setwarnmode` | — | Uyarı cezasını seçer | Grup yöneticisi |
+| `/antilink` | — | Bağlantı korumasını açar veya kapatır | Grup yöneticisi |
+| `/antibotlink` | — | Bot bağlantısı korumasını yönetir | Grup yöneticisi |
+| `/rmwhitelist` | — | Guardian rmwhitelist komutu | Grup yöneticisi |
+| `/antiraid` | — | Katılım saldırısı korumasını yönetir | Grup yöneticisi |
+| `/approve` | — | Kullanıcıyı onaylı listeye alır | Grup yöneticisi |
+| `/disapprove` | — | Kullanıcıyı onaylı listeden çıkarır | Grup yöneticisi |
+| `/approved` | — | Onaylı kullanıcıları listeler | Genel |
+| `/addblock` | — | Kara listeye kelime ekler | Grup yöneticisi |
+| `/rmblock` | — | Kara listeden kelime siler | Grup yöneticisi |
+| `/blocklistmode` | — | Kara liste cezasını seçer | Grup yöneticisi |
+| `/captcha` | — | Yeni üyeler için doğrulamayı yönetir | Grup yöneticisi |
+| `/captchatype` | — | Doğrulama tipini seçer | Grup yöneticisi |
+| `/cleanservice` | — | Telegram servis mesajlarını temizler | Grup yöneticisi |
+| `/connect` | — | Bağlı sohbet ayarını yönetir | Grup yöneticisi |
+| `/disconnect` | — | Bağlı sohbet ayarını kaldırır | Grup yöneticisi |
+| `/export` | — | Guardian ayarlarını dışa aktarır | Grup yöneticisi |
+| `/import` | — | Guardian ayarlarını içe alır | Grup yöneticisi |
+| `/disable` | — | Bir komutu bu grupta kapatır | Grup yöneticisi |
+| `/enable` | — | Kapatılmış komutu açar | Grup yöneticisi |
+| `/disabled` | — | Kapalı komutları listeler | Genel |
+| `/fsub` | — | Zorunlu kanal aboneliğini yönetir | Grup yöneticisi |
+| `/gban` | — | Kullanıcıyı genel yasak kaydına alır | Grup yöneticisi |
+| `/ungban` | — | Genel yasağı kaldırır | Grup yöneticisi |
+| `/setwelcome` | — | Karşılama mesajını ayarlar | Grup yöneticisi |
+| `/setgoodbye` | — | Veda mesajını ayarlar | Grup yöneticisi |
+| `/cleanwelcome` | — | Karşılama temizliğini yönetir | Grup yöneticisi |
+| `/welcomemute` | — | Karşılama susturmasını yönetir | Grup yöneticisi |
+| `/lockmode` | — | Medya kilidi cezasını seçer | Grup yöneticisi |
+| `/logchannel` | — | Kayıt kanalını ayarlar | Grup yöneticisi |
+| `/mban` | — | Medya türünü yasaklar | Grup yöneticisi |
+| `/munban` | — | Medya yasağını kaldırır | Grup yöneticisi |
+| `/userinfo` | — | Kullanıcı bilgi kartını gösterir | Genel |
+| `/firstmsg` | — | Kullanıcının ilk mesajını gösterir | Genel |
+| `/memberlog` | — | Üye geçmişini listeler | Genel |
+| `/nightmode` | — | Gece modunu yönetir | Grup yöneticisi |
+| `/nighttime` | — | Gece saatlerini ayarlar | Grup yöneticisi |
+| `/save` | — | Guardian grup notu kaydeder | Grup yöneticisi |
+| `/get` | — | Guardian grup notunu getirir | Genel |
+| `/notes` | — | Guardian grup notlarını listeler | Genel |
+| `/privaterules` | — | Özel kural mesajını yönetir | Grup yöneticisi |
+| `/delfed` | — | Guardian delfed komutu | Grup yöneticisi |
+| `/fedinfo` | — | Guardian fedinfo komutu | Genel |
+| `/myfed` | — | Guardian myfed komutu | Genel |
+| `/fpromote` | — | Guardian fpromote komutu | Grup yöneticisi |
+| `/fdemote` | — | Guardian fdemote komutu | Grup yöneticisi |
+| `/fedadmins` | — | Guardian fedadmins komutu | Genel |
+| `/fedchats` | — | Guardian fedchats komutu | Grup yöneticisi |
+| `/fedapproved` | — | Guardian fedapproved komutu | Grup yöneticisi |
+| `/setappeallog` | — | Guardian setappeallog komutu | Grup yöneticisi |
+| `/fednotes` | — | Guardian fednotes komutu | Grup yöneticisi |
+| `/fedtransfer` | — | Guardian fedtransfer komutu | Grup yöneticisi |
+| `/feddelete` | — | Guardian feddelete komutu | Grup yöneticisi |
+| `/setfedlog` | — | Guardian setfedlog komutu | Grup yöneticisi |
+| `/fnote` | — | Guardian fnote komutu | Grup yöneticisi |
+| `/unsubfed` | — | Guardian unsubfed komutu | Grup yöneticisi |
+| `/fedsubs` | — | Guardian fedsubs komutu | Grup yöneticisi |
+| `/fbanlist` | — | Guardian fbanlist komutu | Grup yöneticisi |
+| `/importfbans` | — | Guardian importfbans komutu | Grup yöneticisi |
+| `/subfed` | — | Guardian subfed komutu | Grup yöneticisi |
+| `/stats` | — | Guardian durumunu gösterir | Genel |
+| `/toprisk` | — | Guardian toprisk komutu | Grup yöneticisi |
+| `/shadowstats` | — | Guardian shadowstats komutu | Grup yöneticisi |
+| `/addsudo` | — | Guardian addsudo komutu | Grup yöneticisi |
+| `/delsudo` | — | Guardian delsudo komutu | Grup yöneticisi |
+| `/adminmute` | — | Guardian adminmute komutu | Grup yöneticisi |
+| `/adminunmute` | — | Guardian adminunmute komutu | Grup yöneticisi |
+
+**Diğer sözlük adları:** `/gecicisustur`. Bunlar statik kayıt, ham Guardian sözlüğü veya parser alias'ında yer alır; tek başına etkin handler garantisi değildir. `/gecicisustur`, parser'da `tmute` karşılığıdır.
+
+**Kapsam kontrolü:** Bu sürümde statik `main.py` kayıtları 144, canonical registry kayıtları 172, registry adları alias dahil 246, benzersiz ham Guardian adları 168 adettir. Parser alias'larıyla birlikte birleşim **387 benzersiz komut adı** içerir; bu rehber bunların tamamını anar. Sayılar toplanmaz: kümeler birbiriyle örtüşür. Bunlar 387 ayrı ürün özelliği veya başarılı akış anlamına gelmez. Gruba özel alias adları bu sabit sayıdan ayrıdır.
