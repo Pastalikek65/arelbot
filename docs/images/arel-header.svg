@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="320" viewBox="0 0 1200 320" role="img" aria-labelledby="title desc">
+  <title id="title">Arel — Telegram için sohbet, araçlar ve topluluk yönetimi</title>
+  <desc id="desc">Koyu lacivert zemin üzerinde açık renk Arel başlığı, turkuaz vurgu ve bağlantılı bileşenlerden oluşan geometrik bir amblem.</desc>
+  <rect width="1200" height="320" rx="20" fill="#101c32"/>
+  <rect x="56" y="56" width="40" height="5" rx="2.5" fill="#58dcc1"/>
+  <g font-family="Arial, Helvetica, sans-serif">
+    <text x="56" y="149" fill="#f2f6fc" font-size="76" font-weight="700" letter-spacing="-2">Arel</text>
+    <text x="59" y="202" fill="#d3deed" font-size="26">Telegram için sohbet, araçlar ve topluluk yönetimi</text>
+    <text x="59" y="264" fill="#58dcc1" font-size="15" letter-spacing="3">SOHBET · ÜRETKENLİK · TOPLULUK</text>
+  </g>
+  <g transform="translate(955 68)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="0" y="0" width="176" height="176" rx="32" stroke="#2d405d" stroke-width="2"/>
+    <path d="M46 130 88 43 130 130M61 99h54" stroke="#58dcc1" stroke-width="8"/>
+    <circle cx="88" cy="43" r="10" fill="#f2f6fc" stroke="#101c32" stroke-width="4"/>
+    <circle cx="46" cy="130" r="10" fill="#58dcc1" stroke="#101c32" stroke-width="4"/>
+    <circle cx="130" cy="130" r="10" fill="#58dcc1" stroke="#101c32" stroke-width="4"/>
+  </g>
+</svg>
