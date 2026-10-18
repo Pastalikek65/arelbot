@@ -1,5 +1,15 @@
 # Arel güvenilirlik düzeltmeleri — 18 Ekim 2026
 
+## Güncel kaynak doğrulaması
+
+İkinci düzeltme turunda film önerileri Wikidata'nın film kayıtlarına ve kaynak bağlantılarına taşındı; başlık araması, tür önerisi, boş sonuç ve hata durumları sınandı. Önceki Apple film araması artık kullanılmıyor. On beş Guardian ayarı komutun ötesinde gerçek yetki, olay ve Telegram işlem yollarına bağlandı. Blackjack'te doğal 21, çift bahis, terminal durum, yarım bahis iadeli ilk hamle pes etme ve eşzamanlı işlem tutarlılığı; kelime oyunlarında bitiş ve ödeme davranışı düzeltildi.
+
+Yerel kaynak paketinde **1.898 test geçti, 18 koşullu test atlandı**. Benzersiz **387 kayıtlı komut adının her biri** işleyici yönlendirmesinde tek tek sınandı; Guardian ve film akışlarına ayrı regresyonlar eklendi. Mimari denetim 0 sorun, özellik kataloğu 56/56, sıkı kaynak onayı 18/18 ve çevrimdışı yayın kapısı başarılı sonuç verdi. Bu sayılar gerçek bir Telegram kullanıcısının bütün komutları bütün izin ve veri koşullarında çalıştırdığının kanıtı değildir.
+
+Canlı film sağlayıcısı; genel öneri, bilim kurgu, aksiyon ve belirli film aramasında kaynak bağlı veri döndürdü. Telegram test grubundaki ve yeni sunucu imajındaki kabul, bu kaynak kesitinin çevrimdışı testinden ayrı kaydedilmelidir. Faz 9'da tam Telegram mutasyon matrisi ile uyarı teslimi için canlı kanıt henüz yoktur; bunlar tamamlanmış gibi gösterilmez. Blackjack oturum kilidinin ani işlem sonlandırmasındaki sınırı [oyun notunda](GAME_RELIABILITY-2026-10-18.md) açıklanır.
+
+## İlk dağıtımın tarihsel kaydı
+
 ## Doğrulanan düzeltmeler
 
 - Python 3.11 üzerinde kart motorunun açılmasını engelleyen dataclass varsayılanı düzeltildi.

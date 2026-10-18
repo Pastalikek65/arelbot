@@ -20,6 +20,7 @@ from src.moderation.action_ledger import ModerationActionLedger
 from src.moderation.authorization import TelegramModerationAuthorization
 from src.moderation.guardian_enforcement import evaluate_guardian_message
 from src.moderation.telegram_guardian_service import GuardianTelegramService
+from src.moderation.guardian_surface import GuardianSurface
 from src.handlers.handler_utils import is_group_admin
 
 logger = logging.getLogger(__name__)
@@ -59,7 +60,7 @@ class MediaHandler:
         if event is None:
             return False
         try:
-            settings = await self.data_port.get_chat_settings(chat.id) if hasattr(self, "data_port") and self.data_port else None
+            settings = await GuardianSurface(self.data_port).effective_settings(chat.id) if hasattr(self, "data_port") and self.data_port else None
         except Exception:
             logger.warning("Could not load group media moderation settings")
             # Do not emit a group-facing error or execute a default policy;
@@ -139,6 +140,11 @@ class MediaHandler:
                 ),
             )
             result = await executor.execute(action)
+            if getattr(result, "ok", False):
+                await self.guardian_telegram_service.emit_event(
+                    bot=context.bot, chat_id=int(chat.id), actor_id=actor_id, action=action_name,
+                    target_user_id=int(user.id), settings=settings,
+                )
             if getattr(result, "status", None) == "rejected" and getattr(result, "error_code", None) == "permission_denied":
                 return False
         return True

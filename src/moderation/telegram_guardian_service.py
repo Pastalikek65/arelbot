@@ -14,6 +14,7 @@ from typing import Any
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 from .guardian_enforcement import validate_captcha_challenge
+from src.security.output_sanitizer import sanitize_html
 
 
 class GuardianTelegramService:
@@ -21,6 +22,122 @@ class GuardianTelegramService:
 
     _USERNAME_RE = re.compile(r"^[A-Za-z0-9_]{1,64}$")
     _ACTIVE_MEMBER_STATUSES = frozenset({"member", "administrator", "creator", "owner", "restricted"})
+
+    async def route_private_command(self, *, bot: Any, data_port: Any, surface: Any,
+                                     command: str, user_id: int, args: list, message: Any) -> bool:
+        """Allow only configuration/read commands through a revalidated connection."""
+        from .authorization import TelegramModerationAuthorization
+        allowed = {"rules", "setrules", "privaterules", "language", "cleanservice", "cleanwelcome",
+                   "welcomemute", "welcome", "goodbye", "setwelcome", "setgoodbye",
+                   "banlimit", "promotelimit", "grupinfolimit", "antilink", "captcha"}
+        if command == "disconnect":
+            await data_port.update_user(user_id, {"guardian_connected_chat": None})
+            await message.reply_text("Özel sohbet bağlantısı kaldırıldı.")
+            return True
+        row = await data_port.get_user(user_id) or {}
+        target = row.get("guardian_connected_chat")
+        if command == "connect":
+            if not args or not re.fullmatch(r"-\d+", str(args[0])):
+                await message.reply_text("Kullanım: /connect negatif_grup_id")
+                return True
+            target = int(args[0])
+        elif not target or command not in allowed:
+            return False
+        if not isinstance(target, int) or target >= 0 or not await TelegramModerationAuthorization(bot).is_admin(target, user_id):
+            await message.reply_text("Bağlı grubun güncel yöneticisi olmalısın; grup ayarı değiştirilmedi.")
+            return True
+        if command != "connect" and await surface.is_command_disabled(target, command):
+            await message.reply_text("Bu komut bağlı grupta kapalı; ayar değiştirilmedi.")
+            return True
+        if command == "rules":
+            await self.deliver_rules(bot=bot, message=message, chat_id=user_id, user_id=user_id,
+                                     settings=await surface.effective_settings(target))
+            return True
+        result = await surface.execute(command, chat_id=target, user_id=user_id,
+                                       args=[] if command == "connect" else args, is_group=True, is_admin=True)
+        if result is not None:
+            if result.changed:
+                audit = getattr(data_port, "add_audit_log", None)
+                if callable(audit):
+                    await audit(user_id, f"guardian_setting:{command}", chat_id=target)
+                await self.emit_event(bot=bot, chat_id=target, actor_id=user_id, action=command,
+                                      data_port=data_port)
+            await message.reply_text(sanitize_html(result.text), parse_mode="HTML")
+        return True
+
+    async def cleanup_service_message(self, *, message: Any, settings: dict) -> bool:
+        if not settings.get("clean_service_enabled") or message is None:
+            return False
+        fields = ("new_chat_members", "left_chat_member", "new_chat_title", "new_chat_photo",
+                  "delete_chat_photo", "group_chat_created", "supergroup_chat_created",
+                  "channel_chat_created", "migrate_to_chat_id", "migrate_from_chat_id", "pinned_message")
+        if not any(getattr(message, name, None) for name in fields):
+            return False
+        try:
+            await message.delete()
+            return True
+        except Exception:
+            return False
+
+    async def deliver_welcome(self, *, bot: Any, data_port: Any, chat_id: int,
+                              user_id: int, text: str | None, settings: dict, joined: bool = True) -> None:
+        """Apply bounded join mute and replace the preceding welcome when enabled."""
+        if joined and settings.get("welcome_mute_enabled"):
+            from telegram import ChatPermissions
+            from datetime import datetime, timedelta, timezone
+            member = await bot.get_chat_member(chat_id=chat_id, user_id=user_id)
+            if str(getattr(member, "status", "")) not in {"administrator", "creator", "owner"}:
+                await bot.restrict_chat_member(chat_id=chat_id, user_id=user_id,
+                    permissions=ChatPermissions(can_send_messages=False),
+                    until_date=datetime.now(timezone.utc) + timedelta(seconds=300))
+        if not text:
+            return
+        if joined and settings.get("clean_welcome_enabled") and settings.get("guardian_last_welcome_id"):
+            try:
+                await bot.delete_message(chat_id=chat_id, message_id=int(settings["guardian_last_welcome_id"]))
+            except Exception:
+                pass  # Old greetings can already have been removed by admins.
+        sent = await bot.send_message(chat_id=chat_id, text=sanitize_html(text), parse_mode="HTML")
+        if joined and settings.get("clean_welcome_enabled"):
+            await data_port.update_chat_setting_key(chat_id, "guardian_last_welcome_id", int(sent.message_id))
+
+    async def deliver_rules(self, *, bot: Any, message: Any, chat_id: int, user_id: int, settings: dict) -> bool:
+        text = str(settings.get("guardian_rules") or settings.get("rules") or "Bu grubun henüz yazılı bir kuralı yok.")[:4096]
+        if settings.get("private_rules") and chat_id < 0:
+            try:
+                await bot.send_message(chat_id=user_id, text=text)
+                await message.reply_text("Kurallar özel mesajına gönderildi.")
+                return True
+            except Exception:
+                await message.reply_text("Kuralları almak için önce Arel'in özel sohbetinde /start yaz, ardından /rules komutunu tekrar kullan.")
+                return False
+        await message.reply_text(text)
+        return True
+
+    async def emit_event(self, *, bot: Any, chat_id: int, actor_id: int, action: str,
+                         settings: dict | None = None, data_port: Any = None,
+                         target_user_id: int | None = None, appeal: bool = False) -> None:
+        """Emit identifiers and action names only; never copy member message content."""
+        if settings is None:
+            from .guardian_surface import GuardianSurface
+            try:
+                settings = await GuardianSurface(data_port).effective_settings(chat_id)
+            except Exception:
+                return
+        key = "guardian_appeal_log_channel" if appeal else "guardian_log_channel"
+        channels = {settings.get(key)}
+        if not appeal and action in {"fban", "funban", "fedapprove", "fedunapprove", "setfedlog", "setappeallog"}:
+            channels.add(settings.get("guardian_federation_log_channel"))
+        text = (f"Guardian · {escape(str(action)[:48])}\nGrup: {int(chat_id)}\n"
+                f"İşlemi yapan: {int(actor_id)}" + (f"\nHedef: {int(target_user_id)}" if target_user_id else ""))
+        for channel in channels:
+            if not isinstance(channel, int) or channel >= 0:
+                continue
+            try:
+                await bot.send_message(chat_id=channel, text=text, parse_mode="HTML")
+            except Exception:
+                # Audit delivery cannot undo an already completed moderation action.
+                pass
 
     async def resolve_member_username(
         self,

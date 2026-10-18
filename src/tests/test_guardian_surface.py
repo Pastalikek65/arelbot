@@ -62,15 +62,15 @@ async def test_guardian_surface_applies_group_aliases_disables_and_note_authoriz
 
 
 @pytest.mark.asyncio
-async def test_guardian_surface_can_remove_shadow_ban_and_rejects_unwired_language_setting():
+async def test_guardian_surface_can_remove_shadow_ban_and_set_group_language():
     port = Port()
     surface = GuardianSurface(port)
     await surface.execute("hayaletban", chat_id=-100, user_id=7, args=["42"], is_admin=True)
     removed = await surface.execute("unsban", chat_id=-100, user_id=7, args=["42"], is_admin=True)
     assert removed and removed.changed is True
     language = await surface.execute("language", chat_id=-100, user_id=7, args=["tr"], is_admin=True)
-    assert language and language.metadata["error_code"] == "guardian_feature_unavailable"
-    assert "guardian_language" not in port.settings.get(-100, {})
+    assert language and language.changed
+    assert port.settings[-100]["guardian_language"] == "tr"
 
 
 def test_registry_contains_full_guardian_command_surface_without_duplicate_names():

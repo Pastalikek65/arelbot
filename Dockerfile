@@ -61,6 +61,7 @@ COPY . .
 
 # Copy and make entrypoint executable
 COPY entrypoint.sh .
-RUN sed -i 's/\r$//' entrypoint.sh && chmod +x entrypoint.sh
+RUN sed -i 's/\r$//' entrypoint.sh && chmod +x entrypoint.sh \
+    && chmod 600 deploy/evidence/provider-approval-manifest.json
 
 CMD ["./entrypoint.sh"]

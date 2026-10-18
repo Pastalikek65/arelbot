@@ -15,7 +15,7 @@
 | `prayer_times` | `/ezan` | Türkiye | Provider | Aktif — schema/cache/health |
 | `flights` | `/ucak` | Ulaşım | Local typed provider | Aktif — doğrulanmış arama bağlantıları; canlı fiyat yok |
 | `bim_deals` | `/bim` | Türkiye | Provider | Aktif — schema/cache/health |
-| `culture_recommendation` | `/kultur [film\|dizi\|kitap\|müzik]`, `/filmoneri`, `/dizioneri`, `/kitaponeri`, `/sarkioneri` | Kultur | Open Library / TVmaze / iTunes | Active - typed JSON provider and owner-scoped category picker |
+| `culture_recommendation` | `/kultur [film\|dizi\|kitap\|müzik]`, `/filmoneri`, `/dizioneri`, `/kitaponeri`, `/sarkioneri` | Kultur | Open Library / TVmaze / Wikidata / iTunes | Active - typed JSON provider and owner-scoped category picker |
 | `story` | `/hikaye` | AI | Typed generation provider | Active - validated brief and allowlisted AI handoff |
 | `web_reader` | AI tool | AI | Typed public web provider | Active - SSRF/private-host/redirect policy, bounded body and untrusted-context metadata; source sign-off pending |
 | `web_search` | `/ara`, `/search`, `@bot ara ...`, AI tool | AI | Typed Tavily provider | Active - key rotation, bounded results, cache/health/circuit, source attribution and automatic live-search routing for current/date/exam questions; terms sign-off pending |

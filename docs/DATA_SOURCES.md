@@ -102,7 +102,8 @@ authorization must be signed off before production enablement.
 
 ## Culture recommendation APIs
 
-- Books use Open Library Search API; series use TVmaze Search API; films and music use Apple iTunes Search API.
+- Books use Open Library Search API; series use TVmaze Search API; films use Wikidata Action API; music uses Apple iTunes Search API.
+- Film searches verify Wikidata's film type before rendering. Genre and no-argument suggestions rotate through a bounded editorial seed list of Wikidata film IDs. The bot displays source titles, release years and descriptions without inventing ratings. Source data is CC0; requests identify Arelbot, use a short timeout and the feature's 900-second cache. Wikimedia's API policy requires respecting rate limits and keeping the provider identifiable.
 - Results are normalized into a shared typed response and include source links when the upstream response provides an HTTPS URL.
 - Ratings are displayed only when the upstream payload supplies a numeric rating. The bot never estimates or invents scores.
 - Query text is length limited, HTML escaped, and sent through the normal provider timeout, cache, circuit and health runtime.

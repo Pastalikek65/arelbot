@@ -8,6 +8,10 @@ from src.moderation.guardian_surface import GuardianSurface
 class Port:
     def __init__(self):
         self.settings: dict[int, dict] = {}
+        self.users = {}
+
+    async def update_user(self, user_id, data):
+        self.users.setdefault(user_id, {}).update(data)
 
     async def get_chat_settings(self, chat_id):
         return dict(self.settings.get(chat_id, {}))
@@ -66,8 +70,9 @@ def test_federation_ban_list_alias_is_part_of_the_guardian_surface():
         ("welcomemute", ["on"]),
     ],
 )
-async def test_unwired_guardian_settings_return_explicit_error_code(command, args):
+async def test_guardian_controls_accept_authorized_configuration(command, args):
     port = Port()
+    port.settings[-100] = {"guardian_federation": {"id": "arel-100", "created_by": 7}}
     surface = GuardianSurface(port)
 
     result = await surface.execute(
@@ -80,8 +85,6 @@ async def test_unwired_guardian_settings_return_explicit_error_code(command, arg
     )
 
     assert result is not None
-    assert result.changed is False
-    assert result.metadata["error_code"] == "guardian_feature_unavailable"
-    assert result.metadata["command"] == command
-    assert not port.settings.get(-100)
+    assert result.changed is True
+    assert result.metadata.get("error_code") != "guardian_feature_unavailable"
 

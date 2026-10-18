@@ -46,7 +46,7 @@ SOURCE_METADATA: dict[str, tuple[str, str | None, str, str | None]] = {
     "prayer_times": ("Habert\u00fcrk", "https://www.haberturk.com/namaz-vakitleri", "Public web data", "https://www.haberturk.com/"),
     "flights": ("Arelbot flight search links", None, "Generated search links", None),
     "story": ("Arelbot AI story provider", None, "Arelbot generated", None),
-    "culture_recommendation": ("Open Library / TVmaze / iTunes Search", "https://performance-partners.apple.com/search-api", "Public API data; provider attribution and rate limits apply", "https://performance-partners.apple.com/search-api"),
+    "culture_recommendation": ("Open Library / TVmaze / Wikidata / iTunes Search", "https://www.wikidata.org/wiki/Wikidata:Data_access", "Public API data; Wikidata structured data is CC0 and API rate limits apply", "https://foundation.wikimedia.org/wiki/Policy:Wikimedia_Foundation_API_Usage_Guidelines"),
     "lyrics": ("Tavily + permitted lyrics sources", None, "Source-specific terms; bounded excerpt and attribution", "https://www.tavily.com/terms"),
     "document_search": ("User-provided documents", None, "User content", None),
 }

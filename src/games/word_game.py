@@ -26,21 +26,22 @@ def reveal_word_hint(state: dict) -> dict:
     """Give a bounded clue without exposing a complete answer."""
 
     found = {normalize_game_word(word) for word in state.get("found_words", [])}
-    candidates = [
+    candidates = {
         normalize_game_word(word)
         for word in state.get("valid_words", [])
         if normalize_game_word(word) not in found
-    ]
-    if not candidates:
-        return {"status": "no_hint", "state": state}
-
-    candidates.sort(key=lambda value: (-len(value), value))
-    word = candidates[0]
-    state["hints_used"] = int(state.get("hints_used", 0) or 0) + 1
-    hint = {
-        "length": len(word),
-        "first": word[0].upper(),
-        "last": word[-1].upper(),
     }
-    state.setdefault("hint_history", []).append(hint)
-    return {"status": "hint", "hint": hint, "state": state}
+    history = state.get("hint_history", [])
+    for word in sorted(candidates, key=lambda value: (-len(value), value)):
+        # First/last would disclose the full answer for one/two-letter words.
+        if len(word) < 3 or not word.isalpha():
+            continue
+        hint = {"length": len(word), "first": word[0].upper(), "last": word[-1].upper()}
+        # Compare the displayed clue, rather than a hidden answer. Two words
+        # with the same signature must not charge the player for the same tip.
+        if any(isinstance(previous, dict) and all(previous.get(key) == value for key, value in hint.items()) for previous in history):
+            continue
+        state["hints_used"] = int(state.get("hints_used", 0) or 0) + 1
+        state.setdefault("hint_history", []).append(hint)
+        return {"status": "hint", "hint": hint, "state": state}
+    return {"status": "no_hint", "state": state}

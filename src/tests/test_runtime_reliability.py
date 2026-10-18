@@ -121,12 +121,12 @@ async def test_chat_engine_preserves_verified_admin_context_at_real_tool_call(au
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("command", ["fedapprove", "fedunapprove"])
-async def test_unwired_federation_aliases_explain_limitation_instead_of_disappearing(command):
+async def test_federation_trust_commands_require_existing_federation_authority(command):
     from src.moderation.guardian_surface import GuardianSurface
     port = SimpleNamespace(get_chat_settings=AsyncMock(return_value={}), update_chat_setting_key=AsyncMock())
     result = await GuardianSurface(port).execute(command, chat_id=-111, user_id=1, args=["22"], is_admin=True)
     assert result is not None
-    assert result.metadata.get("error_code") == "guardian_feature_unavailable"
+    assert "federasyon" in result.text.casefold()
     assert result.changed is False
     port.update_chat_setting_key.assert_not_awaited()
 

@@ -89,6 +89,16 @@
       "production_signoff": "approved"
     },
     {
+      "name": "Wikidata Action API",
+      "kind": "public-api",
+      "license": "CC0 structured data; Wikimedia API usage and User-Agent policies apply",
+      "url": "https://www.wikidata.org/wiki/Wikidata:Data_access",
+      "source_governance": "approved",
+      "robots_policy": "allowed",
+      "terms_review": "approved",
+      "production_signoff": "approved"
+    },
+    {
       "name": "Apple iTunes Search API",
       "kind": "public-api",
       "license": "Apple iTunes Search API terms (link-only metadata policy)",

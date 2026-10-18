@@ -28,6 +28,7 @@ from src.ai.personality import PersonalityPolicy
 from src.ai.conversation_style import NORMAL_MODE, is_normal_mode, style_mode_label
 from src.games.state_store import persist_game, delete_game
 from src.games.engine import parse_word_game_request
+from src.games.blackjack import BlackjackGame
 from src.features.city_directory import normalize_text
 from src.services.feature_presentation import format_feature_result
 from src.utils import tr_lower
@@ -262,6 +263,10 @@ class CommandHandler:
 
     async def _get_language(self, update: Update) -> str:
         try:
+            if getattr(update.effective_chat, "type", None) in {"group", "supergroup"}:
+                settings = await self.data_port.get_chat_settings(update.effective_chat.id) or {}
+                if settings.get("guardian_language") in {"tr", "en"}:
+                    return settings["guardian_language"]
             user = await self.data_port.get_user(update.effective_user.id)
             return (user or {}).get("language", "tr")
         except Exception:
@@ -421,6 +426,11 @@ class CommandHandler:
         raw_name = raw.lstrip("/").split("@", 1)[0].casefold()
         raw_command = GuardianCommandService.canonical(raw)
         command = raw_command
+        if getattr(chat, "type", None) == "private" and await self.guardian_telegram_service.route_private_command(
+            bot=getattr(context, "bot", None), data_port=self.data_port, surface=self.guardian_surface,
+            command=command, user_id=int(update.effective_user.id), args=list(getattr(context, "args", None) or []), message=message,
+        ):
+            return
         custom_alias = False
         # Custom Guardian aliases and per-group command switches are resolved
         # before any legacy branch.  This keeps every surface (including the
@@ -511,8 +521,10 @@ class CommandHandler:
 
         if command == "rules":
             settings = await self.data_port.get_chat_settings(chat.id) or {}
-            rules = str(settings.get("guardian_rules") or settings.get("rules") or "").strip()
-            await message.reply_text(rules[:4096] if rules else "bu grubun henüz yazılı bir kuralı yok")
+            await self.guardian_telegram_service.deliver_rules(
+                bot=getattr(context, "bot", None), message=message, chat_id=int(chat.id),
+                user_id=int(update.effective_user.id), settings=settings,
+            )
             return
 
         if command == "setrules":
@@ -534,6 +546,8 @@ class CommandHandler:
                 await message.reply_text("rapor komutu yalnızca gruplarda kullanılabilir")
                 return
             replied = getattr(message, "reply_to_message", None)
+            report_args = list(getattr(context, "args", None) or [])
+            is_appeal = bool(report_args and str(report_args[0]).casefold() in {"itiraz", "appeal"})
             target = getattr(replied, "from_user", None)
             if replied is None or target is None:
                 await message.reply_text("raporlamak istediğin mesaja yanıt ver")
@@ -541,14 +555,19 @@ class CommandHandler:
             try:
                 await self.data_port.add_audit_log(
                     int(update.effective_user.id),
-                    "guardian_report",
+                    "guardian_appeal" if is_appeal else "guardian_report",
                     chat_id=int(chat.id),
                     target_user_id=int(target.id),
                     target_message_id=int(getattr(replied, "message_id", 0) or 0),
                 )
             except Exception:
                 logger.warning("Guardian report audit failed", exc_info=True)
-            await message.reply_text("rapor yöneticilere iletildi")
+            await self.guardian_telegram_service.emit_event(
+                bot=getattr(context, "bot", None), chat_id=int(chat.id), actor_id=int(update.effective_user.id),
+                action="appeal" if is_appeal else "report", target_user_id=int(target.id), appeal=is_appeal,
+                data_port=self.data_port,
+            )
+            await message.reply_text("İtiraz kaydı yöneticilere iletildi." if is_appeal else "rapor yöneticilere iletildi")
             return
 
         if command == "setflood":
@@ -761,6 +780,7 @@ class CommandHandler:
                     "admin", "deadmin", "muter", "unmuter", "yetkiler",
                     "hayaletban", "unsban", "gban", "ungban", "whois",
                     "shadowstats", "toprisk", "fednotes", "warns", "resetwarn",
+                    "fedapprove", "fedunapprove",
                 }:
                     surface_target_id = await self._resolve_moderation_target_id(
                         update, context, command=command
@@ -788,7 +808,19 @@ class CommandHandler:
                         )
                     except Exception:
                         logger.debug("Guardian setting audit unavailable", exc_info=True)
+                    await self.guardian_telegram_service.emit_event(
+                        bot=getattr(context, "bot", None), chat_id=int(chat.id), actor_id=int(update.effective_user.id),
+                        action=command, data_port=self.data_port,
+                        target_user_id=surface_target_id,
+                    )
                 transport_action = str((result.metadata or {}).get("transport_action") or "")
+                if transport_action in {"settitle", "setdesc", "setpic", "admin_permissions"}:
+                    if not await self.guardian_surface.consume_action_budget(
+                        int(chat.id), int(update.effective_user.id), transport_action,
+                        f"guardian:{chat.id}:{getattr(message, 'message_id', 0)}",
+                    ):
+                        await message.reply_text("Yönetici için saatlik işlem sınırına ulaşıldı; işlem uygulanmadı.")
+                        return
                 if transport_action in {"settitle", "setdesc", "setpic"}:
                     try:
                         if transport_action == "settitle":
@@ -950,6 +982,9 @@ class CommandHandler:
                 duration=((getattr(context, "args", None) or [None])[0]),
                 generation_id=generation_id,
             )
+            if not await self.guardian_surface.consume_action_budget(int(chat.id), int(update.effective_user.id), action.action, generation_id):
+                await message.reply_text("Yönetici için saatlik işlem sınırına ulaşıldı; işlem uygulanmadı.")
+                return
             executor = TelegramModerationActionExecutor(
                 getattr(context, "bot", None),
                 ledger=getattr(self, "moderation_action_ledger", None) or ModerationActionLedger(),
@@ -962,6 +997,11 @@ class CommandHandler:
             await message.reply_text("Guardian işlemi için hedefi ve komut biçimini kontrol et")
             return
         if result.ok:
+            await self.guardian_telegram_service.emit_event(
+                bot=getattr(context, "bot", None), chat_id=int(chat.id), actor_id=int(update.effective_user.id),
+                action=command, target_user_id=target_user_id,
+                data_port=self.data_port,
+            )
             if info.command == "warn" and target_user_id is not None:
                 try:
                     count, limit, mode = await self.guardian_surface.record_warning(
@@ -2202,15 +2242,21 @@ class CommandHandler:
         )
 
     @staticmethod
-    def _blackjack_keyboard(user_id: int) -> InlineKeyboardMarkup:
+    def _blackjack_keyboard(user_id: int, state: dict | None = None) -> InlineKeyboardMarkup:
         owner = int(user_id)
-        return InlineKeyboardMarkup([
+        token = (state or {}).get("round_token")
+        prefix = f"bj:{owner}:{token}" if token else f"bj:{owner}"
+        rows = [
             [
-                InlineKeyboardButton("➕ Kart çek", callback_data=f"bj:{owner}:hit"),
-                InlineKeyboardButton("✅ Dur", callback_data=f"bj:{owner}:stand"),
+                InlineKeyboardButton("➕ Kart çek", callback_data=f"{prefix}:hit"),
+                InlineKeyboardButton("✅ Dur", callback_data=f"{prefix}:stand"),
             ],
-            [InlineKeyboardButton("2️⃣ Double", callback_data=f"bj:{owner}:double")],
-        ])
+        ]
+        if state is None or len(state.get("player_hand", [])) == 2:
+            rows.append([InlineKeyboardButton("2️⃣ Double", callback_data=f"{prefix}:double")])
+        if token and state is not None and BlackjackGame().can_surrender(state):
+            rows.append([InlineKeyboardButton("🏳️ Pes et · yarım iade", callback_data=f"{prefix}:surrender")])
+        return InlineKeyboardMarkup(rows)
 
     async def handle_blackjack_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Start an owner-scoped, persistent Blackjack hand."""
@@ -2249,7 +2295,7 @@ class CommandHandler:
             return
 
         text = sanitize_html(str(result.get("text", "Blackjack")))
-        markup = None if result.get("terminal") else self._blackjack_keyboard(update.effective_user.id)
+        markup = None if result.get("terminal") else self._blackjack_keyboard(update.effective_user.id, result.get("state"))
         await message.reply_text(text, reply_markup=markup, parse_mode="HTML")
 
     async def handle_oyun_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):

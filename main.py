@@ -641,6 +641,7 @@ def register_handlers(application, orchestrator):
     # Register global callback query handler
     application.add_handler(CallbackQueryHandler(orchestrator.handle_callback_query))
     application.add_handler(ChatMemberHandler(orchestrator.handle_chat_member_update, ChatMemberHandler.CHAT_MEMBER))
+    application.add_handler(MessageHandler(filters.StatusUpdate.ALL, orchestrator.handle_service_message))
 
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, orchestrator.handle_message))
     application.add_handler(MessageHandler(filters.ANIMATION, orchestrator.handle_animation))

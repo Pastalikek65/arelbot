@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import logging
+import hashlib
+from contextlib import asynccontextmanager
+from copy import deepcopy
 from typing import Any, Callable
 
 from src.games.blackjack import BlackjackGame
@@ -57,7 +60,27 @@ class BlackjackService:
         if deleter:
             await deleter(int(chat_id), self.state_key(user_id))
 
+    @asynccontextmanager
+    async def _hand_guard(self, chat_id: int, user_id: int):
+        """Serialize every mutation of this owner's hand through the ledger.
+
+        Production uses the repository's unique action key; test/degraded
+        memory fallback retains the ledger's existing scope and limitations.
+        A contending callback fails explicitly and may be retried.
+        """
+        key = f"owner:{int(user_id)}"
+        if not await self.actions.claim(chat_id, "blackjack_session", key, user_id=user_id):
+            raise ValueError("game_busy")
+        try:
+            yield
+        finally:
+            await self.actions.release(chat_id, "blackjack_session", key)
+
     async def start(self, *, chat_id: int, user_id: int, user_name: str, bet: int, event_id: str) -> dict[str, Any]:
+        async with self._hand_guard(chat_id, user_id):
+            return await self._start(chat_id=chat_id, user_id=user_id, user_name=user_name, bet=bet, event_id=event_id)
+
+    async def _start(self, *, chat_id: int, user_id: int, user_name: str, bet: int, event_id: str) -> dict[str, Any]:
         bet = self.validate_bet(bet)
         if await self._load(chat_id, user_id):
             raise ValueError("active_game")
@@ -74,14 +97,19 @@ class BlackjackService:
         state["base_bet"] = bet
         state["charged_bet"] = bet
         state["event_id"] = str(event_id)[:160]
-        if state.get("status") == "blackjack":
+        state["round_token"] = hashlib.sha256(str(event_id).encode("utf-8")).hexdigest()[:12]
+        if state.get("status") in {"blackjack", "finished"}:
             return await self._settle(chat_id, user_id, state, game)
         await self._save(chat_id, user_id, state)
         return self._view(state, game, terminal=False)
 
-    async def action(self, *, chat_id: int, user_id: int, action: str, action_id: str) -> dict[str, Any]:
+    async def action(self, *, chat_id: int, user_id: int, action: str, action_id: str, round_token: str | None = None) -> dict[str, Any]:
+        async with self._hand_guard(chat_id, user_id):
+            return await self._action(chat_id=chat_id, user_id=user_id, action=action, action_id=action_id, round_token=round_token)
+
+    async def _action(self, *, chat_id: int, user_id: int, action: str, action_id: str, round_token: str | None) -> dict[str, Any]:
         action = str(action).casefold()
-        if action not in {"hit", "stand", "double"}:
+        if action not in {"hit", "stand", "double", "surrender"}:
             raise ValueError("invalid_action")
         claimed = await self.actions.claim(
             chat_id, "blackjack", action_id, user_id=user_id,
@@ -95,16 +123,28 @@ class BlackjackService:
                 raise ValueError("game_expired")
             if int(state.get("player_id", 0)) != int(user_id):
                 raise ValueError("not_owner")
+            if (round_token is not None or action == "surrender") and (
+                not round_token or round_token != state.get("round_token")
+            ):
+                raise ValueError("stale_game")
+            game = self.game_factory()
+            if state.get("status") in {"bust", "finished", "blackjack", "surrendered"}:
+                # A previous settlement may have credited before deletion
+                # failed. Resume its persisted outcome, never a new action.
+                return await self._settle(chat_id, user_id, state, game)
             if state.get("status") not in {"playing", "stand"}:
                 raise ValueError("game_finished")
-            game = self.game_factory()
             if action == "hit":
                 game.hit(state)
             elif action == "stand":
                 game.stand(state)
+            elif action == "surrender":
+                game.surrender(state)
             else:
                 if len(state.get("player_hand", [])) != 2:
                     raise ValueError("double_only_initial_hand")
+                candidate = deepcopy(state)
+                game.double_down(candidate)
                 extra_bet = int(state.get("base_bet", state.get("bet", 0)))
                 if self.economy and extra_bet:
                     accepted = await self.economy.debit(
@@ -114,9 +154,9 @@ class BlackjackService:
                     )
                     if not accepted:
                         raise ValueError("insufficient_balance")
-                game.double_down(state)
+                state = candidate
                 state["charged_bet"] = int(state.get("charged_bet", state.get("base_bet", 0))) + extra_bet
-            if state.get("status") in {"bust", "finished", "blackjack"}:
+            if state.get("status") in {"bust", "finished", "blackjack", "surrendered"}:
                 return await self._settle(chat_id, user_id, state, game)
             await self._save(chat_id, user_id, state)
             return self._view(state, game, terminal=False)
@@ -128,6 +168,10 @@ class BlackjackService:
             raise
 
     async def cancel(self, *, chat_id: int, user_id: int) -> dict[str, Any]:
+        async with self._hand_guard(chat_id, user_id):
+            return await self._cancel(chat_id=chat_id, user_id=user_id)
+
+    async def _cancel(self, *, chat_id: int, user_id: int) -> dict[str, Any]:
         """Cancel the owner's hand and return all stakes charged for it.
 
         The economy event id is derived from the immutable game event, so a
@@ -138,6 +182,10 @@ class BlackjackService:
             raise ValueError("game_expired")
         if int(state.get("player_id", 0)) != int(user_id):
             raise ValueError("not_owner")
+        if state.get("status") in {"bust", "finished", "blackjack", "surrendered"}:
+            return await self._settle(chat_id, user_id, state, self.game_factory())
+        state["status"] = "cancelled"
+        await self._save(chat_id, user_id, state)
         charged = max(0, int(state.get("charged_bet", state.get("base_bet", state.get("bet", 0)))))
         if self.economy and charged:
             await self.economy.credit(
@@ -150,6 +198,9 @@ class BlackjackService:
 
     async def _settle(self, chat_id: int, user_id: int, state: dict[str, Any], game: BlackjackGame) -> dict[str, Any]:
         result = game.get_result(state)
+        # Preserve the irrevocable outcome before any credit. On retry the
+        # economy's same event id prevents a second refund/payout.
+        await self._save(chat_id, user_id, state)
         bet = int(state.get("bet", 0))
         winnings = int(result.get("winnings", 0))
         credit = max(0, bet + winnings)

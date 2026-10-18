@@ -45,6 +45,15 @@ def _word(state: dict) -> str:
     return normalize_game_word(state.get("word", ""))
 
 
+def _finished(state: dict) -> bool:
+    """Check terminal rounds without normalizing/mutating their saved state."""
+    if int(state.get("lives", 0) or 0) <= 0:
+        return True
+    word = _word(state)
+    guessed = {normalize_game_word(value) for value in state.get("guessed_letters", [])}
+    return bool(word) and all(letter in guessed for letter in word)
+
+
 def _guessed(state: dict) -> list[str]:
     values: list[str] = []
     for value in state.get("guessed_letters", []):
@@ -69,6 +78,9 @@ def _refresh_hidden(state: dict) -> None:
 
 def apply_guess(state: dict, token: object) -> dict:
     """Apply one letter token and return a bounded result envelope."""
+
+    if _finished(state):
+        return {"status": "invalid", "reason": "round_finished", "state": state}
 
     raw = str(token or "").strip().casefold()
     letter = _TOKEN_TO_LETTER.get(raw) or normalize_game_word(raw)
@@ -99,6 +111,9 @@ def apply_guess(state: dict, token: object) -> dict:
 def reveal_hint(state: dict) -> dict:
     """Reveal one unseen character, charging a hint against the round."""
 
+    if _finished(state):
+        return {"status": "no_hint", "reason": "round_finished", "state": state}
+
     word = _word(state)
     guessed = set(_guessed(state))
     candidates = [letter for letter in word if letter not in guessed]
@@ -116,6 +131,9 @@ def reveal_hint(state: dict) -> dict:
 
 def available_keys(state: dict) -> list[tuple[str, str]]:
     """Return callback tokens and labels that are still playable."""
+
+    if _finished(state):
+        return []
 
     guessed = set(_guessed(state))
     return [

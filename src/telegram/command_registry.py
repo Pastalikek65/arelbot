@@ -432,7 +432,7 @@ _AREL_SPECS: tuple[CommandDefinition, ...] = (
     CommandDefinition("grupayari", "Bu grubun Arel ayarları", "handle_ayar_command", CommandScope.GROUP_ADMIN, ("ayarlar",)),
     CommandDefinition("grupkurallari", "Grup kurallarını göster", "handle_guardian_command", CommandScope.PUBLIC, ("rules", "setrules", "kurallar", "chatkurallari")),
     CommandDefinition("sustur", "Bir üyeyi süreli sustur", "handle_guardian_command", CommandScope.GROUP_ADMIN, ("sus", "mute")),
-    CommandDefinition("tmute", "Bir üyeyi süreli sustur", "handle_guardian_command", CommandScope.GROUP_ADMIN),
+    CommandDefinition("tmute", "Bir üyeyi süreli sustur", "handle_guardian_command", CommandScope.GROUP_ADMIN, ("gecicisustur",)),
     CommandDefinition("susturac", "Bir üyenin susturmasını kaldır", "handle_guardian_command", CommandScope.GROUP_ADMIN, ("sesiac", "unmute")),
     CommandDefinition("yasakla", "Bir üyeyi gruptan uzaklaştır", "handle_guardian_command", CommandScope.GROUP_ADMIN, ("ban",)),
     CommandDefinition("yasagiac", "Üyenin grup yasağını kaldır", "handle_guardian_command", CommandScope.GROUP_ADMIN, ("unban",)),

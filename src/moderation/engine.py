@@ -62,6 +62,7 @@ class ModerationEngine:
             for key in guardian_policy_keys
         )
         approved = {str(item) for item in (settings.get("approved_users") or [])}
+        approved.update(str(item) for item in (settings.get("guardian_federation_approved") or []))
         roles = settings.get("guardian_roles")
         role = str(roles.get(str(user_id), "")).casefold() if isinstance(roles, dict) else ""
         if is_admin or str(user_id) in approved or role == "free" or not policy_enabled:

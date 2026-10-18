@@ -33,6 +33,7 @@ from src.stickers.validator import StickerValidationError, make_pack_name, valid
 from src.games.state_store import hydrate_games, persist_game, delete_game
 from src.games.vocabulary import can_form_word, normalize_game_word
 from src.games.engine import calculate_hangman_score, calculate_word_game_score, calculate_word_guess_score
+from src.games.hangman import apply_guess
 from src.services.word_game_ui import word_game_keyboard, render_word_game_text
 from src.services.word_guess_ui import word_guess_keyboard
 from src.services.group_member_service import GroupMemberService
@@ -163,6 +164,11 @@ class MessageHandler:
             ),
         )
         result = await executor.execute(action)
+        if getattr(result, "ok", False):
+            await self.guardian_telegram_service.emit_event(
+                bot=bot, chat_id=int(event.chat_id), actor_id=actor_id, action=action_name,
+                target_user_id=int(event.user_id), data_port=self.data_port,
+            )
         if getattr(result, "status", None) == "rejected" and getattr(result, "error_code", None) == "permission_denied":
             # A stale or unavailable membership lookup must never consume a
             # privileged member's message as if moderation succeeded.
@@ -218,6 +224,16 @@ class MessageHandler:
             # The result remains visible if the optional reward ledger is down;
             # idempotent event ids make a later retry safe.
             logger.warning("Could not record %s game result", game_type, exc_info=True)
+
+    async def handle_service_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Consume only real Telegram service messages when cleanup is enabled."""
+        chat = getattr(update, "effective_chat", None)
+        if getattr(chat, "type", None) not in {"group", "supergroup"}:
+            return
+        settings = await self.data_port.get_chat_settings(int(chat.id)) or {}
+        await self.guardian_telegram_service.cleanup_service_message(
+            message=getattr(update, "effective_message", None), settings=settings,
+        )
 
     async def handle_chat_member_update(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Send configured welcome/goodbye messages for real group transitions."""
@@ -328,8 +344,10 @@ class MessageHandler:
             chat_title=getattr(event.chat, "title", None) or "grup",
             settings=settings,
         )
-        if text:
-            await context.bot.send_message(chat_id=event.chat.id, text=text, parse_mode="HTML")
+        await self.guardian_telegram_service.deliver_welcome(
+            bot=context.bot, data_port=self.data_port, chat_id=int(event.chat.id), user_id=int(getattr(user, "id", 0) or 0),
+            text=text, settings=settings, joined=joined,
+        )
 
     async def _captcha_timeout_callback(self, context: ContextTypes.DEFAULT_TYPE):
         """Remove an unanswered join challenge without group-facing errors."""
@@ -452,7 +470,7 @@ class MessageHandler:
         if moderation and update.effective_chat.type in {"group", "supergroup"}:
             settings_failed = False
             try:
-                settings = await self.data_port.get_chat_settings(update.effective_chat.id)
+                settings = await GuardianSurface(self.data_port).effective_settings(update.effective_chat.id)
             except Exception as exc:
                 logger.warning("Could not load group moderation settings: type=%s", type(exc).__name__[:64])
                 settings_failed = True
@@ -715,40 +733,40 @@ class MessageHandler:
                     name=job_name,
                 )
         if 'hangman' in context.chat_data and len(text) == 1 and text.isalpha():
-            text = normalize_game_word(text).upper()
             game = context.chat_data['hangman']
-            if text in game['guessed_letters']:
-                await update.message.reply_text(f"⚠️ <b>{text}</b> harfini zaten söylemiştin!", parse_mode='HTML')
+            result = apply_guess(game, text)
+            if result['status'] == 'invalid':
+                if result.get('reason') == 'round_finished':
+                    context.chat_data.pop('hangman', None)
+                    await delete_game(self.data_port, update.effective_chat.id, "hangman")
+                    await update.message.reply_text("Bu adam asmaca turu sona ermiş.")
+                else:
+                    await update.message.reply_text("Geçerli bir harf yazmalısın.")
                 return True
-
-            game['guessed_letters'].append(text)
-            if text in game['word']:
-                for i, char in enumerate(game['word']):
-                    if char == text:
-                        game['hidden'][i] = text
-
-                if "_" not in game['hidden']:
-                    elapsed = max(0.0, time.time() - float(game.get("start_time", time.time())))
-                    score = calculate_hangman_score(
-                        elapsed_seconds=elapsed,
-                        difficulty=game.get("difficulty", "normal"),
-                        lives_remaining=game.get("lives", 0),
-                        max_lives=game.get("max_lives", 6),
-                        wrong_guesses=game.get("wrong_guesses", 0),
-                    )
-                    await self._record_game_result(update, "hangman", score, "win")
-                    await update.message.reply_text(f"🥳 <b>TEBRİKLER!</b> Kelimeyi buldun: <b>{game['word']}</b> 🏆", parse_mode='HTML')
-                    del context.chat_data['hangman']
-                    await delete_game(self.data_port, update.effective_chat.id, "hangman")
-                    return True
-            else:
-                game['lives'] -= 1
-                game['wrong_guesses'] = int(game.get('wrong_guesses', 0) or 0) + 1
-                if game['lives'] <= 0:
-                    await update.message.reply_text(f"💀 <b>MAALESEF!</b> Canın bitti. Kelime: <b>{game['word']}</b> idi. 🪦", parse_mode='HTML')
-                    del context.chat_data['hangman']
-                    await delete_game(self.data_port, update.effective_chat.id, "hangman")
-                    return True
+            if result['status'] == 'duplicate':
+                letter = escape(str(result.get('letter', text)).upper())
+                await update.message.reply_text(f"⚠️ <b>{letter}</b> harfini zaten söylemiştin!", parse_mode='HTML')
+                return True
+            if result['status'] == 'won':
+                elapsed = max(0.0, time.time() - float(game.get("start_time", time.time())))
+                score = calculate_hangman_score(
+                    elapsed_seconds=elapsed,
+                    difficulty=game.get("difficulty", "normal"),
+                    lives_remaining=game.get("lives", 0),
+                    max_lives=game.get("max_lives", 6),
+                    wrong_guesses=game.get("wrong_guesses", 0),
+                    hints_used=game.get("hints_used", 0),
+                )
+                await self._record_game_result(update, "hangman", score, "win")
+                await update.message.reply_text(f"🥳 <b>TEBRİKLER!</b> Kelimeyi buldun: <b>{game['word']}</b> 🏆", parse_mode='HTML')
+                del context.chat_data['hangman']
+                await delete_game(self.data_port, update.effective_chat.id, "hangman")
+                return True
+            if result['status'] == 'lost':
+                await update.message.reply_text(f"💀 <b>MAALESEF!</b> Canın bitti. Kelime: <b>{game['word']}</b> idi. 🪦", parse_mode='HTML')
+                del context.chat_data['hangman']
+                await delete_game(self.data_port, update.effective_chat.id, "hangman")
+                return True
 
             await persist_game(self.data_port, update.effective_chat.id, "hangman", game)
             display = " ".join(game['hidden'])

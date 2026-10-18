@@ -2178,8 +2178,8 @@ class CallbackHandler:
 
     async def _handle_blackjack_callback(self, update, query, context, data: str):
         """Apply one owner-scoped Blackjack action and refresh the message."""
-        parts = data.split(":", 2)
-        if len(parts) != 3 or self.blackjack_service is None:
+        parts = data.split(":")
+        if len(parts) not in {3, 4} or self.blackjack_service is None:
             await query.answer("Geçersiz Blackjack işlemi.", show_alert=True)
             return
         try:
@@ -2190,17 +2190,20 @@ class CallbackHandler:
         if owner_id != int(update.effective_user.id):
             await query.answer("Bu el başka bir oyuncuya ait.", show_alert=True)
             return
-        action = parts[2].casefold()
-        if action not in {"hit", "stand", "double"}:
+        token = parts[2] if len(parts) == 4 else None
+        action = parts[-1].casefold()
+        if action not in {"hit", "stand", "double", "surrender"} or (action == "surrender" and not token):
             await query.answer("Geçersiz Blackjack hamlesi.", show_alert=True)
             return
         action_id = self._game_action_id(query, owner_id, data)
         try:
+            kwargs = {"round_token": token} if token is not None else {}
             result = await self.blackjack_service.action(
                 chat_id=update.effective_chat.id,
                 user_id=owner_id,
                 action=action,
                 action_id=action_id,
+                **kwargs,
             )
         except ValueError as exc:
             messages = {
@@ -2210,6 +2213,9 @@ class CallbackHandler:
                 "double_only_initial_hand": "Double yalnızca ilk iki kartta kullanılabilir.",
                 "insufficient_balance": "Double için yeterli jetonun yok.",
                 "not_owner": "Bu el başka bir oyuncuya ait.",
+                "surrender_only_initial_hand": "Pes et yalnızca ilk hamleden önce kullanılabilir.",
+                "stale_game": "Bu düğme eski bir Blackjack eline ait.",
+                "game_busy": "Bu elde başka bir hamle işleniyor. Biraz sonra tekrar dene.",
             }
             code = normalize_error_code(exc, "GAME_ERROR").lower()
             await query.answer(messages.get(code, "Bu hamle uygulanamadı."), show_alert=True)
@@ -2221,13 +2227,8 @@ class CallbackHandler:
 
         markup = None
         if not result.get("terminal"):
-            markup = InlineKeyboardMarkup([
-                [
-                    InlineKeyboardButton("➕ Kart çek", callback_data=f"bj:{owner_id}:hit"),
-                    InlineKeyboardButton("✅ Dur", callback_data=f"bj:{owner_id}:stand"),
-                ],
-                [InlineKeyboardButton("2️⃣ Double", callback_data=f"bj:{owner_id}:double")],
-            ])
+            from src.handlers.command_handler import CommandHandler
+            markup = CommandHandler._blackjack_keyboard(owner_id, result.get("state"))
         try:
             await query.edit_message_text(
                 sanitize_html(str(result.get("text", "Blackjack"))),

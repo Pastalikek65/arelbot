@@ -12,7 +12,7 @@ Günlük işlerini düzenle. Bilgiye ulaş. İçerik üret. Birlikte oyna.
 
 Arel, özel sohbetlerde ve Telegram gruplarında çalışan modüler bir Python botudur. Sohbet ve belge analizi, medya indirme, notlar, hatırlatıcılar, güncel veri araçları, sticker ve alıntılar, oyunlar ve yönetici kontrollerini tek bir arayüzde toplar.
 
-> **Sürüm durumu:** Kaynaklar `2026.10.18-reliability-2` dağıtımıyla eşitlenmiştir. Donmuş imajda 1.431 test geçti, 2 test atlandı. Operasyon kabulü ile gerçek kullanıcı akışlarının uçtan uca kabulü ayrı tutulur. Düzeltmeler ve açık sınırlar [güvenilirlik kaydında](docs/RELIABILITY-2026-10-18.md) yer alır.
+> **Doğrulama durumu:** Kaynak, otomatik test ve canlı Telegram kabulü ayrı kaydedilir. Güncel sonuçlar [güvenilirlik kaydında](docs/RELIABILITY-2026-10-18.md) yer alır; bir komutun kayıtlı olması her grupta ve her yetkiyle başarılı olacağı anlamına gelmez.
 
 ## Neler yapar?
 
@@ -30,9 +30,9 @@ Yeteneklerin komutları, koşulları ve kaynakları [özellik rehberinde](docs/F
 
 ## Güncel sürüm
 
-`2026.10.18-reliability-2`, komut yönlendirmesi, grup içi araç kullanımı, yetki kontrolleri, medya işlem ömrü ve haber kaynağı geçişi düzeltmelerini içerir. Connect Four, XOX, Gomoku ve kapsamlı moderasyon yüzeyleri bu depoda bulunur.
+Güncel kaynak; komut yönlendirmesi, grup içi araç kullanımı, yetki kontrolleri, medya işlem ömrü ve kaynak bağlantılı film önerileri için düzeltmeler içerir. Guardian yönetici sınırları, federasyon onayı, özel sohbetten güvenli yönetim, kayıt kanalları ve karşılama denetimleri gerçek işleyicilere bağlanmıştır. Blackjack ve kelime oyunlarında kural ve ödeme tutarlılığı güçlendirilmiştir.
 
-Film kaynağındaki boş sonuç sorunu ve henüz bağlanmamış bazı moderasyon ayarları açık sınırlardır. Özelliklerin komutları ve gereksinimleri [özellik rehberinde](docs/FEATURES.md), doğrulama kapsamı [güvenilirlik kaydında](docs/RELIABILITY-2026-10-18.md) açıklanır.
+Özelliklerin komutları ve gereksinimleri [özellik rehberinde](docs/FEATURES.md), doğrulama kapsamı ve kalan sınırlar [güvenilirlik kaydında](docs/RELIABILITY-2026-10-18.md) açıklanır.
 
 ## Kullanım örnekleri
 

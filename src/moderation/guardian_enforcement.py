@@ -219,6 +219,7 @@ def evaluate_guardian_message(
         return GuardianEnforcementDecision()
     roles = settings.get("guardian_roles") if isinstance(settings, Mapping) else None
     approved = {str(item) for item in (settings.get("approved_users") or [])}
+    approved.update(str(item) for item in (settings.get("guardian_federation_approved") or []))
     role = str(roles.get(str(user_id), "")).casefold() if isinstance(roles, Mapping) else ""
     fed_bans = {str(item) for item in (settings.get("guardian_fed_bans") or [])}
     if user_id is not None and str(int(user_id)) in fed_bans:

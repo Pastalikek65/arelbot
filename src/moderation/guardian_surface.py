@@ -16,6 +16,8 @@ turn features on per group without creating a second bot.
 from __future__ import annotations
 
 import json
+import asyncio
+import time
 import html
 import re
 from dataclasses import dataclass, field
@@ -112,29 +114,68 @@ class GuardianSurface:
         "munban": "media_bans",
     }
 
-    # These settings were historically accepted and written but no runtime
-    # consumer read them.  Returning an explicit error is safer than telling a
-    # group that protection is active when no enforcement path exists.
-    _UNWIRED_FEATURES = {
-        "fedapprove": "federation_trust_management",
-        "fedunapprove": "federation_trust_management",
-        "banlimit": "ban_limit",
-        "promotelimit": "promote_limit",
-        "grupinfolimit": "group_info_limit",
-        "privaterules": "private_rules",
-        "language": "group_language",
-        "connect": "connected_chat",
-        "disconnect": "connected_chat",
-        "logchannel": "log_channel",
-        "setappeallog": "appeal_log",
-        "setfedlog": "federation_log",
-        "cleanservice": "service_message_cleanup",
-        "cleanwelcome": "welcome_cleanup",
-        "welcomemute": "welcome_mute",
-    }
+    # Retained for compatibility with the catalog; every formerly unwired
+    # control now has a command consumer and event/transport regression tests.
+    _UNWIRED_FEATURES = {}
 
     def __init__(self, data_port: Any):
         self.data_port = data_port
+        self._budget_lock = asyncio.Lock()
+
+    async def federation_origin(self, chat_id: int, settings: dict | None = None):
+        """Resolve canonical federation state from its existing arel-chat id."""
+        settings = settings if settings is not None else await self._settings(chat_id)
+        federation = dict(settings.get("guardian_federation") or {})
+        match = re.fullmatch(r"arel-(\d+)", str(federation.get("id") or ""))
+        if not match:
+            return None, {}
+        origin = -int(match[1])
+        canonical = dict((await self._settings(origin)).get("guardian_federation") or {})
+        if canonical.get("id") != federation.get("id") or not canonical.get("created_by"):
+            return None, {}
+        return origin, canonical
+
+    async def effective_settings(self, chat_id: int) -> dict:
+        settings = dict(await self._settings(chat_id))
+        _, federation = await self.federation_origin(chat_id, settings)
+        settings["guardian_federation_approved"] = list(federation.get("approved_users") or [])
+        settings["guardian_federation_log_channel"] = federation.get("log_channel")
+        settings["guardian_appeal_log_channel"] = federation.get("appeal_log_channel")
+        return settings
+
+    @staticmethod
+    def federation_managers(federation: dict) -> set[int]:
+        owner = int(federation.get("owner_id") or federation.get("created_by") or 0)
+        return {owner, *[int(value) for value in federation.get("admins", []) if str(value).isdigit()]}
+
+    async def consume_action_budget(self, chat_id: int, actor_id: int, action: str, event_id: str) -> bool:
+        """Cap manual actions per administrator per rolling hour; retries are free."""
+        key = ("ban_limit" if action in {"ban", "temp_ban", "kick", "fban"} else
+               "promote_limit" if action in {"promote", "demote", "admin", "deadmin", "muter", "unmuter", "admin_permissions"} else
+               "group_info_limit" if action in {"settitle", "setdesc", "setpic"} else None)
+        if key is None:
+            return True
+        async with self._budget_lock:
+            settings = await self._settings(chat_id)
+            limit = int(settings.get(key) or 0)
+            if limit <= 0:
+                return True
+            now = time.time()
+            history = dict(settings.get("guardian_action_budgets") or {})
+            # Bound old actors as well as each actor's events.
+            history = {k: [row for row in rows if isinstance(row, dict) and float(row.get("at", 0)) > now - 3600]
+                       for k, rows in history.items() if isinstance(rows, list)}
+            history = {k: rows for k, rows in history.items() if rows}
+            bucket = f"{key}:{int(actor_id)}"
+            rows = history.get(bucket, [])
+            if any(row.get("event") == str(event_id) for row in rows):
+                return True
+            if len(rows) >= limit:
+                return False
+            rows.append({"at": now, "event": str(event_id)[:128]})
+            history[bucket] = rows
+            await self._set(chat_id, "guardian_action_budgets", dict(list(history.items())[-500:]))
+            return True
 
     @classmethod
     def _unavailable(cls, command: str) -> GuardianCommandResult:
@@ -279,7 +320,19 @@ class GuardianSurface:
         if command in {"fedapprove", "fedunapprove"}:
             if not is_group or not is_admin:
                 return GuardianCommandResult("Bu işlem grup yöneticilerine açık.")
-            return self._unavailable(command)
+            origin, federation = await self.federation_origin(chat_id)
+            if origin is None or user_id not in self.federation_managers(federation):
+                return GuardianCommandResult("Bu işlem federasyon sahibi veya federasyon yöneticilerine açık.")
+            target = target_user_id or (int(args[0]) if args and args[0].isdigit() else 0)
+            if target <= 0:
+                return GuardianCommandResult(f"Kullanım: /{command} kullanıcı_id veya bir mesaja yanıt")
+            values = [int(value) for value in federation.get("approved_users", []) if str(value).isdigit()]
+            values = [value for value in values if value != target]
+            if command == "fedapprove":
+                values.append(target)
+            federation["approved_users"] = values[-500:]
+            await self._set(origin, "guardian_federation", federation)
+            return GuardianCommandResult("Federasyon güvenilir listesi güncellendi.", True, "guardian_federation", federation)
         if command in {"ghelp", "help"}:
             return GuardianCommandResult(
                 "🛡️ <b>AREL GUARDIAN</b>\n\n"
@@ -339,7 +392,11 @@ class GuardianSurface:
                 return GuardianCommandResult("grup dili yalnızca gruplarda ayarlanabilir")
             if not is_admin:
                 return GuardianCommandResult("grup dilini yalnızca yöneticiler değiştirebilir")
-            return self._unavailable(command)
+            value = args[0].casefold() if args else ""
+            if value not in {"tr", "en"}:
+                return GuardianCommandResult("Kullanım: /language tr|en")
+            await self._set(chat_id, "guardian_language", value)
+            return GuardianCommandResult("Group language updated." if value == "en" else "Grup dili güncellendi.", True, "guardian_language", value)
         if command in {"start", "help"}:
             return GuardianCommandResult(
                 "Guardian komutları Arel'in içinde hazır. /ghelp ile kategorileri, /rules ile grup kurallarını görürsün."
@@ -436,7 +493,12 @@ class GuardianSurface:
         if command in {"banlimit", "promotelimit", "grupinfolimit"}:
             if not is_admin:
                 return GuardianCommandResult("limit ayarlarını yalnızca grup yöneticileri değiştirebilir")
-            return self._unavailable(command)
+            key = {"banlimit": "ban_limit", "promotelimit": "promote_limit", "grupinfolimit": "group_info_limit"}[command]
+            if not args or not args[0].isdigit() or not 0 <= int(args[0]) <= 1000:
+                return GuardianCommandResult(f"Kullanım: /{command} 0..1000 · yönetici başına saatlik sınır; 0 kapatır.")
+            value = int(args[0])
+            await self._set(chat_id, key, value)
+            return GuardianCommandResult(f"Yönetici başına saatlik işlem sınırı: {value} (0: kapalı)", True, key, value)
         if command in {"reaksiyon", "fakekoruma", "gorselkoruma", "editkoruma"}:
             if not is_admin:
                 return GuardianCommandResult("bu koruma ayarını yalnızca grup yöneticileri değiştirebilir")
@@ -493,7 +555,11 @@ class GuardianSurface:
             if not is_admin:
                 return GuardianCommandResult("bu Guardian komutu grup yöneticilerine açık")
             if command == "privaterules":
-                return self._unavailable(command)
+                state = _on(args[0]) if args else not bool(settings.get("private_rules"))
+                if state is None:
+                    return GuardianCommandResult("Kullanım: /privaterules on|off")
+                await self._set(chat_id, "private_rules", state)
+                return GuardianCommandResult("Kurallar özel mesajda gönderilecek." if state else "Kurallar grupta gösterilecek.", True, "private_rules", state)
             if not args:
                 return GuardianCommandResult("kullanım: /setrules kurallar")
             value = " ".join(args)[:4096]
@@ -526,6 +592,8 @@ class GuardianSurface:
                 return self._unavailable(command)
             key = self._TOGGLE_KEYS[command]
             state = _on(args[0]) if args else None
+            if command in {"cleanservice", "cleanwelcome", "welcomemute"} and args and state is None:
+                return GuardianCommandResult(f"Kullanım: /{command} on|off")
             settings = await self._settings(chat_id)
             if state is None:
                 state = not bool(settings.get(key, False))
@@ -535,7 +603,7 @@ class GuardianSurface:
                 "antiraid_enabled": "raid koruması", "captcha_enabled": "doğrulama",
                 "clean_service_enabled": "servis temizleyici", "welcome_enabled": "hoş geldin",
                 "goodbye_enabled": "veda", "clean_welcome_enabled": "karşılama temizliği",
-                "welcome_mute_enabled": "karşılama susturması", "night_mode_enabled": "gece modu",
+                "welcome_mute_enabled": "karşılama susturması (5 dakika)", "night_mode_enabled": "gece modu",
                 "private_rules": "özel kurallar", "blocklist_mode_enabled": "kara liste modu",
             }
             metadata = {"transport_action": "nightmode", "locked": bool(state)} if key == "night_mode_enabled" else {}
@@ -717,10 +785,20 @@ class GuardianSurface:
                 chats = list(federation.get("chats") or [chat_id])
                 return GuardianCommandResult("federasyona bağlı sohbetler: " + ", ".join(map(str, chats)))
             if command == "fedapproved":
-                values = list(federation.get("approved_users") or [])
+                _, canonical = await self.federation_origin(chat_id, settings)
+                values = list(canonical.get("approved_users") or [])
                 return GuardianCommandResult("federasyon güvenilir listesi: " + (", ".join(map(str, values)) if values else "yok"))
             if command in {"setappeallog", "setfedlog"}:
-                return self._unavailable(command)
+                origin, federation = await self.federation_origin(chat_id)
+                managers = self.federation_managers(federation)
+                if origin is None or user_id not in managers:
+                    return GuardianCommandResult("Kayıt kanalını federasyon sahibi veya yöneticisi ayarlayabilir.")
+                if not args or (args[0].casefold() != "off" and not re.fullmatch(r"-\d+", args[0])):
+                    return GuardianCommandResult(f"Kullanım: /{command} negatif_kanal_id|off")
+                key = "appeal_log_channel" if command == "setappeallog" else "log_channel"
+                federation[key] = None if args[0].casefold() == "off" else int(args[0])
+                await self._set(origin, "guardian_federation", federation)
+                return GuardianCommandResult("Federasyon kayıt kanalı güncellendi.", True, "guardian_federation", federation)
             if command == "fednotes":
                 target = str(int(args[0])) if args and args[0].lstrip("-").isdigit() else str(target_user_id or user_id)
                 notes = dict(federation.get("notes") or {})
@@ -734,9 +812,14 @@ class GuardianSurface:
                 federation["notes"] = notes; await self._set(chat_id, "guardian_federation", federation)
                 return GuardianCommandResult("federasyon notu eklendi", True, "guardian_federation", federation)
             if command == "fedtransfer":
+                origin, federation = await self.federation_origin(chat_id, settings)
+                if origin is None or user_id != int(federation.get("owner_id") or federation.get("created_by") or 0):
+                    return GuardianCommandResult("Federasyon sahipliğini yalnızca mevcut sahibi aktarabilir.")
                 if not args or not args[0].lstrip("-").isdigit():
                     return GuardianCommandResult("kullanım: /fedtransfer kullanıcı_id")
-                federation["owner_id"] = int(args[0]); await self._set(chat_id, "guardian_federation", federation)
+                if int(args[0]) <= 0:
+                    return GuardianCommandResult("Hedef kullanıcı kimliği pozitif olmalı.")
+                federation["owner_id"] = int(args[0]); await self._set(origin, "guardian_federation", federation)
                 return GuardianCommandResult("federasyon sahipliği aktarıldı", True, "guardian_federation", federation)
             if command == "feddelete":
                 await self._set(chat_id, "guardian_federation", {}); await self._set(chat_id, "guardian_fed_bans", [])
@@ -802,7 +885,9 @@ class GuardianSurface:
                         copied += 1
                 return GuardianCommandResult(f"Guardian yedeği içe aktarıldı: {copied} ayar", True)
             if command in {"connect", "disconnect"}:
-                return self._unavailable(command)
+                value = int(chat_id) if command == "connect" else None
+                await self.data_port.update_user(int(user_id), {"guardian_connected_chat": value})
+                return GuardianCommandResult("Özel sohbet grup ayarlarına bağlandı." if value else "Özel sohbet bağlantısı kaldırıldı.", True, "guardian_connected_chat", value)
             if command == "fsub":
                 settings = await self._settings(chat_id)
                 if not args:
@@ -820,7 +905,6 @@ class GuardianSurface:
                 await self._set(chat_id, "fsub_channel", value)
                 return GuardianCommandResult(f"zorunlu kanal: {value}", True, "fsub_channel", value)
             if command == "logchannel":
-                return self._unavailable(command)
                 settings = await self._settings(chat_id)
                 if not args:
                     value = settings.get("guardian_log_channel")
@@ -829,7 +913,7 @@ class GuardianSurface:
                 if args[0].casefold() in {"off", "kapat", "kapal\u0131", "kapali"}:
                     await self._set(chat_id, "guardian_log_channel", None)
                     return GuardianCommandResult("kay\u0131t kanal\u0131 kapat\u0131ld\u0131", True, "guardian_log_channel", None)
-                if not args[0].lstrip("-").isdigit():
+                if not re.fullmatch(r"-\d+", args[0]):
                     return GuardianCommandResult("kullan\u0131m: /logchannel kanal_id")
                 value = int(args[0])
                 await self._set(chat_id, "guardian_log_channel", value)

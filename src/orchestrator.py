@@ -369,6 +369,10 @@ class Orchestrator:
         """Dispatch the embedded Kek Guardian command surface."""
         return await self.command_handler.handle_guardian_command(update, context)
 
+    async def handle_service_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Apply Guardian settings to Telegram service events."""
+        return await self.message_handler.handle_service_message(update, context)
+
     async def _background_cleanup_task(self):
         while True:
             try:

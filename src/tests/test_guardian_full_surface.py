@@ -72,8 +72,9 @@ async def test_guardian_extended_moderation_and_federation_surface_persists_stat
     assert result and "spam-pack" in port.settings[-100]["guardian_blocked_sticker_packs"]
     result = await surface.execute("fnote", chat_id=-100, user_id=7, args=["88", "dikkat", "gerekiyor"], is_admin=True)
     assert result and port.settings[-100]["guardian_federation"]["notes"]["88"]
+    port.settings[-100]["guardian_federation"].update(id="arel-100", created_by=7)
     result = await surface.execute("setfedlog", chat_id=-100, user_id=7, args=["-100123"], is_admin=True)
-    assert result and result.metadata["error_code"] == "guardian_feature_unavailable"
+    assert result and result.changed and port.settings[-100]["guardian_federation"]["log_channel"] == -100123
     result = await surface.execute("purge", chat_id=-100, user_id=7, target_message_id=55, is_admin=True)
     assert result and result.metadata["amount"] == 200 and result.metadata["end_message_id"] == 55
 
@@ -99,7 +100,7 @@ async def test_guardian_setup_and_alias_commands_are_real_domain_operations():
     assert port.settings[-100]["guardian_setup_complete"] is True
     assert port.settings[-100]["captcha_enabled"] is True
     result = await surface.execute("kayitkanali", chat_id=-100, user_id=7, args=["-100555"], is_admin=True)
-    assert result and result.metadata["error_code"] == "guardian_feature_unavailable"
+    assert result and result.changed and port.settings[-100]["guardian_log_channel"] == -100555
     result = await surface.execute("notekle", chat_id=-100, user_id=7, args=["kurallar", "spam", "yok"], is_admin=True)
     assert result and port.settings[-100]["guardian_notes"]["kurallar"] == "spam yok"
     result = await surface.execute("ghelp", chat_id=-100, user_id=7, is_group=True)
