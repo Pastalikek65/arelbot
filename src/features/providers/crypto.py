@@ -118,16 +118,16 @@ class CryptoProvider:
             })
         if not rows:
             raise ValueError("crypto_unknown_coin")
-        lines = ["<b>â‚¿ Kripto PiyasasÄ±</b>", ""]
+        lines = ["<b>₿ Kripto Piyasası</b>", ""]
         for row in rows:
             change = row.get("change_24h")
-            trend = f"{change:+.2f}%" if isinstance(change, float) else "â€”"
+            trend = f"{change:+.2f}%" if isinstance(change, float) else "—"
             lines.append(
-                f"â€¢ <b>{html.escape(str(row['id']))}</b>: "
+                f"• <b>{html.escape(str(row['id']))}</b>: "
                 f"<code>{html.escape(_format_number(row['price'], vs_currency))}</code> "
                 f"<i>(24s {html.escape(trend)})</i>"
             )
-        lines.extend(["", "<i>YatÄ±rÄ±m tavsiyesi deÄŸildir; piyasa da bunu yeterince hatÄ±rlatÄ±yor.</i>"])
+        lines.extend(["", "<i>Yatırım tavsiyesi değildir; piyasa da bunu yeterince hatırlatıyor.</i>"])
         return ProviderResponse(
             data={"coins": rows, "currency": vs_currency, "content": "\n".join(lines)},
             source="CoinGecko",

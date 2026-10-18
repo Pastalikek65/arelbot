@@ -112,4 +112,3 @@ async def test_nvidia_vision_uses_multimodal_wire_format_without_reasoning_paylo
     assert kwargs["json"]["max_tokens"] == 128
     assert "reasoning_effort" not in kwargs["json"]
 
-

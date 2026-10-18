@@ -8,7 +8,7 @@
       "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
       "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
       "id": 1,
-      "title": "Kuyruk derinliÄŸi",
+      "title": "Kuyruk derinliği",
       "type": "timeseries",
       "targets": [{"expr": "arelbot_media_queue_depth", "refId": "A", "legendFormat": "media"}, {"expr": "arelbot_documents_queue_depth", "refId": "B", "legendFormat": "documents"}, {"expr": "arelbot_images_queue_depth", "refId": "C", "legendFormat": "images"}]
     },
@@ -17,7 +17,7 @@
       "fieldConfig": {"defaults": {"unit": "ms"}, "overrides": []},
       "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
       "id": 2,
-      "title": "Medya iÅŸ gecikmesi p95",
+      "title": "Medya iş gecikmesi p95",
       "type": "timeseries",
       "targets": [{"expr": "arelbot_media_latency_media_job_seconds_p95 * 1000", "refId": "A", "legendFormat": "p95"}]
     },
@@ -26,7 +26,7 @@
       "fieldConfig": {"defaults": {"unit": "reqps"}, "overrides": []},
       "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
       "id": 3,
-      "title": "Ä°ÅŸ sonuÃ§larÄ±",
+      "title": "İş sonuçları",
       "type": "timeseries",
       "targets": [{"expr": "rate(arelbot_media_counters_media_jobs_completed[5m])", "refId": "A", "legendFormat": "completed"}, {"expr": "rate(arelbot_media_counters_media_jobs_failed[5m])", "refId": "B", "legendFormat": "failed"}]
     },
@@ -35,7 +35,7 @@
       "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
       "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
       "id": 4,
-      "title": "AI istek ve token kullanÄ±mÄ±",
+      "title": "AI istek ve token kullanımı",
       "type": "timeseries",
       "targets": [{"expr": "arelbot_ai_requests", "refId": "A", "legendFormat": "requests"}, {"expr": "arelbot_ai_input_tokens + arelbot_ai_output_tokens", "refId": "B", "legendFormat": "tokens"}]
     }

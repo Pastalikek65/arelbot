@@ -27,8 +27,8 @@ class WeatherProvider:
     @staticmethod
     def _city_slug(value: str) -> str:
         value = value.translate(str.maketrans({
-            "Ã§": "c", "Ã‡": "c", "ÄŸ": "g", "Ä": "g", "Ä±": "i", "Ä°": "i",
-            "Ã¶": "o", "Ã–": "o", "ÅŸ": "s", "Å": "s", "Ã¼": "u", "Ãœ": "u",
+            "ç": "c", "Ç": "c", "ğ": "g", "Ğ": "g", "ı": "i", "İ": "i",
+            "ö": "o", "Ö": "o", "ş": "s", "Ş": "s", "ü": "u", "Ü": "u",
         }))
         value = unicodedata.normalize("NFKD", str(value or "")).encode("ascii", "ignore").decode()
         value = re.sub(r"[^a-zA-Z0-9 -]", "", value).strip()
@@ -92,10 +92,10 @@ class WeatherProvider:
         safe_city = html.escape(city)
         safe_description = html.escape(str(description))
         content = (
-            f"<b>ğŸŒ¤ {safe_city} Hava Durumu</b>\n\n"
-            f"ğŸŒ¡ SÄ±caklÄ±k: <b>{html.escape(str(temperature))}Â°C</b>\n"
-            f"ğŸ“ Durum: <b>{safe_description}</b>\n"
-            f"ğŸ’§ Nem: %{html.escape(str(humidity))}"
+            f"<b>🌤 {safe_city} Hava Durumu</b>\n\n"
+            f"🌡 Sıcaklık: <b>{html.escape(str(temperature))}°C</b>\n"
+            f"📝 Durum: <b>{safe_description}</b>\n"
+            f"💧 Nem: %{html.escape(str(humidity))}"
         )
         forecast: list[dict[str, str]] = []
         raw_forecast = payload.get("weather")
@@ -133,19 +133,19 @@ class WeatherProvider:
                         row["wind_kmph"] = str(max(wind_values))
                 forecast.append(row)
         if forecast:
-            content += f"\n\n<b>ğŸ“… {len(forecast)} gÃ¼nlÃ¼k tahmin</b>"
+            content += f"\n\n<b>📅 {len(forecast)} günlük tahmin</b>"
             for row in forecast:
                 extra = []
                 if row.get("uv_index"):
                     extra.append(f"UV {row['uv_index']}")
                 if row.get("rain_chance"):
-                    extra.append(f"YaÄŸÄ±ÅŸ %{row['rain_chance']}")
+                    extra.append(f"Yağış %{row['rain_chance']}")
                 if row.get("wind_kmph"):
-                    extra.append(f"RÃ¼zgar {row['wind_kmph']} km/sa")
-                suffix = f" Â· {' Â· '.join(extra)}" if extra else ""
+                    extra.append(f"Rüzgar {row['wind_kmph']} km/sa")
+                suffix = f" · {' · '.join(extra)}" if extra else ""
                 content += (
-                    f"\nâ€¢ <b>{html.escape(row['date'])}</b>: "
-                    f"{html.escape(row['min_c'])}â€“{html.escape(row['max_c'])}Â°C"
+                    f"\n• <b>{html.escape(row['date'])}</b>: "
+                    f"{html.escape(row['min_c'])}–{html.escape(row['max_c'])}°C"
                     f"{suffix}"
                 )
         data = {

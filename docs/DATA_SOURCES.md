@@ -261,3 +261,19 @@ taşır; fingerprint uyuşmazlığı veya süre aşımı runtime'da otomatik ola
 fail-closed davranır. Ayrıntılı şema ve dosya izinleri `docs/OPERATIONS.md`
 içinde tutulur.
 
+## Kek Guardian
+
+- Kaynak: dağıtıma ait ayrı moderasyon servisi; hedef taşıma noktası
+  `/run/kek-guardian/guardian.sock`.
+- Veri: sınırlı Telegram moderasyon olayı metadata'sı ve sınırlı metin/caption
+  alanı.
+- Lisans/terms: servis dağıtım sahibine aittir; Guardian kaynak kodu bu
+  depoya kopyalanmaz.
+- Saklama: bridge frame'leri geçicidir; Arel aksiyon ledger'ı MongoDB retention
+  index'lerini izler.
+- Güvenlik: Unix socket peer credential allowlist'i, bounded NDJSON, süre sonu,
+  nonce/replay denetimi ve fail-closed adapter.
+- Mevcut VDS durumu: 2026-10-17 salt-okunur kontrolde Guardian Telegram
+  polling servisi aktifti, ancak hedef socket veya RPC endpoint'i bulunmadı.
+  Gerçek bridge kurulana kadar provider `disabled` kalır.
+- Attribution: kullanıcıya gösterilmez; yalnızca yönetici provider durumu.

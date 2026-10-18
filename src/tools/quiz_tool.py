@@ -33,16 +33,16 @@ class QuizTool(BaseTool):
             "required": []
         }
 
-    async def execute(self, category: str = "Genel KÃ¼ltÃ¼r", difficulty: str = "medium", **kwargs) -> Dict[str, Any]:
+    async def execute(self, category: str = "Genel Kültür", difficulty: str = "medium", **kwargs) -> Dict[str, Any]:
         try:
             logger.info(f"Starting quiz: {category} ({difficulty})")
             
             result = (
-                f"ğŸ¯ <b>BÄ°LGÄ° YARIÅMASI BAÅLIYOR!</b>\n\n"
+                f"🎯 <b>BİLGİ YARIŞMASI BAŞLIYOR!</b>\n\n"
                 f"Kategori: {category}\n"
                 f"Zorluk: {difficulty}\n\n"
-                f"LÃ¼tfen ÅŸimdi gruba harika bir soru sor ve ÅŸÄ±klarÄ± belirt. "
-                f"Ä°lk doÄŸru cevabÄ± vereni tebrik etmeyi unutma!"
+                f"Lütfen şimdi gruba harika bir soru sor ve şıkları belirt. "
+                f"İlk doğru cevabı vereni tebrik etmeyi unutma!"
             )
             return {"result": result}
         except Exception as e:

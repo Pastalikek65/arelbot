@@ -14,7 +14,7 @@ class MarketTool(BaseTool):
     def __init__(self, provider: MarketProvider | None = None) -> None:
         super().__init__(
             name="get_market_quote",
-            description="Hisse senedi sembolÃ¼ iÃ§in gÃ¼ncel piyasa Ã¶zeti ve 7 gÃ¼nlÃ¼k deÄŸiÅŸim verir.",
+            description="Hisse senedi sembolü için güncel piyasa özeti ve 7 günlük değişim verir.",
         )
         self.provider = provider or MarketProvider()
 
@@ -22,7 +22,7 @@ class MarketTool(BaseTool):
     def parameters(self) -> Dict[str, Any]:
         return {
             "type": "object",
-            "properties": {"symbol": {"type": "string", "description": "Yahoo Finance sembolÃ¼; Ã¶rnek THYAO.IS veya thy"}},
+            "properties": {"symbol": {"type": "string", "description": "Yahoo Finance sembolü; örnek THYAO.IS veya thy"}},
             "required": ["symbol"],
         }
 

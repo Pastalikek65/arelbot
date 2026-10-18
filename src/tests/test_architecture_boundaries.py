@@ -64,7 +64,7 @@ def test_architecture_check_rejects_mojibake_in_markdown(tmp_path: Path, monkeyp
         "kullan\u00c4\u00b1r.\n"
     )
     (docs / "broken.md").write_text(broken, encoding="utf-8")
-    (docs / "good.md").write_text("Bootstrap dispatch'i aynÄ± sÃ¶zleÅŸmeyi kullanÄ±r.\n", encoding="utf-8")
+    (docs / "good.md").write_text("Bootstrap dispatch'i aynı sözleşmeyi kullanır.\n", encoding="utf-8")
     monkeypatch.setattr(architecture_check, "ROOT", tmp_path)
 
     errors = architecture_check.check_document_encoding()

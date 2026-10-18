@@ -41,9 +41,9 @@ def _boolean(value: Any, default: bool) -> bool:
     if isinstance(value, bool):
         return value
     normalized = str(value).strip().casefold()
-    if normalized in {"1", "true", "on", "yes", "evet", "aÃ§Ä±k", "acik"}:
+    if normalized in {"1", "true", "on", "yes", "evet", "açık", "acik"}:
         return True
-    if normalized in {"0", "false", "off", "no", "hayÄ±r", "hayir", "kapalÄ±", "kapali"}:
+    if normalized in {"0", "false", "off", "no", "hayır", "hayir", "kapalı", "kapali"}:
         return False
     raise QuoteOptionsError("boolean_option_invalid")
 
@@ -62,7 +62,7 @@ def normalize_quote_options(value: Mapping[str, Any] | None) -> dict[str, Any]:
     if not math.isfinite(scale) or not 0.5 <= scale <= 2.0:
         raise QuoteOptionsError("scale_invalid")
 
-    emoji = str(source.get("emoji") or "âœ¨").strip()
+    emoji = str(source.get("emoji") or "✨").strip()
     if not emoji or len(emoji) > 16 or any(ord(char) < 32 for char in emoji):
         raise QuoteOptionsError("emoji_invalid")
 

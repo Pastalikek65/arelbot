@@ -26,12 +26,12 @@ async def test_recent_index_filters_thread_window_and_replied_messages():
     })
     await index.add_message({
         "chat_id": -10, "thread_id": 4, "telegram_message_id": 3,
-        "author_user_id": 202, "display_name": "Y", "text": "baÅŸka",
+        "author_user_id": 202, "display_name": "Y", "text": "başka",
         "created_at": now - timedelta(seconds=10),
     })
     await index.add_message({
         "chat_id": -10, "thread_id": 9, "telegram_message_id": 4,
-        "author_user_id": 303, "display_name": "Z", "text": "baÅŸlÄ±k dÄ±ÅŸÄ±",
+        "author_user_id": 303, "display_name": "Z", "text": "başlık dışı",
         "created_at": now - timedelta(seconds=5),
     })
     await index.mark_replied(-10, 4, 3)
@@ -202,9 +202,45 @@ def test_database_registers_reversible_group_reply_migration_v15():
     Database._db = Mongo()
     try:
         runner = Database.__new__(Database).migration_runner()
-        migration = runner.migrations[-1]
+        migration = next(item for item in runner.migrations if item.name == "group-targeted-reply-persistence")
         assert migration.version == 15
         assert migration.name == "group-targeted-reply-persistence"
+        assert migration.down is not None
+    finally:
+        Database._db = previous
+
+
+def test_database_registers_unique_attribution_upgrade_migration_v18():
+    from src.database import Database
+
+    class Mongo:
+        def __getitem__(self, name):
+            return object()
+
+    previous = Database._db
+    Database._db = Mongo()
+    try:
+        runner = Database.__new__(Database).migration_runner()
+        migration = next(item for item in runner.migrations if item.version == 18)
+        assert migration.name == "group-reply-unique-attribution-index"
+        assert migration.down is not None
+    finally:
+        Database._db = previous
+
+
+def test_database_registers_username_target_lookup_migration_v19():
+    from src.database import Database
+
+    class Mongo:
+        def __getitem__(self, name):
+            return object()
+
+    previous = Database._db
+    Database._db = Mongo()
+    try:
+        runner = Database.__new__(Database).migration_runner()
+        migration = next(item for item in runner.migrations if item.version == 19)
+        assert migration.name == "telegram-username-target-lookup"
         assert migration.down is not None
     finally:
         Database._db = previous

@@ -24,7 +24,14 @@ def normalize_media_url(url: str) -> str:
         raise InvalidMediaURL("unsupported_scheme")
     if not parts.hostname or parts.username or parts.password:
         raise InvalidMediaURL("invalid_url")
-    if parts.port not in {None, 80, 443}:
+    try:
+        port = parts.port
+    except ValueError as exc:
+        # urllib raises while reading ``.port`` for malformed values such as
+        # ``:abc`` or out-of-range ports.  Convert that parser exception into
+        # the domain error consumed by extract_media_url and callers.
+        raise InvalidMediaURL("invalid_port") from exc
+    if port not in {None, 80, 443}:
         raise InvalidMediaURL("unsupported_port")
     host = parts.hostname.rstrip(".").lower()
     if not any(host == allowed or host.endswith("." + allowed) for allowed in _ALLOWED_HOSTS):

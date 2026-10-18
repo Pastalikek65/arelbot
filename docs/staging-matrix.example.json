@@ -3,7 +3,7 @@
     {
       "id": "weather_istanbul",
       "feature": "weather",
-      "params": {"city": "Ä°stanbul", "days": 3},
+      "params": {"city": "İstanbul", "days": 3},
       "expect_source": "wttr.in",
       "repeat": true
     },

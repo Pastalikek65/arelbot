@@ -1,15 +1,17 @@
 """
 Orchestrator - Merkezi Event Dispatcher
 
-TÃ¼m handler'lara daÄŸÄ±tÄ±m yapan basit dispatcher.
-ModÃ¼ler yapÄ±ya geÃ§iÅŸ iÃ§in eski devasa dosya parÃ§alandÄ±.
+Tüm handler'lara dağıtım yapan basit dispatcher.
+Modüler yapıya geçiş için eski devasa dosya parçalandı.
 """
 import logging
 import asyncio
 import html
 import os
 import tempfile
+from typing import Any
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputFile
 from telegram.ext import ContextTypes
@@ -37,6 +39,12 @@ from src.services.daily_brief_service import DailyBriefService
 from src.services.alert_service import AlertService
 from src.services.announcement_service import AnnouncementService
 from src.moderation import ModerationEngine, ModerationService, TelegramModerationService
+from src.moderation.action_ledger import ModerationActionLedger
+from src.moderation.contracts import ModerationAction
+from src.moderation.action_executor import TelegramModerationActionExecutor
+from src.moderation.guardian_adapter import GuardianAdapter
+from src.moderation.authorization import TelegramModerationAuthorization
+from src.moderation.telegram_guardian_service import GuardianTelegramService
 from src.handlers.handler_utils import is_admin
 from src.stickers.render_service import StickerRenderService
 from src.services.sticker_pack_service import StickerPackService
@@ -121,8 +129,18 @@ class Orchestrator:
         )
         self.market_chart_service = MarketChartService()
         self.moderation = ModerationEngine()
-        self.moderation_service = ModerationService(self.chat_engine.db, self.moderation)
+        self.guardian_adapter = GuardianAdapter.from_environment()
+        self.moderation_service = ModerationService(
+            self.chat_engine.db,
+            self.moderation,
+            guardian_adapter=self.guardian_adapter,
+        )
+        self.moderation_action_ledger = ModerationActionLedger(
+            self.chat_engine.db,
+            required=str(getattr(Config, "APP_ENV", "development")).casefold() == "production",
+        )
         self.telegram_moderation_service = TelegramModerationService()
+        self.guardian_telegram_service = GuardianTelegramService()
         self.game_action_ledger = GameActionLedger(self.chat_engine.db)
         self.inline_query_service = InlineQueryService(
             self.chat_engine.city_directory,
@@ -134,6 +152,17 @@ class Orchestrator:
         self._health_snapshot_cache: tuple[float, dict] | None = None
 
         self._init_handlers()
+
+    def configure_telegram_dependencies(self, bot: Any) -> None:
+        """Bind transport-backed moderation role checks after Application init."""
+        authorization = TelegramModerationAuthorization(bot, bot_id=getattr(bot, "id", None))
+        self.telegram_authorization = authorization
+        self.moderation_service.member_admin_checker = authorization.is_admin
+        # Command/callback handlers use the same injected boundary for every
+        # group permission lookup.  Keeping one instance avoids ad-hoc
+        # ``get_chat_member`` calls and makes failures fail closed uniformly.
+        for handler in (self.command_handler, self.callback_handler, self.message_handler, self.media_handler):
+            handler.authorization = authorization
 
     def _init_handlers(self):
         from src.handlers.command_handler import CommandHandler
@@ -258,6 +287,10 @@ class Orchestrator:
             card_renderer=self.card_renderer,
             data_port=self.data_port,
         )
+        # Guardian actions use the same durable ledger and Telegram role
+        # boundary as automatic moderation.  There is no second bot or
+        # duplicate action store in the embedded Guardian surface.
+        self.command_handler.moderation_action_ledger = self.moderation_action_ledger
         self.callback_handler = CallbackHandler(
             chat_engine=self.chat_engine,
             sudo_manager=self.sudo_manager,
@@ -294,6 +327,7 @@ class Orchestrator:
                 metrics=self.group_reply_metrics,
             ),
             group_reply_metrics=self.group_reply_metrics,
+            authorization=getattr(self, "telegram_authorization", None),
         )
         self.media_handler = MediaHandler(
             chat_engine=self.chat_engine,
@@ -306,6 +340,7 @@ class Orchestrator:
             sticker_render_service=self.sticker_render_service,
             document_service=self.document_service,
             attachment_service=self.attachment_service,
+            authorization=getattr(self, "telegram_authorization", None),
         )
         self.command_handler.media_handler = self.media_handler
         self.callback_handler.message_handler = self.message_handler
@@ -325,6 +360,14 @@ class Orchestrator:
         self.message_handler.media_service = self.media_service
         self.message_handler.moderation = self.moderation
         self.message_handler.moderation_service = self.moderation_service
+        self.message_handler.moderation_action_ledger = self.moderation_action_ledger
+        self.media_handler.data_port = self.data_port
+        self.media_handler.moderation_service = self.moderation_service
+        self.media_handler.moderation_action_ledger = self.moderation_action_ledger
+
+    async def handle_guardian_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Dispatch the embedded Kek Guardian command surface."""
+        return await self.command_handler.handle_guardian_command(update, context)
 
     async def _background_cleanup_task(self):
         while True:
@@ -337,7 +380,7 @@ class Orchestrator:
             await asyncio.sleep(3600)
 
     async def start_background_tasks(self, bot=None, job_queue=None):
-        logger.info("ğŸ§¹ Starting background cleanup task...")
+        logger.info("🧹 Starting background cleanup task...")
         self._background_tasks.append(asyncio.create_task(self._background_cleanup_task(), name="arel-file-cleanup"))
         try:
             if bot is not None:
@@ -399,6 +442,12 @@ class Orchestrator:
                         name="arel-subscription-tick",
                     )
                     job_queue.run_repeating(
+                        self._guardian_night_tick,
+                        interval=60,
+                        first=10,
+                        name="arel-guardian-night-mode",
+                    )
+                    job_queue.run_repeating(
                         self._daily_brief_tick,
                         interval=30,
                         first=15,
@@ -451,6 +500,10 @@ class Orchestrator:
             snapshot["ai"] = await self.chat_engine.usage_tracker.snapshot()
         except Exception:
             snapshot["ai"] = {"metrics_errors": 1}
+        try:
+            snapshot["guardian"] = await self.guardian_adapter.health_check()
+        except Exception:
+            snapshot["guardian"] = {"health": "unavailable"}
         return snapshot
 
     async def _observability_health(self) -> dict:
@@ -551,7 +604,7 @@ class Orchestrator:
                 delivery_finalized = False
                 delivery_send_started = False
                 try:
-                    if item.get("feature_key") == "group_announcement":
+                    if item.get("feature_key") in {"group_announcement", "guardian_recurring"}:
                         # Announcement text is user-authored content. Escape it
                         # before using Telegram HTML parse mode.
                         params = item.get("params") or {}
@@ -561,7 +614,7 @@ class Orchestrator:
                         delivery_send_started = True
                         sent_message = await context.bot.send_message(
                             chat_id=item["chat_id"],
-                            text=f"ğŸ“£ <b>GRUP DUYURUSU</b>\n\n{body}",
+                            text=f"📣 <b>GRUP DUYURUSU</b>\n\n{body}",
                             parse_mode="HTML",
                             message_thread_id=item.get("message_thread_id"),
                         )
@@ -594,7 +647,7 @@ class Orchestrator:
                             delivery_finalized = True
                             success = True
                             continue
-                        body = format_feature_result(result, "Veri bulunamadÄ±.")
+                        body = format_feature_result(result, "Veri bulunamadı.")
                         if not await self.subscription_service.store.begin_delivery_send(delivery_key):
                             raise RuntimeError("DELIVERY_LEASE_LOST")
                         delivery_send_started = True
@@ -641,6 +694,37 @@ class Orchestrator:
         except Exception as exc:
             logger.error("Subscription tick failed: %s", summarize_exception(exc, label="subscription_tick"))
 
+    async def _guardian_night_tick(self, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Apply persisted Guardian night windows after restarts."""
+        try:
+            now = datetime.now(ZoneInfo("Europe/Istanbul"))
+            current = now.strftime("%H:%M")
+            for chat_id in await self.chat_engine.get_active_chat_ids():
+                if int(chat_id) >= 0:
+                    continue
+                settings = await self._get_data_port().get_chat_settings(int(chat_id)) or {}
+                if not settings.get("night_mode_enabled"):
+                    continue
+                start = str(settings.get("night_start") or "22:00")
+                end = str(settings.get("night_end") or "08:00")
+                in_window = (start <= current < end) if start < end else (current >= start or current < end)
+                locked = bool(settings.get("guardian_night_locked"))
+                if in_window == locked:
+                    continue
+                if await self.guardian_telegram_service.set_night_permissions(
+                    bot=getattr(context, "bot", None), chat_id=int(chat_id), locked=in_window
+                ):
+                    await self._get_data_port().update_chat_setting_key(int(chat_id), "guardian_night_locked", in_window)
+                    try:
+                        await context.bot.send_message(
+                            chat_id=int(chat_id),
+                            text=("🌙 gece modu devrede, grup kilitlendi" if in_window else "☀️ gece modu bitti, grup yeniden açıldı"),
+                        )
+                    except Exception:
+                        pass
+        except Exception as exc:
+            logger.warning("Guardian night tick failed: %s", summarize_exception(exc, label="guardian_night_tick"))
+
     async def _daily_brief_tick(self, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Deliver personal daily digests with an atomic local-date claim."""
         try:
@@ -659,7 +743,7 @@ class Orchestrator:
                 try:
                     text = await self.daily_brief_service.build(
                         user_id,
-                        city=str(item.get("daily_brief_city") or "Ä°stanbul"),
+                        city=str(item.get("daily_brief_city") or "İstanbul"),
                         timezone_name=timezone_name,
                     )
                     await context.bot.send_message(chat_id=user_id, text=text, parse_mode="HTML")
@@ -863,20 +947,26 @@ class Orchestrator:
         from src.media.url_normalizer import extract_media_url
 
         message = update.effective_message
+        moderate = getattr(self.media_handler, "moderate_update", None)
+        if callable(moderate) and await moderate(update, context):
+            return
         url = extract_media_url(message.caption or "")
         if url:
             await self._queue_media_download(update, url)
             return
         if message.photo:
-            await self.media_handler.handle_photo(update, context)
+            await self.media_handler.handle_photo(update, context, skip_moderation=True)
         elif message.document:
-            await self.media_handler.handle_document(update, context)
+            await self.media_handler.handle_document(update, context, skip_moderation=True)
 
     async def handle_animation(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Keep passive GIFs silent; captions with links still enter media."""
 
         message = update.effective_message
         if message is None or not getattr(message, "animation", None):
+            return
+        moderate = getattr(self.media_handler, "moderate_update", None)
+        if callable(moderate) and await moderate(update, context):
             return
         from src.media.url_normalizer import extract_media_url
 
@@ -895,13 +985,25 @@ class Orchestrator:
     async def handle_voice(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         await self.media_handler.handle_voice(update, context)
 
+    async def handle_passive_attachment(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Moderate non-text attachments without starting an AI workflow.
+
+        GIFs, videos, audio, video notes and stickers are passive by default.
+        Their captions are handled by ``handle_caption``; this path exists for
+        uncaptioned media so moderation cannot be bypassed and no spurious
+        group-facing error is emitted.
+        """
+        moderate = getattr(self.media_handler, "moderate_update", None)
+        if callable(moderate):
+            await moderate(update, context)
+
     async def handle_download_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         from src.media.url_normalizer import extract_media_url
 
         url = extract_media_url(" ".join(context.args or []))
         if not url:
             await update.effective_message.reply_text(
-                "KullanÄ±m: /indir <Instagram, TikTok, YouTube Shorts, X, Facebook veya Reddit baÄŸlantÄ±sÄ±>"
+                "Kullanım: /indir <Instagram, TikTok, YouTube Shorts, X, Facebook veya Reddit bağlantısı>"
             )
             return
         await self._queue_media_download(update, url)
@@ -937,7 +1039,7 @@ class Orchestrator:
             return
         status = None
         try:
-            status = await update.effective_message.reply_text("ğŸ” BaÄŸlantÄ± analiz ediliyorâ€¦")
+            status = await update.effective_message.reply_text("🔎 Bağlantı analiz ediliyor…")
             job_id, duplicate = await self.media_service.submit(
                 url,
                 update.effective_chat.id,
@@ -946,25 +1048,25 @@ class Orchestrator:
                 chat_type=getattr(update.effective_chat, "type", "private"),
             )
             if duplicate:
-                await status.edit_text(f"â³ Bu baÄŸlantÄ± iÃ§in aktif bir iÅŸ var.\nÄ°ÅŸ: <code>{job_id}</code>", parse_mode="HTML")
+                await status.edit_text(f"⏳ Bu bağlantı için aktif bir iş var.\nİş: <code>{job_id}</code>", parse_mode="HTML")
             else:
-                await status.edit_text(f"â³ Ä°ndirme kuyruÄŸa alÄ±ndÄ±.\nÄ°ÅŸ: <code>{job_id}</code>", parse_mode="HTML")
+                await status.edit_text(f"⏳ İndirme kuyruğa alındı.\nİş: <code>{job_id}</code>", parse_mode="HTML")
         except InvalidMediaURL as exc:
             await self._media_enqueue_failure(update, status, media_url_error_message(exc))
         except ValueError as exc:
             if str(exc) == "rate_limited":
-                message = "â±ï¸ Ã‡ok sÄ±k medya isteÄŸi gÃ¶nderdin. LÃ¼tfen bir dakika bekle."
+                message = "⏱️ Çok sık medya isteği gönderdin. Lütfen bir dakika bekle."
             elif str(exc) == "maintenance":
-                message = "Medya servisi bakÄ±mda. LÃ¼tfen daha sonra tekrar deneyin."
+                message = "Medya servisi bakımda. Lütfen daha sonra tekrar deneyin."
             else:
-                message = "âŒ Medya isteÄŸi geÃ§ersiz."
+                message = "❌ Medya isteği geçersiz."
             await self._media_enqueue_failure(update, status, message)
         except Exception as exc:
             logger.error("Could not enqueue media URL: %s", summarize_exception(exc, label="media_enqueue"))
             await self._media_enqueue_failure(
                 update,
                 status,
-                "âŒ Medya iÅŸi baÅŸlatÄ±lamadÄ±. LÃ¼tfen daha sonra tekrar deneyin.",
+                "❌ Medya işi başlatılamadı. Lütfen daha sonra tekrar deneyin.",
             )
 
     async def _media_enqueue_failure(self, update: Update, status, private_text: str) -> None:
@@ -987,7 +1089,7 @@ class Orchestrator:
             return
         job_id = (context.args or [None])[0]
         if not job_id:
-            await update.effective_message.reply_text("KullanÄ±m: /jobs <iÅŸ_id>")
+            await update.effective_message.reply_text("Kullanım: /jobs <iş_id>")
             return
         job = await self.media_service.get_status(job_id)
         job_kind = "Medya"
@@ -1011,7 +1113,7 @@ class Orchestrator:
             job_kind = "Market chart"
         if not job:
             job = await self.image_generation_service.get_status(job_id)
-            job_kind = "GÃ¶rsel"
+            job_kind = "Görsel"
         if not job:
             await update.effective_message.reply_text("\u0130\u015f bulunamad\u0131.")
             return
@@ -1034,19 +1136,19 @@ class Orchestrator:
         ai_metrics = await self.chat_engine.usage_tracker.snapshot()
         feature_persistence = self.chat_engine.feature_executor.persistence_metrics()
         await update.effective_message.reply_text(
-            "ğŸ“Š <b>Medya kuyruÄŸu</b>\n" + "\n".join(f"{key}: <code>{value}</code>" for key, value in metrics.items())
-            + "\n\n<b>Belge kuyruÄŸu</b>\n" + "\n".join(f"{key}: <code>{value}</code>" for key, value in document_metrics.items())
-            + "\n\n<b>Ek medya kuyruÄŸu</b>\n" + "\n".join(f"{key}: <code>{value}</code>" for key, value in attachment_metrics.items())
-            + "\n\n<b>Quote kuyruÄŸu</b>\n" + "\n".join(f"{key}: <code>{value}</code>" for key, value in quote_metrics.items())
-            + "\n\n<b>Speech kuyruÄŸu</b>\n" + "\n".join(f"{key}: <code>{value}</code>" for key, value in speech_metrics.items())
-            + "\n\n<b>Sticker etiket kuyruÄŸu</b>\n" + "\n".join(f"{key}: <code>{value}</code>" for key, value in sticker_tag_metrics.items())
-            + "\n\n<b>Grafik kuyruÄŸu</b>\n" + "\n".join(f"{key}: <code>{value}</code>" for key, value in chart_metrics.items())
-            + "\n\n<b>GÃ¶rsel kuyruÄŸu</b>\n" + "\n".join(f"{key}: <code>{value}</code>" for key, value in image_metrics.items())
+            "📊 <b>Medya kuyruğu</b>\n" + "\n".join(f"{key}: <code>{value}</code>" for key, value in metrics.items())
+            + "\n\n<b>Belge kuyruğu</b>\n" + "\n".join(f"{key}: <code>{value}</code>" for key, value in document_metrics.items())
+            + "\n\n<b>Ek medya kuyruğu</b>\n" + "\n".join(f"{key}: <code>{value}</code>" for key, value in attachment_metrics.items())
+            + "\n\n<b>Quote kuyruğu</b>\n" + "\n".join(f"{key}: <code>{value}</code>" for key, value in quote_metrics.items())
+            + "\n\n<b>Speech kuyruğu</b>\n" + "\n".join(f"{key}: <code>{value}</code>" for key, value in speech_metrics.items())
+            + "\n\n<b>Sticker etiket kuyruğu</b>\n" + "\n".join(f"{key}: <code>{value}</code>" for key, value in sticker_tag_metrics.items())
+            + "\n\n<b>Grafik kuyruğu</b>\n" + "\n".join(f"{key}: <code>{value}</code>" for key, value in chart_metrics.items())
+            + "\n\n<b>Görsel kuyruğu</b>\n" + "\n".join(f"{key}: <code>{value}</code>" for key, value in image_metrics.items())
             + "\n\n<b>Feature telemetry</b>\n"
             + "\n".join(f"{key}: <code>{value}</code>" for key, value in feature_persistence.items())
-            + "\n\n<b>AI saÄŸlayÄ±cÄ±larÄ±</b>\n" + "\n".join(
-                f"{name}: <code>{data['successes']}/{data['requests']} Â· {data['avg_latency_ms']:.0f}ms Â· "
-                f"{data['input_tokens'] + data['output_tokens']} token Â· ${data.get('cost_usd', 0):.6f}</code>"
+            + "\n\n<b>AI sağlayıcıları</b>\n" + "\n".join(
+                f"{name}: <code>{data['successes']}/{data['requests']} · {data['avg_latency_ms']:.0f}ms · "
+                f"{data['input_tokens'] + data['output_tokens']} token · ${data.get('cost_usd', 0):.6f}</code>"
                 for name, data in ai_metrics.items()
             ),
             parse_mode="HTML",
@@ -1066,7 +1168,7 @@ class Orchestrator:
         chart_metrics = await self.market_chart_job_service.get_metrics()
         image_metrics = await self.image_generation_service.get_metrics()
         feature_persistence = self.chat_engine.feature_executor.persistence_metrics()
-        redis_state = "baÄŸlÄ±" if self.media_service.queue.redis else "bellek fallback"
+        redis_state = "bağlı" if self.media_service.queue.redis else "bellek fallback"
         ffmpeg_state = "var" if shutil.which("ffmpeg") else "yok"
         ffprobe_state = "var" if shutil.which("ffprobe") else "yok"
         mongo_state = "bagli" if await self._get_data_port().ping() else "yok"
@@ -1085,19 +1187,19 @@ class Orchestrator:
         ) or "yok"
         try:
             tts_health = await self.tts_service.health_check()
-            tts_state = "ok" if tts_health.get("healthy") else "kapalÄ±"
+            tts_state = "ok" if tts_health.get("healthy") else "kapalı"
         except Exception:
-            tts_state = "kapalÄ±"
+            tts_state = "kapalı"
         try:
             sticker_health = await self.sticker_render_service.health_check()
             sticker_state = "ok" if sticker_health.get("healthy") else "ffmpeg yok"
         except Exception:
-            sticker_state = "kapalÄ±"
+            sticker_state = "kapalı"
         try:
             quote_health = await self.quote_render_service.health_check()
-            quote_state = "ok" if quote_health.get("healthy") else "kapalÄ±"
+            quote_state = "ok" if quote_health.get("healthy") else "kapalı"
         except Exception:
-            quote_state = "kapalÄ±"
+            quote_state = "kapalı"
         try:
             market_chart_health = await self.market_chart_service.health_check()
             market_chart_state = "ok" if market_chart_health.get("healthy") else "renderer yok"
@@ -1108,8 +1210,13 @@ class Orchestrator:
             image_provider_state = "ok" if image_provider_health.get("healthy") else "kapal\u0131"
         except Exception:
             image_provider_state = "kapal\u0131"
+        try:
+            guardian_health = await self.guardian_adapter.health_check()
+            guardian_state = f"{guardian_health.get('mode', 'disabled')}/{guardian_health.get('health', 'unknown')}"
+        except Exception:
+            guardian_state = "unavailable"
         await update.effective_message.reply_text(
-            "ğŸ©º <b>Arel saÄŸlÄ±k durumu</b>\n"
+            "🩺 <b>Arel sağlık durumu</b>\n"
             f"Media queue: <code>{redis_state}</code>\n"
             f"MongoDB: <code>{mongo_state}</code>\n"
             f"FFmpeg: <code>{ffmpeg_state}</code>\n"
@@ -1119,7 +1226,8 @@ class Orchestrator:
             f"Quote render: <code>{quote_state}</code>\n"
             f"Market chart: <code>{market_chart_state}</code>\n"
             f"Image provider: <code>{image_provider_state}</code>\n"
-            f"City data: <code>{len(self.city_directory.all())} il / {sum(len(city.districts) for city in self.city_directory.all())} ilÃ§e</code>\n"
+            f"Guardian bridge: <code>{html.escape(guardian_state[:80])}</code>\n"
+            f"City data: <code>{len(self.city_directory.all())} il / {sum(len(city.districts) for city in self.city_directory.all())} ilçe</code>\n"
             f"Providers: <code>{provider_state}</code>\n"
             f"Feature providers: <code>{feature_provider_state[:900]}</code>\n"
             f"AI providers: <code>{html.escape(ai_provider_state[:500])}</code>\n"
@@ -1167,6 +1275,10 @@ class Orchestrator:
         text += "\n\n<b>Image provider</b>\n" + (
             "\u2705 configured" if image_health.get("healthy") else "\u26a0\ufe0f key_not_configured"
         )
+        guardian_health = await self.guardian_adapter.health_check()
+        text += "\n\n<b>Guardian bridge</b>\n<code>" + html.escape(
+            f"{guardian_health.get('mode', 'disabled')}/{guardian_health.get('health', 'unknown')}"
+        ) + "</code>"
         await update.effective_message.reply_text(text, parse_mode="HTML")
 
     async def handle_features_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1178,23 +1290,23 @@ class Orchestrator:
         if args and args[0].casefold() in {"on", "off", "acik", "kapali"}:
             if len(args) != 2:
                 await update.effective_message.reply_text(
-                    "KullanÄ±m: <code>/features on|off feature_key</code>", parse_mode="HTML"
+                    "Kullanım: <code>/features on|off feature_key</code>", parse_mode="HTML"
                 )
                 return
             action = args[0].casefold()
             enabled = action in {"on", "acik"}
             feature_key = args[1].casefold()
             if self.chat_engine.feature_registry.get_feature(feature_key) is None:
-                await update.effective_message.reply_text("Feature bulunamadÄ±.", parse_mode="HTML")
+                await update.effective_message.reply_text("Feature bulunamadı.", parse_mode="HTML")
                 return
             if not self.chat_engine.feature_registry.runtime_toggle_supported(feature_key):
                 await update.effective_message.reply_text(
-                    "Bu Ã¶zellik provider kill-switch kapsamÄ± dÄ±ÅŸÄ±nda; kendi queue/servis bakÄ±m kontrolÃ¼ kullanÄ±lÄ±r.",
+                    "Bu özellik provider kill-switch kapsamı dışında; kendi queue/servis bakım kontrolü kullanılır.",
                     parse_mode="HTML",
                 )
                 return
             if not self.chat_engine.feature_registry.set_feature_enabled(feature_key, enabled):
-                await update.effective_message.reply_text("Feature durumu deÄŸiÅŸtirilemedi.", parse_mode="HTML")
+                await update.effective_message.reply_text("Feature durumu değiştirilemedi.", parse_mode="HTML")
                 return
             await self._get_data_port().add_audit_log(
                 user_id,
@@ -1203,10 +1315,10 @@ class Orchestrator:
                 enabled=enabled,
                 scope="process",
             )
-            state = "aÃ§Ä±ldÄ±" if enabled else "kapatÄ±ldÄ±"
+            state = "açıldı" if enabled else "kapatıldı"
             await update.effective_message.reply_text(
-                f"âœ… <b>{html.escape(feature_key)}</b> kaynaÄŸÄ± {state}. "
-                "Bu acil durum ayarÄ± restart sonrasÄ± config deÄŸerine dÃ¶ner.",
+                f"✅ <b>{html.escape(feature_key)}</b> kaynağı {state}. "
+                "Bu acil durum ayarı restart sonrası config değerine döner.",
                 parse_mode="HTML",
             )
             return
@@ -1217,7 +1329,7 @@ class Orchestrator:
             status = self.chat_engine.feature_registry.feature_status(item.key)
             status_label = "acik" if status["enabled"] else "KAPALI"
             lines.append(
-                f"â€¢ <code>{item.key}</code> [{item.category}] â€” {commands or '-'} "
+                f"• <code>{item.key}</code> [{item.category}] — {commands or '-'} "
                 f"({item.timeout_ms}ms, cache={item.cache_ttl_seconds}s, {status_label})"
             )
         await update.effective_message.reply_text("\n".join(lines), parse_mode="HTML")
@@ -1228,22 +1340,22 @@ class Orchestrator:
         if context.args and context.args[0].lower() in {"clear", "temizle"}:
             removed = await self.media_service.clear_cache()
             await self._get_data_port().add_audit_log(update.effective_user.id, "media_cache_clear", removed=removed)
-            await update.effective_message.reply_text(f"âœ… Medya cache temizlendi: <code>{removed}</code>", parse_mode="HTML")
+            await update.effective_message.reply_text(f"✅ Medya cache temizlendi: <code>{removed}</code>", parse_mode="HTML")
             return
-        await update.effective_message.reply_text("KullanÄ±m: /cache clear")
+        await update.effective_message.reply_text("Kullanım: /cache clear")
 
     async def handle_maintenance_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not self.sudo_manager.is_owner(update.effective_user.id):
             return
         action = (context.args or ["status"])[0].lower()
-        if action in {"on", "aÃ§Ä±k", "acik"}:
+        if action in {"on", "açık", "acik"}:
             self.media_service.set_maintenance(True)
             await self._get_data_port().add_audit_log(update.effective_user.id, "maintenance_toggle", enabled=True)
-        elif action in {"off", "kapalÄ±", "kapali"}:
+        elif action in {"off", "kapalı", "kapali"}:
             self.media_service.set_maintenance(False)
             await self._get_data_port().add_audit_log(update.effective_user.id, "maintenance_toggle", enabled=False)
         await update.effective_message.reply_text(
-            f"Medya bakÄ±m modu: <b>{'aÃ§Ä±k' if self.media_service.maintenance else 'kapalÄ±'}</b>", parse_mode="HTML"
+            f"Medya bakım modu: <b>{'açık' if self.media_service.maintenance else 'kapalı'}</b>", parse_mode="HTML"
         )
 
     async def handle_audit_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1254,10 +1366,10 @@ class Orchestrator:
         except Exception:
             rows = []
         if not rows:
-            await update.effective_message.reply_text("HenÃ¼z denetim kaydÄ± yok veya MongoDB baÄŸlÄ± deÄŸil.")
+            await update.effective_message.reply_text("Henüz denetim kaydı yok veya MongoDB bağlı değil.")
             return
-        text = "<b>Son denetim kayÄ±tlarÄ±</b>\n" + "\n".join(
-            f"â€¢ <code>{row.get('action', 'unknown')}</code> Â· actor <code>{row.get('actor_id')}</code>"
+        text = "<b>Son denetim kayıtları</b>\n" + "\n".join(
+            f"• <code>{row.get('action', 'unknown')}</code> · actor <code>{row.get('actor_id')}</code>"
             for row in rows
         )
         await update.effective_message.reply_text(text, parse_mode="HTML")
@@ -1270,11 +1382,11 @@ class Orchestrator:
         if action in {"on", "off"}:
             self.media_service.set_cookie_enabled(action == "on")
             await self._get_data_port().add_audit_log(update.effective_user.id, "media_cookie_toggle", enabled=action == "on")
-            await update.effective_message.reply_text(f"âœ… YÃ¶netici cookie fallback {'aÃ§Ä±ldÄ±' if action == 'on' else 'kapatÄ±ldÄ±'}.")
+            await update.effective_message.reply_text(f"✅ Yönetici cookie fallback {'açıldı' if action == 'on' else 'kapatıldı'}.")
             return
         if action == "durum":
-            state = "aÃ§Ä±k" if self.media_service.cookie_enabled else "kapalÄ±"
-            rows = "\n".join(f"{platform}: {'âœ…' if enabled else 'â€”'}" for platform, enabled in self.media_service.cookie_status().items())
+            state = "açık" if self.media_service.cookie_enabled else "kapalı"
+            rows = "\n".join(f"{platform}: {'✅' if enabled else '—'}" for platform, enabled in self.media_service.cookie_status().items())
             await update.effective_message.reply_text(f"Cookie fallback: <b>{state}</b>\n{rows}", parse_mode="HTML")
             return
         if action in {"sil", "delete"}:
@@ -1282,16 +1394,16 @@ class Orchestrator:
             try:
                 deleted = self.media_service.cookie_vault.delete(platform)
                 await self._get_data_port().add_audit_log(update.effective_user.id, "media_cookie_delete", platform=platform)
-                await update.effective_message.reply_text("âœ… Cookie silindi." if deleted else "Bu platform iÃ§in kayÄ±t yok.")
+                await update.effective_message.reply_text("✅ Cookie silindi." if deleted else "Bu platform için kayıt yok.")
             except CookieVaultError as exc:
-                await update.effective_message.reply_text(f"âŒ {cookie_error_message(exc)}")
+                await update.effective_message.reply_text(f"❌ {cookie_error_message(exc)}")
             return
-        if action in {"yÃ¼kle", "yukle", "upload"}:
+        if action in {"yükle", "yukle", "upload"}:
             platform = args[1] if len(args) > 1 else ""
             try:
                 self.media_service.cookie_vault._platform(platform)
             except CookieVaultError as exc:
-                await update.effective_message.reply_text(f"âŒ KullanÄ±m: /medya_cookie yÃ¼kle <platform>\n{cookie_error_message(exc)}")
+                await update.effective_message.reply_text(f"❌ Kullanım: /medya_cookie yükle <platform>\n{cookie_error_message(exc)}")
                 return
             set_scoped_state(
                 self.user_states,
@@ -1301,11 +1413,11 @@ class Orchestrator:
             )
             await self._get_data_port().add_audit_log(update.effective_user.id, "media_cookie_upload_requested", platform=platform)
             await update.effective_message.reply_text(
-                f"ğŸ“„ Åimdi <b>{platform}</b> iÃ§in Netscape veya tarayÄ±cÄ± JSON cookie dÄ±ÅŸa aktarÄ±mÄ±nÄ± belge olarak gÃ¶nderin.\n"
-                "JSON iÃ§eriÄŸi seÃ§ilen platform alan adÄ±yla sÄ±nÄ±rlandÄ±rÄ±lÄ±r; cookie yalnÄ±zca ÅŸifreli kasaya yazÄ±lÄ±r.", parse_mode="HTML"
+                f"📄 Şimdi <b>{platform}</b> için Netscape veya tarayıcı JSON cookie dışa aktarımını belge olarak gönderin.\n"
+                "JSON içeriği seçilen platform alan adıyla sınırlandırılır; cookie yalnızca şifreli kasaya yazılır.", parse_mode="HTML"
             )
             return
-        await update.effective_message.reply_text("KullanÄ±m: /medya_cookie durum | on | off | yÃ¼kle <platform> | sil <platform>")
+        await update.effective_message.reply_text("Kullanım: /medya_cookie durum | on | off | yükle <platform> | sil <platform>")
 
     async def handle_callback_query(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         await self.callback_handler.handle_callback_query(update, context)
@@ -1336,13 +1448,13 @@ class Orchestrator:
                 else:
                     logger.warning("Sticker creation cache miss")
                     await update.message.reply_text(
-                        "âš ï¸ <b>BaÄŸlantÄ± sÃ¼resi dolmuÅŸ veya geÃ§ersiz.</b> LÃ¼tfen gruptan tekrar 'Yeni Paket OluÅŸtur' butonuna basÄ±n.",
+                        "⚠️ <b>Bağlantı süresi dolmuş veya geçersiz.</b> Lütfen gruptan tekrar 'Yeni Paket Oluştur' butonuna basın.",
                         parse_mode='HTML'
                     )
                     return True
             except Exception as e:
                 logger.error("Error retrieving/parsing sticker cache: %s", summarize_exception(e, label="sticker_cache"))
-                await update.message.reply_text("âš ï¸ <b>Teknik bir hata oluÅŸtu.</b>", parse_mode='HTML')
+                await update.message.reply_text("⚠️ <b>Teknik bir hata oluştu.</b>", parse_mode='HTML')
                 return True
 
         elif payload.startswith("stk_new_"):
@@ -1380,11 +1492,11 @@ class Orchestrator:
                 logger.info("Sticker creation state advanced: awaiting_pack_emoji")
 
                 await update.message.reply_text(
-                    f"ğŸ“¦ <b>Yeni Sticker Paketi OluÅŸturma</b>\n\n"
-                    f"Paket baÅŸlÄ±ÄŸÄ± otomatik olarak <b>{auto_title}</b> ÅŸeklinde belirlendi.\n\n"
-                    f"Bu akÄ±ÅŸ Ã¶zel sohbette ilerler; gruba dÃ¶nersen adÄ±mlar tÃ¼ketilmez.\n"
-                    f"Åimdi burada paket sticker'Ä± iÃ§in 1-3 emoji yazÄ±n (Ã¶rn: ğŸ˜€ ğŸ˜‚), "
-                    f"ardÄ±ndan baÄŸlantÄ± adÄ±nÄ± belirleyin.",
+                    f"📦 <b>Yeni Sticker Paketi Oluşturma</b>\n\n"
+                    f"Paket başlığı otomatik olarak <b>{auto_title}</b> şeklinde belirlendi.\n\n"
+                    f"Bu akış özel sohbette ilerler; gruba dönersen adımlar tüketilmez.\n"
+                    f"Şimdi burada paket sticker'ı için 1-3 emoji yazın (örn: 😀 😂), "
+                    f"ardından bağlantı adını belirleyin.",
                     parse_mode='HTML'
                 )
                 return True
@@ -1495,10 +1607,10 @@ class Orchestrator:
                 results = [
                     InlineQueryResultArticle(
                         id="inline:empty",
-                        title="SonuÃ§ bulunamadÄ±",
-                        description="FarklÄ± bir ÅŸehir, haber, kripto, borsa, sticker veya quote aramasÄ± deneyin.",
+                        title="Sonuç bulunamadı",
+                        description="Farklı bir şehir, haber, kripto, borsa, sticker veya quote araması deneyin.",
                         input_message_content=InputTextMessageContent(
-                            "Arama sonucu bulunamadÄ±. Ã–rnek: sehir ist, haber istanbul, kripto btc, borsa thy veya top:-100123"
+                            "Arama sonucu bulunamadı. Örnek: sehir ist, haber istanbul, kripto btc, borsa thy veya top:-100123"
                         ),
                     )
                 ]
@@ -1650,6 +1762,15 @@ class Orchestrator:
     async def handle_anlat_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         await self.command_handler.handle_anlat_command(update, context)
 
+    async def handle_connect4_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        await self.command_handler.handle_connect4_command(update, context)
+
+    async def handle_tictactoe_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        await self.command_handler.handle_tictactoe_command(update, context)
+
+    async def handle_gomoku_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        await self.command_handler.handle_gomoku_command(update, context)
+
     async def handle_batak_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         await self.command_handler.handle_batak_command(update, context)
 
@@ -1705,13 +1826,13 @@ class Orchestrator:
             if await self.handle_deep_link(update, context, context.args[0]):
                 return
 
-        first_name = html.escape(user.first_name or "arkadaÅŸ")
+        first_name = html.escape(user.first_name or "arkadaş")
         welcome_text = (
-            f"ğŸŒŒ <b>HoÅŸ Geldiniz, {first_name}!</b>\n\n"
-            "Ben <b>Arel</b>; doÄŸal dille sohbet, medya, Ã¼retkenlik, veri araÃ§larÄ± ve oyunlarÄ± "
-            "tek bir Telegram arayÃ¼zÃ¼nde birleÅŸtiren yapay zeka asistanÄ±nÄ±m. ğŸ¤–âœ¨\n\n"
-            "BaÅŸlamak iÃ§in bir mesaj yazÄ±n veya aÅŸaÄŸÄ±daki menÃ¼lerden birini seÃ§in.\n\n"
-            "<i>Gruplarda yÃ¶netici kontrollÃ¼ ayarlarÄ± ve planlÄ± bildirimleri de kullanabilirsiniz.</i>"
+            f"🌌 <b>Hoş Geldiniz, {first_name}!</b>\n\n"
+            "Ben <b>Arel</b>; doğal dille sohbet, medya, üretkenlik, veri araçları ve oyunları "
+            "tek bir Telegram arayüzünde birleştiren yapay zeka asistanınım. 🤖✨\n\n"
+            "Başlamak için bir mesaj yazın veya aşağıdaki menülerden birini seçin.\n\n"
+            "<i>Gruplarda yönetici kontrollü ayarları ve planlı bildirimleri de kullanabilirsiniz.</i>"
         )
         try:
             bot_user = await context.bot.get_me()
@@ -1719,21 +1840,21 @@ class Orchestrator:
             bot_user = None
         keyboard = [
             [
-                InlineKeyboardButton("ğŸ  Ana MenÃ¼", callback_data="menu_main"),
-                InlineKeyboardButton("ğŸ® Oyun Salonu", callback_data="menu_games"),
+                InlineKeyboardButton("🏠 Ana Menü", callback_data="menu_main"),
+                InlineKeyboardButton("🎮 Oyun Salonu", callback_data="menu_games"),
             ],
             [
-                InlineKeyboardButton("ğŸ“– Komut Rehberi", callback_data="help_cat_ai"),
-                InlineKeyboardButton("âš™ï¸ Grup AyarlarÄ±", callback_data="open_ayar_menu"),
+                InlineKeyboardButton("📖 Komut Rehberi", callback_data="help_cat_ai"),
+                InlineKeyboardButton("⚙️ Grup Ayarları", callback_data="open_ayar_menu"),
             ],
             [
-                InlineKeyboardButton("ğŸ‘¨â€ğŸ’» GeliÅŸtirici", url="https://t.me/pastalikek"),
-                InlineKeyboardButton("ğŸ“¢ Kanal", url="https://t.me/botsofspart"),
+                InlineKeyboardButton("👨‍💻 Geliştirici", url="https://t.me/pastalikek"),
+                InlineKeyboardButton("📢 Kanal", url="https://t.me/botsofspart"),
             ],
         ]
         if getattr(bot_user, "username", None):
             keyboard.insert(2, [InlineKeyboardButton(
-                "â• Arel'i Grubuna Ekle",
+                "➕ Arel'i Grubuna Ekle",
                 url=f"https://t.me/{bot_user.username}?startgroup=true",
             )])
         markup = InlineKeyboardMarkup(keyboard)
@@ -1741,7 +1862,7 @@ class Orchestrator:
         try:
             destination = tempfile.NamedTemporaryFile(prefix="arel_welcome_", suffix=".png", delete=False).name
             renderer = getattr(self, "card_renderer", None) or ArelCardRenderer()
-            await asyncio.to_thread(renderer.render_welcome, destination, user.first_name or "arkadaÅŸ")
+            await asyncio.to_thread(renderer.render_welcome, destination, user.first_name or "arkadaş")
             await update.effective_message.reply_photo(
                 photo=InputFile(destination),
                 caption=welcome_text,
@@ -1765,22 +1886,23 @@ class Orchestrator:
     async def handle_help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Open the categorized help menu; detailed pages stay in callbacks."""
         help_text = (
-            "ğŸŒŸ <b>AREL ASÄ°STAN â€” KOMUT REHBERÄ°</b> ğŸŒŸ\n\n"
-            "Bir kategori seÃ§in; komutlarÄ± kullanÄ±m Ã¶rnekleri ve izin kapsamlarÄ±yla aÃ§alÄ±m. ğŸ‘‡"
+            "🌟 <b>AREL ASİSTAN — KOMUT REHBERİ</b> 🌟\n\n"
+            "Bir kategori seçin; komutları kullanım örnekleri ve izin kapsamlarıyla açalım. 👇"
         )
         keyboard = [
             [
-                InlineKeyboardButton("ğŸ¤– Yapay Zeka", callback_data="help_cat_ai"),
-                InlineKeyboardButton("ğŸ® Oyunlar", callback_data="help_cat_games"),
+                InlineKeyboardButton("🤖 Yapay Zeka", callback_data="help_cat_ai"),
+                InlineKeyboardButton("🎮 Oyunlar", callback_data="help_cat_games"),
             ],
             [
-                InlineKeyboardButton("ğŸ¨ Sticker Sistemi", callback_data="help_cat_sticker"),
-                InlineKeyboardButton("ğŸ“Š Finans & KÃ¼ltÃ¼r", callback_data="help_cat_finance"),
+                InlineKeyboardButton("🎨 Sticker Sistemi", callback_data="help_cat_sticker"),
+                InlineKeyboardButton("📊 Finans & Kültür", callback_data="help_cat_finance"),
             ],
             [
-                InlineKeyboardButton("âš™ï¸ AraÃ§lar & DiÄŸer", callback_data="help_cat_tools"),
-                InlineKeyboardButton("ğŸš€ GeliÅŸtirme Fikirleri", callback_data="help_cat_suggestions"),
+                InlineKeyboardButton("⚙️ Araçlar & Diğer", callback_data="help_cat_tools"),
+                InlineKeyboardButton("🚀 Geliştirme Fikirleri", callback_data="help_cat_suggestions"),
             ],
+            [InlineKeyboardButton("🛡️ Guardian Moderasyon", callback_data="help_cat_guardian")],
         ]
         await update.effective_message.reply_text(
             help_text,
@@ -1788,19 +1910,35 @@ class Orchestrator:
             parse_mode="HTML",
         )
 
+    async def handle_admin_center_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Owner-only operational center for the embedded Guardian runtime."""
+        actor_id = int(getattr(update.effective_user, "id", 0) or 0)
+        if not self.sudo_manager.is_owner(actor_id):
+            return
+        text = (
+            "🛡️ <b>AREL MERKEZ</b>\n\n"
+            "Kek Guardian artık Arel'in içinde çalışıyor; ayrı bot veya ikinci polling süreci gerekmez.\n\n"
+            "<b>Operasyon:</b> /health · /metrics · /providers · /jobs\n"
+            "<b>Yayın:</b> /broadcast · /broadcastpin\n"
+            "<b>Yetki:</b> /sudo · /unsudo · /sudolist\n"
+            "<b>Grup:</b> /groups · /audit\n\n"
+            "Grup moderasyon komutları yalnızca Telegram grup yöneticilerine görünür ve ayrıca işlem anında doğrulanır."
+        )
+        await update.effective_message.reply_text(text, parse_mode="HTML")
+
     async def handle_sudohelp_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not self.sudo_manager.is_sudo(update.effective_user.id):
             return
         text = (
-            "ğŸš¨ <b>SUDO ADMIN KOMUTLARI</b> ğŸš¨\n\n"
-            "â€¢ <code>/sudo id</code> â€” Yetkili ekle\n"
-            "â€¢ <code>/unsudo id</code> â€” Yetkiyi kaldÄ±r\n"
-            "â€¢ <code>/ban id</code> â€” KullanÄ±cÄ± veya grubu engelle\n"
-            "â€¢ <code>/unban id</code> â€” Engeli kaldÄ±r\n"
-            "â€¢ <code>/broadcast mesaj</code> â€” Aktif sohbetlere duyuru\n"
-            "â€¢ <code>/groups</code> â€” KayÄ±tlÄ± gruplarÄ± listele\n"
-            "â€¢ <code>/sudolist</code> â€” Yetkili listesini gÃ¶ster\n"
-            "â€¢ <code>/obs on|off</code> â€” GÃ¶zlem modunu yÃ¶net"
+            "🚨 <b>SUDO ADMIN KOMUTLARI</b> 🚨\n\n"
+            "• <code>/sudo id</code> — Yetkili ekle\n"
+            "• <code>/unsudo id</code> — Yetkiyi kaldır\n"
+            "• <code>/ban id</code> — Kullanıcı veya grubu engelle\n"
+            "• <code>/unban id</code> — Engeli kaldır\n"
+            "• <code>/broadcast mesaj</code> — Aktif sohbetlere duyuru\n"
+            "• <code>/groups</code> — Kayıtlı grupları listele\n"
+            "• <code>/sudolist</code> — Yetkili listesini göster\n"
+            "• <code>/obs on|off</code> — Gözlem modunu yönet"
         )
         await update.effective_message.reply_text(text, parse_mode="HTML")
 
@@ -1810,11 +1948,11 @@ class Orchestrator:
         try:
             target_id = int((context.args or [])[0])
         except (IndexError, ValueError):
-            await update.effective_message.reply_text("âŒ KullanÄ±m: /sudo <user_id>", parse_mode="HTML")
+            await update.effective_message.reply_text("❌ Kullanım: /sudo <user_id>", parse_mode="HTML")
             return
         self.sudo_manager.add_sudo(target_id)
         await self._get_data_port().add_audit_log(update.effective_user.id, "sudo_add", target_id=target_id)
-        await update.effective_message.reply_text(f"âœ… {target_id} sudo listesine eklendi.", parse_mode="HTML")
+        await update.effective_message.reply_text(f"✅ {target_id} sudo listesine eklendi.", parse_mode="HTML")
 
     async def handle_unsudo_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not self.sudo_manager.is_owner(update.effective_user.id):
@@ -1822,11 +1960,11 @@ class Orchestrator:
         try:
             target_id = int((context.args or [])[0])
         except (IndexError, ValueError):
-            await update.effective_message.reply_text("âŒ KullanÄ±m: /unsudo <user_id>", parse_mode="HTML")
+            await update.effective_message.reply_text("❌ Kullanım: /unsudo <user_id>", parse_mode="HTML")
             return
         self.sudo_manager.remove_sudo(target_id)
         await self._get_data_port().add_audit_log(update.effective_user.id, "sudo_remove", target_id=target_id)
-        await update.effective_message.reply_text(f"âœ… {target_id} sudo listesinden Ã§Ä±karÄ±ldÄ±.", parse_mode="HTML")
+        await update.effective_message.reply_text(f"✅ {target_id} sudo listesinden çıkarıldı.", parse_mode="HTML")
 
     @staticmethod
     def _moderation_target_id(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int | None:
@@ -1850,42 +1988,60 @@ class Orchestrator:
         actor_id = update.effective_user.id
         chat = getattr(update, "effective_chat", None)
         if chat is not None and getattr(chat, "type", "private") in {"group", "supergroup"}:
-            if not await is_admin(update, context, self.sudo_manager):
+            if not await is_admin(
+                update,
+                context,
+                self.sudo_manager,
+                authorization=getattr(self, "telegram_authorization", None),
+            ):
                 await update.effective_message.reply_text(
-                    "Bu iÅŸlemi yalnÄ±zca grup yÃ¶neticileri yapabilir. Yetki rozeti olmadan sihirbazlÄ±k yapmÄ±yorum."
+                    "Bu işlemi yalnızca grup yöneticileri yapabilir. Yetki rozeti olmadan sihirbazlık yapmıyorum."
                 )
                 return
             target_id = self._moderation_target_id(update, context)
             if target_id is None:
                 await update.effective_message.reply_text(
-                    "KullanÄ±m: /ban <kullanÄ±cÄ±_id> veya banlamak istediÄŸin mesaja yanÄ±t ver."
+                    "Kullanım: /ban <kullanıcı_id> veya banlamak istediğin mesaja yanıt ver."
                 )
                 return
             if target_id == actor_id or target_id <= 0:
-                await update.effective_message.reply_text("Kendini ya da geÃ§ersiz bir hedefi banlayamam.")
+                await update.effective_message.reply_text("Kendini ya da geçersiz bir hedefi banlayamam.")
                 return
-            try:
-                service = getattr(self, "telegram_moderation_service", None) or TelegramModerationService()
-                await service.ban_member(
-                    getattr(context, "bot", None), chat.id, target_id
-                )
-            except Exception as exc:
-                logger.warning("Telegram group ban failed: %s", summarize_exception(exc, label="group_ban"))
+            action = ModerationAction(
+                action="ban",
+                chat_id=int(chat.id),
+                actor_id=int(actor_id),
+                target_user_id=int(target_id),
+                reason="manual_group_ban",
+                metadata={
+                    "source": "manual_group_ban",
+                    "generation_id": f"update:{getattr(update, 'update_id', None) or getattr(getattr(update, 'effective_message', None), 'message_id', 0)}",
+                },
+            )
+            result = await TelegramModerationActionExecutor(
+                getattr(context, "bot", None),
+                ledger=getattr(self, "moderation_action_ledger", None) or ModerationActionLedger(),
+                permission_checker=TelegramModerationAuthorization(
+                    getattr(context, "bot", None),
+                    bot_id=getattr(getattr(context, "bot", None), "id", None),
+                ),
+            ).execute(action)
+            if not result.ok:
                 await update.effective_message.reply_text(
-                    "Ban uygulanamadÄ±. Botun bu grupta kullanÄ±cÄ± engelleme yetkisi var mÄ± kontrol et."
+                    "Ban uygulanamadı. Botun bu grupta kullanıcı engelleme yetkisi var mı kontrol et."
                 )
                 return
             await self._get_data_port().add_audit_log(
                 actor_id, "group_ban", target_id=target_id, chat_id=chat.id
             )
-            await update.effective_message.reply_text(f"ğŸš« {target_id} gruptan uzaklaÅŸtÄ±rÄ±ldÄ±.")
+            await update.effective_message.reply_text(f"🚫 {target_id} gruptan uzaklaştırıldı.")
             return
         if not self.sudo_manager.is_sudo(actor_id):
             return
         try:
             target_id = int((context.args or [])[0])
         except (IndexError, ValueError):
-            await update.effective_message.reply_text("âŒ KullanÄ±m: /ban <user_id|chat_id>", parse_mode="HTML")
+            await update.effective_message.reply_text("❌ Kullanım: /ban <user_id|chat_id>", parse_mode="HTML")
             return
         if str(target_id).startswith("-"):
             self.sudo_manager.ban_group(target_id)
@@ -1894,48 +2050,66 @@ class Orchestrator:
             self.sudo_manager.ban_user(target_id)
             target_type = "user"
         await self._get_data_port().add_audit_log(actor_id, "ban", target_id=target_id, target_type=target_type)
-        await update.effective_message.reply_text(f"ğŸš« {target_id} kara listeye alÄ±ndÄ±.", parse_mode="HTML")
+        await update.effective_message.reply_text(f"🚫 {target_id} kara listeye alındı.", parse_mode="HTML")
 
     async def handle_unban_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         actor_id = update.effective_user.id
         chat = getattr(update, "effective_chat", None)
         if chat is not None and getattr(chat, "type", "private") in {"group", "supergroup"}:
-            if not await is_admin(update, context, self.sudo_manager):
+            if not await is_admin(
+                update,
+                context,
+                self.sudo_manager,
+                authorization=getattr(self, "telegram_authorization", None),
+            ):
                 await update.effective_message.reply_text(
-                    "Bu iÅŸlemi yalnÄ±zca grup yÃ¶neticileri yapabilir."
+                    "Bu işlemi yalnızca grup yöneticileri yapabilir."
                 )
                 return
             target_id = self._moderation_target_id(update, context)
             if target_id is None:
                 await update.effective_message.reply_text(
-                    "KullanÄ±m: /unban <kullanÄ±cÄ±_id> veya kullanÄ±cÄ±nÄ±n mesajÄ±na yanÄ±t ver."
+                    "Kullanım: /unban <kullanıcı_id> veya kullanıcının mesajına yanıt ver."
                 )
                 return
             if target_id <= 0:
-                await update.effective_message.reply_text("GeÃ§erli bir kullanÄ±cÄ± hedefi ver.")
+                await update.effective_message.reply_text("Geçerli bir kullanıcı hedefi ver.")
                 return
-            try:
-                service = getattr(self, "telegram_moderation_service", None) or TelegramModerationService()
-                await service.unban_member(
-                    getattr(context, "bot", None), chat.id, target_id
-                )
-            except Exception as exc:
-                logger.warning("Telegram group unban failed: %s", summarize_exception(exc, label="group_unban"))
+            action = ModerationAction(
+                action="unban",
+                chat_id=int(chat.id),
+                actor_id=int(actor_id),
+                target_user_id=int(target_id),
+                reason="manual_group_unban",
+                metadata={
+                    "source": "manual_group_unban",
+                    "generation_id": f"update:{getattr(update, 'update_id', None) or getattr(getattr(update, 'effective_message', None), 'message_id', 0)}",
+                },
+            )
+            result = await TelegramModerationActionExecutor(
+                getattr(context, "bot", None),
+                ledger=getattr(self, "moderation_action_ledger", None) or ModerationActionLedger(),
+                permission_checker=TelegramModerationAuthorization(
+                    getattr(context, "bot", None),
+                    bot_id=getattr(getattr(context, "bot", None), "id", None),
+                ),
+            ).execute(action)
+            if not result.ok:
                 await update.effective_message.reply_text(
-                    "Yasak kaldÄ±rÄ±lamadÄ±. Botun bu grupta kullanÄ±cÄ± yÃ¶netme yetkisini kontrol et."
+                    "Yasak kaldırılamadı. Botun bu grupta kullanıcı yönetme yetkisini kontrol et."
                 )
                 return
             await self._get_data_port().add_audit_log(
                 actor_id, "group_unban", target_id=target_id, chat_id=chat.id
             )
-            await update.effective_message.reply_text(f"âœ… {target_id} grubun yasak listesinden Ã§Ä±karÄ±ldÄ±.")
+            await update.effective_message.reply_text(f"✅ {target_id} grubun yasak listesinden çıkarıldı.")
             return
         if not self.sudo_manager.is_sudo(actor_id):
             return
         try:
             target_id = int((context.args or [])[0])
         except (IndexError, ValueError):
-            await update.effective_message.reply_text("âŒ KullanÄ±m: /unban <user_id|chat_id>", parse_mode="HTML")
+            await update.effective_message.reply_text("❌ Kullanım: /unban <user_id|chat_id>", parse_mode="HTML")
             return
         if str(target_id).startswith("-"):
             self.sudo_manager.unban_group(target_id)
@@ -1944,14 +2118,14 @@ class Orchestrator:
             self.sudo_manager.unban_user(target_id)
             target_type = "user"
         await self._get_data_port().add_audit_log(actor_id, "unban", target_id=target_id, target_type=target_type)
-        await update.effective_message.reply_text(f"âœ… {target_id} kara listeden Ã§Ä±karÄ±ldÄ±.", parse_mode="HTML")
+        await update.effective_message.reply_text(f"✅ {target_id} kara listeden çıkarıldı.", parse_mode="HTML")
 
     async def handle_broadcast_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         actor_id = update.effective_user.id
         if not self.sudo_manager.is_sudo(actor_id):
             return
         if not context.args:
-            await update.effective_message.reply_text("âŒ KullanÄ±m: /broadcast <mesaj>", parse_mode="HTML")
+            await update.effective_message.reply_text("❌ Kullanım: /broadcast <mesaj>", parse_mode="HTML")
             return
         broadcast_text = html.escape(" ".join(context.args))
         delivered = 0
@@ -1959,7 +2133,7 @@ class Orchestrator:
             try:
                 await context.bot.send_message(
                     chat_id=chat_id,
-                    text=f"ğŸ“¢ <b>DUYURU</b>\n\n{broadcast_text}",
+                    text=f"📢 <b>DUYURU</b>\n\n{broadcast_text}",
                     parse_mode="HTML",
                 )
                 delivered += 1
@@ -1967,7 +2141,35 @@ class Orchestrator:
             except Exception:
                 logger.warning("Broadcast delivery failed for chat", exc_info=True)
         await self._get_data_port().add_audit_log(actor_id, "broadcast", delivered=delivered)
-        await update.effective_message.reply_text(f"âœ… Duyuru {delivered} sohbete ulaÅŸtÄ±rÄ±ldÄ±.", parse_mode="HTML")
+        await update.effective_message.reply_text(f"✅ Duyuru {delivered} sohbete ulaştırıldı.", parse_mode="HTML")
+
+    async def handle_broadcastpin_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Guardian-compatible owner broadcast that also pins the message."""
+        actor_id = int(update.effective_user.id)
+        if not self.sudo_manager.is_sudo(actor_id):
+            return
+        if not context.args:
+            await update.effective_message.reply_text("Kullan\u0131m: /broadcastpin mesaj", parse_mode="HTML")
+            return
+        text = html.escape(" ".join(context.args)[:3500])
+        delivered = 0
+        failed = 0
+        for chat_id in await self.chat_engine.get_active_chat_ids():
+            try:
+                sent = await context.bot.send_message(
+                    chat_id=int(chat_id), text="\U0001f4e2 <b>DUYURU</b>\n\n" + text, parse_mode="HTML"
+                )
+                try:
+                    await context.bot.pin_chat_message(chat_id=int(chat_id), message_id=int(sent.message_id), disable_notification=True)
+                except Exception:
+                    pass
+                delivered += 1
+            except Exception:
+                failed += 1
+        await self._get_data_port().add_audit_log(actor_id, "broadcast_pin", delivered=delivered, failed=failed)
+        await update.effective_message.reply_text(
+            f"Yay\u0131n + sabitleme tamamland\u0131 ? ba\u015far\u0131l\u0131: {delivered} ? ba\u015far\u0131s\u0131z: {failed}"
+        )
 
     async def handle_groups_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not self.sudo_manager.is_sudo(update.effective_user.id):
@@ -1981,8 +2183,8 @@ class Orchestrator:
                 title = html.escape(chat.title or "Bilinmeyen grup")
             except Exception:
                 title = "Bilinmeyen grup"
-            rows.append(f"ğŸ”¹ {title} (<code>{int(chat_id)}</code>)")
-        text = "ğŸ“­ HenÃ¼z kayÄ±tlÄ± grup yok." if not rows else "ğŸ‘¥ <b>KayÄ±tlÄ± Gruplar</b>\n\n" + "\n".join(rows)
+            rows.append(f"🔹 {title} (<code>{int(chat_id)}</code>)")
+        text = "📭 Henüz kayıtlı grup yok." if not rows else "👥 <b>Kayıtlı Gruplar</b>\n\n" + "\n".join(rows)
         await update.effective_message.reply_text(text, parse_mode="HTML")
 
     async def handle_sudolist_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1990,8 +2192,8 @@ class Orchestrator:
             return
         rows = [f"<code>{int(item)}</code>" for item in self.sudo_manager.sudos if item != self.sudo_manager.owner_id]
         text = (
-            f"ğŸ‘‘ <b>Owner:</b> <code>{int(self.sudo_manager.owner_id)}</code>\n\n"
-            "âš”ï¸ <b>Sudolar:</b>\n" + ("\n".join(rows) if rows else "HenÃ¼z sudo yok.")
+            f"👑 <b>Owner:</b> <code>{int(self.sudo_manager.owner_id)}</code>\n\n"
+            "⚔️ <b>Sudolar:</b>\n" + ("\n".join(rows) if rows else "Henüz sudo yok.")
         )
         await update.effective_message.reply_text(text, parse_mode="HTML")
 
@@ -2003,18 +2205,18 @@ class Orchestrator:
             try:
                 member = await context.bot.get_chat_member(chat_id, user_id)
                 if member.status not in ['administrator', 'creator']:
-                    await update.message.reply_text("âŒ Bu komutu sadece adminler kullanabilir.", parse_mode='HTML')
+                    await update.message.reply_text("❌ Bu komutu sadece adminler kullanabilir.", parse_mode='HTML')
                     return
             except Exception:
-                await update.message.reply_text("âŒ Bu komutu sadece adminler kullanabilir.", parse_mode='HTML')
+                await update.message.reply_text("❌ Bu komutu sadece adminler kullanabilir.", parse_mode='HTML')
                 return
 
         args = context.args
         if not args:
             current_mode = self.chat_engine.get_observation_mode(chat_id)
-            status = "AÃ‡IK" if current_mode else "KAPALI"
+            status = "AÇIK" if current_mode else "KAPALI"
             await update.message.reply_text(
-                f"ğŸ‘ï¸ GÃ¶zlem Modu ÅŸu an: <b>{status}</b>\n\nDeÄŸiÅŸtirmek iÃ§in: `/obs on` veya `/obs off`",
+                f"👁️ Gözlem Modu şu an: <b>{status}</b>\n\nDeğiştirmek için: `/obs on` veya `/obs off`",
                 parse_mode='HTML'
             )
             return
@@ -2023,14 +2225,14 @@ class Orchestrator:
         if mode_str == "on":
             self.chat_engine.set_observation_mode(chat_id, True)
             await update.message.reply_text(
-                "âœ… <b>GÃ¶zlem Modu AÃ‡ILDI.</b> Arel artÄ±k bu gruptaki tÃ¼m konuÅŸmalarÄ± detaylÄ±ca takip edecek. ğŸ§ ",
+                "✅ <b>Gözlem Modu AÇILDI.</b> Arel artık bu gruptaki tüm konuşmaları detaylıca takip edecek. 🧠",
                 parse_mode='HTML'
             )
         elif mode_str == "off":
             self.chat_engine.set_observation_mode(chat_id, False)
             await update.message.reply_text(
-                "âŒ <b>GÃ¶zlem Modu KAPATILDI.</b> Arel artÄ±k sadece kendisine sorulanlara cevap verecek.",
+                "❌ <b>Gözlem Modu KAPATILDI.</b> Arel artık sadece kendisine sorulanlara cevap verecek.",
                 parse_mode='HTML'
             )
         else:
-            await update.message.reply_text("âŒ KullanÄ±m: `/obs on` veya `/obs off`", parse_mode='HTML')
+            await update.message.reply_text("❌ Kullanım: `/obs on` veya `/obs off`", parse_mode='HTML')

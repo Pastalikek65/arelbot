@@ -54,10 +54,10 @@ class MultiModalClient:
     async def post(self, url, **kwargs):
         self.calls.append((url, kwargs))
         if url.endswith("/chat/completions"):
-            return MultiModalResponse({"choices": [{"message": {"content": "GÃ¶rselde bir kedi var."}}]})
+            return MultiModalResponse({"choices": [{"message": {"content": "Görselde bir kedi var."}}]})
         if url.endswith("/audio/transcriptions"):
             assert kwargs["files"]["file"][1] == b"audio-data"
-            return MultiModalResponse({"text": "TÃ¼rkÃ§e ses metni"})
+            return MultiModalResponse({"text": "Türkçe ses metni"})
         return MultiModalResponse({
             "data": [
                 {"index": 1, "embedding": [0.2, 0.3]},
@@ -236,12 +236,12 @@ async def test_openai_compatible_provider_supports_vision_transcription_and_embe
         http_client=client,
     )
 
-    vision = await provider.vision(VisionRequest(prompt="Ne gÃ¶rÃ¼yorsun?", image_bytes=b"image"))
+    vision = await provider.vision(VisionRequest(prompt="Ne görüyorsun?", image_bytes=b"image"))
     transcript = await provider.transcribe(AudioInput(audio_bytes=b"audio-data"))
     vectors = await provider.embed(["bir", "iki"])
 
-    assert vision.content == "GÃ¶rselde bir kedi var."
-    assert transcript.text == "TÃ¼rkÃ§e ses metni"
+    assert vision.content == "Görselde bir kedi var."
+    assert transcript.text == "Türkçe ses metni"
     assert vectors == [[0.1, 0.4], [0.2, 0.3]]
     assert [url.rsplit("/", 1)[-1] for url, _ in client.calls] == [
         "completions", "transcriptions", "embeddings"
@@ -260,7 +260,7 @@ async def test_vision_uses_the_same_configured_completion_budget():
         max_completion_tokens=128,
     )
 
-    await provider.vision(VisionRequest(prompt="Ne gÃ¶rÃ¼yorsun?", image_bytes=b"image", max_tokens=999))
+    await provider.vision(VisionRequest(prompt="Ne görüyorsun?", image_bytes=b"image", max_tokens=999))
     assert client.calls[0][1]["json"]["max_tokens"] == 128
 
 

@@ -123,6 +123,15 @@ class Database:
     def group_reply_deliveries(self):
         return Database._db["group_reply_deliveries"] if Database._db is not None else None
     @property
+    def moderation_actions(self):
+        return Database._db["moderation_actions"] if Database._db is not None else None
+    @property
+    def moderation_provider_events(self):
+        return Database._db["moderation_provider_events"] if Database._db is not None else None
+    @property
+    def moderation_policies(self):
+        return Database._db["moderation_policies"] if Database._db is not None else None
+    @property
     def provider_observations(self):
         return Database._db["provider_observations"] if Database._db is not None else None
     @property
@@ -455,7 +464,7 @@ class Database:
             )
             await messages.create_index(
                 [("chat_id", 1), ("thread_id", 1), ("telegram_message_id", 1)],
-                sparse=True,
+                partialFilterExpression={"telegram_message_id": {"$exists": True}},
                 name="group_reply_telegram_message_unique",
             )
             deliveries = database["group_reply_deliveries"]
@@ -485,6 +494,179 @@ class Database:
                         await collection.drop_index(name)
                     except Exception:
                         continue
+
+        async def apply_group_reply_unique_index(database: Any) -> None:
+            """Upgrade the v15 attribution index to a real uniqueness guard.
+
+            v15 created the index with a stable name but without ``unique``.
+            Drop-in upgrades therefore need an explicit migration; simply
+            changing the v15 declaration would never run on an already
+            migrated database.  Duplicate legacy rows are reduced
+            deterministically before the unique index is rebuilt.
+            """
+            messages = database["messages"]
+            index_name = "group_reply_telegram_message_unique"
+            try:
+                await messages.drop_index(index_name)
+            except Exception:
+                pass
+            try:
+                # Remove explicit null values from legacy attribution fields.
+                # The partial index below also excludes legacy documents that
+                # never had Telegram attribution at all.
+                await messages.update_many(
+                    {"telegram_message_id": {"$type": 10}},
+                    {"$unset": {"telegram_message_id": ""}},
+                )
+                cursor = messages.find(
+                    {"telegram_message_id": {"$exists": True}},
+                    {"_id": 1, "chat_id": 1, "thread_id": 1, "telegram_message_id": 1, "created_at": 1},
+                )
+                rows = await cursor.to_list(length=None)
+                seen: set[tuple[Any, Any, Any]] = set()
+                duplicate_ids = []
+                def created_sort_key(item: dict[str, Any]) -> tuple[int, float | str]:
+                    value = item.get("created_at")
+                    if isinstance(value, datetime):
+                        if value.tzinfo is not None:
+                            return (0, value.timestamp())
+                        return (0, value.replace(tzinfo=timezone.utc).timestamp())
+                    if isinstance(value, str):
+                        return (1, value)
+                    return (2, "")
+
+                for row in sorted(rows, key=created_sort_key):
+                    key = (row.get("chat_id"), row.get("thread_id"), row.get("telegram_message_id"))
+                    if key in seen:
+                        if row.get("_id") is not None:
+                            duplicate_ids.append(row["_id"])
+                    else:
+                        seen.add(key)
+                if duplicate_ids:
+                    await messages.delete_many({"_id": {"$in": duplicate_ids}})
+            except Exception:
+                # A minimal test double or a partially unavailable collection
+                # may not support the cleanup query.  Index creation remains
+                # the authoritative operation and will surface real conflicts.
+                pass
+            await messages.create_index(
+                [("chat_id", 1), ("thread_id", 1), ("telegram_message_id", 1)],
+                unique=True,
+                partialFilterExpression={"telegram_message_id": {"$exists": True}},
+                name=index_name,
+            )
+
+        async def rollback_group_reply_unique_index(database: Any) -> None:
+            messages = database["messages"]
+            try:
+                await messages.drop_index("group_reply_telegram_message_unique")
+            except Exception:
+                pass
+            await messages.create_index(
+                [("chat_id", 1), ("thread_id", 1), ("telegram_message_id", 1)],
+                partialFilterExpression={"telegram_message_id": {"$exists": True}},
+                name="group_reply_telegram_message_unique",
+            )
+
+        async def apply_user_username_index(database: Any) -> None:
+            # Historical profiles may contain display names in this field, so
+            # this lookup index is deliberately non-unique and sparse.
+            await database["users"].create_index(
+                "username",
+                name="user_username_lookup",
+                sparse=True,
+            )
+
+        async def rollback_user_username_index(database: Any) -> None:
+            try:
+                await database["users"].drop_index("user_username_lookup")
+            except Exception:
+                pass
+
+        async def apply_moderation_action_indexes(database: Any) -> None:
+            """Create durable, idempotent moderation/provider ledgers.
+
+            The collections are deliberately created through indexes only.  No
+            existing violation or message data is modified, so the migration
+            can be rolled back by removing only the indexes it introduced.
+            """
+            actions = database["moderation_actions"]
+            await actions.create_index(
+                "idempotency_key",
+                unique=True,
+                name="moderation_action_idempotency_unique",
+            )
+            await actions.create_index(
+                [("chat_id", 1), ("created_at", -1)],
+                name="moderation_action_chat_time",
+            )
+            await actions.create_index(
+                "created_at",
+                expireAfterSeconds=30 * 24 * 60 * 60,
+                name="moderation_action_created_ttl",
+            )
+
+            provider_events = database["moderation_provider_events"]
+            await provider_events.create_index(
+                "request_id",
+                unique=True,
+                name="moderation_provider_request_unique",
+            )
+            await provider_events.create_index(
+                [("provider", 1), ("created_at", -1)],
+                name="moderation_provider_time",
+            )
+            await provider_events.create_index(
+                "created_at",
+                expireAfterSeconds=7 * 24 * 60 * 60,
+                name="moderation_provider_created_ttl",
+            )
+
+            policies = database["moderation_policies"]
+            await policies.create_index(
+                "chat_id",
+                unique=True,
+                name="moderation_policy_chat_unique",
+            )
+
+        async def rollback_moderation_action_indexes(database: Any) -> None:
+            for collection_name, names in {
+                "moderation_actions": (
+                    "moderation_action_idempotency_unique",
+                    "moderation_action_chat_time",
+                    "moderation_action_created_ttl",
+                ),
+                "moderation_provider_events": (
+                    "moderation_provider_request_unique",
+                    "moderation_provider_time",
+                    "moderation_provider_created_ttl",
+                ),
+                "moderation_policies": (
+                    "moderation_policy_chat_unique",
+                ),
+            }.items():
+                collection = database[collection_name]
+                for name in names:
+                    try:
+                        await collection.drop_index(name)
+                    except Exception:
+                        continue
+
+        async def apply_moderation_policy_retention_fix(database: Any) -> None:
+            """Group moderation policies are durable configuration, not TTL data."""
+            policies = database["moderation_policies"]
+            try:
+                await policies.drop_index("moderation_policy_updated_ttl")
+            except Exception:
+                pass
+
+        async def rollback_moderation_policy_retention_fix(database: Any) -> None:
+            policies = database["moderation_policies"]
+            await policies.create_index(
+                "updated_at",
+                expireAfterSeconds=180 * 24 * 60 * 60,
+                name="moderation_policy_updated_ttl",
+            )
         return MigrationRunner(
             Database._db,
             [
@@ -572,6 +754,30 @@ class Database:
                     "group-targeted-reply-persistence",
                     apply_group_reply_indexes,
                     rollback_group_reply_indexes,
+                ),
+                Migration(
+                    16,
+                    "moderation-action-ledger",
+                    apply_moderation_action_indexes,
+                    rollback_moderation_action_indexes,
+                ),
+                Migration(
+                    17,
+                    "moderation-policy-retention-fix",
+                    apply_moderation_policy_retention_fix,
+                    rollback_moderation_policy_retention_fix,
+                ),
+                Migration(
+                    18,
+                    "group-reply-unique-attribution-index",
+                    apply_group_reply_unique_index,
+                    rollback_group_reply_unique_index,
+                ),
+                Migration(
+                    19,
+                    "telegram-username-target-lookup",
+                    apply_user_username_index,
+                    rollback_user_username_index,
                 ),
             ],
         )
@@ -781,6 +987,36 @@ class Database:
             "reason": safe_reason,
             "created_at": {"$gte": cutoff},
         }))
+
+    async def record_moderation_provider_event(
+        self,
+        *,
+        request_id: str,
+        provider: str,
+        decision: str,
+        error_code: str | None = None,
+        latency_ms: float | None = None,
+        enforced: bool = False,
+    ) -> bool:
+        """Persist a bounded, content-free Guardian/provider observation."""
+        if Database._db is None or self.moderation_provider_events is None:
+            return False
+        document = {
+            "request_id": str(request_id)[:180],
+            "provider": str(provider)[:64],
+            "decision": str(decision)[:32],
+            "error_code": str(error_code)[:96] if error_code else None,
+            "latency_ms": max(0.0, float(latency_ms)) if latency_ms is not None else None,
+            "enforced": bool(enforced),
+            "created_at": datetime.now(timezone.utc),
+        }
+        try:
+            await self.moderation_provider_events.insert_one(document)
+            return True
+        except Exception as exc:
+            if getattr(exc, "code", None) == 11000 or "duplicate" in str(exc).casefold():
+                return False
+            raise
 
     async def get_moderation_summary(
         self,
@@ -1025,12 +1261,12 @@ class Database:
         rows = await self.game_progress_events.aggregate(pipeline).to_list(length=max(1, min(int(limit), 100)))
         rows = [{"key": row["_id"], "unlocked_at": row.get("unlocked_at")} for row in rows]
         labels = {
-            "first_game": "Ä°lk oyun",
+            "first_game": "İlk oyun",
             "perfect_round": "Kusursuz tur",
             "quiz_player": "Quiz oyuncusu",
         }
         for row in rows:
-            row["label"] = labels.get(row.get("key"), str(row.get("key", "BaÅŸarÄ±m")).replace("_", " ").title())
+            row["label"] = labels.get(row.get("key"), str(row.get("key", "Başarım")).replace("_", " ").title())
         return rows
 
     async def get_season_leaderboard(self, chat_id: int, season_id: str, limit: int = 10) -> List[Dict]:
@@ -1050,13 +1286,13 @@ class Database:
 
     # --- SUDO OPERATIONS ---
     async def get_sudo_users(self) -> List[int]:
-        """TÃ¼m sudo kullanÄ±cÄ±larÄ±nÄ± dÃ¶ndÃ¼rÃ¼r."""
+        """Tüm sudo kullanıcılarını döndürür."""
         cursor = self.sudo_users.find({}, {"_id": 1})
         results = await cursor.to_list(length=1000)
         return [r["_id"] for r in results]
 
     async def add_sudo_user(self, user_id: int):
-        """Sudo kullanÄ±cÄ± ekler."""
+        """Sudo kullanıcı ekler."""
         await self.sudo_users.update_one(
             {"_id": user_id},
             {"$set": {"added_at": datetime.utcnow()}},
@@ -1064,27 +1300,27 @@ class Database:
         )
 
     async def remove_sudo_user(self, user_id: int):
-        """Sudo kullanÄ±cÄ± siler."""
+        """Sudo kullanıcı siler."""
         await self.sudo_users.delete_one({"_id": user_id})
 
     async def is_sudo_user(self, user_id: int) -> bool:
-        """KullanÄ±cÄ± sudo mu?"""
+        """Kullanıcı sudo mu?"""
         return await self.sudo_users.find_one({"_id": user_id}) is not None
 
     async def get_blacklist_users(self) -> List[int]:
-        """TÃ¼m kara listedeki kullanÄ±cÄ±larÄ± dÃ¶ndÃ¼rÃ¼r."""
+        """Tüm kara listedeki kullanıcıları döndürür."""
         cursor = self.blacklist.find({"type": "user"}, {"_id": 1})
         results = await cursor.to_list(length=1000)
         return [r["_id"] for r in results]
 
     async def get_blacklist_groups(self) -> List[int]:
-        """TÃ¼m kara listedeki gruplarÄ± dÃ¶ndÃ¼rÃ¼r."""
+        """Tüm kara listedeki grupları döndürür."""
         cursor = self.blacklist.find({"type": "group"}, {"_id": 1})
         results = await cursor.to_list(length=1000)
         return [r["_id"] for r in results]
 
     async def add_blacklist_user(self, user_id: int):
-        """KullanÄ±cÄ±yÄ± kara listeye ekler."""
+        """Kullanıcıyı kara listeye ekler."""
         await self.blacklist.update_one(
             {"_id": user_id, "type": "user"},
             {"$set": {"added_at": datetime.utcnow()}},
@@ -1100,15 +1336,15 @@ class Database:
         )
 
     async def remove_blacklist_user(self, user_id: int):
-        """KullanÄ±cÄ±yÄ± kara listeden Ã§Ä±karÄ±r."""
+        """Kullanıcıyı kara listeden çıkarır."""
         await self.blacklist.delete_one({"_id": user_id, "type": "user"})
 
     async def remove_blacklist_group(self, chat_id: int):
-        """Grubu kara listeden Ã§Ä±karÄ±r."""
+        """Grubu kara listeden çıkarır."""
         await self.blacklist.delete_one({"_id": chat_id, "type": "group"})
 
     async def is_blacklisted_user(self, user_id: int) -> bool:
-        """KullanÄ±cÄ± kara listede mi?"""
+        """Kullanıcı kara listede mi?"""
         return await self.blacklist.find_one({"_id": user_id, "type": "user"}) is not None
 
     async def is_blacklisted_group(self, chat_id: int) -> bool:
@@ -1118,6 +1354,23 @@ class Database:
     # --- USER OPERATIONS ---
     async def get_user(self, user_id: int) -> Optional[Dict]:
         return await self.users.find_one({"_id": user_id})
+
+    async def find_user_by_username(self, username: str) -> Optional[Dict[str, Any]]:
+        """Return the bounded profile for a username observed by Arel.
+
+        Telegram usernames are case-insensitive.  The query is anchored and
+        escaped so user supplied input cannot become a Mongo regex operator.
+        Membership in a particular chat is verified by the Telegram transport
+        service before a moderation action is built.
+        """
+        normalized = str(username or "").strip().lstrip("@").strip()
+        if not normalized or Database._db is None:
+            return None
+        pattern = f"^{re.escape(normalized)}$"
+        return await self.users.find_one(
+            {"username": {"$regex": pattern, "$options": "i"}},
+            {"_id": 1, "username": 1, "first_name": 1},
+        )
 
     async def update_user(self, user_id: int, data: Dict):
         data["last_seen"] = datetime.utcnow()
@@ -1607,6 +1860,49 @@ class Database:
         ]
         results = await self.messages.aggregate(pipeline).to_list(length=limit)
         return [r["_id"] for r in results]
+
+    async def get_first_message(self, chat_id: int, user_id: int | None = None) -> Optional[Dict[str, Any]]:
+        """Return the first retained user message for a chat/member.
+
+        Guardian's member-intelligence commands are intentionally backed by
+        Arel's 30-day message retention.  The query returns metadata and a
+        bounded content preview; callers must still escape it for Telegram.
+        """
+        if Database._db is None:
+            return None
+        query: Dict[str, Any] = {"chat_id": int(chat_id), "role": "user"}
+        if user_id is not None:
+            query["user_id"] = int(user_id)
+        return await self.messages.find_one(query, {"_id": 0}, sort=[("timestamp", 1), ("_id", 1)])
+
+    async def get_member_message_log(self, chat_id: int, user_id: int, limit: int = 20) -> List[Dict[str, Any]]:
+        if Database._db is None:
+            return []
+        bounded = max(1, min(int(limit), 100))
+        cursor = self.messages.find(
+            {"chat_id": int(chat_id), "user_id": int(user_id), "role": "user"},
+            {"_id": 0, "content": 1, "timestamp": 1, "telegram_message_id": 1, "thread_id": 1},
+        ).sort([("timestamp", -1), ("_id", -1)]).limit(bounded)
+        rows = await cursor.to_list(length=bounded)
+        return list(reversed(rows))
+
+    async def get_inactive_users(self, chat_id: int, since: datetime, limit: int = 50) -> List[Dict[str, Any]]:
+        """Return users whose last retained message predates ``since``.
+
+        Telegram Bot API does not expose a complete member list, so the
+        reliable bounded alternative is the activity index Arel already owns.
+        """
+        if Database._db is None:
+            return []
+        bounded = max(1, min(int(limit), 100))
+        pipeline = [
+            {"$match": {"chat_id": int(chat_id), "role": "user"}},
+            {"$group": {"_id": "$user_id", "last_seen": {"$max": "$timestamp"}}},
+            {"$match": {"last_seen": {"$lt": since}}},
+            {"$sort": {"last_seen": 1}},
+            {"$limit": bounded},
+        ]
+        return await self.messages.aggregate(pipeline).to_list(length=bounded)
 
     # --- CACHE OPERATIONS ---
     async def save_creation_cache(self, unique_id: str, data: Any):

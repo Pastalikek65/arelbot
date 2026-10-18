@@ -363,7 +363,7 @@ async def test_provider_error_code_and_message_are_bounded():
 
     assert result.ok is False
     assert result.error_code == "PROVIDER_ERROR"
-    assert result.error_message == "Veri kaynaÄŸÄ± gÃ¼venli bir yanÄ±t Ã¼retemedi."
+    assert result.error_message == "Veri kaynağı güvenli bir yanıt üretemedi."
     assert "secret" not in str(result)
 
 

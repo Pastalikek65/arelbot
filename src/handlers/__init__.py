@@ -1,7 +1,7 @@
 """
-Handler ModÃ¼lleri - Arel Bot
+Handler Modülleri - Arel Bot
 
-TÃ¼m iÅŸleyicileri Merkezi olarak yÃ¶netir.
+Tüm işleyicileri Merkezi olarak yönetir.
 """
 from .command_handler import CommandHandler
 from .callback_handler import CallbackHandler

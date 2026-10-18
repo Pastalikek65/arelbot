@@ -72,20 +72,20 @@ class StickerTagService:
         started = time.perf_counter()
         try:
             if self.bot is None or self.vision_service is None:
-                raise StickerTagJobError("ai_provider_unavailable", "Sticker etiketleme servisi hazÄ±r deÄŸil.")
+                raise StickerTagJobError("ai_provider_unavailable", "Sticker etiketleme servisi hazır değil.")
             telegram_file = await self.bot.get_file(payload["source_file_id"])
             os.makedirs(Config.STICKER_TAG_TEMP_DIR, exist_ok=True)
             with tempfile.NamedTemporaryFile(dir=Config.STICKER_TAG_TEMP_DIR, prefix="tag_", suffix=".webp", delete=False) as handle:
                 path = handle.name
             await telegram_file.download_to_drive(path)
-            prompt = "Bu sticker gÃ¶rselini incele. Arama iÃ§in 5-10 TÃ¼rkÃ§e anahtar kelime dÃ¶ndÃ¼r; yalnÄ±zca virgÃ¼lle ayrÄ±lmÄ±ÅŸ kelimeler yaz. GÃ¶rselde olmayan ÅŸeyi uydurma."
+            prompt = "Bu sticker görselini incele. Arama için 5-10 Türkçe anahtar kelime döndür; yalnızca virgülle ayrılmış kelimeler yaz. Görselde olmayan şeyi uydurma."
             tags_raw = await asyncio.wait_for(
                 self.vision_service.analyze_image(path, prompt, 0, payload["user_id"], "Arelbot", None),
                 timeout=Config.STICKER_TAG_JOB_TIMEOUT_SECONDS,
             )
             tags = ", ".join(item.strip().casefold()[:48] for item in str(tags_raw or "").split(",") if item.strip())[:500]
             if not tags:
-                raise StickerTagJobError("sticker_tags_empty", "Sticker etiketi Ã¼retilemedi.")
+                raise StickerTagJobError("sticker_tags_empty", "Sticker etiketi üretilemedi.")
             await self.database.update_sticker_tags(payload["source_file_id"], tags)
             self.metrics_registry.inc("sticker_tag_jobs_completed")
             if self.mongo_available:
@@ -95,7 +95,7 @@ class StickerTagService:
                     logger.debug("Sticker tag audit failed", exc_info=True)
         except asyncio.TimeoutError as exc:
             self.metrics_registry.inc("sticker_tag_jobs_failed")
-            raise StickerTagJobError("timeout", "Sticker etiketleme zaman aÅŸÄ±mÄ±na uÄŸradÄ±.") from exc
+            raise StickerTagJobError("timeout", "Sticker etiketleme zaman aşımına uğradı.") from exc
         except StickerTagJobError:
             self.metrics_registry.inc("sticker_tag_jobs_failed")
             raise

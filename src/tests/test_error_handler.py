@@ -19,14 +19,14 @@ class TestErrorClasses:
         err = ArelError("test error")
         assert err.message == "test error"
         assert err.code == "UNKNOWN_ERROR"
-        assert err.user_message == "Bir hata oluÅŸtu. LÃ¼tfen tekrar deneyin."
+        assert err.user_message == "Bir hata oluştu. Lütfen tekrar deneyin."
         assert err.details == {}
 
     def test_arel_error_custom(self):
-        err = ArelError("custom", code="CUSTOM", details={"key": "val"}, user_message="KullanÄ±cÄ± mesajÄ±")
+        err = ArelError("custom", code="CUSTOM", details={"key": "val"}, user_message="Kullanıcı mesajı")
         assert err.code == "CUSTOM"
         assert err.details == {"key": "val"}
-        assert err.user_message == "KullanÄ±cÄ± mesajÄ±"
+        assert err.user_message == "Kullanıcı mesajı"
 
     def test_ai_api_error(self):
         err = AIApiError("API down", service="gemini", status_code=503)
@@ -89,7 +89,7 @@ class TestErrorHandler:
     def test_handle_standard_exception(self):
         err = ValueError("something wrong")
         msg = ErrorHandler.handle(err)
-        assert msg == "Beklenmedik bir hata oluÅŸtu. LÃ¼tfen tekrar deneyin."
+        assert msg == "Beklenmedik bir hata oluştu. Lütfen tekrar deneyin."
         stats = ErrorHandler.get_stats()
         assert stats["total_errors"] >= 1
         assert "ValueError" in stats["errors_by_type"]
@@ -119,7 +119,7 @@ class TestErrorHandler:
     def test_handle_with_none_context(self):
         err = RuntimeError("critical")
         msg = ErrorHandler.handle(err, context=None)
-        assert msg == "Beklenmedik bir hata oluÅŸtu. LÃ¼tfen tekrar deneyin."
+        assert msg == "Beklenmedik bir hata oluştu. Lütfen tekrar deneyin."
 
 
 @pytest.mark.asyncio

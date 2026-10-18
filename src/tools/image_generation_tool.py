@@ -9,7 +9,7 @@ class ImageGenerationTool(BaseTool):
     def __init__(self):
         super().__init__(
             name="image_generation",
-            description="KullanÄ±cÄ±nÄ±n isteÄŸine gÃ¶re yapay zeka ile gÃ¶rsel oluÅŸturur. FotoÄŸraf, Ã§izim, illÃ¼strasyon veya sanat eseri Ã¼retebilir."
+            description="Kullanıcının isteğine göre yapay zeka ile görsel oluşturur. Fotoğraf, çizim, illüstrasyon veya sanat eseri üretebilir."
         )
 
     @property
@@ -19,7 +19,7 @@ class ImageGenerationTool(BaseTool):
             "properties": {
                 "prompt": {
                     "type": "string", 
-                    "description": "GÃ¶rselin detaylÄ± Ä°ngilizce aÃ§Ä±klamasÄ± (Ã–rn: 'A realistic wolf running in a dark forest, cinematic lighting')."
+                    "description": "Görselin detaylı İngilizce açıklaması (Örn: 'A realistic wolf running in a dark forest, cinematic lighting')."
                 }
             },
             "required": ["prompt"]
@@ -32,7 +32,7 @@ class ImageGenerationTool(BaseTool):
         """
         try:
             if not prompt:
-                return {"error": "GÃ¶rsel aÃ§Ä±klamasÄ± (prompt) gerekli."}
+                return {"error": "Görsel açıklaması (prompt) gerekli."}
             
             logger.info("Image generation requested: %s", summarize_private_text(prompt, label="image_prompt"))
             
@@ -40,7 +40,7 @@ class ImageGenerationTool(BaseTool):
             # This allows us to use the existing photo sending logic without refactoring everything.
             return {
                 "status": "success",
-                "message": "GÃ¶rsel Ã¼retim sistemi aktifleÅŸtirildi.",
+                "message": "Görsel üretim sistemi aktifleştirildi.",
                 "handover_tag": f"<GENERATE_IMAGE>{prompt}</GENERATE_IMAGE>"
             }
         except Exception as e:

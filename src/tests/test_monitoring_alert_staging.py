@@ -7,9 +7,11 @@ import pytest
 
 from scripts.monitoring_alert_staging import (
     MonitoringProbeError,
+    _safe_report,
     parse_notification_counter,
     validate_live_gate,
     validate_local_base_url,
+    validate_monitoring_inputs,
 )
 
 
@@ -36,6 +38,19 @@ def test_monitoring_delivery_probe_requires_all_live_signals():
 def test_monitoring_delivery_probe_only_targets_loopback_alertmanager(url: str):
     with pytest.raises(MonitoringProbeError, match="alertmanager_url_invalid"):
         validate_local_base_url(url)
+
+
+def test_monitoring_validation_checks_target_and_bounds_before_live_gate():
+    assert validate_monitoring_inputs("http://127.0.0.1:9093", timeout_seconds=1, poll_interval_seconds=0, max_attempts=1)
+    with pytest.raises(MonitoringProbeError, match="alertmanager_url_invalid"):
+        validate_monitoring_inputs("https://alerts.example.com")
+    with pytest.raises(MonitoringProbeError, match="monitoring_attempts_invalid"):
+        validate_monitoring_inputs("http://127.0.0.1:9093", max_attempts=6)
+
+
+def test_monitoring_report_rejects_secret_material(tmp_path):
+    with pytest.raises(MonitoringProbeError, match="report_secret_material"):
+        _safe_report(tmp_path / "monitoring.json", {"scope": "x", "authorization": "Bearer secret"})
 
 
 def test_notification_counter_parser_selects_webhook_and_ignores_other_integrations():

@@ -1,4 +1,4 @@
-"""Basit i18n Ã§eviri katmanÄ±."""
+"""Basit i18n çeviri katmanı."""
 import json
 import logging
 from pathlib import Path
@@ -21,7 +21,7 @@ class Translator:
                 self._messages[lang_file.stem] = json.loads(lang_file.read_text(encoding="utf-8"))
             except Exception as exc:
                 logger.warning(
-                    "Dil dosyasÄ± okunamadÄ±: %s (%s)",
+                    "Dil dosyası okunamadı: %s (%s)",
                     lang_file.name,
                     summarize_exception(exc, label="translation_file"),
                 )

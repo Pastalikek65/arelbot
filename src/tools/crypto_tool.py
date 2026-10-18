@@ -14,7 +14,7 @@ class CryptoTool(BaseTool):
     def __init__(self, provider: CryptoProvider | None = None) -> None:
         super().__init__(
             name="get_crypto_prices",
-            description="Kripto varlÄ±klarÄ±n gÃ¼ncel fiyat ve 24 saat deÄŸiÅŸimini getirir.",
+            description="Kripto varlıkların güncel fiyat ve 24 saat değişimini getirir.",
         )
         self.provider = provider or CryptoProvider()
 
@@ -23,7 +23,7 @@ class CryptoTool(BaseTool):
         return {
             "type": "object",
             "properties": {
-                "symbol": {"type": "string", "description": "CoinGecko kimliÄŸi veya kÄ±sa sembol; Ã¶rnek btc, eth, bitcoin"},
+                "symbol": {"type": "string", "description": "CoinGecko kimliği veya kısa sembol; örnek btc, eth, bitcoin"},
                 "vs_currency": {"type": "string", "enum": ["usd", "try", "eur", "gbp"]},
             },
             "required": ["symbol"],

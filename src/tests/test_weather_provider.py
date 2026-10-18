@@ -16,7 +16,7 @@ async def test_weather_provider_normalizes_valid_payload_and_escapes_display():
             200,
             json={
                 "current_condition": [
-                    {"temp_C": "22", "humidity": "47", "lang_tr": [{"value": "AÃ§Ä±k & gÃ¼neÅŸli"}]}
+                    {"temp_C": "22", "humidity": "47", "lang_tr": [{"value": "Açık & güneşli"}]}
                 ]
             },
             request=request,
@@ -25,12 +25,12 @@ async def test_weather_provider_normalizes_valid_payload_and_escapes_display():
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
         provider = WeatherProvider(client=client)
         response = await provider.fetch(
-            ProviderRequest(operation="weather", params={"city": "Ä°stanbul"}, timeout_seconds=2)
+            ProviderRequest(operation="weather", params={"city": "İstanbul"}, timeout_seconds=2)
         )
 
     assert response.source == "wttr.in"
     assert response.data["temperature_c"] == "22"
-    assert "AÃ§Ä±k &amp; gÃ¼neÅŸli" in response.data["content"]
+    assert "Açık &amp; güneşli" in response.data["content"]
 
 
 @pytest.mark.asyncio
@@ -51,7 +51,7 @@ async def test_weather_provider_exposes_bounded_daily_forecast():
             200,
             json={
                 "current_condition": [
-                    {"temp_C": "22", "humidity": "47", "lang_tr": [{"value": "AÃ§Ä±k"}]}
+                    {"temp_C": "22", "humidity": "47", "lang_tr": [{"value": "Açık"}]}
                 ],
                 "weather": [
                     {"date": "2026-10-05", "maxtempC": "25", "mintempC": "15", "uvIndex": "4"},
@@ -76,7 +76,7 @@ async def test_weather_provider_exposes_bounded_daily_forecast():
         "min_c": "15",
         "uv_index": "4",
     }
-    assert "3 gÃ¼nlÃ¼k tahmin" in response.data["content"]
+    assert "3 günlük tahmin" in response.data["content"]
     assert "UV 4" in response.data["content"]
 
 
@@ -89,5 +89,5 @@ async def test_weather_provider_rejects_forecast_days_out_of_range():
 
 
 def test_weather_provider_transliterates_turkish_city_names():
-    assert WeatherProvider._city_slug("ÅÄ±rnak") == "sirnak"
-    assert WeatherProvider._city_slug("Ä°stanbul") == "istanbul"
+    assert WeatherProvider._city_slug("Şırnak") == "sirnak"
+    assert WeatherProvider._city_slug("İstanbul") == "istanbul"

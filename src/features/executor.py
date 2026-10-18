@@ -17,10 +17,10 @@ from src.observability.metrics import MetricsRegistry
 
 
 _KNOWN_PROVIDER_FAILURES = {
-    "PROVIDER_RESPONSE_TOO_LARGE": "Kaynak yanÄ±tÄ± izin verilen boyutu aÅŸÄ±yor.",
-    "PROVIDER_CONTENT_TYPE_INVALID": "Kaynak beklenen iÃ§erik tÃ¼rÃ¼nÃ¼ gÃ¶ndermedi.",
-    "PROVIDER_HOST_NOT_ALLOWED": "Kaynak gÃ¼venlik politikasÄ± nedeniyle reddedildi.",
-    "PROVIDER_SCHEMA_ERROR": "Kaynak beklenmeyen bir veri biÃ§imi dÃ¶ndÃ¼rdÃ¼.",
+    "PROVIDER_RESPONSE_TOO_LARGE": "Kaynak yanıtı izin verilen boyutu aşıyor.",
+    "PROVIDER_CONTENT_TYPE_INVALID": "Kaynak beklenen içerik türünü göndermedi.",
+    "PROVIDER_HOST_NOT_ALLOWED": "Kaynak güvenlik politikası nedeniyle reddedildi.",
+    "PROVIDER_SCHEMA_ERROR": "Kaynak beklenmeyen bir veri biçimi döndürdü.",
 }
 
 
@@ -38,7 +38,7 @@ def _stable_provider_failure(exc: Exception) -> tuple[str, str]:
         code = "PROVIDER_SCHEMA_ERROR"
     else:
         code = "PROVIDER_UNAVAILABLE"
-    return code, _KNOWN_PROVIDER_FAILURES.get(code, "Veri saÄŸlayÄ±cÄ±sÄ± ÅŸu an kullanÄ±lamÄ±yor.")
+    return code, _KNOWN_PROVIDER_FAILURES.get(code, "Veri sağlayıcısı şu an kullanılamıyor.")
 
 
 class FeatureExecutor:
@@ -205,7 +205,7 @@ class FeatureExecutor:
             status = self.registry.feature_status(feature_key)
             return FeatureResult.failure(
                 "FEATURE_DISABLED",
-                "Bu Ã¶zellik geÃ§ici olarak kullanÄ±ma kapatÄ±ldÄ±.",
+                "Bu özellik geçici olarak kullanıma kapatıldı.",
                 metadata={
                     "feature_key": feature_key,
                     "feature_flag": status.get("flag"),
@@ -246,7 +246,7 @@ class FeatureExecutor:
             )
             return FeatureResult.failure(
                 "PROVIDER_RATE_LIMITED",
-                "Veri kaynaÄŸÄ± yoÄŸun; lÃ¼tfen kÄ±sa sÃ¼re sonra tekrar deneyin.",
+                "Veri kaynağı yoğun; lütfen kısa süre sonra tekrar deneyin.",
                 correlation_id=request.correlation_id,
                 metadata={"retry_after_seconds": round(exc.retry_after_seconds, 2)},
             )
@@ -258,7 +258,7 @@ class FeatureExecutor:
             )
             return FeatureResult.failure(
                 "PROVIDER_SCHEMA_INVALID",
-                "Veri saÄŸlayÄ±cÄ±sÄ±nÄ±n yanÄ±tÄ± gÃ¼venli biÃ§imde doÄŸrulanamadÄ±.",
+                "Veri sağlayıcısının yanıtı güvenli biçimde doğrulanamadı.",
                 correlation_id=request.correlation_id,
                 metadata={"contract_error": exc.reason},
             )
@@ -267,7 +267,7 @@ class FeatureExecutor:
             self._schedule_health_persistence(feature.definition.provider_key, runtime, error_code=code)
             return FeatureResult.failure(
                 code,
-                "Ä°stek bilgilerini kontrol edin.",
+                "İstek bilgilerini kontrol edin.",
                 correlation_id=request.correlation_id,
             )
         except Exception as exc:
@@ -289,7 +289,7 @@ class FeatureExecutor:
             self._schedule_health_persistence(feature.definition.provider_key, runtime, response, error_code=code)
             return FeatureResult.failure(
                 code,
-                "Veri saÄŸlayÄ±cÄ±sÄ±nÄ±n yanÄ±tÄ± beklenen biÃ§imde deÄŸil.",
+                "Veri sağlayıcısının yanıtı beklenen biçimde değil.",
                 correlation_id=request.correlation_id,
             )
         except Exception:
@@ -301,14 +301,14 @@ class FeatureExecutor:
             )
             return FeatureResult.failure(
                 "PROVIDER_SCHEMA_INVALID",
-                "Veri saÄŸlayÄ±cÄ±sÄ±nÄ±n yanÄ±tÄ± iÅŸlenemedi.",
+                "Veri sağlayıcısının yanıtı işlenemedi.",
                 correlation_id=request.correlation_id,
             )
         if isinstance(raw, dict) and raw.get("error"):
             self._schedule_health_persistence(feature.definition.provider_key, runtime, response, error_code="PROVIDER_ERROR")
             return FeatureResult.failure(
                 normalize_error_code(raw.get("error_code") or raw.get("error"), "PROVIDER_ERROR"),
-                "Veri kaynaÄŸÄ± gÃ¼venli bir yanÄ±t Ã¼retemedi.",
+                "Veri kaynağı güvenli bir yanıt üretemedi.",
                 correlation_id=request.correlation_id,
             )
         display = ()

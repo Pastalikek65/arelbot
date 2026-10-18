@@ -49,7 +49,7 @@ class GroupReplyRouter:
         "group_reply_fallback_created": "group_reply_reply_fallback_total",
     }
     _LABEL_RE = re.compile(
-        r"(?im)^\s*(?:@[a-z0-9_\.]{2,}|[a-zÃ§ÄŸÄ±Ã¶ÅŸÃ¼][a-zÃ§ÄŸÄ±Ã¶ÅŸÃ¼0-9]*(?:\s+[a-zÃ§ÄŸÄ±Ã¶ÅŸÃ¼][a-zÃ§ÄŸÄ±Ã¶ÅŸÃ¼0-9]*){0,3})\s*:"
+        r"(?im)^\s*(?:@[a-z0-9_\.]{2,}|[a-zçğıöşü][a-zçğıöşü0-9]*(?:\s+[a-zçğıöşü][a-zçğıöşü0-9]*){0,3})\s*:"
     )
     _MENTION_RE = re.compile(r"(?<!\w)@[a-z0-9_]{2,}", re.IGNORECASE)
 

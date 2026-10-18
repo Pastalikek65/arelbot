@@ -12,7 +12,7 @@ from src.tools.spatula_tool import StoryTool
 async def test_story_provider_bounds_and_escapes_user_topic():
     provider = StoryProvider()
     result = await provider.fetch(
-        ProviderRequest("story", {"topic": "<script>kayÄ±p kedi</script>", "style": "gizem"})
+        ProviderRequest("story", {"topic": "<script>kayıp kedi</script>", "style": "gizem"})
     )
     assert result.metadata["prompt_injection_safe"] is True
     assert "&lt;script&gt;" in result.data["content"]
@@ -30,7 +30,7 @@ async def test_story_provider_rejects_invalid_input_with_stable_codes():
 
 @pytest.mark.asyncio
 async def test_legacy_ai_story_tool_delegates_to_typed_provider():
-    result = await StoryTool().execute("uzay macerasÄ±", style="bilimkurgu")
+    result = await StoryTool().execute("uzay macerası", style="bilimkurgu")
     assert "result" in result
     assert result["metadata"]["provider_kind"] == "typed_generation_brief"
 

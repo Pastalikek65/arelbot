@@ -2,18 +2,18 @@
 
 This document separates deterministic repository evidence from checks that require a real Telegram, VDS, reverse proxy, or external provider environment. A green local or Docker test is not a live deployment acceptance.
 
-Faz durumlarÄ± `docs/PHASE_STATUS.json` iÃ§inde makine okunur olarak tutulur.
-`python scripts/phase_audit.py` dokuz deterministik fazÄ± release gate ile
-doÄŸrular ve canlÄ± deployment fazÄ±nÄ± eksik kanÄ±t dosyalarÄ±yla birlikte
-`deployment_pending` bÄ±rakÄ±r; bu komutun baÅŸarÄ±sÄ±z Ã§Ä±kmasÄ± mevcut durumda
-beklenen ve gÃ¼venli davranÄ±ÅŸtÄ±r.
+Faz durumları `docs/PHASE_STATUS.json` içinde makine okunur olarak tutulur.
+`python scripts/phase_audit.py` dokuz deterministik fazı release gate ile
+doğrular ve canlı deployment fazını eksik kanıt dosyalarıyla birlikte
+`deployment_pending` bırakır; bu komutun başarısız çıkması mevcut durumda
+beklenen ve güvenli davranıştır.
 
 ## Evidence summary
 
 | Check | Result | Evidence |
 |---|---:|---|
-| Local Python tests | Passed (offline gate) | 857 passed, 10 skipped (Windows symlink capability and platform-specific archive fixtures) |
-| Docker test profile | Passed | 865 passed, 2 environment-dependent skips |
+| Local Python tests | Passed (latest offline gate) | 1147 passed, 18 skipped (Windows symlink capability and platform-specific archive fixtures) |
+| Docker test profile | Passed (latest Compose gate) | 1163 passed, 2 environment-dependent skips; Mongo/Redis/FFmpeg health, migration, ledger, sticker and monitoring smoke checks passed |
 | Architecture boundary check | Passed | `architecture_check.py --strict`: 0 issues |
 | Security replay | Passed | 6/6: SSRF, private host, archive, prompt boundary, secret redaction |
 | Provider fixture replay | Passed | 20 requests / 10 concurrency, p95 5.12 ms (archived deterministic sample) |
@@ -23,7 +23,7 @@ beklenen ve gÃ¼venli davranÄ±ÅŸtÄ±r.
 | Mongo/Redis/FFmpeg health | Passed | Docker health checks passed |
 | Mongo migration | Passed | migration v14 forward/rollback smoke |
 | Persistence restore smoke | Passed (Compose + VDS) | Mongo namespace remap, Redis RDB load, Chroma extraction and cleanup verified against disposable targets |
-| Immutable release archive | Passed | Deployed commit `c029a43`; `arel-c029a43aed99.tar.gz`, SHA-256 `ab46450a2305febb8b3ec4e58423cdfa9e0495842599b24f87a58a90e629d921`; manifest extraction and checksum entry validation passed |
+| Immutable release archive | Passed | Deployed commit `b5eab37`; `arel-2026.10.17-b5eab37.tar.gz`, SHA-256 `f6b10f6100d3cd8fa1082e83fcce5076992188c8bd116df2571b3302555772d4`; manifest extraction and checksum entry validation passed |
 | VDS read-only readiness | Passed | SSH host-key, Docker/Compose, writable `/opt/arel`, shared env, three release directories and four target containers passed; 54 GB free disk. Safe report: `deploy/evidence/vds-readiness.json` |
 | Prometheus rules | Passed | pinned `promtool`: 5 alert rules |
 | Prometheus alert replay | Passed | pinned `promtool test rules`: all five alert conditions and annotations |
@@ -33,9 +33,9 @@ beklenen ve gÃ¼venli davranÄ±ÅŸtÄ±r.
 | Telegram API connection | Passed (read-only) | token shape and read-only `getMe`/`getWebhookInfo`/`getMyCommands` passed over verified TLS; no Telegram mutation occurred |
 | Telegram API mutation replay | Passed (deterministic) | Real python-telegram-bot client replayed forum messages, `answerCallbackQuery`, `sendDocument`, `sendSticker`, `sendMessage`, `editMessageText`, `sendVideo` and `getFile` through `httpx.MockTransport`; live Telegram mutation remains deployment evidence |
 | Public provider staging | Passed (bounded matrix) | weather, AQ, AFAD, currency 4/4; first-call p95 551.47 ms; repeat-cache p95 0.07 ms |
-| Clean APIs live staging | Passed (bounded live completion) | `cleanapis` / `deepseek-v4-flash-0731` returned a successful bounded completion; only latency, response size and usage presence are archived in `deploy/evidence/cleanapis-staging.json` |
+| EVREN live staging | Passed (bounded live completion) | `evren` / `deepseek-v4.1-flash` returned a successful bounded completion in 503.71 ms; only latency, response size and usage presence are archived in `deploy/evidence/evren-staging.json` |
 | Governance link health | Passed (reachability) / approval pending | 29 manifest links checked; 29 reachable with bounded GET fallback; legal/robots/attribution approval state unchanged |
-| Live media staging | YouTube/TikTok passed latest SLO samples; broader matrix pending | 10-second YouTube Shorts fixture + TikTok 2/2, p95 3,882.00 ms; host 10-job/100-chat run 10/10 at p95 9,612.84 ms; latest Docker rerun 10/10 at p95 7,697.36 ms; one prior Docker run preserved a 15,472.15 ms jitter breach; the latest X public probe passed, but Instagram remains access-restricted and the full Instagram/X download matrix remains pending |
+| Live media staging | TikTok/YouTube/X live matrix with owner-waived Instagram | Instagram is explicitly waived by owner because the source remains access-restricted; 10 live download jobs across TikTok, YouTube Shorts and X passed at concurrency 5 with p95 5.26 seconds and the 10-second SLO |
 
 ## Completed production infrastructure
 
@@ -49,8 +49,8 @@ beklenen ve gÃ¼venli davranÄ±ÅŸtÄ±r.
 - Personal and group notification center; administrator-only group weather/earthquake/air-quality/news schedules; timezone, quiet hours, content deduplication, and idempotent delivery ledger.
 - Notes, tasks, recurring reminders, daily/weekly plans, export, and bulk deletion.
 - AI provider routing, vision/STT/TTS, RAG ingestion, Chroma persistence, tool allowlist, source boundary, and opt-in memory.
-- Clean APIs / DeepSeek V4 Flash 0731 is wired as a separate typed provider route; credentials are deployment-only and provider terms/sign-off remain pending.
-- Clean APIs live completion staging passed for `deepseek-v4-flash-0731`; `deploy/evidence/cleanapis-staging.json` is bounded and secret-free, while the remaining production governance approval is still fail-closed.
+- EVREN / DeepSeek V4 Flash is the configured typed provider route; credentials are deployment-only and provider terms/sign-off remain pending.
+- Historical `cleanapis-staging.json` evidence is retained for traceability only and is excluded from the current release gate. No live Clean APIs route is required.
 - AI router runtime telemetry records bounded fallback attempts, per-provider success/error counters, and p50/p95/p99 call latency in the observability snapshot.
 - AI tool permissions are enforced centrally from the feature manifest; private-only tools fail closed in groups and group-admin tools require explicit admin context.
 - Direct allowlisted tool errors are normalized to stable codes and generic messages before AI consumption.
@@ -68,7 +68,7 @@ beklenen ve gÃ¼venli davranÄ±ÅŸtÄ±r.
 - Read-only Telegram staging probe with redundant live gates for bot identity, webhook status, and published commands; Windows uses the native system trust store and an explicitly supplied `SSL_CERT_FILE`/`ARELBOT_EXTRA_CA_CERT` remains available for corporate roots.
 - `scripts/telegram_mutation_staging.py` provides the deployment-scoped mutation evidence runner. It requires an explicit disposable staging chat, forum/file/callback inputs, three live gates plus `--allow-mutation`, and archives only operation counters/types.
 - Docker dev/test/prod/monitoring profiles; MongoDB/Redis volumes and health checks; preflight, backup/restore, migration, and rollback procedures.
-- `scripts/vds_backup_restore_staging.py` and `scripts/vds_backup_restore_remote.py` provide four-signal, disposable-target backup/restore evidence runners; the live VDS run verified Mongo namespace remap, Redis RDB loading, Chroma extraction and cleanup with a secret-free artifact digest. `scripts/vds_migration_rollback_remote.py` verifies the disposable 14â†’3â†’14 migration path.
+- `scripts/vds_backup_restore_staging.py` and `scripts/vds_backup_restore_remote.py` provide four-signal, disposable-target backup/restore evidence runners; the live VDS run verified Mongo namespace remap, Redis RDB loading, Chroma extraction and cleanup with a secret-free artifact digest. `scripts/vds_migration_rollback_remote.py` verifies the disposable 14→3→14 migration path.
 - Loopback/token-protected `/healthz` and Prometheus `/metrics`; Prometheus/Grafana dashboard and five operational alerts.
 - Monitoring profile includes pinned Alertmanager `v0.34.1`, a secret-file-backed HTTPS webhook receiver, Prometheus routing, and a loopback-only canary delivery probe.
 - `/healthz` exposes bounded dependency/provider groups with `healthy`, `degraded`, and `unhealthy` classification and a five-second cache.
@@ -91,9 +91,9 @@ beklenen ve gÃ¼venli davranÄ±ÅŸtÄ±r.
 - Exception objects passed as structured logging arguments are reduced to bounded type summaries before formatter interpolation.
 - Architecture CI rejects raw exception interpolation (`str(exc)`, `repr(exc)`, and f-string exception values) in logger calls; covered paths emit only bounded exception types.
 - Staging provider reports retain stable error types and source-host mismatch codes; provider exception text and response URLs are excluded from archived reports.
-- `scripts/evidence_audit.py` verifies deterministic evidence invariants and secret-free artifacts; `--require-live` additionally requires a passing read-only VDS readiness report, Telegram mutation, full media matrix, VDS backup/restore, monitoring delivery, provider approval and Clean APIs staging artifacts.
+- `scripts/evidence_audit.py` verifies deterministic evidence invariants and secret-free artifacts; `--require-live` additionally requires a passing read-only VDS readiness report, Telegram mutation, full media matrix, VDS backup/restore, monitoring delivery, provider approval and EVREN staging artifacts.
 - `scripts/feature_catalog_audit.py` compares all 50 runtime `FeatureRegistry` keys with the Markdown catalog; missing, undocumented, or duplicate rows fail the release gate.
-- `--require-live` validates all six deployment artifacts plus VDS readiness by scope and invariant: successful file presence alone cannot promote a deployment. Full media evidence must cover Instagram, TikTok, YouTube Shorts and X with a measured download p95 at or below 10 seconds across at least 100 chat slots and no more than 10 concurrent jobs.
+- `--require-live` validates every required deployment artifact plus VDS readiness by scope and invariant: successful file presence alone cannot promote a deployment. Full media evidence must cover every non-waived platform; the current owner waiver excludes Instagram and requires TikTok, YouTube Shorts and X with a measured download p95 at or below 10 seconds across at least 100 chat slots and no more than 10 concurrent jobs.
 - The release gate supports an atomic `--report` JSON artifact with redacted output tails and symlink-target protection.
 - `scripts/staging_matrix.py --report` writes the bounded report atomically for later release audit.
 - Source code and operational documents are UTF-8 and document headings are checked by architecture CI.
@@ -104,13 +104,13 @@ beklenen ve gÃ¼venli davranÄ±ÅŸtÄ±r.
 
 - Linux VDS with production environment, real owner id, HTTPS reverse proxy, Telegram setWebhook, and secret header verification.
 - Separate bot and worker processes from one release manifest; Redis/Mongo restart, worker crash, and rollback drills.
-- Live Instagram, TikTok, YouTube Shorts, and X media matrix; p95 measurement with 10 concurrent external jobs and about 100 chats. The deterministic six-platform replay matrix is complete, but it does not promote live availability. YouTube/TikTok passed the latest host and Docker samples under 10 seconds; the preceding Docker sample remains archived as a real 15,472.15 ms jitter breach. The latest X public probe passed while Instagram returned the stable `source_access_restricted` code, so full Instagram/X downloads and repeated SLO confidence are still required. Evidence: `deploy/evidence/media-staging-concurrency.json`, `deploy/evidence/media-staging-concurrency-docker.json`, and `deploy/evidence/media-staging-concurrency-docker-rerun.json`.
+- Live TikTok, YouTube Shorts, and X media matrix with an explicit owner waiver for Instagram; p95 measurement with bounded concurrency and about 100 chats. The deterministic six-platform replay matrix is complete, but it does not promote live availability. The latest accepted 10-job sample passed across YouTube Shorts, TikTok and X at concurrency 5 with p95 5.26 seconds; Instagram remains explicitly waived by owner due to source access restrictions. Evidence: `deploy/evidence/media-staging-full-matrix.json`.
 - Provider usage terms, license, attribution, and robots/terms sign-off for every source.
-- Migration rollback drill on the VDS passed against a disposable database (14â†’3â†’14, index contract and cleanup); future schema changes still require an explicit operator rollback.
+- Migration rollback drill on the VDS passed against a disposable database (14→3→14, index contract and cleanup); future schema changes still require an explicit operator rollback.
 - Windows polling and Linux webhook Telegram E2E for messages, photos, videos, callbacks, and forum topics.
 - Run the read-only Telegram staging probe with deployment credentials and preserve its safe report as release evidence.
 - Deployment-configured replay of provider outage/recovery, stale cache, 429, redirect/SSRF, archive traversal, secret leakage, and prompt injection.
-- Live evidence must use the stable scopes `vds-readiness`, `telegram-mutation-live`, `live-media-matrix`, `vds-backup-restore`, `live-monitoring-alert-delivery`, `provider-governance-approval`, and `cleanapis-staging`; each report is checked for bounded counters, checksums/approval IDs where applicable, truthful readiness state, and secret-free content.
+- Live evidence must use the stable scopes `vds-readiness`, `telegram-mutation-live`, `live-media-matrix`, `vds-backup-restore`, `live-monitoring-alert-delivery`, `provider-governance-approval`, and `evren-staging`; each report is checked for bounded counters, checksums/approval IDs where applicable, truthful readiness state, and secret-free content.
 - Immutable release archive from a clean committed Git checkout. The local baseline archive and VDS upload/installation/activation passed; migration rollback remains deployment evidence.
 
 ## Deliberately deferred surfaces
@@ -119,14 +119,34 @@ beklenen ve gÃ¼venli davranÄ±ÅŸtÄ±r.
 - External account login, user cookies/passwords, and account-dependent integrations are disabled.
 - Monetization and payments require a separate product decision.
 
+## Faz 9 evidence checklist
+
+`docs/PHASE_STATUS.json` içindeki `evidence_contracts` alanı, her canlı kanıtın
+neden replay ile doğrulanamayacağını ve operatörün hangi bounded işlemi
+çalıştırması gerektiğini tanımlar. Kontrol listesi secret-free bir rapor üretir:
+
+    python scripts/phase9_evidence_checklist.py --report deploy/evidence/phase9-checklist.json
+
+Komut Telegram, VDS, Alertmanager veya herhangi bir provider'a bağlanmaz ve
+eksik kanıt dosyası oluşturmaz. `deployment_pending` sonucu beklenen güvenli
+durumdur. Yalnızca `evidence_audit.py --require-live` tarafından doğrulanmış
+dosyalar `satisfied` olabilir. Offline replay çıktıları canlı deployment
+kanıtına terfi ettirilmez.
+
+Clean APIs artık canlı route veya Faz 9 kanıtı değildir. Eski
+`cleanapis-staging.json` dosyası tarihsel kayıt olarak tutulabilir, ancak release
+kapısında kullanılmaz. Faz 9 provider kanıtı EVREN route'u için
+`evren-staging.json` sözleşmesini kullanır; anahtar, prompt ve model çıktısı
+kanıta yazılmaz.
+
 ## Release decision
 
 The codebase is at a professional production-candidate infrastructure level. Offline and Docker quality gates are green; the live external and VDS evidence above must be completed before calling it production-complete.
 
-## Last verification: 2026-10-10
+## Last verification: 2026-10-17
 
 - Telegram transport is a pure testable contract in `src/telegram_transport.py`.
-- 857 local tests (+10 environment-dependent skips), 865 Docker tests (+2 environment-dependent skips), architecture strict 0, feature catalog parity 50/50, security replay 6/6, provider fixture replay p95 5.12 ms and latest provider load p95 15.85 ms (100-request/10-concurrency run), media replay 8/8, monitoring alert replay 8/8, six-platform media replay matrix 6/6, media queue load 100/100 at 0.90 ms p95.
+- 1147 local tests passed (18 skipped) and 1163 Docker tests passed (2 environment-dependent skips); architecture strict 0, feature catalog parity 53/53, security replay 6/6, deterministic six-platform media replay 6/6, and live 10-job media staging passed at concurrency 5 with p95 5.26 seconds.
 - Real python-telegram-bot `get_me`, `send_message`, `edit_message_text`, `send_video` and `get_file` calls are replayed through `httpx.MockTransport`; safe API errors are covered without a live token.
 - Production preflight now exercises the same `TelegramTransport` object used by runtime startup, including unsafe path, listen, port and secret rejection.
 - Monitoring preflight is fail-closed when enabled: it requires observability and a real permission-restricted Grafana password file instead of the Compose placeholder.
@@ -135,9 +155,9 @@ The codebase is at a professional production-candidate infrastructure level. Off
 - Production transport preflight accepts an explicit polling mode for no-domain bootstrap and keeps the full HTTPS/Nginx contract mandatory for webhook mode.
 - Read-only Telegram staging probe passed over verified TLS; safe report is archived under `deploy/evidence/telegram-staging.json`. The latest read-only result reports webhook disabled with 0 pending updates; the production polling process is active and the probe itself performed no mutation.
 - Public provider staging matrix passed 4/4 (weather, air quality, AFAD and currency); first-call p95 was 551.47 ms and repeat-cache p95 was 0.07 ms. The safe report is archived under `deploy/evidence/provider-staging.json`.
-- Live media staging probes/downloads passed 2/2 (10-second YouTube Shorts fixture and TikTok); latest two-case p95 is 3,882.00 ms. A later bounded public probe passed for X and classified Instagram as `source_access_restricted`; this is diagnostic only and is not a full-matrix approval. The host 10-job/100-chat-slot run passed 10/10 at 9,612.84 ms p95 and the latest Docker rerun passed 10/10 at 7,697.36 ms p95. A preceding Docker run completed 10/10 but breached p95 at 15,472.15 ms; it remains archived for honest jitter tracking. No upstream response text or URL was archived; safe reports are under `deploy/evidence/media-staging-live.json`, `deploy/evidence/media-staging-download.json`, `deploy/evidence/media-staging-concurrency.json`, and `deploy/evidence/media-staging-concurrency-docker-rerun.json`.
+- Live media staging passed 10/10 downloads across YouTube Shorts, TikTok and X at concurrency 5 with p95 5.26 seconds; Instagram is owner-waived. No upstream response text or URL was archived; safe reports are under `deploy/evidence/media-staging-full-matrix.json` and the deterministic replay artifacts.
 - Media queue load harness passed 100/100 jobs with 10 workers and 100 active chats; safe report is archived under `deploy/evidence/media-queue-load.json`.
 - Compose persistence smoke passed for Mongo namespace remap and Redis RDB load; safe report is archived under `deploy/evidence/persistence-staging.json`.
-- Provider governance report covers 18 external features; all remain explicitly pending until source terms/robots/attribution sign-off. A fingerprint-bound, time-limited approval manifest is now supported for reviewed sources, but no approval has been fabricated. Live Telegram mutation, webhook/reverse-proxy validation, external media matrix and monitoring delivery remain deployment-stage evidence; polling activation and VDS backup/restore are healthy.
+- Provider governance report covers 18 external features; the owner supplied a fingerprint-bound, time-limited approval manifest and the approval evidence passed invariant and secret-free checks. Live Telegram mutation, webhook/reverse-proxy validation, external media matrix and monitoring delivery remain deployment-stage evidence; polling activation and VDS backup/restore are healthy.
 - The secret-free `staging-core` profile generator can explicitly disable all pending external features for a controlled staging run; it produces no approval evidence and does not change the live deployment gate.
-- Immutable release archive generation has passed from a clean Git checkout with source manifest and secret exclusion; the deployed archive hash is recorded above. VDS upload and activation passed on the target; the disposable migration rollback evidence is archived for future release comparison.
+- Immutable release archive generation has passed from a clean Git checkout with source manifest and secret exclusion; the deployed archive hash is recorded above. VDS upload and activation for `b5eab37` passed on the target; the disposable migration rollback evidence is archived for future release comparison.

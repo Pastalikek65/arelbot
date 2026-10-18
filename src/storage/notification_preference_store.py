@@ -31,7 +31,7 @@ class NotificationPreferenceStore:
         try:
             ZoneInfo(value)
         except (ZoneInfoNotFoundError, ValueError) as exc:
-            raise ValueError("GeÃ§ersiz saat dilimi. Ã–rn: Europe/Istanbul") from exc
+            raise ValueError("Geçersiz saat dilimi. Örn: Europe/Istanbul") from exc
         return value
 
     @staticmethod
@@ -39,9 +39,9 @@ class NotificationPreferenceStore:
         try:
             hour, minute = (int(part) for part in str(value).split(":", 1))
         except (TypeError, ValueError) as exc:
-            raise ValueError("Saat HH:MM biÃ§iminde olmalÄ±.") from exc
+            raise ValueError("Saat HH:MM biçiminde olmalı.") from exc
         if not 0 <= hour <= 23 or not 0 <= minute <= 59:
-            raise ValueError("Saat 00:00 ile 23:59 arasÄ±nda olmalÄ±.")
+            raise ValueError("Saat 00:00 ile 23:59 arasında olmalı.")
         return f"{hour:02d}:{minute:02d}"
 
     @classmethod
@@ -55,7 +55,7 @@ class NotificationPreferenceStore:
             "quiet_end": "08:00",
             "daily_brief_enabled": False,
             "daily_brief_time": "08:00",
-            "daily_brief_city": "Ä°stanbul",
+            "daily_brief_city": "İstanbul",
             "daily_brief_last_sent_date": None,
             "updated_at": now,
         }
@@ -87,7 +87,7 @@ class NotificationPreferenceStore:
         if quiet_end is not None:
             current["quiet_end"] = self._validate_time(quiet_end)
         if current["quiet_start"] == current["quiet_end"]:
-            raise ValueError("Sessiz saat baÅŸlangÄ±cÄ± ve bitiÅŸi aynÄ± olamaz.")
+            raise ValueError("Sessiz saat başlangıcı ve bitişi aynı olamaz.")
         if quiet_hours_enabled is not None:
             current["quiet_hours_enabled"] = bool(quiet_hours_enabled)
         if daily_brief_enabled is not None:
@@ -97,7 +97,7 @@ class NotificationPreferenceStore:
         if daily_brief_city is not None:
             city = str(daily_brief_city).strip()
             if not city or len(city) > 80:
-                raise ValueError("Åehir adÄ± geÃ§ersiz.")
+                raise ValueError("Şehir adı geçersiz.")
             current["daily_brief_city"] = city
         current["user_id"] = int(user_id)
         current["updated_at"] = _now()

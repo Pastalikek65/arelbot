@@ -152,7 +152,7 @@ class MediaDownloadService:
             )
             acquired = await lock.acquire()
             if not acquired:
-                raise MediaDownloadError("inflight_busy", "AynÄ± medya zaten hazÄ±rlanÄ±yor.")
+                raise MediaDownloadError("inflight_busy", "Aynı medya zaten hazırlanıyor.")
             try:
                 yield
             finally:
@@ -245,10 +245,10 @@ class MediaDownloadService:
                 output_type=result.get("extension"),
             )
             await self.queue._set_status(payload, "transcoding")
-            await self._edit_status(chat_id, status_id, "âš™ï¸ Telegram formatÄ± hazÄ±rlanÄ±yorâ€¦")
+            await self._edit_status(chat_id, status_id, "⚙️ Telegram formatı hazırlanıyor…")
             result = await self.transcoder.prepare(result)
             used_cookie = bool(result.get("used_cookie"))
-            caption = f"ğŸ“¹ {(result.get('title') or 'Sosyal medya videosu')[:850]}"
+            caption = f"📹 {(result.get('title') or 'Sosyal medya videosu')[:850]}"
             await self.queue._set_status(payload, "sending")
             with open(result["path"], "rb") as media_file:
                 if result["extension"] == ".mp4":
@@ -266,7 +266,7 @@ class MediaDownloadService:
                         reply_to_message_id=status_id,
                         read_timeout=45, write_timeout=45, connect_timeout=15,
                     )
-            await self._edit_status(chat_id, status_id, "âœ… Medya gÃ¶nderildi.")
+            await self._edit_status(chat_id, status_id, "✅ Medya gönderildi.")
             await self.job_store.update(job_id, telegram_file_id=file_id if result.get("extension") == ".mp4" else None,
                                         finished_at=time.time())
         except MediaTranscodeError as exc:
@@ -283,7 +283,7 @@ class MediaDownloadService:
                 summarize_exception(exc, label="media_delivery"),
             )
             await self._report_failure(payload, "delivery_failed", exc)
-            raise MediaDownloadError("delivery_failed", "Telegram medya gÃ¶nderimi baÅŸarÄ±sÄ±z") from exc
+            raise MediaDownloadError("delivery_failed", "Telegram medya gönderimi başarısız") from exc
         finally:
             if progress_task is not None:
                 progress_task.cancel()
@@ -303,16 +303,16 @@ class MediaDownloadService:
             await self._edit_status(
                 chat_id,
                 status_id,
-                "â³ Kaynak beklenenden yavaÅŸ; iÅŸ iptal edilmedi. Biraz naz yapÄ±yor. "
-                f"Ä°ÅŸ: <code>{job_id}</code>",
+                "⏳ Kaynak beklenenden yavaş; iş iptal edilmedi. Biraz naz yapıyor. "
+                f"İş: <code>{job_id}</code>",
             )
             while True:
                 await asyncio.sleep(15)
                 await self._edit_status(
                     chat_id,
                     status_id,
-                    "â³ Medya hala hazÄ±rlanÄ±yor; dÄ±ÅŸ kaynakla pazarlÄ±k sÃ¼rÃ¼yor. "
-                    f"Ä°ÅŸ: <code>{job_id}</code>",
+                    "⏳ Medya hala hazırlanıyor; dış kaynakla pazarlık sürüyor. "
+                    f"İş: <code>{job_id}</code>",
                 )
         except asyncio.CancelledError:
             return
@@ -386,7 +386,7 @@ class MediaDownloadService:
         except Exception:
             # Deletion can fail when a message is already gone or the bot has
             # insufficient rights. Keep the fallback neutral and bounded.
-            await self._edit_status(chat_id, message_id, "Medya iÅŸlemi sonlandÄ±.")
+            await self._edit_status(chat_id, message_id, "Medya işlemi sonlandı.")
 
     async def _report_failure(self, payload: Dict[str, Any], error_code: str, error: Exception) -> None:
         """Keep media failures private while preserving bounded retries."""
@@ -398,7 +398,7 @@ class MediaDownloadService:
                 await self._edit_status(
                     chat_id,
                     status_id,
-                    "Medya kaynaÄŸÄ± yanÄ±t vermedi; baÅŸka bir yÃ¶ntem deneniyorâ€¦",
+                    "Medya kaynağı yanıt vermedi; başka bir yöntem deneniyor…",
                 )
                 self.metrics_registry.inc("media_group_failures_suppressed")
             else:
@@ -408,7 +408,7 @@ class MediaDownloadService:
         await self._edit_status(
             chat_id,
             status_id,
-            f"âŒ {media_delivery_error_message(error)}\nÄ°ÅŸ: <code>{payload['job_id']}</code>",
+            f"❌ {media_delivery_error_message(error)}\nİş: <code>{payload['job_id']}</code>",
         )
 
     async def get_status(self, job_id: str):

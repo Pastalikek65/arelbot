@@ -21,6 +21,7 @@ data/media_settings.json
 # Generated/runtime artifacts
 .pytest_cache/
 dist/
+deploy/releases/
 temp/
 scratch/
 test_downloads/
@@ -67,4 +68,3 @@ test.json
 
 .docker/*.crt
 .docker/*.cer
-

@@ -27,8 +27,8 @@ class RouletteGame:
     def spin(self) -> str:
         """Simple single-shot roulette (legacy)."""
         if random.randint(1, 6) == 1:
-            return "ğŸ’¥ <b>GÃœÃœÃœM!</b> ÅansÄ±n yaver gitmedi, masadan Ã§ekiliyorsun. (Mermi doluydu!) ğŸ’€"
-        return "ğŸ’¨ <i>TÄ±k...</i> ÅanslÄ±sÄ±n, bu tur boÅŸ geÃ§ti. Tabanca bir sonrakine dÃ¶nÃ¼yor. ğŸ˜Œ"
+            return "💥 <b>GÜÜÜM!</b> Şansın yaver gitmedi, masadan çekiliyorsun. (Mermi doluydu!) 💀"
+        return "💨 <i>Tık...</i> Şanslısın, bu tur boş geçti. Tabanca bir sonrakine dönüyor. 😌"
 
     def pull_trigger(self, game_state: Dict, player_name: str) -> Dict:
         """Pull the trigger in a multi-round game."""
@@ -39,13 +39,13 @@ class RouletteGame:
         if hit:
             return {
                 "hit": True,
-                "message": f"ğŸ’¥ <b>GÃœÃœÃœM!</b>\n\nâ˜ ï¸ <b>{player_name}</b> masadan elendi! Mermi dolu geldi... ğŸ’€",
+                "message": f"💥 <b>GÜÜÜM!</b>\n\n☠️ <b>{player_name}</b> masadan elendi! Mermi dolu geldi... 💀",
                 "player": player_name
             }
         else:
             return {
                 "hit": False,
-                "message": f"ğŸ’¨ <i>TÄ±k...</i>\n\nğŸ˜Œ <b>{player_name}</b> bu turda kurtuldu! Tabanca bir sonrakine geÃ§iyor...",
+                "message": f"💨 <i>Tık...</i>\n\n😌 <b>{player_name}</b> bu turda kurtuldu! Tabanca bir sonrakine geçiyor...",
                 "player": player_name
             }
 
@@ -55,58 +55,58 @@ class RouletteGame:
         loser = p2 if winner == p1 else p1
         
         scenarios = [
-            f"âš”ï¸ <b>{p1}</b> ve <b>{p2}</b> sÄ±rt sÄ±rta verip 10 adÄ±m attÄ±lar...\n"
-            f"ğŸ’¥ <b>BANG!</b> {winner} daha hÄ±zlÄ± Ã§ekti! {loser} yere yÄ±ÄŸÄ±ldÄ±.\n\n"
-            f"ğŸ† Kazanan: <b>{winner}</b> âš°ï¸",
+            f"⚔️ <b>{p1}</b> ve <b>{p2}</b> sırt sırta verip 10 adım attılar...\n"
+            f"💥 <b>BANG!</b> {winner} daha hızlı çekti! {loser} yere yığıldı.\n\n"
+            f"🏆 Kazanan: <b>{winner}</b> ⚰️",
             
-            f"âš”ï¸ <b>{p1}</b> kÄ±lÄ±cÄ±nÄ± Ã§ekti, <b>{p2}</b> gardÄ±nÄ± aldÄ±...\n"
-            f"ğŸ’¨ Ä°nanÄ±lmaz bir hamleyle <b>{winner}</b> rakibini silahsÄ±z bÄ±raktÄ±!\n\n"
-            f"ğŸ† Kazanan: <b>{winner}</b> ğŸ³ï¸",
+            f"⚔️ <b>{p1}</b> kılıcını çekti, <b>{p2}</b> gardını aldı...\n"
+            f"💨 İnanılmaz bir hamleyle <b>{winner}</b> rakibini silahsız bıraktı!\n\n"
+            f"🏆 Kazanan: <b>{winner}</b> 🏳️",
             
-            f"âš”ï¸ Gergin bir sessizlik... RÃ¼zgar esti...\n"
-            f"ğŸ‘€ <b>{loser}</b> gÃ¶zÃ¼nÃ¼ kÄ±rptÄ±ÄŸÄ± an <b>{winner}</b> hamlesini yaptÄ±!\n\n"
-            f"ğŸ† Kazanan: <b>{winner}</b> ğŸ¯",
+            f"⚔️ Gergin bir sessizlik... Rüzgar esti...\n"
+            f"👀 <b>{loser}</b> gözünü kırptığı an <b>{winner}</b> hamlesini yaptı!\n\n"
+            f"🏆 Kazanan: <b>{winner}</b> 🎯",
             
-            f"âš”ï¸ <b>{p1}</b> ile <b>{p2}</b> meydana Ã§Ä±ktÄ±...\n"
-            f"â³ 3... 2... 1... Ã‡EK!\n"
-            f"ğŸ’« <b>{winner}</b> yÄ±ldÄ±rÄ±m hÄ±zÄ±yla rakibini alt etti!\n\n"
-            f"ğŸ† Kazanan: <b>{winner}</b> ğŸ”¥",
+            f"⚔️ <b>{p1}</b> ile <b>{p2}</b> meydana çıktı...\n"
+            f"⏳ 3... 2... 1... ÇEK!\n"
+            f"💫 <b>{winner}</b> yıldırım hızıyla rakibini alt etti!\n\n"
+            f"🏆 Kazanan: <b>{winner}</b> 🔥",
             
-            f"âš”ï¸ Arena sessizleÅŸti... Ä°ki savaÅŸÃ§Ä± karÅŸÄ± karÅŸÄ±ya...\n"
-            f"ğŸŒªï¸ <b>{winner}</b> inanÄ±lmaz bir hÄ±zla saldÄ±rdÄ±!\n"
-            f"<b>{loser}</b> savunamadÄ± bile...\n\n"
-            f"ğŸ† Kazanan: <b>{winner}</b> âš¡"
+            f"⚔️ Arena sessizleşti... İki savaşçı karşı karşıya...\n"
+            f"🌪️ <b>{winner}</b> inanılmaz bir hızla saldırdı!\n"
+            f"<b>{loser}</b> savunamadı bile...\n\n"
+            f"🏆 Kazanan: <b>{winner}</b> ⚡"
         ]
         return random.choice(scenarios)
 
     def dice_roll(self) -> str:
         val = random.randint(1, 6)
-        dice_faces = {1: "âš€", 2: "âš", 3: "âš‚", 4: "âšƒ", 5: "âš„", 6: "âš…"}
-        return f"ğŸ² Zar atÄ±ldÄ±: {dice_faces[val]} <b>{val}</b>"
+        dice_faces = {1: "⚀", 2: "⚁", 3: "⚂", 4: "⚃", 5: "⚄", 6: "⚅"}
+        return f"🎲 Zar atıldı: {dice_faces[val]} <b>{val}</b>"
 
     def coin_flip(self) -> str:
         result = random.choice(["YAZI", "TURA"])
-        emoji = "ğŸª™" if result == "YAZI" else "ğŸ’°"
-        return f"{emoji} YazÄ± Tura: <b>{result}</b>"
+        emoji = "🪙" if result == "YAZI" else "💰"
+        return f"{emoji} Yazı Tura: <b>{result}</b>"
 
     def slot_machine(self) -> str:
         """3-reel slot machine."""
-        symbols = ["ğŸ’", "ğŸ‹", "ğŸŠ", "ğŸ‡", "ğŸ’", "7ï¸âƒ£", "ğŸ””", "â­"]
+        symbols = ["🍒", "🍋", "🍊", "🍇", "💎", "7️⃣", "🔔", "⭐"]
         reels = [random.choice(symbols) for _ in range(3)]
         
-        text = f"ğŸ° <b>Slot Makinesi</b>\n\n"
-        text += f"â”ƒ {reels[0]} â”ƒ {reels[1]} â”ƒ {reels[2]} â”ƒ\n\n"
+        text = f"🎰 <b>Slot Makinesi</b>\n\n"
+        text += f"┃ {reels[0]} ┃ {reels[1]} ┃ {reels[2]} ┃\n\n"
         
         if reels[0] == reels[1] == reels[2]:
-            if reels[0] == "7ï¸âƒ£":
-                text += "ğŸ¤‘ <b>JACKPOT!</b> ÃœÃ§lÃ¼ 7! BÃ¼yÃ¼k Ã¶dÃ¼lÃ¼ kazandÄ±n! ğŸ’°ğŸ’°ğŸ’°"
-            elif reels[0] == "ğŸ’":
-                text += "ğŸ’ <b>ELMAS!</b> ÃœÃ§lÃ¼ elmas! MÃ¼thiÅŸ Ã¶dÃ¼l! ğŸ’°ğŸ’°"
+            if reels[0] == "7️⃣":
+                text += "🤑 <b>JACKPOT!</b> Üçlü 7! Büyük ödülü kazandın! 💰💰💰"
+            elif reels[0] == "💎":
+                text += "💎 <b>ELMAS!</b> Üçlü elmas! Müthiş ödül! 💰💰"
             else:
-                text += f"ğŸŠ <b>KAZANDIN!</b> ÃœÃ§lÃ¼ {reels[0]}! Tebrikler! ğŸ†"
+                text += f"🎊 <b>KAZANDIN!</b> Üçlü {reels[0]}! Tebrikler! 🏆"
         elif reels[0] == reels[1] or reels[1] == reels[2]:
-            text += "ğŸ˜Š Ä°kili eÅŸleÅŸme! KÃ¼Ã§Ã¼k bir Ã¶dÃ¼l kazandÄ±n. ğŸ’°"
+            text += "😊 İkili eşleşme! Küçük bir ödül kazandın. 💰"
         else:
-            text += "ğŸ˜” Bu sefer olmadÄ±... Tekrar dene! ğŸ²"
+            text += "😔 Bu sefer olmadı... Tekrar dene! 🎲"
         
         return text

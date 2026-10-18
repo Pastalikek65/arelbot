@@ -13,14 +13,14 @@ from types import SimpleNamespace
 
 def test_subscription_parser_validates_feature_city_and_interval():
     service = SubscriptionService(SubscriptionStore())
-    request = service.parse(["hava", "Ä°stanbul", "1sa"])
+    request = service.parse(["hava", "İstanbul", "1sa"])
     assert request.feature_key == "weather"
-    assert request.params == {"city": "Ä°stanbul"}
+    assert request.params == {"city": "İstanbul"}
     assert request.interval_seconds == 3600
 
-    air_quality = service.parse(["hava", "kalite", "Ä°stanbul", "3sa"])
+    air_quality = service.parse(["hava", "kalite", "İstanbul", "3sa"])
     assert air_quality.feature_key == "air_quality"
-    assert air_quality.params == {"city": "Ä°stanbul"}
+    assert air_quality.params == {"city": "İstanbul"}
     assert air_quality.interval_seconds == 3 * 3600
 
     earthquake = service.parse(["deprem", "30dk"])
@@ -53,8 +53,8 @@ def test_subscription_parser_accepts_turkish_daily_and_weekly_words():
 
 def test_threshold_parser_accepts_turkish_currency_and_fuel_alerts():
     service = SubscriptionService(SubscriptionStore())
-    currency = service.parse_threshold(["doviz", "usd", "40", "Ã¼stÃ¼"])
-    fuel = service.parse_threshold(["akaryakit", "benzin", "50", "altÄ±"])
+    currency = service.parse_threshold(["doviz", "usd", "40", "üstü"])
+    fuel = service.parse_threshold(["akaryakit", "benzin", "50", "altı"])
 
     assert currency.feature_key == "currency"
     assert currency.condition == {"kind": "threshold", "metric": "usd", "operator": "above", "value": 40.0}
@@ -133,7 +133,7 @@ async def test_existing_subscription_is_backfilled_with_dedupe_policy():
 @pytest.mark.asyncio
 async def test_threshold_alert_creation_deduplicates_same_condition():
     service = SubscriptionService(SubscriptionStore())
-    request = service.parse_threshold(["doviz", "usd", "40", "Ã¼stÃ¼"])
+    request = service.parse_threshold(["doviz", "usd", "40", "üstü"])
     first = await service.create_threshold(7, -100, request)
     second = await service.create_threshold(7, -100, request)
     assert first["subscription_id"] == second["subscription_id"]
@@ -232,8 +232,8 @@ async def test_failed_delivery_key_can_be_reclaimed_for_retry():
 @pytest.mark.asyncio
 async def test_same_weather_tracking_is_updated_instead_of_duplicated():
     service = SubscriptionService(SubscriptionStore())
-    first = await service.create(7, -7, service.parse(["hava", "Ä°st"] ))
-    second_request = service.parse(["hava", "Ä°st", "1sa"])
+    first = await service.create(7, -7, service.parse(["hava", "İst"] ))
+    second_request = service.parse(["hava", "İst", "1sa"])
     second = await service.create(7, -7, second_request)
 
     assert first["subscription_id"] == second["subscription_id"]
@@ -276,7 +276,7 @@ async def test_subscription_defer_moves_due_item_without_claiming():
         user_id=7,
         chat_id=7,
         feature_key="weather",
-        params={"city": "Ä°stanbul"},
+        params={"city": "İstanbul"},
         interval_seconds=3600,
         next_run_at=datetime.now(timezone.utc) - timedelta(seconds=1),
     )

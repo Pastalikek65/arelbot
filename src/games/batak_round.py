@@ -13,7 +13,7 @@ from typing import Any
 
 
 class BatakRound:
-    SUITS = ("â™ ", "â™¥", "â™¦", "â™£")
+    SUITS = ("♠", "♥", "♦", "♣")
     RANKS = ("2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A")
     VALUES = {rank: index for index, rank in enumerate(RANKS, start=2)}
     MAX_PLAYERS = 4
@@ -127,26 +127,26 @@ class BatakRound:
         phase = state.get("phase")
         if phase == "lobby":
             return (
-                "ğŸƒ <b>Batak masasÄ±</b>\n\n"
+                "🃏 <b>Batak masası</b>\n\n"
                 f"Oyuncular: <b>{names}</b> ({len(players)}/{cls.MAX_PLAYERS})\n"
-                "KatÄ±lmak iÃ§in butona, masa dolunca baÅŸlatmak iÃ§in baÅŸlat butonuna basÄ±n."
+                "Katılmak için butona, masa dolunca başlatmak için başlat butonuna basın."
             )
         if phase == "completed":
             scores = state.get("scores", {})
-            lines = ["ğŸ† <b>Batak eli tamamlandÄ±</b>", ""]
+            lines = ["🏆 <b>Batak eli tamamlandı</b>", ""]
             for player in players:
                 player_id = str(player["id"])
-                lines.append(f"â€¢ {player.get('name', 'Oyuncu')}: <b>{int(scores.get(player_id, 0))}</b> puan")
+                lines.append(f"• {player.get('name', 'Oyuncu')}: <b>{int(scores.get(player_id, 0))}</b> puan")
             return "\n".join(lines)
         current = int(state.get("current_turn", 0))
         current_name = next((p.get("name", "Oyuncu") for p in players if int(p["id"]) == current), "Oyuncu")
         trick = state.get("trick", [])
-        table = " ".join(f"{item['player_id']}: {item['card'][0]}{item['card'][1]}" for item in trick) or "boÅŸ"
+        table = " ".join(f"{item['player_id']}: {item['card'][0]}{item['card'][1]}" for item in trick) or "boş"
         hand = state.get("hands", {}).get(str(int(viewer_id)), [])
-        hand_text = " ".join(f"{index + 1}:{card[0]}{card[1]}" for index, card in enumerate(hand)) or "el tamamlandÄ±"
+        hand_text = " ".join(f"{index + 1}:{card[0]}{card[1]}" for index, card in enumerate(hand)) or "el tamamlandı"
         return (
-            "ğŸƒ <b>Batak</b>\n\n"
-            f"Koz: <b>{state.get('trump')}</b> Â· SÄ±ra: <b>{current_name}</b>\n"
+            "🃏 <b>Batak</b>\n\n"
+            f"Koz: <b>{state.get('trump')}</b> · Sıra: <b>{current_name}</b>\n"
             f"Masadaki kartlar: {table}\n"
             f"Senin elin: {hand_text}"
         )

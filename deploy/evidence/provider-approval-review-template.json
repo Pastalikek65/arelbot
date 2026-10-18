@@ -17,7 +17,7 @@
     {
       "feature_key": "bim_deals",
       "provider_key": "get_bim_deals",
-      "source_name": "BÄ°M",
+      "source_name": "BİM",
       "source_fingerprint": "ae736bec2574db5ce586f679f31d690ca4300b0f998b635da904b927b5eac305",
       "current_source_governance": "approved",
       "current_robots_policy": "allowed",
@@ -28,8 +28,8 @@
     {
       "feature_key": "breaking_news",
       "provider_key": "get_breaking_news",
-      "source_name": "TRT Haber + AA RSS",
-      "source_fingerprint": "777df41b88234f61f549e15c4b3e6e4276e1ef460969659cbf01dc80dd5f9aae",
+      "source_name": "TRT Haber RSS",
+      "source_fingerprint": "a0f98928e4d39d11a7ade98930161bd34f67f858445ce9f8f6467c5f5acd2b2f",
       "current_source_governance": "approved",
       "current_robots_policy": "allowed",
       "current_terms_review": "approved",
@@ -50,8 +50,8 @@
     {
       "feature_key": "culture_recommendation",
       "provider_key": "culture_tool",
-      "source_name": "Open Library / TVmaze / iTunes",
-      "source_fingerprint": "01da6f9502c19ea519b34ada25b2c4184b2e18ab3ad9b0707a65a3438805bca2",
+      "source_name": "Open Library / TVmaze / iTunes Search",
+      "source_fingerprint": "196ec52f56a7a4eb15e6cffcca1551b72dcc3c78df1f331a18d692cd74a64c09",
       "current_source_governance": "approved",
       "current_robots_policy": "allowed",
       "current_terms_review": "approved",
@@ -61,7 +61,7 @@
     {
       "feature_key": "currency",
       "provider_key": "get_currency_rates",
-      "source_name": "DÃ¶viz.com",
+      "source_name": "Döviz.com",
       "source_fingerprint": "fc911d71aad7e0e42d3eb23f76b625a3d58f225cdf185acab764effd3e01e41c",
       "current_source_governance": "approved",
       "current_robots_policy": "allowed",
@@ -73,7 +73,7 @@
       "feature_key": "earthquakes",
       "provider_key": "get_recent_earthquakes",
       "source_name": "AFAD",
-      "source_fingerprint": "ea390d24d543d6f914040732e6c9347de7278252b924cc5897fa657bc612fc75",
+      "source_fingerprint": "f61f1f6e08f15a1df739a7c7749861e8f46e966960302efa184c2788eed8809a",
       "current_source_governance": "approved",
       "current_robots_policy": "allowed",
       "current_terms_review": "approved",
@@ -83,8 +83,8 @@
     {
       "feature_key": "fuel",
       "provider_key": "get_fuel_prices",
-      "source_name": "DÃ¶viz.com",
-      "source_fingerprint": "ea7a27d58e6e5e816e62e81746e257e1071ec5d3c9a4ef911362462c5c693471",
+      "source_name": "EPDK / Güncel Akaryakıt Fiyatları",
+      "source_fingerprint": "b8d89a921fcf6e849900cb193d882ca880bbada347440f5f4415f7cc400b5e03",
       "current_source_governance": "approved",
       "current_robots_policy": "allowed",
       "current_terms_review": "approved",
@@ -138,8 +138,8 @@
     {
       "feature_key": "news_digest",
       "provider_key": "rss_news_digest",
-      "source_name": "RSS haber akÄ±ÅŸlarÄ±",
-      "source_fingerprint": "5cf9d6da0b0dc057bcaa248a1c1d291e7a3c0bd9bbc0c78dd393b5941122e8c4",
+      "source_name": "RSS haber akışları",
+      "source_fingerprint": "687f90c5b9f51ac2af31f0c373b1cbca733556d46ec932f529fb3e8d16e3d4a5",
       "current_source_governance": "approved",
       "current_robots_policy": "allowed",
       "current_terms_review": "approved",
@@ -149,7 +149,7 @@
     {
       "feature_key": "pharmacy",
       "provider_key": "get_pharmacies",
-      "source_name": "NÃ¶betÃ§i Eczaneler",
+      "source_name": "Nöbetçi Eczaneler",
       "source_fingerprint": "6e296b20527b544b63ca969f4af3f412fa173fbd37423f06c2ce3c1e96e56ea1",
       "current_source_governance": "approved",
       "current_robots_policy": "allowed",
@@ -160,7 +160,7 @@
     {
       "feature_key": "prayer_times",
       "provider_key": "get_prayer_times",
-      "source_name": "HabertÃ¼rk",
+      "source_name": "Habertürk",
       "source_fingerprint": "5659d34ebd52679c6efa1d012692ff0787ea6a737d68da72e26de9531c3f375a",
       "current_source_governance": "pending",
       "current_robots_policy": "review_required",

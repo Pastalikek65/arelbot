@@ -2,6 +2,57 @@
   "schema_version": 1,
   "project": "arelbot",
   "purpose": "Machine-readable phase contract for release and coding agents.",
+  "evidence_contracts": [
+    {
+      "file": "vds-readiness.json",
+      "kind": "vds_read_only",
+      "requires_live": true,
+      "offline_replay_sufficient": false,
+      "owner_action": "Run the read-only SSH/Docker readiness probe against the target VDS with verified host keys."
+    },
+    {
+      "file": "telegram-mutation-live.json",
+      "kind": "telegram_disposable_mutation",
+      "requires_live": true,
+      "offline_replay_sufficient": false,
+      "owner_action": "Run the bounded mutation probe in a disposable staging chat with operator-supplied file and callback identifiers."
+    },
+    {
+      "file": "media-staging-full-matrix.json",
+      "kind": "external_media_matrix",
+      "requires_live": true,
+      "offline_replay_sufficient": false,
+      "owner_action": "Run the bounded live TikTok/YouTube/X matrix at the configured concurrency and chat-slot SLO; record an explicit owner waiver for Instagram source-access restrictions."
+    },
+    {
+      "file": "vds-backup-restore.json",
+      "kind": "vds_disposable_backup_restore",
+      "requires_live": true,
+      "offline_replay_sufficient": false,
+      "owner_action": "Run backup and restore against disposable VDS namespaces and retain only the secret-free digest report."
+    },
+    {
+      "file": "monitoring-alert-delivery.json",
+      "kind": "monitoring_live_delivery",
+      "requires_live": true,
+      "offline_replay_sufficient": false,
+      "owner_action": "Send the bounded canary through the VDS Alertmanager webhook and verify receiver delivery counters."
+    },
+    {
+      "file": "provider-governance-approval.json",
+      "kind": "provider_operator_approval",
+      "requires_live": true,
+      "offline_replay_sufficient": false,
+      "owner_action": "Complete terms, robots, attribution and production sign-off for every enabled external provider, then emit fingerprint-bound approval evidence."
+    },
+    {
+      "file": "evren-staging.json",
+      "kind": "evren_live_completion",
+      "requires_live": true,
+      "offline_replay_sufficient": false,
+      "owner_action": "Run the bounded EVREN completion probe with the deployment secret; never archive the key, prompt or model output."
+    }
+  ],
   "phases": [
     {
       "id": "0",
@@ -60,7 +111,7 @@
         "vds-backup-restore.json",
         "monitoring-alert-delivery.json",
         "provider-governance-approval.json",
-        "cleanapis-staging.json"
+        "evren-staging.json"
       ]
     }
   ]

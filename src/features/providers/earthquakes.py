@@ -140,11 +140,11 @@ class EarthquakeProvider:
 
     @staticmethod
     def _render(rows: list[dict[str, Any]]) -> str:
-        lines = ["<b>ğŸ“Š Son Depremler (AFAD)</b>", ""]
+        lines = ["<b>📊 Son Depremler (AFAD)</b>", ""]
         for item in rows:
             lines.append(
-                f"ğŸ“ {html.escape(str(item['location']))} | <b>{html.escape(str(item['magnitude']))}</b>\n"
-                f"ğŸ•’ {html.escape(str(item['date']))} Â· Derinlik: {html.escape(str(item['depth_km']))} km"
+                f"📍 {html.escape(str(item['location']))} | <b>{html.escape(str(item['magnitude']))}</b>\n"
+                f"🕒 {html.escape(str(item['date']))} · Derinlik: {html.escape(str(item['depth_km']))} km"
             )
         return "\n\n".join(lines)
 

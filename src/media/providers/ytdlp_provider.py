@@ -1,6 +1,8 @@
 """yt-dlp provider with bounded downloads and explicit cookie fallback."""
 
 import asyncio
+import gc
+import io
 import logging
 import shutil
 import tempfile
@@ -34,6 +36,10 @@ class MediaDownloadError(RuntimeError):
     def __init__(self, code: str, message: str):
         super().__init__(message)
         self.code = code
+
+
+class _DeferredDownloadTimeout(asyncio.TimeoutError):
+    """Timeout whose worker still owns files and must be reaped first."""
 
 
 # Public extractors sometimes return a login wall to a default Python client
@@ -72,13 +78,56 @@ class YtDlpProvider:
         self.cookie_vault = cookie_vault
         self.cookie_enabled = cookie_enabled
         self.aria2_enabled = bool(aria2_enabled)
+        self._background_cleanup_tasks: set[asyncio.Task[Any]] = set()
+        self._deferred_cleanup_dirs: set[Path] = set()
+
+    async def wait_for_background_cleanup(self) -> None:
+        """Wait for timed-out yt-dlp workers before the spool is removed."""
+        while self._background_cleanup_tasks:
+            tasks = tuple(self._background_cleanup_tasks)
+            await asyncio.gather(*tasks, return_exceptions=True)
+
+    @staticmethod
+    async def _reap_timed_out_download(task: asyncio.Task[Any], job_dir: Path) -> None:
+        try:
+            await task
+        except BaseException:
+            pass
+        shutil.rmtree(job_dir, ignore_errors=True)
+
+    def _schedule_timed_out_cleanup(self, task: asyncio.Task[Any], job_dir: Path) -> None:
+        self._deferred_cleanup_dirs.add(job_dir)
+
+        async def reap() -> None:
+            try:
+                await self._reap_timed_out_download(task, job_dir)
+            finally:
+                self._deferred_cleanup_dirs.discard(job_dir)
+
+        reaper = asyncio.create_task(reap())
+        self._background_cleanup_tasks.add(reaper)
+        reaper.add_done_callback(self._background_cleanup_tasks.discard)
+
+    async def _bounded_download(
+        self,
+        url: str,
+        job_dir: Path,
+        cookie_file: Optional[str],
+    ) -> Dict[str, Any]:
+        """Bound the await without cancelling the worker writing into spool."""
+        task = asyncio.create_task(asyncio.to_thread(self._download_sync, url, job_dir, cookie_file))
+        try:
+            return await asyncio.wait_for(asyncio.shield(task), self.timeout)
+        except asyncio.TimeoutError as exc:
+            self._schedule_timed_out_cleanup(task, job_dir)
+            raise _DeferredDownloadTimeout() from exc
 
     async def probe(self, url: str) -> Dict[str, Any]:
         """Return lightweight metadata without downloading the media."""
         try:
             import yt_dlp
         except ImportError as exc:
-            raise MediaDownloadError("provider_unavailable", "yt-dlp kurulmamÄ±ÅŸ") from exc
+            raise MediaDownloadError("provider_unavailable", "yt-dlp kurulmamış") from exc
         try:
             await ensure_public_host(url)
             options = {
@@ -113,12 +162,12 @@ class YtDlpProvider:
                 "platform": platform_for_url(url),
             }
         except asyncio.TimeoutError as exc:
-            raise MediaDownloadError("timeout", "Metadata sorgusu zaman aÅŸÄ±mÄ±na uÄŸradÄ±") from exc
+            raise MediaDownloadError("timeout", "Metadata sorgusu zaman aşımına uğradı") from exc
         except InvalidMediaURL as exc:
             # Keep the shared SSRF/private-host policy observable at the
             # media boundary instead of hiding it behind ``probe_failed``.
             code = str(exc.args[0] if exc.args else "invalid_url")[:64]
-            raise MediaDownloadError(code, "BaÄŸlantÄ± gÃ¼venli bir dÄ±ÅŸ hosta iÅŸaret etmiyor") from exc
+            raise MediaDownloadError(code, "Bağlantı güvenli bir dış hosta işaret etmiyor") from exc
         except MediaDownloadError:
             raise
         except Exception as exc:
@@ -146,7 +195,7 @@ class YtDlpProvider:
             try:
                 self.cookie_vault.load_to_file(platform, str(cookie_path))
             except CookieVaultError as exc:
-                raise MediaDownloadError("cookie_invalid", "YÃ¶netici cookie kasasÄ± aÃ§Ä±lamadÄ±") from exc
+                raise MediaDownloadError("cookie_invalid", "Yönetici cookie kasası açılamadı") from exc
             cookie_options = dict(options)
             cookie_options["cookiefile"] = str(cookie_path)
             try:
@@ -155,7 +204,7 @@ class YtDlpProvider:
                     min(self.timeout, 8),
                 )
             except asyncio.TimeoutError as exc:
-                raise MediaDownloadError("timeout", "Cookie ile metadata sorgusu zaman aÅŸÄ±mÄ±na uÄŸradÄ±") from exc
+                raise MediaDownloadError("timeout", "Cookie ile metadata sorgusu zaman aşımına uğradı") from exc
             except Exception as exc:
                 code, message = self._safe_source_error(exc, phase="probe")
                 raise MediaDownloadError(code, message) from exc
@@ -179,18 +228,22 @@ class YtDlpProvider:
         try:
             await ensure_public_host(url)
         except InvalidMediaURL as exc:
-            raise MediaDownloadError(exc.args[0] if exc.args else "invalid_url", "BaÄŸlantÄ± gÃ¼venli bir dÄ±ÅŸ hosta iÅŸaret etmiyor") from exc
+            raise MediaDownloadError(exc.args[0] if exc.args else "invalid_url", "Bağlantı güvenli bir dış hosta işaret etmiyor") from exc
         platform = platform_for_url(url)
         job_dir = self.download_dir / job_id
         job_dir.mkdir(parents=True, exist_ok=True)
         completed = False
+        deferred_cleanup = False
         try:
             try:
-                result = await asyncio.wait_for(asyncio.to_thread(self._download_sync, url, job_dir, None), self.timeout)
+                result = await self._bounded_download(url, job_dir, None)
                 completed = True
                 return result
+            except _DeferredDownloadTimeout as public_error:
+                deferred_cleanup = True
+                raise MediaDownloadError("timeout", "download timeout") from public_error
             except asyncio.TimeoutError as public_error:
-                raise MediaDownloadError("timeout", "Ä°ndirme zaman aÅŸÄ±mÄ±na uÄŸradÄ±") from public_error
+                raise MediaDownloadError("timeout", "İndirme zaman aşımına uğradı") from public_error
             except Exception as public_error:
                 if isinstance(public_error, MediaDownloadError) and public_error.code in {
                     "file_too_large", "duration_limit", "non_public_host", "timeout"
@@ -205,29 +258,31 @@ class YtDlpProvider:
                 try:
                     self.cookie_vault.load_to_file(platform, str(cookie_path))
                 except CookieVaultError as exc:
-                    raise MediaDownloadError("cookie_invalid", "YÃ¶netici cookie kasasÄ± aÃ§Ä±lamadÄ±") from exc
+                    raise MediaDownloadError("cookie_invalid", "Yönetici cookie kasası açılamadı") from exc
                 try:
-                    result = await asyncio.wait_for(
-                        asyncio.to_thread(self._download_sync, url, job_dir, str(cookie_path)), self.timeout
-                    )
+                    result = await self._bounded_download(url, job_dir, str(cookie_path))
                     result["used_cookie"] = True
                     completed = True
                     return result
+                except _DeferredDownloadTimeout as cookie_error:
+                    deferred_cleanup = True
+                    raise MediaDownloadError("timeout", "cookie download timeout") from cookie_error
                 except Exception as cookie_error:
                     if isinstance(cookie_error, MediaDownloadError):
                         raise cookie_error
                     code, message = self._safe_source_error(cookie_error, phase="download")
                     raise MediaDownloadError(code, message) from cookie_error
         except asyncio.TimeoutError as exc:
-            raise MediaDownloadError("timeout", "Ä°ndirme zaman aÅŸÄ±mÄ±na uÄŸradÄ±") from exc
+            raise MediaDownloadError("timeout", "İndirme zaman aşımına uğradı") from exc
         finally:
-            try:
-                cookie_path = job_dir / "admin.cookies.txt"
-                if cookie_path.exists():
-                    cookie_path.unlink()
-            except OSError:
-                logger.warning("Could not remove temporary cookie file for job %s", job_id)
-            if not completed:
+            if not deferred_cleanup:
+                try:
+                    cookie_path = job_dir / "admin.cookies.txt"
+                    if cookie_path.exists():
+                        cookie_path.unlink()
+                except OSError:
+                    logger.warning("Could not remove temporary cookie file for job %s", job_id)
+            if not completed and not deferred_cleanup:
                 # A failed provider attempt has no result for the service's
                 # outer cleanup hook. Remove partial media here so retries do
                 # not inherit untrusted or oversized artifacts.
@@ -237,7 +292,7 @@ class YtDlpProvider:
         try:
             import yt_dlp
         except ImportError as exc:
-            raise MediaDownloadError("provider_unavailable", "yt-dlp kurulmamÄ±ÅŸ") from exc
+            raise MediaDownloadError("provider_unavailable", "yt-dlp kurulmamış") from exc
 
         output = str(job_dir / "media.%(ext)s")
 
@@ -245,7 +300,7 @@ class YtDlpProvider:
             downloaded = data.get("downloaded_bytes") or 0
             total = data.get("total_bytes") or data.get("total_bytes_estimate") or 0
             if downloaded > self.max_bytes or total > self.max_bytes:
-                raise MediaDownloadError("file_too_large", "Medya dosyasÄ± Telegram gÃ¶nderim sÄ±nÄ±rÄ±nÄ± aÅŸÄ±yor")
+                raise MediaDownloadError("file_too_large", "Medya dosyası Telegram gönderim sınırını aşıyor")
 
         options: Dict[str, Any] = {
             "format": "best[ext=mp4][height<=720][filesize<47000000]/best[height<=720][filesize<47000000]/best[filesize<47000000]/best[ext=mp4]/best",
@@ -292,25 +347,27 @@ class YtDlpProvider:
             with yt_dlp.YoutubeDL(options) as ydl:
                 info = ydl.extract_info(url, download=True)
         except MediaDownloadError:
+            self._close_open_files_under(job_dir)
             raise
         except Exception as exc:
+            self._close_open_files_under(job_dir)
             message = str(exc).lower()
             if "max file size" in message or "file_too_large" in message:
-                raise MediaDownloadError("file_too_large", "Medya dosyasÄ± Telegram gÃ¶nderim sÄ±nÄ±rÄ±nÄ± aÅŸÄ±yor") from exc
+                raise MediaDownloadError("file_too_large", "Medya dosyası Telegram gönderim sınırını aşıyor") from exc
             raise
 
         if not info:
-            raise MediaDownloadError("empty_result", "Kaynak medya bulunamadÄ±")
+            raise MediaDownloadError("empty_result", "Kaynak medya bulunamadı")
         duration = info.get("duration")
         if self.max_duration and duration and duration > self.max_duration:
             raise MediaDownloadError("duration_limit", f"Video {self.max_duration} saniyeden uzun")
         paths = [path for path in job_dir.glob("media.*") if path.is_file() and path.name != "admin.cookies.txt"]
         if not paths:
-            raise MediaDownloadError("empty_result", "Ä°ndirilen medya dosyasÄ± bulunamadÄ±")
+            raise MediaDownloadError("empty_result", "İndirilen medya dosyası bulunamadı")
         path = paths[0]
         size = path.stat().st_size
         if size > self.max_bytes:
-            raise MediaDownloadError("file_too_large", "Medya dosyasÄ± Telegram gÃ¶nderim sÄ±nÄ±rÄ±nÄ± aÅŸÄ±yor")
+            raise MediaDownloadError("file_too_large", "Medya dosyası Telegram gönderim sınırını aşıyor")
         return {
             "path": str(path),
             "title": (info.get("title") or "Sosyal medya videosu")[:900],
@@ -335,6 +392,29 @@ class YtDlpProvider:
         return options
 
     @staticmethod
+    def _close_open_files_under(job_dir: Path) -> None:
+        """Release extractor-owned file handles before Windows spool cleanup."""
+        try:
+            root = job_dir.resolve()
+            candidates = tuple(gc.get_objects())
+        except OSError:
+            return
+        except Exception:
+            return
+        for candidate in candidates:
+            try:
+                if not isinstance(candidate, (io.BufferedIOBase, io.RawIOBase)):
+                    continue
+                name = getattr(candidate, "name", None)
+                if not name or candidate.closed:
+                    continue
+                path = Path(str(name)).resolve()
+                if path == root or root in path.parents:
+                    candidate.close()
+            except Exception:
+                continue
+
+    @staticmethod
     def _safe_source_error(exc: Exception, *, phase: str) -> tuple[str, str]:
         """Classify known upstream access failures without exposing their text."""
 
@@ -342,16 +422,20 @@ class YtDlpProvider:
         if any(marker in text for marker in (
             "sign in", "login required", "log in", "private", "restricted", "not available",
         )):
-            return "source_access_restricted", "Kaynak herkese aÃ§Ä±k eriÅŸime izin vermiyor"
+            return "source_access_restricted", "Kaynak herkese açık erişime izin vermiyor"
         if any(marker in text for marker in ("rate limit", "too many requests", "http error 429", "429")):
-            return "source_rate_limited", "Kaynak geÃ§ici olarak Ã§ok fazla istek aldÄ±"
-        return f"{phase}_failed", "Kaynak metadata bilgisi alÄ±namadÄ±" if phase == "probe" else "Bu baÄŸlantÄ± ÅŸu anda indirilemedi"
+            return "source_rate_limited", "Kaynak geçici olarak çok fazla istek aldı"
+        return f"{phase}_failed", "Kaynak metadata bilgisi alınamadı" if phase == "probe" else "Bu bağlantı şu anda indirilemedi"
 
-    @staticmethod
-    def cleanup(result: Optional[Dict[str, Any]], job_id: str, download_dir: str) -> None:
+    def cleanup(self, result: Optional[Dict[str, Any]], job_id: str, download_dir: str) -> None:
+        job_dir = Path(download_dir) / job_id
+        if job_dir in self._deferred_cleanup_dirs:
+            # A timed-out worker still owns files in this directory. Its
+            # reaper removes the directory after the worker has stopped.
+            return
         if result and result.get("path"):
             try:
                 Path(result["path"]).unlink(missing_ok=True)
             except OSError:
                 pass
-        shutil.rmtree(Path(download_dir) / job_id, ignore_errors=True)
+        shutil.rmtree(job_dir, ignore_errors=True)

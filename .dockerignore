@@ -6,4 +6,5 @@ downloads
 temp
 data/cookies
 .git
-.docker
+.docker/*
+!.docker/empty-ca.pem

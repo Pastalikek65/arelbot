@@ -37,7 +37,7 @@ async def test_roulette_lobby_join_start_and_turn_are_persistent(monkeypatch):
     assert started["state"]["phase"] == "playing"
     assert started["state"]["current_player_id"] == 1
 
-    monkeypatch.setattr("src.services.roulette_service.RouletteGame.pull_trigger", lambda self, state, player_name: {"hit": False, "message": "tÄ±k", "player": player_name})
+    monkeypatch.setattr("src.services.roulette_service.RouletteGame.pull_trigger", lambda self, state, player_name: {"hit": False, "message": "tık", "player": player_name})
     result = await service.pull(chat_id=-100, user_id=1, action_id="pull-1")
 
     assert result["status"] == "playing"

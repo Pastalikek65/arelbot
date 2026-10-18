@@ -61,6 +61,22 @@ def test_monitoring_bindings_are_loopback_only():
     assert '"127.0.0.1:${ALERTMANAGER_PORT:-9093}:9093"' in compose
 
 
+def test_worker_uses_entrypoint_and_mounts_extra_ca_secret():
+    """Worker TLS setup must match the bot path when a CA is configured."""
+    compose = (ROOT / "docker-compose.yml").read_text(encoding="utf-8")
+    worker = compose.split("\n  worker:\n", 1)[1].split("\n  alertmanager:\n", 1)[0]
+    assert 'command: ["./entrypoint.sh", "python", "-m", "src.worker"]' in worker
+    assert "ARELBOT_EXTRA_CA_CERT: /run/secrets/arelbot_ca" in worker
+    assert "      - arelbot_ca" in worker
+
+
+def test_entrypoint_preserves_default_and_explicit_commands():
+    entrypoint = (ROOT / "entrypoint.sh").read_text(encoding="utf-8")
+    assert 'if [[ "$#" -gt 0 ]]; then' in entrypoint
+    assert 'exec "$@"' in entrypoint
+    assert "exec python main.py" in entrypoint
+
+
 def test_monitoring_profile_is_a_valid_compose_graph():
     """Prometheus/Grafana must pull in the processes they scrape.
 

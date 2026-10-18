@@ -281,4 +281,3 @@ async def test_message_handler_log_event_is_suppressed_in_errors_only_mode(monke
     await handler._log_event(SimpleNamespace(bot=Bot()), message="normal event", chat_type="private")
 
     assert sent == []
-

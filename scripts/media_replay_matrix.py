@@ -19,6 +19,7 @@ import sys
 import tempfile
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -36,6 +37,8 @@ class MatrixError(ValueError):
 _ID_RE = re.compile(r"^[a-z][a-z0-9_-]{1,48}$")
 _PLATFORMS = frozenset({"instagram", "tiktok", "youtube", "x", "facebook", "reddit"})
 _MAX_CASES = 16
+_SENSITIVE_KEY_RE = re.compile(r"(?i)(?:token|cookie|password|authorization|api[_-]?key|private[_-]?key|secret)")
+_TOKEN_RE = re.compile(r"\b\d{6,}:[A-Za-z0-9_-]{20,}\b")
 
 
 def load_matrix(path: Path) -> list[dict[str, str]]:
@@ -61,6 +64,18 @@ def load_matrix(path: Path) -> list[dict[str, str]]:
         seen.add(case_id)
         raw_url = str(item.get("url") or "").strip()
         try:
+            raw_parts = urlsplit(raw_url)
+        except ValueError as exc:
+            raise MatrixError("matrix_fixture_port_invalid") from exc
+        if raw_parts.username or raw_parts.password:
+            raise MatrixError("matrix_fixture_url_unsafe")
+        try:
+            raw_port = raw_parts.port
+        except ValueError as exc:
+            raise MatrixError("matrix_fixture_port_invalid") from exc
+        if raw_port not in {None, 80, 443}:
+            raise MatrixError("matrix_fixture_port_invalid")
+        try:
             normalized = normalize_media_url(raw_url)
         except InvalidMediaURL as exc:
             raise MatrixError("matrix_url_invalid") from exc
@@ -68,7 +83,41 @@ def load_matrix(path: Path) -> list[dict[str, str]]:
         if platform not in _PLATFORMS or platform_for_url(normalized) != platform:
             raise MatrixError("matrix_platform_mismatch")
         result.append({"id": case_id, "url": normalized, "platform": platform})
+    validate_fixture_matrix(result)
     return result
+
+
+def validate_fixture_matrix(cases: list[dict[str, str]]) -> None:
+    """Validate the bounded, public-shape-only replay contract.
+
+    Replay cases are identifiers and URL shapes, not credentials or live
+    download instructions.  Keeping this check separate makes it reusable by
+    CI and prevents a future fixture from accidentally carrying an auth
+    component or an unsupported platform.
+    """
+
+    if not cases or len(cases) > _MAX_CASES:
+        raise MatrixError("matrix_cases_invalid")
+    seen: set[str] = set()
+    for case in cases:
+        case_id = str(case.get("id") or "")
+        url = str(case.get("url") or "")
+        platform = str(case.get("platform") or "").casefold()
+        if not _ID_RE.fullmatch(case_id) or case_id in seen:
+            raise MatrixError("matrix_case_id_invalid")
+        if platform not in _PLATFORMS:
+            raise MatrixError("matrix_platform_invalid")
+        parsed = urlsplit(url)
+        if parsed.scheme not in {"http", "https"} or parsed.username or parsed.password:
+            raise MatrixError("matrix_fixture_url_unsafe")
+        try:
+            if parsed.port not in {None, 80, 443}:
+                raise MatrixError("matrix_fixture_port_invalid")
+        except ValueError as exc:
+            raise MatrixError("matrix_fixture_port_invalid") from exc
+        if platform_for_url(url) != platform:
+            raise MatrixError("matrix_platform_mismatch")
+        seen.add(case_id)
 
 
 class _ReplayProvider:
@@ -175,13 +224,41 @@ async def run_replay(cases: list[dict[str, str]]) -> dict[str, Any]:
 def _write_report(path: Path, payload: dict[str, Any]) -> None:
     if path.exists() and path.is_symlink():
         raise MatrixError("report_target_symlink")
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.parent / f".{path.name}.{os.urandom(8).hex()}.tmp"
+    for parent in (path.parent, *path.parent.parents):
+        if parent.exists() and parent.is_symlink():
+            raise MatrixError("report_parent_symlink")
+    parent = path.parent.resolve()
+    parent.mkdir(parents=True, exist_ok=True)
+    if _contains_sensitive(payload):
+        raise MatrixError("report_secret_material")
+    temporary = parent / f".{path.name}.{os.urandom(8).hex()}.tmp"
     try:
         temporary.write_text(json.dumps(payload, ensure_ascii=True, indent=2) + "\n", encoding="utf-8")
+        if os.name != "nt":
+            os.chmod(temporary, 0o600)
         temporary.replace(path)
     finally:
         temporary.unlink(missing_ok=True)
+
+
+def _contains_sensitive(value: Any, *, key: str = "") -> bool:
+    """Reject credentials/URLs in replay evidence before it reaches disk."""
+
+    if isinstance(value, dict):
+        for child_key, child_value in value.items():
+            lowered = str(child_key).casefold()
+            if lowered == "secret_free" and isinstance(child_value, bool):
+                continue
+            if _SENSITIVE_KEY_RE.search(lowered) and child_value not in (None, False, "", 0):
+                return True
+            if _contains_sensitive(child_value, key=lowered):
+                return True
+        return False
+    if isinstance(value, list):
+        return any(_contains_sensitive(item, key=key) for item in value)
+    if isinstance(value, str):
+        return bool(_TOKEN_RE.search(value) or "authorization:" in value.casefold() or "cookie=" in value.casefold())
+    return False
 
 
 def main() -> int:

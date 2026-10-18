@@ -3,10 +3,92 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
+from enum import Enum
 import unicodedata
 from typing import Iterable
 
-from .catalog import normalize_word_game_category
+from .catalog import GameSession, normalize_word_game_category
+
+
+class TurnValidationCode(str, Enum):
+    OK = "ok"
+    SESSION_FINISHED = "session_finished"
+    EXPIRED = "expired"
+    NOT_A_PLAYER = "not_a_player"
+    NOT_YOUR_TURN = "not_your_turn"
+    INVALID_ACTION = "invalid_action"
+    DUPLICATE_ACTION = "duplicate_action"
+
+
+@dataclass(frozen=True, slots=True)
+class TurnValidation:
+    valid: bool
+    code: TurnValidationCode
+    reason: str = ""
+
+
+def validate_turn(
+    session: GameSession,
+    *,
+    user_id: int,
+    action_id: str,
+    now: datetime | None = None,
+) -> TurnValidation:
+    """Validate a turn before a handler mutates persisted game state."""
+
+    if session.status != "active":
+        return TurnValidation(False, TurnValidationCode.SESSION_FINISHED, "session is not active")
+    if session.is_expired(now):
+        return TurnValidation(False, TurnValidationCode.EXPIRED, "turn timeout elapsed")
+    if int(user_id) not in session.players:
+        return TurnValidation(False, TurnValidationCode.NOT_A_PLAYER, "user is not in this session")
+    if session.turn_user_id is not None and int(user_id) != int(session.turn_user_id):
+        return TurnValidation(False, TurnValidationCode.NOT_YOUR_TURN, "another player owns the turn")
+    action = str(action_id or "").strip()
+    if not action or len(action) > 180:
+        return TurnValidation(False, TurnValidationCode.INVALID_ACTION, "action id is invalid")
+    if action in session.processed_actions:
+        return TurnValidation(False, TurnValidationCode.DUPLICATE_ACTION, "action was already applied")
+    return TurnValidation(True, TurnValidationCode.OK)
+
+
+def next_combo(combo: int, *, success: bool, maximum: int = 20) -> int:
+    """Advance or reset a bounded combo counter after a validated turn."""
+
+    cap = max(1, min(100, int(maximum)))
+    return min(cap, max(0, int(combo or 0)) + 1) if success else 0
+
+
+def combo_multiplier(combo: int, *, step: float = 0.1, maximum: float = 3.0) -> float:
+    """Return a deterministic score multiplier for a combo streak."""
+
+    return min(float(maximum), max(1.0, 1.0 + max(0, int(combo or 0)) * max(0.0, float(step))))
+
+
+def is_turn_expired(session: GameSession, now: datetime | None = None) -> bool:
+    """Public timeout predicate shared by callbacks and scheduled cleanup."""
+
+    return session.is_expired(now)
+
+
+def calculate_score(
+    base_points: int | float,
+    *,
+    difficulty: object = "normal",
+    combo: int = 0,
+    hints_used: int = 0,
+    timed_out: bool = False,
+) -> int:
+    """Apply difficulty, combo and penalties to any game result."""
+
+    if timed_out:
+        return 0
+    profile = difficulty if isinstance(difficulty, DifficultyProfile) else normalize_difficulty(difficulty)
+    raw = max(0.0, float(base_points or 0.0))
+    raw *= profile.score_multiplier * combo_multiplier(combo)
+    raw -= max(0, int(hints_used)) * profile.hint_penalty
+    return max(0, min(int(profile.score_multiplier * 100), int(round(raw))))
 
 
 @dataclass(frozen=True)
@@ -31,7 +113,7 @@ DIFFICULTIES: dict[str, DifficultyProfile] = {
 
 
 def _fold(value: object) -> str:
-    text = str(value or "").strip().casefold().replace("Ä±", "i")
+    text = str(value or "").strip().casefold().replace("ı", "i")
     return "".join(
         char for char in unicodedata.normalize("NFKD", text)
         if not unicodedata.combining(char)

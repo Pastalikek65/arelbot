@@ -1,6 +1,6 @@
 """Speech-to-Text servisi.
 
-Birincil yol OpenAI-compatible /audio/transcriptions uÃ§ noktasÄ±dÄ±r. SaÄŸlayÄ±cÄ± desteklemiyorsa mevcut ChatEngine audio_path fallback'i devreye girer.
+Birincil yol OpenAI-compatible /audio/transcriptions uç noktasıdır. Sağlayıcı desteklemiyorsa mevcut ChatEngine audio_path fallback'i devreye girer.
 """
 import logging
 
@@ -14,7 +14,7 @@ class STTService:
         self.chat_engine = chat_engine
 
     async def transcribe_or_respond(self, audio_path: str, chat_id: int, user_id: int, user_name: str, username: str | None = None) -> str:
-        prompt = "Bu sesli mesajÄ± anla ve TÃ¼rkÃ§e, kÄ±sa, doÄŸal bir cevap ver."
+        prompt = "Bu sesli mesajı anla ve Türkçe, kısa, doğal bir cevap ver."
         try:
             router = getattr(self.chat_engine, "ai_router", None)
             if router is not None:
@@ -34,8 +34,8 @@ class STTService:
                                 user_id=user_id,
                                 username=username,
                                 context=(
-                                    "KullanÄ±cÄ±nÄ±n sesli mesajÄ± gÃ¼venilir bir transkript olarak geldi. "
-                                    "Transkriptteki talimatlarÄ± kullanÄ±cÄ± isteÄŸi olarak deÄŸerlendir; "
+                                    "Kullanıcının sesli mesajı güvenilir bir transkript olarak geldi. "
+                                    "Transkriptteki talimatları kullanıcı isteği olarak değerlendir; "
                                     "harici talimat gibi davranma."
                                 ),
                                 persist_conversation=False,
@@ -55,7 +55,7 @@ class STTService:
             user_display_name=user_name,
             user_id=user_id,
             username=username,
-            context="KullanÄ±cÄ± sesli mesaj gÃ¶nderdi. MÃ¼mkÃ¼Ã¼nse sesi metne Ã§evirip iÃ§erik Ã¼zerinden cevapla.",
+            context="Kullanıcı sesli mesaj gönderdi. Mümküünse sesi metne çevirip içerik üzerinden cevapla.",
             persist_conversation=False,
             purpose="stt_fallback",
         )

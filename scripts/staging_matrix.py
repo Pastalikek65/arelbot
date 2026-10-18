@@ -95,7 +95,7 @@ def _extra_ca_bundle():
         return
     certificate_path = Path(extra_path)
     if not certificate_path.is_file():
-        raise MatrixConfigError("ARELBOT_EXTRA_CA_CERT yolu bulunamadÄ±")
+        raise MatrixConfigError("ARELBOT_EXTRA_CA_CERT yolu bulunamadı")
     raw = certificate_path.read_bytes()
     try:
         if raw.startswith(b"-----BEGIN CERTIFICATE-----"):
@@ -109,16 +109,16 @@ def _extra_ca_bundle():
             cert = x509.load_der_x509_certificate(raw)
             extra_pem = cert.public_bytes(serialization.Encoding.PEM)
     except Exception as exc:
-        raise MatrixConfigError("ARELBOT_EXTRA_CA_CERT geÃ§erli PEM/DER sertifikasÄ± deÄŸil") from exc
+        raise MatrixConfigError("ARELBOT_EXTRA_CA_CERT geçerli PEM/DER sertifikası değil") from exc
 
     try:
         import certifi
 
         base_path = Path(os.getenv("SSL_CERT_FILE") or certifi.where())
     except ImportError as exc:
-        raise MatrixConfigError("sertifika bundle tabanÄ± bulunamadÄ±") from exc
+        raise MatrixConfigError("sertifika bundle tabanı bulunamadı") from exc
     if not base_path.is_file():
-        raise MatrixConfigError("SSL_CERT_FILE bundle yolu bulunamadÄ±")
+        raise MatrixConfigError("SSL_CERT_FILE bundle yolu bulunamadı")
 
     previous = {name: os.environ.get(name) for name in ("SSL_CERT_FILE", "REQUESTS_CA_BUNDLE")}
     with tempfile.NamedTemporaryFile(prefix="arelbot-staging-ca-", suffix=".pem", delete=False) as bundle:
@@ -177,11 +177,11 @@ def _bounded_scalar(value: Any, *, field: str) -> Any:
         return value
     if isinstance(value, str):
         if len(value) > MAX_STRING:
-            raise MatrixConfigError(f"{field} Ã§ok uzun")
+            raise MatrixConfigError(f"{field} çok uzun")
         if any(ord(char) < 32 for char in value):
-            raise MatrixConfigError(f"{field} kontrol karakteri iÃ§eriyor")
+            raise MatrixConfigError(f"{field} kontrol karakteri içeriyor")
         return value
-    raise MatrixConfigError(f"{field} yalnÄ±zca basit deÄŸer taÅŸÄ±yabilir")
+    raise MatrixConfigError(f"{field} yalnızca basit değer taşıyabilir")
 
 
 def load_cases(path: Path, *, feature_keys: set[str] | None = None) -> list[MatrixCase]:
@@ -192,10 +192,10 @@ def load_cases(path: Path, *, feature_keys: set[str] | None = None) -> list[Matr
         # keeping the file content strictly decoded as UTF-8.
         payload = json.loads(path.read_text(encoding="utf-8-sig"))
     except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise MatrixConfigError("staging matrix okunamadÄ±") from exc
+        raise MatrixConfigError("staging matrix okunamadı") from exc
     raw_cases = payload.get("cases") if isinstance(payload, dict) else None
     if not isinstance(raw_cases, list) or not raw_cases:
-        raise MatrixConfigError("cases boÅŸ olamaz")
+        raise MatrixConfigError("cases boş olamaz")
     if len(raw_cases) > MAX_CASES:
         raise MatrixConfigError(f"en fazla {MAX_CASES} case desteklenir")
 
@@ -203,24 +203,24 @@ def load_cases(path: Path, *, feature_keys: set[str] | None = None) -> list[Matr
     seen: set[str] = set()
     for index, raw in enumerate(raw_cases):
         if not isinstance(raw, dict):
-            raise MatrixConfigError(f"case[{index}] nesne olmalÄ±")
+            raise MatrixConfigError(f"case[{index}] nesne olmalı")
         case_id = str(raw.get("id") or "").strip()
         feature = str(raw.get("feature") or "").strip()
         params = raw.get("params") or {}
         if not case_id or len(case_id) > 80 or not case_id.replace("_", "").replace("-", "").isalnum():
-            raise MatrixConfigError(f"case[{index}] geÃ§ersiz id")
+            raise MatrixConfigError(f"case[{index}] geçersiz id")
         if case_id in seen:
             raise MatrixConfigError(f"tekrar eden case id: {case_id}")
         if feature_keys is not None and feature not in feature_keys:
-            raise MatrixConfigError(f"kayÄ±tlÄ± olmayan feature: {feature}")
+            raise MatrixConfigError(f"kayıtlı olmayan feature: {feature}")
         if not isinstance(params, dict) or len(params) > MAX_PARAMS:
-            raise MatrixConfigError(f"{case_id} params geÃ§ersiz")
+            raise MatrixConfigError(f"{case_id} params geçersiz")
         bounded = {str(key)[:64]: _bounded_scalar(value, field=f"{case_id}.{key}") for key, value in params.items()}
         expect_source = raw.get("expect_source")
         if expect_source is not None:
             expect_source = str(expect_source).strip()
             if not expect_source or len(expect_source) > 120:
-                raise MatrixConfigError(f"{case_id} expect_source geÃ§ersiz")
+                raise MatrixConfigError(f"{case_id} expect_source geçersiz")
         repeat = bool(raw.get("repeat", True))
         seen.add(case_id)
         cases.append(MatrixCase(case_id, feature, bounded, expect_source, repeat))
@@ -309,7 +309,7 @@ async def run_case(
 
 async def run_matrix(cases: list[MatrixCase], engine: Any, *, concurrency: int) -> dict[str, Any]:
     if concurrency < 1 or concurrency > MAX_CONCURRENCY:
-        raise MatrixConfigError(f"concurrency 1-{MAX_CONCURRENCY} arasÄ±nda olmalÄ±")
+        raise MatrixConfigError(f"concurrency 1-{MAX_CONCURRENCY} arasında olmalı")
     semaphore = asyncio.Semaphore(concurrency)
 
     async def one(case: MatrixCase) -> CaseResult:
@@ -400,7 +400,7 @@ def main() -> int:
     if not args.confirm_live or os.getenv("ARELBOT_STAGING_LIVE") != "1":
         if args.report:
             write_report(args.report, {"ok": False, "error": "live_gate_required"})
-        print(json.dumps({"ok": False, "error": "live staging iÃ§in --live, --confirm-live ve ARELBOT_STAGING_LIVE=1 gerekir"}, ensure_ascii=False))
+        print(json.dumps({"ok": False, "error": "live staging için --live, --confirm-live ve ARELBOT_STAGING_LIVE=1 gerekir"}, ensure_ascii=False))
         return 2
 
     # The engine is built once so all cases share the same provider runtime,

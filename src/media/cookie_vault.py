@@ -58,16 +58,16 @@ class CookieVault:
         try:
             cookies = json.loads(decoded)
         except (json.JSONDecodeError, TypeError) as exc:
-            raise CookieVaultError("Cookie JSON okunamadÄ±") from exc
+            raise CookieVaultError("Cookie JSON okunamadı") from exc
         if not isinstance(cookies, list) or not cookies or len(cookies) > cls.MAX_COOKIE_COUNT:
-            raise CookieVaultError("Cookie JSON listesi geÃ§ersiz veya Ã§ok bÃ¼yÃ¼k")
+            raise CookieVaultError("Cookie JSON listesi geçersiz veya çok büyük")
         rows = ["# Netscape HTTP Cookie File"]
         for cookie in cookies:
             if not isinstance(cookie, dict):
-                raise CookieVaultError("Cookie kaydÄ± geÃ§ersiz")
+                raise CookieVaultError("Cookie kaydı geçersiz")
             domain = str(cookie.get("domain") or "").strip().lower()
             if not cls._domain_allowed(platform, domain):
-                raise CookieVaultError("Cookie seÃ§ilen platforma ait deÄŸil")
+                raise CookieVaultError("Cookie seçilen platforma ait değil")
             name = str(cookie.get("name") or "")
             value = str(cookie.get("value") or "")
             path = str(cookie.get("path") or "/")
@@ -77,16 +77,16 @@ class CookieVault:
                 or any(ch in value for ch in "\t\r\n\x00")
                 or any(ch in path for ch in "\t\r\n\x00")
             ):
-                raise CookieVaultError("Cookie kaydÄ± geÃ§ersiz")
+                raise CookieVaultError("Cookie kaydı geçersiz")
             host_only = bool(cookie.get("hostOnly", not domain.startswith(".")))
             include_subdomains = "FALSE" if host_only else "TRUE"
             secure = "TRUE" if bool(cookie.get("secure", False)) else "FALSE"
             try:
                 expiry = 0 if bool(cookie.get("session", False)) else int(float(cookie.get("expirationDate") or 0))
             except (TypeError, ValueError, OverflowError) as exc:
-                raise CookieVaultError("Cookie sÃ¼resi geÃ§ersiz") from exc
+                raise CookieVaultError("Cookie süresi geçersiz") from exc
             if expiry < 0:
-                raise CookieVaultError("Cookie sÃ¼resi geÃ§ersiz")
+                raise CookieVaultError("Cookie süresi geçersiz")
             row_domain = domain if domain.startswith(".") or host_only else f".{domain}"
             if bool(cookie.get("httpOnly", False)):
                 row_domain = f"#HttpOnly_{row_domain}"
@@ -96,7 +96,7 @@ class CookieVault:
     @classmethod
     def _validate_netscape(cls, platform: str, decoded: str) -> bytes:
         if not (decoded.startswith("# Netscape HTTP Cookie File") or decoded.startswith("# HTTP Cookie File")):
-            raise CookieVaultError("Cookie biÃ§imi desteklenmiyor")
+            raise CookieVaultError("Cookie biçimi desteklenmiyor")
         rows = ["# Netscape HTTP Cookie File"]
         cookies = 0
         for line in decoded.splitlines():
@@ -105,7 +105,7 @@ class CookieVault:
             http_only = line.startswith("#HttpOnly_")
             fields = line[len("#HttpOnly_"):].split("\t") if http_only else line.split("\t")
             if len(fields) != 7:
-                raise CookieVaultError("Netscape cookie satÄ±rÄ± geÃ§ersiz")
+                raise CookieVaultError("Netscape cookie satırı geçersiz")
             domain, include_subdomains, path, secure, expiry, name, value = fields
             if (
                 not cls._domain_allowed(platform, domain)
@@ -116,24 +116,24 @@ class CookieVault:
                 or not re.fullmatch(r"[!#$%&'*+.^_`|~0-9A-Za-z-]+", name)
                 or any(ch in value for ch in "\r\n\x00")
             ):
-                raise CookieVaultError("Netscape cookie satÄ±rÄ± geÃ§ersiz")
+                raise CookieVaultError("Netscape cookie satırı geçersiz")
             prefix = "#HttpOnly_" if http_only else ""
             rows.append("\t".join((prefix + domain, include_subdomains, path, secure, expiry, name, value)))
             cookies += 1
             if cookies > cls.MAX_COOKIE_COUNT:
-                raise CookieVaultError("Cookie sayÄ±sÄ± sÄ±nÄ±rÄ± aÅŸÄ±yor")
+                raise CookieVaultError("Cookie sayısı sınırı aşıyor")
         if cookies == 0:
-            raise CookieVaultError("Cookie kaydÄ± bulunamadÄ±")
+            raise CookieVaultError("Cookie kaydı bulunamadı")
         return ("\n".join(rows) + "\n").encode("utf-8")
 
     def save(self, platform: str, content: bytes) -> None:
         platform = self._platform(platform)
         if len(content) > 256 * 1024:
-            raise CookieVaultError("Cookie dosyasÄ± 256 KiB sÄ±nÄ±rÄ±nÄ± aÅŸÄ±yor")
+            raise CookieVaultError("Cookie dosyası 256 KiB sınırını aşıyor")
         try:
             decoded = content.decode("utf-8-sig")
         except UnicodeDecodeError as exc:
-            raise CookieVaultError("Cookie dosyasÄ± UTF-8 olmalÄ±") from exc
+            raise CookieVaultError("Cookie dosyası UTF-8 olmalı") from exc
         if decoded.lstrip().startswith("["):
             normalized = self._normalize_json_export(platform, decoded)
         else:
@@ -153,7 +153,7 @@ class CookieVault:
         try:
             plaintext = self._fernet().decrypt(source.read_bytes())
         except InvalidToken as exc:
-            raise CookieVaultError("Cookie kasasÄ± aÃ§Ä±lamadÄ±; ENCRYPTION_KEY deÄŸiÅŸmiÅŸ olabilir") from exc
+            raise CookieVaultError("Cookie kasası açılamadı; ENCRYPTION_KEY değişmiş olabilir") from exc
         target = Path(target_path)
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(plaintext)

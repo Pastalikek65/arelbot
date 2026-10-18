@@ -71,7 +71,7 @@ class McpManager:
                     tool_def["name"] = f"mcp_{name}_{tool_def['name']}"
                     self.tools_cache.append(tool_def)
                 
-                logger.info(f"âœ… Connected to MCP Server: {name}")
+                logger.info(f"✅ Connected to MCP Server: {name}")
                 
             except Exception as e:
                 logger.error("Failed to connect to MCP server name=%s: %s", name, summarize_exception(e, label="mcp_connect"))

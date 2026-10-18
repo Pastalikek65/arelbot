@@ -356,4 +356,3 @@ class ErrorHandler:
                     await message.reply_text(user_msg, parse_mode='HTML')
         except Exception:
             pass
-

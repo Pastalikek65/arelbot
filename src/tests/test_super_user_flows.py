@@ -296,7 +296,7 @@ async def test_word_game_hint_callback_refreshes_inline_keyboard():
 
     assert edits
     text, kwargs = edits[-1]
-    assert "Ä°pucu" in text
+    assert "İpucu" in text
     callbacks = [
         button.callback_data
         for row in kwargs["reply_markup"].inline_keyboard
@@ -350,7 +350,7 @@ async def test_word_game_stop_callback_clears_owner_game():
     await handler._handle_word_game_stop(update, Query(), context)
 
     assert "word_game" not in context.chat_data
-    assert edits == ["ğŸ›‘ Kelime oyunu bitirildi."]
+    assert edits == ["🛑 Kelime oyunu bitirildi."]
 
 
 @pytest.mark.asyncio
@@ -383,8 +383,8 @@ async def test_word_guess_hint_callback_updates_persistent_panel():
 
     state = {
         "category": "Bilim",
-        "description": "Bir ÅŸeyi aÃ§Ä±klayan, gÃ¼nlÃ¼k hayatta kullanÄ±lan gÃ¼venli bir tanÄ±m.",
-        "hints": ["Ä°lk ipucu"],
+        "description": "Bir şeyi açıklayan, günlük hayatta kullanılan güvenli bir tanım.",
+        "hints": ["İlk ipucu"],
         "hint_index": 0,
         "attempts": 1,
         "difficulty": "normal",
@@ -407,7 +407,7 @@ async def test_word_guess_hint_callback_updates_persistent_panel():
     assert state["hint_index"] == 1
     assert edits
     text, kwargs = edits[-1]
-    assert "Ä°lk ipucu" in text
+    assert "İlk ipucu" in text
     callbacks = [
         button.callback_data
         for row in kwargs["reply_markup"].inline_keyboard
@@ -449,8 +449,8 @@ async def test_word_guess_hint_callback_allows_sequential_hints_on_same_panel():
 
     state = {
         "category": "Bilim",
-        "description": "KÄ±sa ve gÃ¼venli bir tanÄ±m.",
-        "hints": ["Ä°lk ipucu", "Ä°kinci ipucu"],
+        "description": "Kısa ve güvenli bir tanım.",
+        "hints": ["İlk ipucu", "İkinci ipucu"],
         "hint_index": 0,
         "attempts": 1,
         "difficulty": "normal",
@@ -501,7 +501,7 @@ async def test_media_menu_button_arms_an_explicit_photo_action():
     state = get_scoped_state(handler.user_states, user_id=42, chat_id=42)
     assert state["state"] == "awaiting_intent_photo"
     assert state["action"] == "vision"
-    assert edits and "fotoÄŸraf" in edits[0].casefold()
+    assert edits and "fotoğraf" in edits[0].casefold()
 
 
 @pytest.mark.asyncio
@@ -551,7 +551,7 @@ async def test_daily_brief_preference_claim_is_idempotent_for_same_local_date():
         42,
         daily_brief_enabled=True,
         daily_brief_time="08:00",
-        daily_brief_city="Ä°stanbul",
+        daily_brief_city="İstanbul",
     )
     assert await store.claim_daily_brief(42, "2026-10-11") is True
     assert await store.claim_daily_brief(42, "2026-10-11") is False
@@ -635,17 +635,17 @@ async def test_photo_with_sticker_caption_opens_explicit_action_menu():
 async def test_daily_brief_combines_typed_features_and_productivity():
     class Features:
         async def execute(self, key, params=None):
-            labels = {"weather": "Ä°stanbul 18Â°C", "earthquakes": "Son deprem: 2.1", "breaking_news": "BaÅŸlÄ±k"}
+            labels = {"weather": "İstanbul 18°C", "earthquakes": "Son deprem: 2.1", "breaking_news": "Başlık"}
             return FeatureResult.success(labels[key], display_blocks=(labels[key],), metadata={"fresh": True})
 
     class Productivity:
         async def daily_summary(self, user_id, **kwargs):
-            return {"open_task_count": 1, "overdue_count": 0, "upcoming_count": 1, "tasks": [{"text": "ToplantÄ±"}], "overdue_reminders": [], "upcoming_reminders": []}
+            return {"open_task_count": 1, "overdue_count": 0, "upcoming_count": 1, "tasks": [{"text": "Toplantı"}], "overdue_reminders": [], "upcoming_reminders": []}
 
     service = DailyBriefService(Features(), Productivity())
-    text = await service.build(42, city="Ä°stanbul", timezone_name="Europe/Istanbul")
-    assert "Ä°stanbul 18Â°C" in text
-    assert "ToplantÄ±" in text
+    text = await service.build(42, city="İstanbul", timezone_name="Europe/Istanbul")
+    assert "İstanbul 18°C" in text
+    assert "Toplantı" in text
     assert "Kaynak" not in text
 
 
@@ -713,7 +713,7 @@ async def test_daily_brief_callback_updates_personal_preference_panel():
     )
     await handler.handle_callback_query(update, SimpleNamespace(chat_data={}))
     assert (await store.get(42))["daily_brief_enabled"] is True
-    assert edits and "GÃœNLÃœK" in edits[0]
+    assert edits and "GÜNLÜK" in edits[0]
 
 
 @pytest.mark.asyncio
@@ -722,7 +722,7 @@ async def test_daily_brief_tick_claims_once_before_delivery():
 
     class Brief:
         async def build(self, *args, **kwargs):
-            return "<b>Ã–zet</b>"
+            return "<b>Özet</b>"
 
     class Bot:
         def __init__(self):
@@ -733,7 +733,7 @@ async def test_daily_brief_tick_claims_once_before_delivery():
     store = NotificationPreferenceStore()
     from zoneinfo import ZoneInfo
     current_time = datetime.now(timezone.utc).astimezone(ZoneInfo("Europe/Istanbul")).strftime("%H:%M")
-    await store.update(42, daily_brief_enabled=True, daily_brief_time=current_time, daily_brief_city="Ä°stanbul")
+    await store.update(42, daily_brief_enabled=True, daily_brief_time=current_time, daily_brief_city="İstanbul")
     orchestrator = object.__new__(Orchestrator)
     orchestrator.notification_preference_store = store
     orchestrator.daily_brief_service = Brief()

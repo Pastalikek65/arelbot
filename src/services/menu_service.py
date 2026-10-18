@@ -12,6 +12,40 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from src.i18n import translator
 from src.games.catalog import WORD_GAME_CATEGORY_LABELS
 from src.games.engine import DIFFICULTIES
+from src.services.tictactoe_ui import tictactoe_keyboard
+
+
+XOX_BOARD_SIZES = (6, 7, 8)
+
+
+def tictactoe_surface_keyboard(state: dict) -> InlineKeyboardMarkup:
+    """Add the round-scoped XOX board-size picker to the domain keyboard.
+
+    The game service owns the board and move rules; this adapter only adds the
+    Telegram setup controls.  Keeping the callback payload bound to the
+    current round prevents an old inline panel from changing a new game.
+    """
+    markup = tictactoe_keyboard(state)
+    rows = [list(row) for row in getattr(markup, "inline_keyboard", ())]
+    if str(state.get("status") or "lobby") != "lobby":
+        return InlineKeyboardMarkup(rows)
+    existing = {
+        str(button.callback_data)
+        for row in rows
+        for button in row
+        if getattr(button, "callback_data", None)
+    }
+    round_id = str(state.get("round_id") or "legacy")
+    selected = state.get("board_size")
+    size_row = []
+    for size in XOX_BOARD_SIZES:
+        marker = "✅ " if str(selected) == str(size) else ""
+        callback = f"tictactoe:{round_id}:size:{size}"
+        if callback not in existing:
+            size_row.append(InlineKeyboardButton(f"{marker}{size}×{size}", callback_data=callback))
+    if size_row:
+        rows.insert(0, size_row)
+    return InlineKeyboardMarkup(rows)
 
 
 class MenuService:
@@ -19,17 +53,20 @@ class MenuService:
         text = f"{translator.t('menu.title', language)}\n\n{translator.t('menu.subtitle', language)}"
         owner = int(user_id or 0)
         group = chat_type in {"group", "supergroup"}
-        digest_label = "📣 Grup bildirimleri" if group else "📅 Günlük özet"
-        digest_callback = f"notify_center:{owner}" if group else f"daily_brief:{owner}"
+        if group:
+            text += "\n\n<b>Grup alanı</b>\nBirlikte oynayın, güncel bilgilere ulaşın ve grup araçlarını yönetin. Kişisel plan ve belgeler için özel sohbeti kullanın."
+        else:
+            text += "\n\nBir şey sorabilir veya aşağıdan yapmak istediğin işi seçebilirsin."
         keyboard = [
             [InlineKeyboardButton("🌍 Türkiye & güncel", callback_data="menu_turkiye")],
             [InlineKeyboardButton("🌤 Hava durumu", callback_data="weather_help"), InlineKeyboardButton("🛒 BİM aktüel", callback_data=f"bim_page:{owner}:0")],
             [InlineKeyboardButton("🤖 Yapay zekâ", callback_data="menu_ai"), InlineKeyboardButton("🎮 Oyun salonu", callback_data="menu_games")],
-            [InlineKeyboardButton("🏆 Liderlik", callback_data="menu_leaderboard"), InlineKeyboardButton("🔔 Bildirim merkezi", callback_data=f"notify_center:{owner}")],
-            [InlineKeyboardButton(digest_label, callback_data=digest_callback), InlineKeyboardButton("📋 Planım", callback_data="menu_plan")],
+            [InlineKeyboardButton("🏆 Liderlik", callback_data="menu_leaderboard"), InlineKeyboardButton("📣 Grup bildirimleri" if group else "🔔 Bildirimlerim", callback_data=f"notify_center:{owner}")],
             [InlineKeyboardButton("📰 Haberler", callback_data="menu_news"), InlineKeyboardButton("🎨 Görsel & ses", callback_data="menu_media")],
             [InlineKeyboardButton("🌐 Dil / Language", callback_data="menu_language"), InlineKeyboardButton("⚙️ Ayarlar", callback_data="open_ayar_menu")],
         ]
+        if not group:
+            keyboard.insert(4, [InlineKeyboardButton("📅 Günlük özet", callback_data=f"daily_brief:{owner}"), InlineKeyboardButton("📋 Planım", callback_data="menu_plan")])
         return text, InlineKeyboardMarkup(keyboard)
 
     def turkiye_menu(self, language: str = "tr", user_id: int | None = None) -> tuple[str, InlineKeyboardMarkup]:
@@ -68,6 +105,9 @@ class MenuService:
             [InlineKeyboardButton("🔠 Kelime türetme", callback_data="game_word_categories"), InlineKeyboardButton("🎯 Quiz", callback_data="game_start_quiz")],
             [InlineKeyboardButton("🍾 Şişe", callback_data="game_start_sise"), InlineKeyboardButton("🃏 Batak", callback_data="game_start_batak")],
             [InlineKeyboardButton("🃏 Blackjack", callback_data="game_start_blackjack")],
+            [InlineKeyboardButton("🔴 Connect Four", callback_data="game_start_connect4")],
+            [InlineKeyboardButton("❌⭕ XOX", callback_data="game_start_tictactoe")],
+            [InlineKeyboardButton("⚫⚪ Gomoku · Beşli", callback_data="game_start_gomoku")],
             [InlineKeyboardButton("🔫 Rulet", callback_data="game_start_rusruleti"), InlineKeyboardButton("⚔️ Düello", callback_data="game_start_duello")],
             [InlineKeyboardButton("🏆 Liderlik", callback_data="menu_leaderboard"), InlineKeyboardButton("🛑 Oyunu bitir", callback_data="game_stop_all")],
             [InlineKeyboardButton("🏠 Ana menü", callback_data="menu_main")],
@@ -155,7 +195,7 @@ class MenuService:
         ])
 
     def media_menu(self) -> tuple[str, InlineKeyboardMarkup]:
-        text = "🎨 <b>GÖRSEL & SES MERKEZİ</b>\n\nFotoğrafı kendiliğinden yorumlamam; ne istediğini butondan seçersin. Böylece bot, masadaki her şeyi üstüne alınan akraba gibi davranmaz."
+        text = "🎨 <b>Görsel ve ses</b>\n\nFotoğraf yükledikten sonra analiz, yazı okuma veya sticker işlemini seç. Yeni görsel oluşturmak ya da bir video indirmek için ilgili aracı aç."
         keyboard = [
             [InlineKeyboardButton("🔎 Fotoğrafı analiz et", callback_data="media_intent:vision"), InlineKeyboardButton("📝 Fotoğraftan yazı oku", callback_data="media_intent:ocr")],
             [InlineKeyboardButton("✨ Fotoğrafı sticker yap", callback_data="media_intent:sticker"), InlineKeyboardButton("🖼 Görsel üret", callback_data="media_image_help")],
@@ -266,4 +306,3 @@ class MenuService:
             [InlineKeyboardButton("😏 İğneleyici", callback_data="persona_user:needle"), InlineKeyboardButton("🔥 Roast / taşlama", callback_data="persona_user:roast")],
             [InlineKeyboardButton("↩️ Ayarlara dön", callback_data="open_ayar_menu")],
         ])
-

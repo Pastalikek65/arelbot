@@ -48,7 +48,7 @@ def audit_registry(registry: FeatureRegistry) -> tuple[ProviderAuditRow, ...]:
             continue
         provider_kind = str(getattr(definition, "provider_kind", "data") or "data").strip().casefold()
         errors: list[str] = []
-        if provider_kind not in {"data", "ai"}:
+        if provider_kind not in {"data", "ai", "moderation"}:
             errors.append("provider_kind_invalid")
         provider = registry.get_provider(provider_key) if provider_kind == "data" else None
         if provider_kind == "data":
@@ -60,6 +60,15 @@ def audit_registry(registry: FeatureRegistry) -> tuple[ProviderAuditRow, ...]:
                         errors.append(f"provider_{method}_missing")
                 if not str(getattr(provider, "name", "")).strip():
                     errors.append("provider_name_missing")
+        if provider_kind == "moderation":
+            # Moderation providers are injected through the moderation
+            # service boundary (for example the Guardian socket adapter),
+            # rather than the data-provider registry. Their typed contract
+            # and audit policy are validated by the moderation package.
+            if not str(getattr(definition, "feature_flag", "") or "").strip():
+                errors.append("moderation_feature_flag_missing")
+            if not str(getattr(definition, "audit_policy", "") or "").strip():
+                errors.append("moderation_audit_policy_missing")
         if definition.timeout_ms <= 0:
             errors.append("timeout_missing")
         if definition.cache_ttl_seconds < 0 or definition.freshness_sla_seconds < 0:

@@ -69,18 +69,18 @@ def _slug(value: str) -> str:
 
     replacements = str.maketrans(
         {
-            "Ã§": "c",
-            "Ã‡": "c",
-            "ÄŸ": "g",
-            "Ä": "g",
-            "Ä±": "i",
-            "Ä°": "i",
-            "Ã¶": "o",
-            "Ã–": "o",
-            "ÅŸ": "s",
-            "Å": "s",
-            "Ã¼": "u",
-            "Ãœ": "u",
+            "ç": "c",
+            "Ç": "c",
+            "ğ": "g",
+            "Ğ": "g",
+            "ı": "i",
+            "İ": "i",
+            "ö": "o",
+            "Ö": "o",
+            "ş": "s",
+            "Ş": "s",
+            "ü": "u",
+            "Ü": "u",
         }
     )
     normalized = unicodedata.normalize("NFKD", str(value or "").translate(replacements))
@@ -168,7 +168,7 @@ class _HtmlProvider(ABC):
 class PharmacyProvider(_HtmlProvider):
     name = "get_pharmacies"
     capabilities = {"pharmacy", "on_duty_pharmacy"}
-    source_name = "NÃ¶betÃ§i Eczaneler"
+    source_name = "Nöbetçi Eczaneler"
     source_base_url = "https://www.nobetcieczaneler.org/nobetci-eczane"
 
     async def fetch(self, request: ProviderRequest) -> ProviderResponse[dict[str, Any]]:
@@ -193,12 +193,12 @@ class PharmacyProvider(_HtmlProvider):
         if not rows:
             raise RuntimeError("pharmacy_schema_error")
         scope = f" {html.escape(district)}" if district else ""
-        lines = [f"<b>ğŸ¥ {html.escape(city)}{scope} NÃ¶betÃ§i Eczaneler</b>", ""]
+        lines = [f"<b>🏥 {html.escape(city)}{scope} Nöbetçi Eczaneler</b>", ""]
         for row in rows:
             lines.append(
-                f"ğŸ’Š <b>{html.escape(row['name'])}</b>\n"
-                f"ğŸ“ {html.escape(row['address'])}\n"
-                f"ğŸ“ {html.escape(row['phone'])}"
+                f"💊 <b>{html.escape(row['name'])}</b>\n"
+                f"📍 {html.escape(row['address'])}\n"
+                f"📞 {html.escape(row['phone'])}"
             )
         return ProviderResponse(
             data={"city": city, "district": district, "pharmacies": rows, "content": "\n\n".join(lines)},
@@ -211,7 +211,7 @@ class PharmacyProvider(_HtmlProvider):
 class FuelProvider(_HtmlProvider):
     name = "get_fuel_prices"
     capabilities = {"fuel", "fuel_prices"}
-    source_name = "EPDK akaryakÄ±t verisi"
+    source_name = "EPDK akaryakıt verisi"
     source_base_url = "https://www.doviz.com/akaryakit-fiyatlari"
     source_url = source_base_url
     json_url = "https://guncelakaryakitfiyatlari.com/veri/fiyatlar.json"
@@ -256,7 +256,7 @@ class FuelProvider(_HtmlProvider):
                 if gasoline or diesel or lpg:
                     rows.append(
                         {
-                            "distributor": "Ä°l medyanÄ±",
+                            "distributor": "İl medyanı",
                             "city": city or city_filter or None,
                             "gasoline": gasoline,
                             "diesel": diesel,
@@ -278,7 +278,7 @@ class FuelProvider(_HtmlProvider):
                 if isinstance(value, list):
                     candidates = value
                     break
-            if not candidates and any(key in payload for key in ("city", "il", "ÅŸehir", "sehir", "marka", "brand")):
+            if not candidates and any(key in payload for key in ("city", "il", "şehir", "sehir", "marka", "brand")):
                 candidates = [payload]
         else:
             candidates = []
@@ -288,11 +288,11 @@ class FuelProvider(_HtmlProvider):
         for item in candidates:
             if not isinstance(item, dict):
                 continue
-            city = cls._json_value(item, "city", "il", "ÅŸehir", "sehir", "province")
+            city = cls._json_value(item, "city", "il", "şehir", "sehir", "province")
             if normalized_filter and city and normalized_filter not in _slug(city):
                 continue
-            distributor = cls._json_value(item, "distributor", "daÄŸÄ±tÄ±cÄ±", "dagitici", "marka", "brand", "firma") or "Ortalama"
-            key = (city or city_filter or "TÃ¼rkiye", distributor)
+            distributor = cls._json_value(item, "distributor", "dağıtıcı", "dagitici", "marka", "brand", "firma") or "Ortalama"
+            key = (city or city_filter or "Türkiye", distributor)
             row = grouped.setdefault(
                 key,
                 {
@@ -308,7 +308,7 @@ class FuelProvider(_HtmlProvider):
             )
             # Some snapshots provide one row with three fuel columns.
             for output, keys in {
-                "gasoline": ("gasoline", "benzin", "benzin_95", "kurÅŸunsuz_95", "kursunsuz95"),
+                "gasoline": ("gasoline", "benzin", "benzin_95", "kurşunsuz_95", "kursunsuz95"),
                 "diesel": ("diesel", "motorin", "mazot"),
                 "lpg": ("lpg", "otogaz"),
             }.items():
@@ -318,7 +318,7 @@ class FuelProvider(_HtmlProvider):
                     row[f"{output}_value"] = _numeric_amount(value)
 
             # Or the source has one fuel type and price per row.
-            fuel_type = _slug(cls._json_value(item, "fuel_type", "fuel", "yakÄ±t", "yakit", "type"))
+            fuel_type = _slug(cls._json_value(item, "fuel_type", "fuel", "yakıt", "yakit", "type"))
             price = cls._json_value(item, "price", "fiyat", "value", "tutar")
             if price:
                 output = "gasoline" if any(token in fuel_type for token in ("benzin", "gasoline", "95")) else (
@@ -333,13 +333,13 @@ class FuelProvider(_HtmlProvider):
 
     @staticmethod
     def _render_rows(rows: list[dict[str, Any]], city_filter: str) -> str:
-        lines = ["<b>â›½ GÃ¼ncel AkaryakÄ±t FiyatlarÄ±</b>", ""]
+        lines = ["<b>⛽ Güncel Akaryakıt Fiyatları</b>", ""]
         for row in rows[:10]:
-            details = f"Benzin: {html.escape(row['gasoline'])} TL Â· Motorin: {html.escape(row['diesel'])} TL"
+            details = f"Benzin: {html.escape(row['gasoline'])} TL · Motorin: {html.escape(row['diesel'])} TL"
             if row["lpg"]:
-                details += f" Â· LPG: {html.escape(row['lpg'])} TL"
-            scope = html.escape(city_filter or row.get("city") or "TÃ¼rkiye")
-            lines.append(f"ğŸ“ <b>{html.escape(row['distributor'])}</b> ({scope})\n{details}")
+                details += f" · LPG: {html.escape(row['lpg'])} TL"
+            scope = html.escape(city_filter or row.get("city") or "Türkiye")
+            lines.append(f"📍 <b>{html.escape(row['distributor'])}</b> ({scope})\n{details}")
         return "\n\n".join(lines)
 
     async def fetch(self, request: ProviderRequest) -> ProviderResponse[dict[str, Any]]:
@@ -359,9 +359,9 @@ class FuelProvider(_HtmlProvider):
                 if rows:
                     return ProviderResponse(
                         data={"city": city_filter or None, "prices": rows, "content": self._render_rows(rows, city_filter)},
-                        source="EPDK akaryakÄ±t verisi",
+                        source="EPDK akaryakıt verisi",
                         source_url=self.json_url,
-                        metadata={"provider_kind": "typed", "records": len(rows), "format": "json", "attribution": "EPDK; derleyen GÃ¼ncel AkaryakÄ±t FiyatlarÄ±"},
+                        metadata={"provider_kind": "typed", "records": len(rows), "format": "json", "attribution": "EPDK; derleyen Güncel Akaryakıt Fiyatları"},
                     )
             except (ProviderTransportError, RuntimeError, ValueError):
                 # Fall through to the bounded HTML compatibility source.
@@ -395,25 +395,25 @@ class FuelProvider(_HtmlProvider):
             )
         if not rows:
             raise RuntimeError("fuel_schema_error")
-        lines = ["<b>â›½ GÃ¼ncel AkaryakÄ±t FiyatlarÄ±</b>", ""]
+        lines = ["<b>⛽ Güncel Akaryakıt Fiyatları</b>", ""]
         for row in rows[:10]:
-            details = f"Benzin: {html.escape(row['gasoline'])} TL Â· Motorin: {html.escape(row['diesel'])} TL"
+            details = f"Benzin: {html.escape(row['gasoline'])} TL · Motorin: {html.escape(row['diesel'])} TL"
             if row["lpg"]:
-                details += f" Â· LPG: {html.escape(row['lpg'])} TL"
+                details += f" · LPG: {html.escape(row['lpg'])} TL"
             scope = html.escape(city_filter) if city_filter else "T\u00fcrkiye"
             lines.append(f"\U0001f4cd <b>{html.escape(row['distributor'])}</b> ({scope})\\n{details}")
         return ProviderResponse(
             data={"city": city_filter or None, "prices": rows, "content": "\n\n".join(lines)},
-            source="DÃ¶viz.com akaryakÄ±t fiyatlarÄ±",
+            source="Döviz.com akaryakıt fiyatları",
             source_url=source_url,
-            metadata={"provider_kind": "typed", "records": len(rows), "format": "html", "attribution": "DÃ¶viz.com"},
+            metadata={"provider_kind": "typed", "records": len(rows), "format": "html", "attribution": "Döviz.com"},
         )
 
 
 class CurrencyProvider(_HtmlProvider):
     name = "get_currency_rates"
     capabilities = {"currency", "gold", "exchange_rates"}
-    source_name = "DÃ¶viz.com"
+    source_name = "Döviz.com"
     source_url = "https://www.doviz.com/"
 
     async def fetch(self, request: ProviderRequest) -> ProviderResponse[dict[str, Any]]:
@@ -433,10 +433,10 @@ class CurrencyProvider(_HtmlProvider):
                 })
         if not rates:
             raise RuntimeError("currency_schema_error")
-        lines = ["<b>ğŸ’° GÃ¼ncel DÃ¶viz ve AltÄ±n KurlarÄ±</b>", ""]
+        lines = ["<b>💰 Güncel Döviz ve Altın Kurları</b>", ""]
         for rate in rates[:12]:
-            suffix = f" Â· {html.escape(rate['change'])}" if rate["change"] else ""
-            lines.append(f"â€¢ <b>{html.escape(rate['name'])}</b>: {html.escape(rate['value'])}{suffix}")
+            suffix = f" · {html.escape(rate['change'])}" if rate["change"] else ""
+            lines.append(f"• <b>{html.escape(rate['name'])}</b>: {html.escape(rate['value'])}{suffix}")
         return ProviderResponse(
             data={"rates": rates, "content": "\n".join(lines)},
             source=self.source_name,
@@ -465,7 +465,7 @@ class NewsProvider(_HtmlProvider):
                 break
         if not titles:
             raise RuntimeError("news_schema_error")
-        lines = ["<b>ğŸ“° Son Dakika Haberleri (NTV)</b>", ""]
+        lines = ["<b>📰 Son Dakika Haberleri (NTV)</b>", ""]
         lines.extend(f"{index}. {html.escape(title)}" for index, title in enumerate(titles[:8], 1))
         return ProviderResponse(
             data={"titles": titles, "content": "\n\n".join(lines)},
@@ -478,7 +478,7 @@ class NewsProvider(_HtmlProvider):
 class BimDealsProvider(_HtmlProvider):
     name = "get_bim_deals"
     capabilities = {"bim", "deals", "retail"}
-    source_name = "BÄ°M aktÃ¼el Ã¼rÃ¼nler"
+    source_name = "BİM aktüel ürünler"
     source_url = "https://www.bim.com.tr/Categories/100/aktuel-urunler.aspx"
 
     async def fetch(self, request: ProviderRequest) -> ProviderResponse[dict[str, Any]]:
@@ -500,7 +500,7 @@ class BimDealsProvider(_HtmlProvider):
             unit = _text(card.select_one(".gramajadet, .quantity, .unit"))
             whole = _text(card.select_one(".priceArea .quantify, .price .quantify"))
             fraction = _text(card.select_one(".priceArea .number, .price .number"))
-            currency = _text(card.select_one(".priceArea .curr, .price .curr")) or "â‚º"
+            currency = _text(card.select_one(".priceArea .curr, .price .curr")) or "₺"
             price = ""
             if whole:
                 whole = whole.rstrip(",.")
@@ -513,7 +513,7 @@ class BimDealsProvider(_HtmlProvider):
             deals.append({
                 "title": title[:160],
                 "unit": unit[:80],
-                "price": price[:64] or "Fiyat belirtilmemiÅŸ",
+                "price": price[:64] or "Fiyat belirtilmemiş",
                 "image_url": image_url,
                 "url": urljoin(self.source_url, href) if href else self.source_url,
             })
@@ -523,8 +523,8 @@ class BimDealsProvider(_HtmlProvider):
                 anchor = image.find_parent("a")
                 href = str(anchor.get("href") or "").strip() if anchor else ""
                 parts = [part for part in href.strip("/").split("/") if part]
-                raw_title = parts[1] if len(parts) > 1 else "AktÃ¼el Ã¼rÃ¼n"
-                title = re.sub(r"[-_]+", " ", raw_title).strip().title() or "AktÃ¼el Ã¼rÃ¼n"
+                raw_title = parts[1] if len(parts) > 1 else "Aktüel ürün"
+                title = re.sub(r"[-_]+", " ", raw_title).strip().title() or "Aktüel ürün"
                 deals.append({
                     "title": title[:120],
                     "image_url": str(image.get("src") or "").strip(),
@@ -535,15 +535,15 @@ class BimDealsProvider(_HtmlProvider):
                 title = _text(item.select_one("h2.title, h2, .title"))
                 if not title:
                     continue
-                price = _text(item.select_one("span.quant, .price")) or "Fiyat belirtilmemiÅŸ"
+                price = _text(item.select_one("span.quant, .price")) or "Fiyat belirtilmemiş"
                 deals.append({"title": title, "price": price})
         if not deals:
             raise RuntimeError("bim_schema_error")
-        lines = ["<b>ğŸ›’ BÄ°M AktÃ¼el ÃœrÃ¼nler</b>", ""]
+        lines = ["<b>🛒 BİM Aktüel Ürünler</b>", ""]
         lines.extend(
-            f"ğŸ <b>{html.escape(item['title'])}</b>"
-            + (f" Â· {html.escape(item['unit'])}" if item.get("unit") else "")
-            + (f" â€” <b>{html.escape(item['price'])}</b>" if item.get("price") else "")
+            f"🎁 <b>{html.escape(item['title'])}</b>"
+            + (f" · {html.escape(item['unit'])}" if item.get("unit") else "")
+            + (f" — <b>{html.escape(item['price'])}</b>" if item.get("price") else "")
             for item in deals[:10]
         )
         return ProviderResponse(
@@ -556,11 +556,11 @@ class BimDealsProvider(_HtmlProvider):
 class PrayerTimesProvider(_HtmlProvider):
     name = "get_prayer_times"
     capabilities = {"prayer_times", "religious_calendar"}
-    source_name = "HabertÃ¼rk namaz vakitleri"
+    source_name = "Habertürk namaz vakitleri"
     source_base_url = "https://www.haberturk.com/namaz-vakitleri"
 
     async def fetch(self, request: ProviderRequest) -> ProviderResponse[dict[str, Any]]:
-        city = str(request.params.get("city") or "").strip() or "Ä°stanbul"
+        city = str(request.params.get("city") or "").strip() or "İstanbul"
         url = f"{self.source_base_url}/{_slug(city)}"
         soup = await self._fetch_html(request, url)
         times: dict[str, str] = {}
@@ -571,14 +571,14 @@ class PrayerTimesProvider(_HtmlProvider):
                 times[label] = value
         if not times:
             text = _text(soup)
-            for label in ("Ä°msak", "GÃ¼neÅŸ", "Ã–ÄŸle", "Ä°kindi", "AkÅŸam", "YatsÄ±"):
+            for label in ("İmsak", "Güneş", "Öğle", "İkindi", "Akşam", "Yatsı"):
                 match = re.search(rf"{re.escape(label)}\s*[:\-]?\s*(\d{{2}}:\d{{2}})", text, re.IGNORECASE)
                 if match:
                     times[label] = match.group(1)
         if not times:
             raise RuntimeError("prayer_schema_error")
-        lines = [f"<b>ğŸ•Œ {html.escape(city)} Namaz Vakitleri</b>", ""]
-        lines.extend(f"â€¢ {html.escape(label)}: <b>{html.escape(value)}</b>" for label, value in times.items())
+        lines = [f"<b>🕌 {html.escape(city)} Namaz Vakitleri</b>", ""]
+        lines.extend(f"• {html.escape(label)}: <b>{html.escape(value)}</b>" for label, value in times.items())
         return ProviderResponse(
             data={"city": city, "times": times, "content": "\n".join(lines)},
             source=self.source_name,

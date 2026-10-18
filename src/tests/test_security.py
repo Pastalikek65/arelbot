@@ -1,5 +1,5 @@
 """
-InputValidator, RBAC iÃ§in testler.
+InputValidator, RBAC için testler.
 """
 import io
 import logging
@@ -12,9 +12,9 @@ from src.security.log_redaction import redact
 
 class TestInputValidator:
     def test_sanitize_text_clean(self):
-        is_safe, text = InputValidator.sanitize_text("Merhaba dÃ¼nya!")
+        is_safe, text = InputValidator.sanitize_text("Merhaba dünya!")
         assert is_safe is True
-        assert text == "Merhaba dÃ¼nya!"
+        assert text == "Merhaba dünya!"
 
     def test_sanitize_text_html(self):
         is_safe, text = InputValidator.sanitize_text("Hello <b>world</b>")

@@ -1,7 +1,7 @@
 """
-AI Service - Yapay zeka yanÄ±t Ã¼retimi
+AI Service - Yapay zeka yanıt üretimi
 
-Chat engine'e delegate eder, ek retry/circuit breaker mantÄ±ÄŸÄ± ekler.
+Chat engine'e delegate eder, ek retry/circuit breaker mantığı ekler.
 """
 import logging
 import asyncio

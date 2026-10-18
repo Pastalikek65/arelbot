@@ -1,5 +1,5 @@
 """
-Test fixtures ve konfigÃ¼rasyon.
+Test fixtures ve konfigürasyon.
 """
 import pytest
 

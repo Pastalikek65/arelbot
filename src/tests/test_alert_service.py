@@ -8,7 +8,7 @@ def test_alert_service_matches_currency_thresholds():
 
 
 def test_alert_service_matches_fuel_metrics_and_rejects_unknown_values():
-    data = {"prices": [{"city": "Ä°stanbul", "gasoline_value": 42.1, "diesel_value": 44.2}]}
+    data = {"prices": [{"city": "İstanbul", "gasoline_value": 42.1, "diesel_value": 44.2}]}
     assert AlertService.matches(data, {"kind": "threshold", "metric": "gasoline", "operator": "below", "value": 45})
     assert not AlertService.matches(data, {"kind": "threshold", "metric": "lpg", "operator": "below", "value": 30})
 

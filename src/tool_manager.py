@@ -25,11 +25,13 @@ class ToolManager:
             for definition in feature_registry.definitions()
             if definition.provider_key and definition.input_model
         }
-        self._feature_permissions = {
-            str(definition.input_model): str(definition.permission or "user")
-            for definition in feature_registry.definitions()
-            if definition.input_model
-        }
+        self._feature_permissions = {}
+        for definition in feature_registry.definitions():
+            # Local tools may use their feature key as the actual tool name;
+            # input_model names a request schema, not necessarily a tool.
+            for name in {str(definition.key), str(definition.input_model or "")}:
+                if name in self.tools:
+                    self._feature_permissions[name] = str(definition.permission or "user")
 
     @staticmethod
     def _permission_error(tool_name: str, context: Dict[str, Any] | None, permission: str) -> dict[str, str] | None:
@@ -110,7 +112,7 @@ class ToolManager:
             return result
         code = normalize_error_code(result.get("error_code") or result.get("error"), "TOOL_FAILED")
         return {
-            "error": "AraÃ§ isteÄŸi gÃ¼venli biÃ§imde tamamlanamadÄ±.",
+            "error": "Araç isteği güvenli biçimde tamamlanamadı.",
             "error_code": code,
         }
 
@@ -137,7 +139,7 @@ class ToolManager:
             # never select another user's memory/document namespace.
             call_args = args.copy()
             if context:
-                if tool_name == "group_analytics" and "session_id" not in call_args and "session_id" in context:
+                if tool_name == "group_analytics" and "session_id" in context:
                     call_args["session_id"] = context["session_id"]
                 if tool_name in {"memory_tool", "document_search"} and "user_id" in context:
                     call_args["user_id"] = context["user_id"]

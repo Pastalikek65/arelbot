@@ -1,7 +1,7 @@
 """
-Quote Handler - AlÄ±ntÄ± sticker sistemi handler'Ä±.
+Quote Handler - Alıntı sticker sistemi handler'ı.
 
-Orchestrator'dan ayrÄ±ÅŸtÄ±rÄ±lmÄ±ÅŸ alÄ±ntÄ± oluÅŸturma ve yÃ¶netme mantÄ±ÄŸÄ±.
+Orchestrator'dan ayrıştırılmış alıntı oluşturma ve yönetme mantığı.
 """
 import logging
 import html
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 class QuoteHandler:
-    """AlÄ±ntÄ± sticker sistemi iÃ§in handler."""
+    """Alıntı sticker sistemi için handler."""
 
     def __init__(self, chat_engine: 'ChatEngine', sudo_manager: 'SudoManager', render_service: QuoteRenderService | None = None, quote_service=None, data_port=None):
         self.chat_engine = chat_engine
@@ -37,7 +37,7 @@ class QuoteHandler:
         return await is_chat_feature_enabled(self.data_port, chat_id, "q_enabled", True)
 
     async def handle_q_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Ana alÄ±ntÄ± oluÅŸturma komutu (/q)."""
+        """Ana alıntı oluşturma komutu (/q)."""
         chat_id = update.effective_chat.id
         user_id = update.effective_user.id
 
@@ -61,7 +61,7 @@ class QuoteHandler:
             'as_file': bool(defaults.get('q_as_file', False)),
             'crop': bool(defaults.get('q_crop', False)),
             'rate_enabled': defaults.get('q_rate_enabled', True),
-            'emoji': defaults.get('q_emoji', "âœ¨")
+            'emoji': defaults.get('q_emoji', "✨")
         }
 
         args = [a.lower() for a in context.args]
@@ -100,28 +100,28 @@ class QuoteHandler:
             messages_to_quote = await self._get_reply_messages(update, options, chat_id)
 
         if not messages_to_quote:
-            await update.message.reply_text("âš ï¸ AlÄ±ntÄ±lanacak mesaj bulunamadÄ±.")
+            await update.message.reply_text("⚠️ Alıntılanacak mesaj bulunamadı.")
             return
 
         await self._generate_and_send_quote(update, context, messages_to_quote, options, chat_id)
 
     async def handle_qtop_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """En iyi alÄ±ntÄ±larÄ± gÃ¶sterme komutu (/qtop)."""
+        """En iyi alıntıları gösterme komutu (/qtop)."""
         if not await self._quote_enabled(update.effective_chat.id):
             return
         chat_id = update.effective_chat.id
         keyboard = [
-            [InlineKeyboardButton("ğŸ† En Ä°yi AlÄ±ntÄ±larÄ± GÃ¶ster", switch_inline_query_current_chat=f"top:{chat_id}")]
+            [InlineKeyboardButton("🏆 En İyi Alıntıları Göster", switch_inline_query_current_chat=f"top:{chat_id}")]
         ]
         await update.message.reply_text(
-            "âœ¨ <b>Grubun en iyi alÄ±ntÄ±larÄ±nÄ± keÅŸfet!</b>\n\n"
-            "AÅŸaÄŸÄ±daki butona basarak en Ã§ok beÄŸenilen ve alÄ±ntÄ±lanan mesajlarÄ± inline modda inceleyebilirsin.",
+            "✨ <b>Grubun en iyi alıntılarını keşfet!</b>\n\n"
+            "Aşağıdaki butona basarak en çok beğenilen ve alıntılanan mesajları inline modda inceleyebilirsin.",
             parse_mode='HTML',
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
 
     async def handle_qrand_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Rastgele alÄ±ntÄ± gÃ¶sterme komutu (/qrand)."""
+        """Rastgele alıntı gösterme komutu (/qrand)."""
         if not await self._quote_enabled(update.effective_chat.id):
             return
         chat_id = update.effective_chat.id
@@ -131,14 +131,14 @@ class QuoteHandler:
                 await update.message.reply_sticker(sticker=quote['sticker_file_id'])
             else:
                 await update.message.reply_text(
-                    "ğŸ•µï¸â€â™‚ï¸ Bu grupta henÃ¼z hiÃ§ alÄ±ntÄ± sticker'Ä± oluÅŸturulmamÄ±ÅŸ. `/q` ile ilkini sen yap!"
+                    "🕵️‍♂️ Bu grupta henüz hiç alıntı sticker'ı oluşturulmamış. `/q` ile ilkini sen yap!"
                 )
         except Exception as e:
             logger.error("Quote random error: %s", summarize_exception(e, label="quote_random"))
-            await update.message.reply_text("âš ï¸ Rastgele alÄ±ntÄ± seÃ§ilirken bir sorun oluÅŸtu.")
+            await update.message.reply_text("⚠️ Rastgele alıntı seçilirken bir sorun oluştu.")
 
     async def handle_qd_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """AlÄ±ntÄ± silme komutu (/qd)."""
+        """Alıntı silme komutu (/qd)."""
         if not await self._quote_enabled(update.effective_chat.id):
             return
         chat_id = update.effective_chat.id
@@ -148,20 +148,20 @@ class QuoteHandler:
         try:
             if args and args[0].lower() == 'all':
                 if not self.sudo_manager.is_sudo(user_id):
-                    await update.message.reply_text("â›” TÃ¼m alÄ±ntÄ±larÄ± silmek iÃ§in sudo yetkisi gerekli.")
+                    await update.message.reply_text("⛔ Tüm alıntıları silmek için sudo yetkisi gerekli.")
                     return
                 count = await self.data_port.delete_quotes(chat_id)
-                await update.message.reply_text(f"ğŸ—‘ï¸ Bu gruptaki **{count}** alÄ±ntÄ± baÅŸarÄ±yla silindi.", parse_mode='Markdown')
+                await update.message.reply_text(f"🗑️ Bu gruptaki **{count}** alıntı başarıyla silindi.", parse_mode='Markdown')
             elif args and args[0].isdigit():
                 n = int(args[0])
                 count = await self.data_port.delete_quotes(chat_id, limit=n)
-                await update.message.reply_text(f"ğŸ—‘ï¸ Son **{count}** alÄ±ntÄ± silindi.", parse_mode='Markdown')
+                await update.message.reply_text(f"🗑️ Son **{count}** alıntı silindi.", parse_mode='Markdown')
             else:
                 count = await self.data_port.delete_quotes(chat_id, limit=1)
                 if count > 0:
-                    await update.message.reply_text("ğŸ—‘ï¸ Son alÄ±ntÄ± silindi.")
+                    await update.message.reply_text("🗑️ Son alıntı silindi.")
                 else:
-                    await update.message.reply_text("ğŸ“­ Bu grupta silinecek alÄ±ntÄ± bulunamadÄ±.")
+                    await update.message.reply_text("📭 Bu grupta silinecek alıntı bulunamadı.")
 
             try:
                 await update.message.delete()
@@ -170,7 +170,7 @@ class QuoteHandler:
 
         except Exception as e:
             logger.error("Quote delete error: %s", summarize_exception(e, label="quote_delete"))
-            await update.message.reply_text("âš ï¸ AlÄ±ntÄ± silinirken bir hata oluÅŸtu.")
+            await update.message.reply_text("⚠️ Alıntı silinirken bir hata oluştu.")
 
     async def handle_qtemplate_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Save, apply and remove named quote style templates."""
@@ -185,7 +185,7 @@ class QuoteHandler:
                 templates = []
             names = ", ".join(html.escape(str(item.get("name", ""))) for item in templates) or "yok"
             await update.effective_message.reply_text(
-                f"Åablonlar: <code>{names}</code>\nKullanÄ±m: /qtemplate save|use|delete isim", parse_mode="HTML"
+                f"Şablonlar: <code>{names}</code>\nKullanım: /qtemplate save|use|delete isim", parse_mode="HTML"
             )
             return
         action, name = args[0], args[1] if len(args) > 1 else ""
@@ -194,7 +194,7 @@ class QuoteHandler:
                 name = normalize_template_name(name)
         except QuoteOptionsError:
             await update.effective_message.reply_text(
-                "GeÃ§ersiz ÅŸablon adÄ±. 1-32 karakter, harf/rakam/alt Ã§izgi veya tire kullan."
+                "Geçersiz şablon adı. 1-32 karakter, harf/rakam/alt çizgi veya tire kullan."
             )
             return
         if action == "save" and name:
@@ -213,16 +213,16 @@ class QuoteHandler:
                     "as_file": settings.get("q_as_file", False),
                     "show_reply": settings.get("q_show_reply", False),
                     "crop": settings.get("q_crop", False),
-                    "emoji": settings.get("q_emoji", "âœ¨"),
+                    "emoji": settings.get("q_emoji", "✨"),
                     "rate_enabled": settings.get("q_rate_enabled", True),
                 })
                 await self.data_port.save_quote_template(user_id, name, template_options)
             except (QuoteOptionsError, ValueError):
                 await update.effective_message.reply_text(
-                    "Mevcut quote ayarlarÄ± geÃ§erli bir ÅŸablona dÃ¶nÃ¼ÅŸtÃ¼rÃ¼lemedi."
+                    "Mevcut quote ayarları geçerli bir şablona dönüştürülemedi."
                 )
                 return
-            await update.effective_message.reply_text(f"âœ… Quote ÅŸablonu kaydedildi: <b>{name}</b>", parse_mode="HTML")
+            await update.effective_message.reply_text(f"✅ Quote şablonu kaydedildi: <b>{name}</b>", parse_mode="HTML")
             return
         template = await self.data_port.get_quote_template(user_id, name)
         if action == "use" and template:
@@ -230,21 +230,21 @@ class QuoteHandler:
                 template_options = normalize_quote_options(template.get("options", {}))
             except QuoteOptionsError:
                 await update.effective_message.reply_text(
-                    "Bu ÅŸablon eski veya geÃ§ersiz ayarlar iÃ§eriyor; yeniden kaydetmelisin."
+                    "Bu şablon eski veya geçersiz ayarlar içeriyor; yeniden kaydetmelisin."
                 )
                 return
             for key, value in template_options.items():
                 await self.data_port.update_chat_setting_key(update.effective_chat.id, f"q_{key}", value)
-            await update.effective_message.reply_text(f"âœ… Quote ÅŸablonu uygulandÄ±: <b>{name}</b>", parse_mode="HTML")
+            await update.effective_message.reply_text(f"✅ Quote şablonu uygulandı: <b>{name}</b>", parse_mode="HTML")
             return
         if action == "delete" and name:
             deleted = await self.data_port.delete_quote_template(user_id, name)
-            await update.effective_message.reply_text("âœ… Åablon silindi." if deleted else "Åablon bulunamadÄ±.")
+            await update.effective_message.reply_text("✅ Şablon silindi." if deleted else "Şablon bulunamadı.")
             return
-        await update.effective_message.reply_text("KullanÄ±m: /qtemplate save|use|delete isim")
+        await update.effective_message.reply_text("Kullanım: /qtemplate save|use|delete isim")
 
     async def _get_ai_selected_messages(self, chat_id: int, options: dict) -> list:
-        """AI ile mesaj seÃ§imi yapar."""
+        """AI ile mesaj seçimi yapar."""
         messages_to_quote = []
         recent = await self.data_port.get_recent_messages_with_users(chat_id, limit=150)
 
@@ -257,8 +257,8 @@ class QuoteHandler:
 
         ai_prompt = (
             f"Sorgu: '{options['ai_query']}'\n\n"
-            f"AÅŸaÄŸÄ±daki mesajlardan sorguya en uygun 1-5 tanesini seÃ§. "
-            f"Sadece seÃ§tiÄŸin ID'leri virgÃ¼lle ayÄ±rarak gÃ¶nder."
+            f"Aşağıdaki mesajlardan sorguya en uygun 1-5 tanesini seç. "
+            f"Sadece seçtiğin ID'leri virgülle ayırarak gönder."
         )
 
         ai_res = await self.chat_engine.get_response(
@@ -288,7 +288,7 @@ class QuoteHandler:
         return messages_to_quote
 
     async def _get_reply_messages(self, update: Update, options: dict, chat_id: int) -> list:
-        """YanÄ±tlanan mesajÄ± ve istenen ardÄ±ÅŸÄ±k mesajlarÄ± quote girdilerine dÃ¶nÃ¼ÅŸtÃ¼rÃ¼r."""
+        """Yanıtlanan mesajı ve istenen ardışık mesajları quote girdilerine dönüştürür."""
         messages_to_quote = []
         replied = update.message.reply_to_message
         if replied is None:
@@ -384,7 +384,7 @@ class QuoteHandler:
         return messages_to_quote[:target_size]
 
     def _get_user_info(self, msg) -> tuple:
-        """Mesajdaki kullanÄ±cÄ± bilgisini dÃ¶ndÃ¼rÃ¼r."""
+        """Mesajdaki kullanıcı bilgisini döndürür."""
         if msg.from_user:
             return msg.from_user.full_name, msg.from_user.id
         elif msg.sender_chat:
@@ -392,7 +392,7 @@ class QuoteHandler:
         return "Anonim", 0
 
     def _extract_entities(self, msg) -> list:
-        """Mesajdaki entity'leri Ã§Ä±karÄ±r."""
+        """Mesajdaki entity'leri çıkarır."""
         entities = []
         raw_ents = msg.entities or msg.caption_entities or []
         for ent in raw_ents:
@@ -407,9 +407,9 @@ class QuoteHandler:
                                         messages_to_quote: list, options: dict, chat_id: int):
         """Validate and enqueue quote rendering; workers perform Telegram I/O."""
         if self.quote_service is None:
-            await update.message.reply_text("Quote kuyruÄŸu bu ortamda etkin deÄŸil.")
+            await update.message.reply_text("Quote kuyruğu bu ortamda etkin değil.")
             return
-        status = await update.message.reply_text("ğŸ–¼ï¸ AlÄ±ntÄ± kuyruÄŸa alÄ±nÄ±yorâ€¦")
+        status = await update.message.reply_text("🖼️ Alıntı kuyruğa alınıyor…")
         try:
             job_id, duplicate = await self.quote_service.submit(
                 chat_id=chat_id,
@@ -419,9 +419,9 @@ class QuoteHandler:
                 options=options,
                 reply_to_message_id=update.message.message_id,
             )
-            text = (f"â³ Bu alÄ±ntÄ± iÃ§in aktif iÅŸ zaten var.\nÄ°ÅŸ: <code>{job_id}</code>" if duplicate
-                    else f"â³ AlÄ±ntÄ± kuyruÄŸa alÄ±ndÄ±.\nÄ°ÅŸ: <code>{job_id}</code>")
+            text = (f"⏳ Bu alıntı için aktif iş zaten var.\nİş: <code>{job_id}</code>" if duplicate
+                    else f"⏳ Alıntı kuyruğa alındı.\nİş: <code>{job_id}</code>")
             await status.edit_text(text, parse_mode="HTML")
         except Exception as exc:
             logger.warning("Quote enqueue failed: %s", summarize_exception(exc, label="quote_enqueue"))
-            await status.edit_text("âŒ AlÄ±ntÄ± kuyruÄŸa alÄ±namadÄ±; biraz sonra tekrar dene.")
+            await status.edit_text("❌ Alıntı kuyruğa alınamadı; biraz sonra tekrar dene.")

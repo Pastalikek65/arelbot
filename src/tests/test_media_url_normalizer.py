@@ -31,9 +31,15 @@ def test_public_platform_matrix_normalizes_and_routes(url: str, platform: str):
 
 
 def test_extract_media_url_ignores_unsupported_and_keeps_instagram_url():
-    text = "ÅŸuna bak http://localhost/private sonra https://www.instagram.com/reel/ABC123/?utm_source=x."
+    text = "şuna bak http://localhost/private sonra https://www.instagram.com/reel/ABC123/?utm_source=x."
 
     assert extract_media_url(text) == "https://www.instagram.com/reel/ABC123/?utm_source=x"
+
+
+def test_malformed_port_is_a_safe_domain_error_and_does_not_escape_extraction():
+    with pytest.raises(InvalidMediaURL, match="invalid_port"):
+        normalize_media_url("https://www.instagram.com:abc/reel/abc")
+    assert extract_media_url("bak https://www.instagram.com:abc/reel/abc") is None
 
 
 @pytest.mark.parametrize(

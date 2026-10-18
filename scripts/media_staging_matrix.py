@@ -38,6 +38,7 @@ class MatrixError(ValueError):
 _ID_RE = re.compile(r"^[a-z][a-z0-9_-]{1,48}$")
 _PLATFORMS = {"instagram", "tiktok", "youtube", "x", "facebook", "reddit"}
 _FULL_LIVE_PLATFORMS = frozenset({"instagram", "tiktok", "youtube", "x"})
+_WAIVER_TEXT_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 .,_:/()'_-]{2,240}$")
 _MAX_CASES = 16
 _MAX_LIVE_JOBS = 100
 _MAX_LIVE_CONCURRENCY = 10
@@ -50,14 +51,42 @@ def validate_live_gate(*, live: bool, confirm_live: bool, env_value: str | None)
         raise MatrixError("live_gate_required")
 
 
-def validate_platform_matrix(cases: list[dict[str, Any]], *, required: bool) -> None:
-    """Fail before external calls when a full live platform matrix is requested."""
+def validate_platform_matrix(
+    cases: list[dict[str, Any]],
+    *,
+    required: bool,
+    waived_platforms: frozenset[str] | set[str] = frozenset(),
+) -> None:
+    """Fail before external calls unless every non-waived platform is present."""
 
     if not required:
         return
+    waived = {str(item).strip().casefold() for item in waived_platforms if str(item).strip()}
+    if not waived <= _FULL_LIVE_PLATFORMS:
+        raise MatrixError("live_platform_waiver_invalid")
     enabled = {str(item.get("platform")) for item in cases if item.get("enabled")}
-    if not _FULL_LIVE_PLATFORMS <= enabled:
+    if not (_FULL_LIVE_PLATFORMS - waived) <= enabled:
         raise MatrixError("live_platform_matrix_incomplete")
+
+
+def validate_platform_waiver(
+    waived_platforms: list[str] | tuple[str, ...] | set[str],
+    *,
+    approver: str | None,
+    reason: str | None,
+) -> frozenset[str]:
+    """Validate an explicit, bounded owner waiver before network calls."""
+
+    waived = frozenset(str(item).strip().casefold() for item in waived_platforms if str(item).strip())
+    if not waived or not waived <= _FULL_LIVE_PLATFORMS:
+        raise MatrixError("live_platform_waiver_invalid")
+    normalized_approver = str(approver or "").strip()
+    normalized_reason = str(reason or "").strip()
+    if not _WAIVER_TEXT_RE.fullmatch(normalized_approver):
+        raise MatrixError("live_platform_waiver_approver_invalid")
+    if not _WAIVER_TEXT_RE.fullmatch(normalized_reason):
+        raise MatrixError("live_platform_waiver_reason_invalid")
+    return waived
 
 
 def _safe_host(url: str) -> str | None:
@@ -187,6 +216,9 @@ async def run_live(
     concurrency: int,
     jobs: int | None = None,
     chat_count: int = _DEFAULT_CHAT_COUNT,
+    waived_platforms: frozenset[str] | set[str] = frozenset(),
+    waiver_approver: str | None = None,
+    waiver_reason: str | None = None,
 ) -> dict[str, Any]:
     """Run a bounded external-provider load sample.
 
@@ -196,6 +228,9 @@ async def run_live(
     defaults preserve the original one-request-per-enabled-case matrix.
     """
 
+    waived = frozenset(str(item).strip().casefold() for item in waived_platforms if str(item).strip())
+    if waived:
+        validate_platform_waiver(waived, approver=waiver_approver, reason=waiver_reason)
     if not 1 <= int(concurrency) <= _MAX_LIVE_CONCURRENCY:
         raise MatrixError("live_concurrency_invalid")
     if not 1 <= int(chat_count) <= _MAX_LIVE_JOBS:
@@ -230,6 +265,7 @@ async def run_live(
                 for index, case in enumerate(expanded)
             ]
         )
+        await provider.wait_for_background_cleanup()
     latencies = sorted(float(item["duration_ms"]) for item in results if item["duration_ms"] is not None)
     # Nearest-rank p95 keeps small staging samples honest: with two enabled
     # cases the slower case is the p95, rather than silently reporting only
@@ -246,7 +282,7 @@ async def run_live(
         bucket["jobs"] += 1
         bucket["passed" if item.get("ok") else "failed"] += 1
     p95 = percentile(0.95)
-    return {
+    report = {
         "ok": all(bool(item["ok"]) for item in results),
         "scope": "live-media-matrix",
         "mode": "live-download" if download else "live-probe",
@@ -271,6 +307,13 @@ async def run_live(
         "results": results,
         "secret_free": True,
     }
+    if waived:
+        report["waived_platforms"] = sorted(waived)
+        report["waiver"] = {
+            "approved_by": str(waiver_approver).strip(),
+            "reason": str(waiver_reason).strip(),
+        }
+    return report
 
 
 def main() -> int:
@@ -299,13 +342,34 @@ def main() -> int:
     parser.add_argument(
         "--require-platform-matrix",
         action="store_true",
-        help="require enabled live cases for Instagram, TikTok, YouTube and X",
+        help="require enabled live cases for the non-waived Instagram, TikTok, YouTube and X set",
     )
+    parser.add_argument(
+        "--waive-platform",
+        action="append",
+        default=[],
+        help="explicit owner waiver for one unavailable platform; repeatable",
+    )
+    parser.add_argument("--waiver-approver", help="bounded owner identity for a platform waiver")
+    parser.add_argument("--waiver-reason", help="bounded reason for a platform waiver")
     parser.add_argument("--report", type=Path)
     args = parser.parse_args()
     try:
         cases = load_matrix(args.config.resolve())
-        validate_platform_matrix(cases, required=args.require_platform_matrix)
+        waived_platforms = frozenset(str(item).strip().casefold() for item in args.waive_platform if str(item).strip())
+        if waived_platforms:
+            validate_platform_waiver(
+                waived_platforms,
+                approver=args.waiver_approver,
+                reason=args.waiver_reason,
+            )
+        elif args.waiver_approver or args.waiver_reason:
+            raise MatrixError("live_platform_waiver_missing_platform")
+        validate_platform_matrix(
+            cases,
+            required=args.require_platform_matrix,
+            waived_platforms=waived_platforms,
+        )
         if args.live or args.confirm_live or args.download:
             validate_live_gate(
                 live=args.live,
@@ -319,6 +383,9 @@ def main() -> int:
                     concurrency=args.concurrency,
                     jobs=args.jobs,
                     chat_count=args.chat_count,
+                    waived_platforms=waived_platforms,
+                    waiver_approver=args.waiver_approver,
+                    waiver_reason=args.waiver_reason,
                 )
             )
             if args.require_slo and payload.get("completion_slo", {}).get("met") is not True:

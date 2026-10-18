@@ -38,8 +38,8 @@ class QuoteManager:
     def _smart_scale(self, img, user_scale, is_sticker):
         """
         Smart auto-scaling:
-        - Short quotes â†’ bigger (fills the sticker canvas)
-        - Long quotes â†’ smaller (fits proportionally)
+        - Short quotes → bigger (fills the sticker canvas)
+        - Long quotes → smaller (fits proportionally)
         - Always respects Telegram's 512px max dimension for stickers
         """
         w, h = img.width, img.height

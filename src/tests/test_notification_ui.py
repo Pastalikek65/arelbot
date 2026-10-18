@@ -53,11 +53,11 @@ def test_timezone_panel_uses_safe_tokens_and_owner_scope():
 
 def test_group_center_keeps_mutations_admin_only():
     member_text, member_markup = group_center(7, is_admin=False)
-    assert "yalnÄ±zca grup yÃ¶neticileri" in member_text
+    assert "yalnızca grup yöneticileri" in member_text
     assert all("notify_group_" in (button.callback_data or "") for row in member_markup.inline_keyboard for button in row)
 
     admin_text, admin_markup = group_center(7, is_admin=True)
-    assert "PlanlÄ± duyuru" in admin_text
+    assert "Planlı duyuru" in admin_text
     assert any(button.callback_data == "notify_group_weather:7" for row in admin_markup.inline_keyboard for button in row)
     callbacks = [button.callback_data for row in admin_markup.inline_keyboard for button in row]
     assert "notify_group_air_quality:7" in callbacks
@@ -75,19 +75,19 @@ def test_render_rows_escapes_payload_and_scopes_stop_callback():
         [{
             "enabled": True,
             "feature_key": "weather",
-            "params": {"city": "<Ä°stanbul>"},
+            "params": {"city": "<İstanbul>"},
             "schedule_kind": "daily",
             "subscription_id": "abcdef123456",
         }],
         owner_id=42,
     )
-    assert "&lt;Ä°stanbul&gt;" in text
+    assert "&lt;İstanbul&gt;" in text
     assert markup.inline_keyboard[0][0].callback_data == "notify_stop:42:abcdef123456"
 
 
 def test_category_help_uses_stable_command_examples():
     text, markup = category_help("prices", 5)
-    assert "/alarm kur usd 40 Ã¼stÃ¼" in text
+    assert "/alarm kur usd 40 üstü" in text
     assert markup.inline_keyboard[0][0].callback_data == "notify_center:5"
 
 
@@ -157,7 +157,7 @@ async def test_notification_settings_command_is_private_and_renders_panel():
     )
     await handler.handle_notification_settings_command(update, SimpleNamespace(args=[]))
 
-    assert replies and "Bildirim ayarlarÄ±n" in replies[0][0]
+    assert replies and "Bildirim ayarların" in replies[0][0]
     assert replies[0][1]["reply_markup"]
 
 
@@ -445,7 +445,7 @@ async def test_group_city_selectors_are_paginated_and_personal_weather_is_group_
     second_page = query.edits[-1][1]["reply_markup"]
     first_city_callback = second_page.inline_keyboard[0][0].callback_data
     assert first_city_callback == "notify_group_weather_pick:9:9"
-    assert "Ä°l sayfasÄ± 2/11" in query.edits[-1][0]
+    assert "İl sayfası 2/11" in query.edits[-1][0]
 
     private_weather = Query()
     await handler._handle_notification_navigation(update, private_weather, context, "notify_weather:9")

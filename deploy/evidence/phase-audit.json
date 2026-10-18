@@ -1,0 +1,92 @@
+{
+  "ok": false,
+  "commit": "b076df02114d82f38c7ca2b4ece606cadcfc06d1",
+  "phase_count": 10,
+  "verified_count": 9,
+  "next_phase": "9",
+  "phases": [
+    {
+      "id": "0",
+      "name": "stabilization",
+      "status": "verified",
+      "missing_checks": [],
+      "missing_evidence": [],
+      "missing_live": []
+    },
+    {
+      "id": "1",
+      "name": "typed_media_and_providers",
+      "status": "verified",
+      "missing_checks": [],
+      "missing_evidence": [],
+      "missing_live": []
+    },
+    {
+      "id": "2",
+      "name": "durable_state_and_persistence",
+      "status": "verified",
+      "missing_checks": [],
+      "missing_evidence": [],
+      "missing_live": []
+    },
+    {
+      "id": "3",
+      "name": "quote_and_sticker_platform",
+      "status": "verified",
+      "missing_checks": [],
+      "missing_evidence": [],
+      "missing_live": []
+    },
+    {
+      "id": "4",
+      "name": "ai_and_rag",
+      "status": "verified",
+      "missing_checks": [],
+      "missing_evidence": [],
+      "missing_live": []
+    },
+    {
+      "id": "5",
+      "name": "groups_and_automation",
+      "status": "verified",
+      "missing_checks": [],
+      "missing_evidence": [],
+      "missing_live": []
+    },
+    {
+      "id": "6",
+      "name": "games_and_economy",
+      "status": "verified",
+      "missing_checks": [],
+      "missing_evidence": [],
+      "missing_live": []
+    },
+    {
+      "id": "7",
+      "name": "observability_and_operations",
+      "status": "verified",
+      "missing_checks": [],
+      "missing_evidence": [],
+      "missing_live": []
+    },
+    {
+      "id": "8",
+      "name": "telegram_surfaces",
+      "status": "verified",
+      "missing_checks": [],
+      "missing_evidence": [],
+      "missing_live": []
+    },
+    {
+      "id": "9",
+      "name": "live_deployment_validation",
+      "status": "deployment_pending",
+      "missing_checks": [],
+      "missing_evidence": [],
+      "missing_live": [
+        "telegram-mutation-live.json",
+        "monitoring-alert-delivery.json"
+      ]
+    }
+  ]
+}

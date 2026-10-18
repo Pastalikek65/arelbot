@@ -33,7 +33,7 @@ async def test_group_schedule_is_shared_by_admins_and_can_be_stopped():
         admin_id=10,
         chat_id=-100,
         feature_key="weather",
-        params={"city": "Ä°stanbul"},
+        params={"city": "İstanbul"},
         schedule_kind="daily",
         local_time="10:00",
     )
@@ -41,7 +41,7 @@ async def test_group_schedule_is_shared_by_admins_and_can_be_stopped():
         admin_id=11,
         chat_id=-100,
         feature_key="weather",
-        params={"city": "Ä°stanbul"},
+        params={"city": "İstanbul"},
         schedule_kind="daily",
         local_time="10:00",
     )
@@ -83,7 +83,7 @@ async def test_multiple_groups_have_isolated_schedules_and_controls():
         admin_id=10,
         chat_id=-100,
         feature_key="weather",
-        params={"city": "Ä°stanbul"},
+        params={"city": "İstanbul"},
         schedule_kind="daily",
         local_time="10:00",
     )
@@ -97,7 +97,7 @@ async def test_multiple_groups_have_isolated_schedules_and_controls():
         weekday=0,
     )
     assert first_group["subscription_id"] != second_group["subscription_id"]
-    assert [row["params"]["city"] for row in await store.list_for_chat(-100)] == ["Ä°stanbul"]
+    assert [row["params"]["city"] for row in await store.list_for_chat(-100)] == ["İstanbul"]
     assert [row["params"]["city"] for row in await store.list_for_chat(-200)] == ["Ankara"]
     assert await store.disable_for_chat(-100, second_group["subscription_id"]) is False
     assert (await store.list_for_chat(-200))[0]["enabled"] is True
@@ -148,7 +148,7 @@ async def test_group_information_schedules_support_air_quality_and_news():
         admin_id=10,
         chat_id=-100,
         feature_key="air_quality",
-        params={"city": "Ä°stanbul"},
+        params={"city": "İstanbul"},
         schedule_kind="daily",
         local_time="10:00",
     )
@@ -162,7 +162,7 @@ async def test_group_information_schedules_support_air_quality_and_news():
         weekday=0,
     )
     assert air["feature_key"] == "air_quality"
-    assert air["params"] == {"city": "Ä°stanbul"}
+    assert air["params"] == {"city": "İstanbul"}
     assert news["feature_key"] == "breaking_news"
     assert news["dedupe_policy"] == "content"
 
@@ -189,7 +189,7 @@ async def test_group_schedule_writes_bounded_admin_audit_event():
         admin_id=10,
         chat_id=-100,
         feature_key="air_quality",
-        params={"city": "Ä°stanbul"},
+        params={"city": "İstanbul"},
         schedule_kind="daily",
         local_time="10:00",
         message_thread_id=42,

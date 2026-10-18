@@ -9,8 +9,8 @@ class BlackjackGame:
         '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10,
         'J': 10, 'Q': 10, 'K': 10, 'A': 11
     }
-    SUITS = ['â™ ï¸', 'â™¥ï¸', 'â™£ï¸', 'â™¦ï¸']
-    SUIT_EMOJI = {'â™ ï¸': 'â™ ', 'â™¥ï¸': 'â™¥', 'â™£ï¸': 'â™£', 'â™¦ï¸': 'â™¦'}
+    SUITS = ['♠️', '♥️', '♣️', '♦️']
+    SUIT_EMOJI = {'♠️': '♠', '♥️': '♥', '♣️': '♣', '♦️': '♦'}
 
     def create_game(self, player_name: str, player_id: int) -> Dict:
         """Create a new interactive blackjack game state."""
@@ -81,17 +81,17 @@ class BlackjackGame:
         d_score = self.calculate_score(game_state['dealer_hand'])
         
         if game_state['status'] == 'blackjack':
-            return {"result": "blackjack", "message": "ğŸ”¥ BLACKJACK! ğŸ’°", "winnings": int(game_state['bet'] * 1.5)}
+            return {"result": "blackjack", "message": "🔥 BLACKJACK! 💰", "winnings": int(game_state['bet'] * 1.5)}
         elif game_state['status'] == 'bust':
-            return {"result": "bust", "message": "ğŸ’€ PatladÄ±n! (Bust)", "winnings": -game_state['bet']}
+            return {"result": "bust", "message": "💀 Patladın! (Bust)", "winnings": -game_state['bet']}
         elif d_score > 21:
-            return {"result": "win", "message": "ğŸ¤µ Krupiyer PatladÄ±! KAZANDIN! ğŸ†", "winnings": game_state['bet']}
+            return {"result": "win", "message": "🤵 Krupiyer Patladı! KAZANDIN! 🏆", "winnings": game_state['bet']}
         elif p_score > d_score:
-            return {"result": "win", "message": "ğŸ† KAZANDIN!", "winnings": game_state['bet']}
+            return {"result": "win", "message": "🏆 KAZANDIN!", "winnings": game_state['bet']}
         elif p_score < d_score:
-            return {"result": "lose", "message": "âŒ KAYBETTÄ°N...", "winnings": -game_state['bet']}
+            return {"result": "lose", "message": "❌ KAYBETTİN...", "winnings": -game_state['bet']}
         else:
-            return {"result": "push", "message": "ğŸ¤ BERABERE (Push)", "winnings": 0}
+            return {"result": "push", "message": "🤝 BERABERE (Push)", "winnings": 0}
 
     def format_game(self, game_state: Dict, reveal_dealer: bool = False) -> str:
         """Format the current game state as a visual string."""
@@ -99,18 +99,18 @@ class BlackjackGame:
         d_hand = game_state['dealer_hand']
         p_score = self.calculate_score(p_hand)
         
-        text = f"ğŸƒ <b>Blackjack â€” {game_state['player_name']}</b>\n"
-        text += f"ğŸ’° Bahis: <b>{game_state['bet']}</b> jeton\n\n"
+        text = f"🃏 <b>Blackjack — {game_state['player_name']}</b>\n"
+        text += f"💰 Bahis: <b>{game_state['bet']}</b> jeton\n\n"
         
         # Player hand
-        text += f"ğŸ‘¤ <b>Senin Elin:</b> {self.format_hand(p_hand)} â†’ <b>{p_score}</b>\n"
+        text += f"👤 <b>Senin Elin:</b> {self.format_hand(p_hand)} → <b>{p_score}</b>\n"
         
         # Dealer hand
         if reveal_dealer:
             d_score = self.calculate_score(d_hand)
-            text += f"ğŸ¤µ <b>Krupiyer:</b> {self.format_hand(d_hand)} â†’ <b>{d_score}</b>\n"
+            text += f"🤵 <b>Krupiyer:</b> {self.format_hand(d_hand)} → <b>{d_score}</b>\n"
         else:
-            text += f"ğŸ¤µ <b>Krupiyer:</b> {d_hand[0][0]}{d_hand[0][1]} ğŸ‚ \n"
+            text += f"🤵 <b>Krupiyer:</b> {d_hand[0][0]}{d_hand[0][1]} 🂠\n"
         
         return text
 

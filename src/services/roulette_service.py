@@ -99,14 +99,14 @@ class RouletteService:
         current = state.get("current_player_id")
         for player_id, name in zip(state.get("players", []), state.get("player_names", [])):
             if player_id in state.get("alive", []):
-                marker = " â—€" if current is not None and int(player_id) == int(current) else ""
-                names.append(f"â€¢ {html.escape(str(name)[:80])}{marker}")
-        header = "ğŸ”« <b>KalÄ±cÄ± Rus Ruleti</b>"
+                marker = " ◀" if current is not None and int(player_id) == int(current) else ""
+                names.append(f"• {html.escape(str(name)[:80])}{marker}")
+        header = "🔫 <b>Kalıcı Rus Ruleti</b>"
         if state.get("phase") == "lobby":
-            body = "Lobi aÃ§Ä±k. Oyuncular katÄ±lsÄ±n, sonra sahibi baÅŸlatsÄ±n."
+            body = "Lobi açık. Oyuncular katılsın, sonra sahibi başlatsın."
         else:
-            body = "SÄ±ra iÅŸaretli oyuncuda. Her callback tek kez uygulanÄ±r."
-        text = f"{header}\n\n{body}\n\n<b>Oyuncular</b>\n" + ("\n".join(names) or "â€¢ HenÃ¼z oyuncu yok")
+            body = "Sıra işaretli oyuncuda. Her callback tek kez uygulanır."
+        text = f"{header}\n\n{body}\n\n<b>Oyuncular</b>\n" + ("\n".join(names) or "• Henüz oyuncu yok")
         if result:
             text += f"\n\n{result}"
         return text
@@ -222,7 +222,7 @@ class RouletteService:
                         "terminal": True,
                         "winner_id": winner_id,
                         "state": state,
-                        "text": f"{result.get('message', '')}\n\nğŸ† Kazanan: <b>{html.escape(winner_name)}</b>",
+                        "text": f"{result.get('message', '')}\n\n🏆 Kazanan: <b>{html.escape(winner_name)}</b>",
                     }
                 state["current_player_idx"] = state["current_player_idx"] % len(alive)
             else:

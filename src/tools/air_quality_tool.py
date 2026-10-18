@@ -14,7 +14,7 @@ class AirQualityTool(BaseTool):
     def __init__(self, provider: AirQualityProvider | None = None) -> None:
         super().__init__(
             name="get_air_quality",
-            description="Bir TÃ¼rk ÅŸehrinin gÃ¼ncel hava kalitesi, AQI, partikÃ¼l ve polen deÄŸerlerini getirir.",
+            description="Bir Türk şehrinin güncel hava kalitesi, AQI, partikül ve polen değerlerini getirir.",
         )
         self.provider = provider or AirQualityProvider()
 
@@ -23,7 +23,7 @@ class AirQualityTool(BaseTool):
         return {
             "type": "object",
             "properties": {
-                "city": {"type": "string", "description": "Ä°l adÄ± veya yerel ÅŸehir kaydÄ±ndaki plaka."},
+                "city": {"type": "string", "description": "İl adı veya yerel şehir kaydındaki plaka."},
             },
             "required": ["city"],
         }

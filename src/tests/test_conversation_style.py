@@ -16,10 +16,10 @@ def test_normal_chat_style_is_compact_and_conversational():
     assert "70 kelimeyi" in instruction
     assert "[telegram_user_id=...]" in instruction
     assert "genel grup analizi" in instruction
-    assert "biÅŸey lazÄ±m mÄ±" in instruction
+    assert "bişey lazım mı" in instruction
     assert "ne istiyorsun" in instruction
     assert "randomu" in instruction
-    assert "nokta, virgÃ¼l" in instruction
+    assert "nokta, virgül" in instruction
 
 
 def test_normal_mode_is_selectable_without_touching_other_modes():
@@ -30,10 +30,10 @@ def test_normal_mode_is_selectable_without_touching_other_modes():
 
 
 def test_normal_response_removes_service_bot_closers_and_relaxes_punctuation():
-    value = normalize_normal_response("tamam hallederiz!!! BaÅŸka bir ÅŸey var mÄ±???")
+    value = normalize_normal_response("tamam hallederiz!!! Başka bir şey var mı???")
     assert value == "tamam hallederiz!"
 
 
 def test_normal_response_does_not_rewrite_normal_question_or_words():
-    value = normalize_normal_response("bugÃ¼n ne istiyorsun? ben kahve iÃ§iyorum")
-    assert value == "bugÃ¼n ne istiyorsun? ben kahve iÃ§iyorum"
+    value = normalize_normal_response("bugün ne istiyorsun? ben kahve içiyorum")
+    assert value == "bugün ne istiyorsun? ben kahve içiyorum"

@@ -35,6 +35,8 @@ class MutationProbeError(ValueError):
 
 _TOKEN_RE = re.compile(r"^\d{6,}:[A-Za-z0-9_-]{20,}$")
 _INT_RE = re.compile(r"^-?\d{1,20}$")
+_OPAQUE_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,255}$")
+_SENSITIVE_KEY_RE = re.compile(r"(?i)(?:token|cookie|password|authorization|api[_-]?key|private[_-]?key|secret)")
 
 
 def validate_live_gate(*, live: bool, confirm_live: bool, allow_mutation: bool, env_value: str | None) -> None:
@@ -54,6 +56,41 @@ def parse_integer(value: str | None, *, required: bool, label: str) -> int | Non
     return parsed
 
 
+def validate_mutation_inputs(
+    *,
+    chat_id: int,
+    thread_id: int | None,
+    video_file_id: str | None,
+    sticker_file_id: str | None,
+    file_id: str | None,
+    callback_query_id: str | None,
+) -> None:
+    """Validate the complete mutation contract before opening Telegram.
+
+    The live probe deliberately performs several mutations.  Discovering a
+    missing file/callback id after ``sendMessage`` would leave a partially
+    executed canary in the staging chat, so all opaque Telegram identifiers
+    are checked up front and the probe fails closed before constructing a bot.
+    """
+
+    if not isinstance(chat_id, int) or chat_id == 0:
+        raise MutationProbeError("chat_id_invalid")
+    if thread_id is not None and (not isinstance(thread_id, int) or thread_id == 0):
+        raise MutationProbeError("thread_id_invalid")
+    required = {
+        "video_file_id": video_file_id,
+        "sticker_file_id": sticker_file_id,
+        "file_id": file_id,
+        "callback_query_id": callback_query_id,
+    }
+    for label, value in required.items():
+        raw = str(value or "").strip()
+        if not raw:
+            raise MutationProbeError(f"{label}_required")
+        if not _OPAQUE_ID_RE.fullmatch(raw):
+            raise MutationProbeError(f"{label}_invalid")
+
+
 def _safe_error(exc: BaseException) -> str:
     return type(exc).__name__[:80] or "Exception"
 
@@ -64,6 +101,8 @@ def _write_report(path: Path, payload: dict[str, Any]) -> None:
     for parent in (path.parent, *path.parent.parents):
         if parent.exists() and parent.is_symlink():
             raise MutationProbeError("report_parent_symlink")
+    if _contains_sensitive(payload):
+        raise MutationProbeError("report_secret_material")
     parent = path.parent.resolve()
     parent.mkdir(parents=True, exist_ok=True)
     temporary: Path | None = None
@@ -84,6 +123,24 @@ def _write_report(path: Path, payload: dict[str, Any]) -> None:
         if temporary is not None:
             temporary.unlink(missing_ok=True)
         raise
+
+
+def _contains_sensitive(value: Any) -> bool:
+    if isinstance(value, dict):
+        for key, child in value.items():
+            lowered = str(key).casefold()
+            if lowered == "secret_free" and isinstance(child, bool):
+                continue
+            if _SENSITIVE_KEY_RE.search(lowered) and child not in (None, False, "", 0):
+                return True
+            if _contains_sensitive(child):
+                return True
+        return False
+    if isinstance(value, list):
+        return any(_contains_sensitive(item) for item in value)
+    if isinstance(value, str):
+        return bool(re.search(r"\b\d{6,}:[A-Za-z0-9_-]{20,}\b", value) or "authorization:" in value.casefold())
+    return False
 
 
 async def _attempt(operations: dict[str, bool], errors: dict[str, str], name: str, call) -> Any | None:
@@ -109,6 +166,16 @@ async def run_live(
 ) -> dict[str, Any]:
     """Execute the fixed mutation contract and return secret-free evidence."""
 
+    # Do this before build_bot/sendMessage.  A live staging run must never
+    # create a partial canary merely because a later operation lacks an id.
+    validate_mutation_inputs(
+        chat_id=chat_id,
+        thread_id=thread_id,
+        video_file_id=video_file_id,
+        sticker_file_id=sticker_file_id,
+        file_id=file_id,
+        callback_query_id=callback_query_id,
+    )
     bot = build_bot(token)
     operations: dict[str, bool] = {}
     errors: dict[str, str] = {}
@@ -291,4 +358,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

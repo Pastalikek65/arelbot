@@ -29,7 +29,7 @@ def test_load_cases_rejects_duplicate_and_complex_parameters(tmp_path: Path):
     complex_params = tmp_path / "complex.json"
     complex_params.write_text(
         json.dumps(
-            {"cases": [{"id": "bad", "feature": "weather", "params": {"city": ["Ä°stanbul"]}}]},
+            {"cases": [{"id": "bad", "feature": "weather", "params": {"city": ["İstanbul"]}}]},
             ensure_ascii=False,
         ),
         encoding="utf-8",
@@ -89,7 +89,7 @@ class _FailingExecutor(_Executor):
 
 def test_run_case_requires_expected_source_and_cache_hit():
     executor = _Executor()
-    case = MatrixCase("fixture", "weather", {"city": "Ä°stanbul"}, "example.test", True)
+    case = MatrixCase("fixture", "weather", {"city": "İstanbul"}, "example.test", True)
     result = asyncio.run(run_case(case, executor))
     assert result.ok is True
     assert result.second_cache_hit is True

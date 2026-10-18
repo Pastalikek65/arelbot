@@ -36,6 +36,8 @@ _METRIC_LINE_RE = re.compile(
 )
 _WEBHOOK_LABEL_RE = re.compile(r'(?:^|,)\s*integration="webhook"\s*(?:,|$)')
 _CANARY_RE = re.compile(r"^ArelbotStagingDeliveryCanary_[a-f0-9]{16}$")
+_TOKEN_RE = re.compile(r"\b\d{6,}:[A-Za-z0-9_-]{20,}\b")
+_SENSITIVE_KEY_RE = re.compile(r"(?i)(?:token|cookie|password|authorization|api[_-]?key|private[_-]?key|secret)")
 
 
 def validate_live_gate(
@@ -81,6 +83,29 @@ def validate_local_base_url(value: str) -> str:
     return urlunsplit(("http", netloc, "", "", "")).rstrip("/")
 
 
+def validate_monitoring_inputs(
+    base_url: str,
+    *,
+    timeout_seconds: float = 15.0,
+    poll_interval_seconds: float = 5.0,
+    max_attempts: int = 3,
+) -> str:
+    """Validate all canary inputs before a live Alertmanager request."""
+
+    normalized = validate_local_base_url(base_url)
+    try:
+        timeout = float(timeout_seconds)
+        poll_interval = float(poll_interval_seconds)
+        attempts = int(max_attempts)
+    except (TypeError, ValueError) as exc:
+        raise MonitoringProbeError("monitoring_timeout_invalid") from exc
+    if not 0.1 <= timeout <= 60 or not 0 <= poll_interval <= 30:
+        raise MonitoringProbeError("monitoring_timeout_invalid")
+    if not 1 <= attempts <= 5:
+        raise MonitoringProbeError("monitoring_attempts_invalid")
+    return normalized
+
+
 def parse_notification_counter(metrics: str, metric_name: str) -> int:
     """Read one bounded webhook integration counter from Prometheus text."""
 
@@ -111,6 +136,8 @@ def _safe_report(path: Path, payload: dict[str, Any]) -> None:
     for parent in (target.parent, *target.parent.parents):
         if parent.exists() and parent.is_symlink():
             raise MonitoringProbeError("report_parent_symlink")
+    if _contains_sensitive(payload):
+        raise MonitoringProbeError("report_secret_material")
     parent = target.parent.resolve()
     parent.mkdir(parents=True, exist_ok=True)
     temporary: Path | None = None
@@ -138,6 +165,24 @@ def _safe_report(path: Path, payload: dict[str, Any]) -> None:
         raise
 
 
+def _contains_sensitive(value: Any) -> bool:
+    if isinstance(value, dict):
+        for key, child in value.items():
+            lowered = str(key).casefold()
+            if lowered == "secret_free" and isinstance(child, bool):
+                continue
+            if _SENSITIVE_KEY_RE.search(lowered) and child not in (None, False, "", 0):
+                return True
+            if _contains_sensitive(child):
+                return True
+        return False
+    if isinstance(value, list):
+        return any(_contains_sensitive(item) for item in value)
+    if isinstance(value, str):
+        return bool(_TOKEN_RE.search(value) or "authorization:" in value.casefold())
+    return False
+
+
 async def run_live(
     base_url: str,
     *,
@@ -148,11 +193,12 @@ async def run_live(
 ) -> dict[str, Any]:
     """Post a canary alert and prove Alertmanager counted its webhook delivery."""
 
-    normalized = validate_local_base_url(base_url)
-    if not 0.1 <= float(timeout_seconds) <= 60 or not 0 <= float(poll_interval_seconds) <= 30:
-        raise MonitoringProbeError("monitoring_timeout_invalid")
-    if not 1 <= int(max_attempts) <= 5:
-        raise MonitoringProbeError("monitoring_attempts_invalid")
+    normalized = validate_monitoring_inputs(
+        base_url,
+        timeout_seconds=timeout_seconds,
+        poll_interval_seconds=poll_interval_seconds,
+        max_attempts=max_attempts,
+    )
     owned = client is None
     if owned:
         client = httpx.AsyncClient(
@@ -260,6 +306,14 @@ def _parse_args() -> argparse.Namespace:
 def main() -> int:
     args = _parse_args()
     try:
+        # Validation-only mode must still reject unsafe targets and bounds so
+        # a copied command cannot silently become a probe of a remote host.
+        validate_monitoring_inputs(
+            args.alertmanager_url,
+            timeout_seconds=args.timeout,
+            poll_interval_seconds=args.poll_interval,
+            max_attempts=args.max_attempts,
+        )
         if not (args.live or args.confirm_live or args.confirm_notification):
             payload = {
                 "scope": "monitoring-alert-delivery-validation",

@@ -12,7 +12,7 @@ if [[ -n "${ARELBOT_EXTRA_CA_CERT:-}" && -f "${ARELBOT_EXTRA_CA_CERT}" ]]; then
     elif openssl x509 -inform DER -in "${ARELBOT_EXTRA_CA_CERT}" -noout >/dev/null 2>&1; then
         openssl x509 -inform DER -in "${ARELBOT_EXTRA_CA_CERT}" -out "${extra_ca_pem}"
     else
-        echo "ARELBOT_EXTRA_CA_CERT geÃ§erli bir PEM/DER sertifikasÄ± deÄŸil; sistem CA zinciri kullanÄ±lacak." >&2
+        echo "ARELBOT_EXTRA_CA_CERT geçerli bir PEM/DER sertifikası değil; sistem CA zinciri kullanılacak." >&2
         extra_ca_pem=""
     fi
     if [[ -n "${extra_ca_pem}" ]]; then
@@ -23,4 +23,10 @@ if [[ -n "${ARELBOT_EXTRA_CA_CERT:-}" && -f "${ARELBOT_EXTRA_CA_CERT}" ]]; then
     fi
 fi
 
+# Compose's worker service passes its process as arguments so the same CA
+# merge path is used by bot, worker and development containers. Keep the
+# default command for the image's normal bot startup.
+if [[ "$#" -gt 0 ]]; then
+    exec "$@"
+fi
 exec python main.py

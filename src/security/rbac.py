@@ -1,12 +1,12 @@
 """
-RBAC (Role-Based Access Control) â€” Yetki kontrol sistemi.
+RBAC (Role-Based Access Control) — Yetki kontrol sistemi.
 
-HiyerarÅŸi:
+Hiyerarşi:
     OWNER (3) > ADMIN (2) > MODERATOR (1) > USER (0)
 
-Permission'lar dekoratÃ¶rlerle kontrol edilir.
+Permission'lar dekoratörlerle kontrol edilir.
 
-KullanÄ±m:
+Kullanım:
     @rbac.require(Role.ADMIN)
     async def ban_user(self, update, context):
         ...
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 class Role(IntEnum):
-    """Yetki seviyeleri â€” deÄŸer bÃ¼yÃ¼dÃ¼kÃ§e yetki artar."""
+    """Yetki seviyeleri — değer büyüdükçe yetki artar."""
     USER = 0
     MODERATOR = 1
     ADMIN = 2
@@ -28,7 +28,7 @@ class Role(IntEnum):
 
 
 class Permission(IntEnum):
-    """DetaylÄ± izinler."""
+    """Detaylı izinler."""
     MANAGE_GROUPS = 1
     MANAGE_USERS = 2
     MANAGE_SUDOS = 3
@@ -75,9 +75,9 @@ ROLE_PERMISSIONS: Dict[Role, Set[Permission]] = {
 
 class RBACManager:
     """
-    Merkezi yetki yÃ¶neticisi.
+    Merkezi yetki yöneticisi.
 
-    SudoManager ile entegre Ã§alÄ±ÅŸÄ±r.
+    SudoManager ile entegre çalışır.
     """
 
     def __init__(self, owner_id: int):
@@ -86,19 +86,19 @@ class RBACManager:
         self._roles[owner_id] = Role.OWNER
 
     def get_role(self, user_id: int) -> Role:
-        """KullanÄ±cÄ±nÄ±n rolÃ¼nÃ¼ dÃ¶ndÃ¼rÃ¼r."""
+        """Kullanıcının rolünü döndürür."""
         if user_id == self.owner_id:
             return Role.OWNER
         return self._roles.get(user_id, Role.USER)
 
     def set_role(self, user_id: int, role: Role, requester_id: int) -> bool:
         """
-        KullanÄ±cÄ±ya rol atar.
+        Kullanıcıya rol atar.
 
-        - OWNER baÅŸkasÄ±na ADMIN atayabilir
-        - ADMIN baÅŸkasÄ±na MODERATOR atayabilir
-        - Kendi rolÃ¼nden yÃ¼ksek atayamaz
-        - OWNER deÄŸiÅŸtirilemez
+        - OWNER başkasına ADMIN atayabilir
+        - ADMIN başkasına MODERATOR atayabilir
+        - Kendi rolünden yüksek atayamaz
+        - OWNER değiştirilemez
         """
         if user_id == self.owner_id:
             logger.warning(f"Cannot change owner's role")
@@ -119,7 +119,7 @@ class RBACManager:
         return True
 
     def remove_role(self, user_id: int, requester_id: int) -> bool:
-        """KullanÄ±cÄ±nÄ±n rolÃ¼nÃ¼ kaldÄ±rÄ±r."""
+        """Kullanıcının rolünü kaldırır."""
         if user_id == self.owner_id:
             return False
 
@@ -132,19 +132,19 @@ class RBACManager:
         return True
 
     def has_permission(self, user_id: int, permission: Permission) -> bool:
-        """KullanÄ±cÄ±nÄ±n belirli bir permission'Ä± var mÄ±?"""
+        """Kullanıcının belirli bir permission'ı var mı?"""
         role = self.get_role(user_id)
         return permission in ROLE_PERMISSIONS.get(role, set())
 
     def has_role(self, user_id: int, min_role: Role) -> bool:
-        """Minimum role kontrolÃ¼."""
+        """Minimum role kontrolü."""
         return self.get_role(user_id) >= min_role
 
     def require(self, min_role: Role) -> Callable:
         """
-        Decorator: Belirli bir rolden dÃ¼ÅŸÃ¼kse iÅŸlemi engeller.
+        Decorator: Belirli bir rolden düşükse işlemi engeller.
 
-        KullanÄ±m:
+        Kullanım:
             @rbac.require(Role.ADMIN)
             async def admin_only_command(self, update, context):
                 ...
@@ -163,7 +163,7 @@ class RBACManager:
                     logger.warning("Permission denied: required_role=%s", min_role.name)
                     if context and hasattr(update, 'effective_message'):
                         await update.effective_message.reply_text(
-                            f"â›” Bu iÅŸlem iÃ§in {min_role.name} yetkisi gerekli.",
+                            f"⛔ Bu işlem için {min_role.name} yetkisi gerekli.",
                             parse_mode='HTML'
                         )
                     return None
@@ -173,14 +173,14 @@ class RBACManager:
         return decorator
 
     def list_roles(self) -> Dict[int, str]:
-        """TÃ¼m rol atamalarÄ±nÄ± listeler."""
+        """Tüm rol atamalarını listeler."""
         result = {}
         for uid, role in self._roles.items():
             result[uid] = role.name
         return result
 
     def get_all_with_min_role(self, min_role: Role) -> Set[int]:
-        """Belirli bir rolden yÃ¼ksek tÃ¼m kullanÄ±cÄ±larÄ± dÃ¶ndÃ¼rÃ¼r."""
+        """Belirli bir rolden yüksek tüm kullanıcıları döndürür."""
         result = set()
         for uid, role in self._roles.items():
             if role >= min_role:

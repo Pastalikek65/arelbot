@@ -65,6 +65,25 @@ def test_live_media_matrix_requires_all_platforms_and_slo():
     assert result.code == "live_media_matrix_invariant_failed"
 
 
+def test_live_media_matrix_accepts_explicit_owner_platform_waiver():
+    payload = _media_matrix()
+    payload["platforms"].pop("instagram")
+    payload["case_count"] = 3
+    payload["passed"] = 3
+    payload["waived_platforms"] = ["instagram"]
+    payload["waiver"] = {
+        "approved_by": "owner",
+        "reason": "source access restricted",
+    }
+    result = _audit_live_invariants("media-staging-full-matrix.json", payload)
+    assert result is not None and result.ok is True
+
+    broken = copy.deepcopy(payload)
+    broken["waiver"]["reason"] = ""
+    result = _audit_live_invariants("media-staging-full-matrix.json", broken)
+    assert result is not None and result.ok is False
+
+
 @pytest.mark.parametrize(
     ("filename", "payload"),
     [
@@ -168,9 +187,9 @@ def test_require_live_audit_promotes_only_a_complete_valid_evidence_set(tmp_path
         },
         "secret_free": True,
     }), encoding="utf-8")
-    (tmp_path / "cleanapis-staging.json").write_text(json.dumps({
-        "scope": "cleanapis-staging", "ok": True, "mode": "live-completion",
-        "provider": "cleanapis", "model": "deepseek-v4-flash-0731",
+    (tmp_path / "evren-staging.json").write_text(json.dumps({
+        "scope": "evren-staging", "ok": True, "mode": "live-completion",
+        "provider": "evren", "model": "deepseek-v4.1-flash",
         "latency_ms": 120.5, "response_chars": 1, "usage_present": True,
         "secret_free": True,
     }), encoding="utf-8")

@@ -94,11 +94,11 @@ class LyricsProvider:
             raise RuntimeError("lyrics_source_empty")
         title = str(page_data.get("title") or f"{song} - {artist}".strip(" -"))[:200]
         content = (
-            f"<b>ğŸµ ÅarkÄ± sÃ¶zÃ¼ kaynaÄŸÄ±</b>\n"
+            f"<b>🎵 Şarkı sözü kaynağı</b>\n"
             f"<b>{html.escape(title)}</b>\n\n"
             f"{html.escape(excerpt)}\n\n"
-            f'<a href="{html.escape(source_url, quote=True)}">KaynaÄŸÄ± aÃ§</a>\n'
-            "<i>Kaynak metin telifli olabilir; Arelbot tam ÅŸarkÄ± sÃ¶zÃ¼ yerine sÄ±nÄ±rlÄ± kaynak Ã¶zeti gÃ¶sterir.</i>"
+            f'<a href="{html.escape(source_url, quote=True)}">Kaynağı aç</a>\n'
+            "<i>Kaynak metin telifli olabilir; Arelbot tam şarkı sözü yerine sınırlı kaynak özeti gösterir.</i>"
         )
         return ProviderResponse(
             data={

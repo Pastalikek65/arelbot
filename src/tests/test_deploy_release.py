@@ -15,14 +15,17 @@ from scripts.deploy_release import extract_source_archive
 import pytest
 
 
-def test_ssh_release_deploy_uses_split_compose_topology_and_waits_for_health():
+def test_ssh_release_deploy_uses_split_compose_topology_and_bounded_probe():
     script = remote_install_script()
 
     assert 'project="arelbot-prod"' in script
     assert 'profile prod' in script
-    assert "compose up -d --build --wait --wait-timeout 240" in script
-    assert "^bot running healthy$" in script
-    assert "^worker running healthy$" in script
+    assert "compose up -d --build" in script
+    assert "wait_for_services()" in script
+    assert 'docker exec "${container_id}" python scripts/healthcheck.py' in script
+    assert "for service in bot worker" in script
+    assert "healthy:*" in script
+    assert 'docker inspect -f' in script
     assert "production_preflight.py" in script
     assert "--require-provider-approval" in script
     assert '--nginx-config "${nginx_config}"' in script
@@ -124,7 +127,7 @@ def test_ssh_release_deploy_restores_previous_compose_release_on_health_failure(
     assert "rollback_previous()" in script
     assert 'previous_compose="${previous}/docker-compose.yml"' in script
     assert "New production release did not become healthy; rolling back" in script
-    assert "--wait --wait-timeout 240" in script
+    assert "wait_for_services()" in script
     assert "compose down --remove-orphans" in script
 
 

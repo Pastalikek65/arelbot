@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 34749)
-Total output lines: 2666
-
 """
 Command Handler - Tüm /komut işleyicileri
 
@@ -15,14 +12,14 @@ import os
 import re
 import tempfile
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 from zoneinfo import ZoneInfo
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputFile
 from telegram.ext import ContextTypes
 
 from config import Config
-from .handler_utils import is_admin, remove_job_by_name, log_event
+from .handler_utils import is_admin, is_group_admin, remove_job_by_name, log_event
 from src.security.output_sanitizer import render_model_html, sanitize_html
 from src.security.log_redaction import summarize_exception, summarize_private_text
 from src.security.error_codes import normalize_error_code, public_error_message, public_validation_message
@@ -46,13 +43,35 @@ from src.services.notification_ui import (
 from src.services.culture_ui import culture_category_panel
 from src.services.bim_ui import bim_page_view
 from src.services.hangman_ui import hangman_keyboard, render_hangman_text
-from src.services.word_game_ui import word_game_keyboard, render_word_game_text
+from src.services.word_game_ui import (
+    connect4_keyboard,
+    new_connect4_state,
+    render_connect4_text,
+    word_game_keyboard,
+    render_word_game_text,
+)
 from src.services.word_guess_ui import word_guess_keyboard, render_word_guess_text
+from src.services.tictactoe_ui import (
+    new_tictactoe_state,
+    render_tictactoe_text,
+)
+from src.services.gomoku_ui import (
+    gomoku_keyboard,
+    new_gomoku_state,
+    render_gomoku_text,
+)
+from src.services.menu_service import tictactoe_surface_keyboard
 from src.features.culture_categories import normalize_culture_category
 from src.features.news_categories import normalize_news_category
 from src.storage.handler_data_port import HandlerDataPort
 from src.features.chat_feature_policy import ChatFeaturePolicy, is_chat_feature_enabled
 from src.storage.state_scope import get_scoped_state, set_scoped_state
+from src.moderation.guardian_commands import GuardianCommandService
+from src.moderation.guardian_surface import GuardianSurface
+from src.moderation.action_ledger import ModerationActionLedger
+from src.moderation.action_executor import TelegramModerationActionExecutor
+from src.moderation.authorization import TelegramModerationAuthorization
+from src.moderation.telegram_guardian_service import GuardianTelegramService
 
 logger = logging.getLogger(__name__)
 
@@ -87,6 +106,7 @@ class CommandHandler:
         image_generation_service=None,
         card_renderer=None,
         data_port=None,
+        authorization=None,
     ):
         self.chat_engine = chat_engine
         self.data_port = data_port or HandlerDataPort.from_engine(chat_engine)
@@ -115,9 +135,106 @@ class CommandHandler:
         self.market_chart_job_service = market_chart_job_service
         self.image_generation_service = image_generation_service
         self.card_renderer = card_renderer
+        # Injected by Orchestrator after the Telegram Application is built.
+        # Handler methods never perform role lookups directly.
+        self.authorization = authorization
+        # The complete Guardian feature surface is a domain service.  It is
+        # deliberately injected with the repository port; it never imports a
+        # Telegram client or the legacy Guardian SQLAlchemy modules.
+        self.guardian_surface = GuardianSurface(self.data_port)
+        self.guardian_telegram_service = GuardianTelegramService()
         # Bound by Orchestrator to the durable, user/chat-scoped FSM store.
         # Keeping this optional preserves lightweight handler fixtures.
         self.user_states = None
+
+    @staticmethod
+    def _moderation_target_id(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int | None:
+        """Resolve a Guardian target from a replied message or numeric arg.
+
+        Guardian action commands run in this handler, so target resolution must
+        live here rather than relying on the orchestrator's unrelated command
+        implementation. Reply context wins over an argument to match
+        Telegram moderation semantics.
+        """
+
+        message = getattr(update, "effective_message", None)
+        replied = getattr(message, "reply_to_message", None)
+        replied_user = getattr(replied, "from_user", None)
+        replied_id = getattr(replied_user, "id", None)
+        if replied_id is not None:
+            try:
+                return int(replied_id)
+            except (TypeError, ValueError):
+                return None
+        args = getattr(context, "args", None) or []
+        try:
+            return int(str(args[0]).strip())
+        except (IndexError, TypeError, ValueError):
+            return None
+
+    async def _resolve_moderation_target_id(
+        self,
+        update: Update,
+        context: ContextTypes.DEFAULT_TYPE,
+        *,
+        command: str | None = None,
+    ) -> int | None:
+        """Resolve reply, numeric id, or a previously observed @username.
+
+        Telegram does not expose a general username lookup endpoint.  The
+        injected Guardian transport therefore resolves only usernames Arel
+        has observed and verifies the resulting id is still a member of the
+        current group.  Reply targets and numeric ids remain deterministic
+        fallbacks and preserve the old Guardian behaviour.
+        """
+        message = getattr(update, "effective_message", None)
+        replied_user = getattr(getattr(message, "reply_to_message", None), "from_user", None)
+        replied_id = getattr(replied_user, "id", None)
+        if replied_id is not None:
+            try:
+                return int(replied_id)
+            except (TypeError, ValueError):
+                return None
+
+        # Telegram can attach a real User object to a ``text_mention`` entity
+        # when the operator selects a member from the mention picker.  Prefer
+        # that identity over a plain @username string; it works even before
+        # Arel has observed a normal message from the member.
+        for entity in list(getattr(message, "entities", None) or ()):
+            if str(getattr(entity, "type", "")) != "text_mention":
+                continue
+            mentioned_user = getattr(entity, "user", None)
+            mentioned_id = getattr(mentioned_user, "id", None)
+            try:
+                if mentioned_id is not None and int(mentioned_id) > 0:
+                    return int(mentioned_id)
+            except (TypeError, ValueError):
+                continue
+
+        args = [str(item).strip() for item in (getattr(context, "args", None) or []) if str(item).strip()]
+        # Temporary Guardian actions accept an optional duration before the
+        # target.  If the first argument looks like one, inspect the next.
+        if str(command or "").casefold() in {"tmute", "tban"} and args:
+            if re.fullmatch(r"\d{1,5}(?:s|m|h|d)?", args[0], flags=re.IGNORECASE):
+                args = args[1:]
+        token = args[0] if args else ""
+        try:
+            if token and int(token) > 0:
+                return int(token)
+        except (TypeError, ValueError):
+            pass
+        if not token:
+            return None
+        try:
+            return await self.guardian_telegram_service.resolve_member_username(
+                bot=getattr(context, "bot", None),
+                chat_id=int(getattr(getattr(update, "effective_chat", None), "id", 0) or 0),
+                username=token,
+                data_port=self.data_port,
+            )
+        except Exception:
+            logger.warning("Guardian username target resolution failed", exc_info=True)
+            return None
 
     async def handle_image_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Validate and enqueue an image request; generation runs in a worker."""
@@ -242,7 +359,7 @@ class CommandHandler:
         if not chat or chat.type not in {"group", "supergroup"}:
             await update.effective_message.reply_text("📊 Bu komut yalnızca grup sohbetlerinde kullanılabilir.")
             return
-        if not await is_admin(update, context, self.sudo_manager):
+        if not await is_admin(update, context, self.sudo_manager, authorization=self.authorization):
             await update.effective_message.reply_text("📊 Grup istatistiklerini yalnızca yöneticiler görüntüleyebilir.")
             return
         service = self.group_analytics_service
@@ -272,7 +389,7 @@ class CommandHandler:
         if not chat or chat.type not in {"group", "supergroup"}:
             await update.effective_message.reply_text("🛡 Bu komut yalnızca grup sohbetlerinde kullanılabilir.")
             return
-        if not await is_admin(update, context, self.sudo_manager):
+        if not await is_admin(update, context, self.sudo_manager, authorization=self.authorization):
             await update.effective_message.reply_text("🛡 Moderasyon özetini yalnızca grup yöneticileri görebilir.")
             return
         service = self.moderation_service
@@ -293,6 +410,655 @@ class CommandHandler:
             await update.effective_message.reply_text("🛡 Moderasyon özeti şu an hazırlanamadı.")
             return
         await update.effective_message.reply_text(text, parse_mode="HTML")
+
+    async def handle_guardian_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Run Kek Guardian's moderation vocabulary inside Arel."""
+        message = getattr(update, "effective_message", None)
+        chat = getattr(update, "effective_chat", None)
+        if message is None or chat is None:
+            return
+        raw = str(getattr(message, "text", "") or "").split(None, 1)[0]
+        raw_name = raw.lstrip("/").split("@", 1)[0].casefold()
+        raw_command = GuardianCommandService.canonical(raw)
+        command = raw_command
+        custom_alias = False
+        # Custom Guardian aliases and per-group command switches are resolved
+        # before any legacy branch.  This keeps every surface (including the
+        # compatibility aliases) scoped to the current group.
+        if getattr(chat, "type", None) in {"group", "supergroup"}:
+            custom_alias = await self.guardian_surface.has_custom_alias(int(chat.id), raw_name)
+            command = await self.guardian_surface.resolve_command(int(chat.id), command)
+            if await self.guardian_surface.is_command_disabled(int(chat.id), command):
+                return
+            if raw_command not in GuardianSurface.COMMANDS and not custom_alias:
+                return
+        elif raw_command not in GuardianSurface.COMMANDS:
+            # The catch-all dispatcher is intentionally silent for unknown
+            # slash commands; only a group-owned Guardian alias may reach it.
+            return
+
+        if command in {"recurring", "stoprecurring"} and self.announcement_service is not None:
+            if not await self._is_group_admin(update, context):
+                await message.reply_text(
+                    await self._guardian_admin_denial_message(update, context, command=command),
+                )
+                return
+            store = getattr(self.announcement_service, "store", None)
+            if store is None:
+                await message.reply_text("tekrarlı mesaj deposu hazır değil")
+                return
+            if command == "stoprecurring":
+                rows = await store.list_for_chat(int(chat.id), scope="group")
+                rows = [row for row in rows if row.get("feature_key") == "guardian_recurring" and row.get("enabled")]
+                target = str((getattr(context, "args", None) or [""])[0]).strip()
+                if target:
+                    rows = [row for row in rows if str(row.get("subscription_id")) == target]
+                disabled = 0
+                for row in rows:
+                    disabled += int(await store.disable_for_chat(int(chat.id), str(row.get("subscription_id")), scope="group"))
+                await message.reply_text(f"{disabled} tekrarlı mesaj durduruldu")
+                return
+            args = [str(item).strip() for item in (getattr(context, "args", None) or []) if str(item).strip()]
+            if len(args) < 2:
+                await message.reply_text("kullanım: /recurring 30m mesaj veya /recurring 2h mesaj")
+                return
+            match = re.fullmatch(r"(\d{1,5})([mh])", args[0].casefold())
+            if not match:
+                await message.reply_text("süre 1m, 5m, 1h gibi yazılmalı")
+                return
+            interval = int(match.group(1)) * (3600 if match.group(2) == "h" else 60)
+            if interval < 60 or interval > 30 * 86400:
+                await message.reply_text("süre 1 dakika ile 30 gün arasında olmalı")
+                return
+            text = " ".join(args[1:])[:3500]
+            params = {"text": text}
+            existing = await store.find_group_active(
+                int(chat.id), "guardian_recurring", params, "interval", "", None,
+                message_thread_id=getattr(message, "message_thread_id", None),
+            )
+            if existing:
+                await message.reply_text(f"bu tekrarlı mesaj zaten aktif: <code>{existing.get('subscription_id')}</code>", parse_mode="HTML")
+                return
+            item = await store.create(
+                user_id=int(update.effective_user.id), chat_id=int(chat.id), feature_key="guardian_recurring",
+                params=params, interval_seconds=interval, scope="group", created_by=int(update.effective_user.id),
+                schedule_kind="interval", local_time="", weekday=None,
+                next_run_at=datetime.now(timezone.utc) + timedelta(seconds=interval),
+                message_thread_id=getattr(message, "message_thread_id", None),
+            )
+            await message.reply_text(f"tekrarlı mesaj kuruldu: her {args[0]} · <code>{item.get('subscription_id')}</code>", parse_mode="HTML")
+            return
+
+        if command in {"addsudo", "delsudo"}:
+            if not self.sudo_manager.is_owner(int(update.effective_user.id)):
+                return
+            raw_id = (getattr(context, "args", None) or [""])[0]
+            if not str(raw_id).lstrip("-").isdigit() or int(raw_id) <= 0:
+                await message.reply_text("kullanım: /addsudo kullanıcı_id")
+                return
+            target = int(raw_id)
+            if command == "addsudo":
+                self.sudo_manager.add_sudo(target)
+                action = "guardian_sudo_add"
+                text = f"{target} sudo listesine eklendi"
+            else:
+                self.sudo_manager.remove_sudo(target)
+                action = "guardian_sudo_remove"
+                text = f"{target} sudo listesinden çıkarıldı"
+            await self.data_port.add_audit_log(int(update.effective_user.id), action, target_user_id=target)
+            await message.reply_text(text)
+            return
+
+        if command == "rules":
+            settings = await self.data_port.get_chat_settings(chat.id) or {}
+            rules = str(settings.get("guardian_rules") or settings.get("rules") or "").strip()
+            await message.reply_text(rules[:4096] if rules else "bu grubun henüz yazılı bir kuralı yok")
+            return
+
+        if command == "setrules":
+            if not await self._is_group_admin(update, context):
+                await message.reply_text(
+                    await self._guardian_admin_denial_message(update, context, command=command),
+                )
+                return
+            value = " ".join(getattr(context, "args", None) or []).strip()
+            if not value:
+                await message.reply_text("kullanım: /setrules kurallar")
+                return
+            await self._update_chat_setting(chat.id, "guardian_rules", value[:4096])
+            await message.reply_text("kurallar güncellendi")
+            return
+
+        if command == "report":
+            if getattr(chat, "type", None) not in {"group", "supergroup"}:
+                await message.reply_text("rapor komutu yalnızca gruplarda kullanılabilir")
+                return
+            replied = getattr(message, "reply_to_message", None)
+            target = getattr(replied, "from_user", None)
+            if replied is None or target is None:
+                await message.reply_text("raporlamak istediğin mesaja yanıt ver")
+                return
+            try:
+                await self.data_port.add_audit_log(
+                    int(update.effective_user.id),
+                    "guardian_report",
+                    chat_id=int(chat.id),
+                    target_user_id=int(target.id),
+                    target_message_id=int(getattr(replied, "message_id", 0) or 0),
+                )
+            except Exception:
+                logger.warning("Guardian report audit failed", exc_info=True)
+            await message.reply_text("rapor yöneticilere iletildi")
+            return
+
+        if command == "setflood":
+            if not await self._is_group_admin(update, context):
+                await message.reply_text(
+                    await self._guardian_admin_denial_message(update, context, command=command),
+                )
+                return
+            raw_limit = (getattr(context, "args", None) or [""])[0]
+            if not str(raw_limit).isdigit():
+                await message.reply_text("kullanım: /setflood 8")
+                return
+            limit = max(3, min(30, int(raw_limit)))
+            await self._update_chat_setting(chat.id, "flood_limit", limit)
+            await message.reply_text(f"flood limiti {limit} mesaj olarak ayarlandı")
+            return
+
+        if command in {"blocklist", "whitelist"}:
+            if not await self._is_group_admin(update, context):
+                await message.reply_text(
+                    await self._guardian_admin_denial_message(update, context, command=command),
+                )
+                return
+            key = "blocked_words" if command == "blocklist" else "allowed_domains"
+            settings = await self.data_port.get_chat_settings(chat.id) or {}
+            values = [str(item).strip() for item in (settings.get(key) or []) if str(item).strip()]
+            args = [str(item).strip().casefold() for item in (getattr(context, "args", None) or []) if str(item).strip()]
+            if args and args[0] in {"sil", "remove", "rm"} and len(args) > 1:
+                values = [item for item in values if item.casefold() != args[1]]
+            elif args:
+                values = list(dict.fromkeys([*values, *args[0].split(",")]))[:200]
+            await self._update_chat_setting(chat.id, key, values)
+            label = "kelime listesi" if command == "blocklist" else "izinli alan adları"
+            await message.reply_text(f"{label}: {', '.join(values) if values else 'boş'}")
+            return
+
+        # Guardian's non-destructive group controls use the same persisted
+        # per-chat settings as the moderation engine.  They intentionally stay
+        # typed and bounded here; Telegram remains only the transport layer.
+        if command in {"welcome", "goodbye"}:
+            if not await self._is_group_admin(update, context):
+                await message.reply_text(
+                    await self._guardian_admin_denial_message(update, context, command=command),
+                )
+                return
+            raw_state = str((getattr(context, "args", None) or [""])[0]).casefold()
+            if raw_state not in {"on", "off", "aç", "kapat", "ac", "kapa"}:
+                await message.reply_text(f"kullanım: /{command} on|off")
+                return
+            enabled = raw_state in {"on", "aç", "ac"}
+            key = "welcome_enabled" if command == "welcome" else "goodbye_enabled"
+            await self._update_chat_setting(chat.id, key, enabled)
+            label = "karşılama" if command == "welcome" else "veda"
+            await message.reply_text(f"{label} mesajları {'açıldı' if enabled else 'kapatıldı'}")
+            return
+
+        if command == "setfloodmode":
+            if not await self._is_group_admin(update, context):
+                await message.reply_text(
+                    await self._guardian_admin_denial_message(update, context, command=command),
+                )
+                return
+            mode = str((getattr(context, "args", None) or [""])[0]).casefold()
+            allowed_modes = {"ban", "kick", "mute", "tmute", "tban"}
+            if mode not in allowed_modes:
+                await message.reply_text("kullanım: /setfloodmode mute|kick|ban|tmute|tban")
+                return
+            await self._update_chat_setting(chat.id, "flood_mode", mode)
+            await message.reply_text(f"flood cezası {mode} olarak ayarlandı")
+            return
+
+        if command in {"filter", "stop", "filters"}:
+            settings = await self.data_port.get_chat_settings(chat.id) or {}
+            filters = [
+                str(item).strip()[:80]
+                for item in (settings.get("guardian_filters") or settings.get("blocked_words") or [])
+                if str(item).strip()
+            ]
+            if command == "filters":
+                await message.reply_text(
+                    "aktif filtreler: " + (", ".join(filters) if filters else "yok")
+                )
+                return
+            if not await self._is_group_admin(update, context):
+                await message.reply_text(
+                    await self._guardian_admin_denial_message(update, context, command=command),
+                )
+                return
+            value = " ".join(getattr(context, "args", None) or []).strip()
+            if not value:
+                await message.reply_text(f"kullanım: /{command} kelime")
+                return
+            if command == "filter":
+                filters = list(dict.fromkeys([*filters, value.casefold()]))[:200]
+            else:
+                target = value.casefold()
+                filters = [item for item in filters if item.casefold() != target]
+            await self._update_chat_setting(chat.id, "guardian_filters", filters)
+            await self._update_chat_setting(chat.id, "blocked_words", filters)
+            await message.reply_text(
+                "filtreler: " + (", ".join(filters) if filters else "yok")
+            )
+            return
+
+        if command in {"lock", "unlock", "locks"}:
+            settings = await self.data_port.get_chat_settings(chat.id) or {}
+            locked = [str(item).strip().casefold() for item in (settings.get("locked_types") or []) if str(item).strip()]
+            if command == "locks":
+                await message.reply_text("aktif kilitler: " + (", ".join(locked) if locked else "yok"))
+                return
+            if not await self._is_group_admin(update, context):
+                await message.reply_text(
+                    await self._guardian_admin_denial_message(update, context, command=command),
+                )
+                return
+            media_type = str((getattr(context, "args", None) or [""])[0]).casefold()
+            allowed_types = {"photo", "video", "sticker", "audio", "voice", "document", "gif", "contact", "location", "poll", "pin", "bots", "inline", "rtl"}
+            if media_type not in allowed_types:
+                await message.reply_text("kullanım: /lock photo|video|sticker|gif|document")
+                return
+            if command == "lock" and media_type not in locked:
+                locked.append(media_type)
+            elif command == "unlock":
+                locked = [item for item in locked if item != media_type]
+            await self._update_chat_setting(chat.id, "locked_types", locked[:50])
+            await message.reply_text("aktif kilitler: " + (", ".join(locked) if locked else "yok"))
+            return
+
+        if command in {"newfed", "delfed", "joinfed", "leavefed", "fedinfo", "myfed", "fedadmins", "subfed", "fedstat", "fedbanlist"}:
+            settings = await self.data_port.get_chat_settings(chat.id) or {}
+            federation = settings.get("guardian_federation") or {}
+            if not isinstance(federation, dict):
+                federation = {}
+            if command in {"fedstat", "fedinfo", "myfed"}:
+                fed_id = str(federation.get("id") or "").strip()
+                name = str(federation.get("name") or "").strip()
+                await message.reply_text(
+                    f"federasyon: {name or 'bağlı değil'}\nkimlik: {fed_id or 'yok'}"
+                )
+                return
+            if command == "fedadmins":
+                admins = [str(item) for item in (federation.get("admins") or []) if str(item).lstrip("-").isdigit()]
+                await message.reply_text("federasyon yöneticileri: " + (", ".join(admins) if admins else "yok"))
+                return
+            if command == "fedbanlist":
+                bans = [str(item) for item in (settings.get("guardian_fed_bans") or []) if str(item).isdigit()]
+                await message.reply_text("federasyon yasakları: " + (", ".join(bans) if bans else "yok"))
+                return
+            if not await self._is_group_admin(update, context):
+                await message.reply_text(
+                    await self._guardian_admin_denial_message(update, context, command=command),
+                )
+                return
+            args = [str(item).strip() for item in (getattr(context, "args", None) or []) if str(item).strip()]
+            if command == "newfed":
+                name = " ".join(args)[:80] or f"Arel Federasyonu {abs(int(chat.id))}"
+                federation = {
+                    "id": f"arel-{abs(int(chat.id))}",
+                    "name": name,
+                    "created_by": int(update.effective_user.id),
+                }
+                await self._update_chat_setting(chat.id, "guardian_federation", federation)
+                await message.reply_text(f"federasyon oluşturuldu\nkimlik: {federation['id']}")
+                return
+            if command == "delfed":
+                await self._update_chat_setting(chat.id, "guardian_federation", {})
+                await self._update_chat_setting(chat.id, "guardian_fed_bans", [])
+                await message.reply_text("federasyon silindi")
+                return
+            if command == "joinfed":
+                if not args:
+                    await message.reply_text("kullanım: /joinfed federasyon_id")
+                    return
+                federation = {"id": args[0][:80], "name": "bağlı federasyon"}
+                await self._update_chat_setting(chat.id, "guardian_federation", federation)
+                await message.reply_text(f"federasyona bağlandım: {federation['id']}")
+                return
+            if command == "subfed":
+                if not args:
+                    await message.reply_text("kullanım: /subfed federasyon_id")
+                    return
+                subs = [str(item) for item in (settings.get("guardian_federation_subs") or []) if str(item).strip()]
+                if args[0] not in subs:
+                    subs.append(args[0][:80])
+                await self._update_chat_setting(chat.id, "guardian_federation_subs", subs[:50])
+                await message.reply_text(f"alt federasyon bağlandı: {args[0][:80]}")
+                return
+            await self._update_chat_setting(chat.id, "guardian_federation", {})
+            await message.reply_text("federasyon bağlantısı kesildi")
+            return
+
+        # Commands that do not need a Telegram mutation are handled by the
+        # embedded Guardian domain surface.  The old project had one module
+        # per command and global SQLAlchemy state; Arel keeps the same public
+        # vocabulary while persisting bounded state through its repository.
+        # Telegram remains a rendering boundary here.
+        legacy_inline = {
+            "rules", "setrules", "report", "setflood", "blocklist", "whitelist",
+            "welcome", "goodbye", "setfloodmode", "filter", "stop", "filters",
+            "lock", "unlock", "locks", "newfed", "joinfed", "leavefed", "fedstat",
+            "fedbanlist", "delfed", "fedinfo", "myfed", "fedadmins", "subfed",
+        }
+        if command not in legacy_inline:
+            is_group = getattr(chat, "type", None) in {"group", "supergroup"}
+            is_admin = await self._is_group_admin(update, context) if is_group else False
+            try:
+                surface_target = getattr(getattr(message, "reply_to_message", None), "from_user", None)
+                surface_target_id = getattr(surface_target, "id", None)
+                if surface_target_id is None and command in {
+                    "admin", "deadmin", "muter", "unmuter", "yetkiler",
+                    "hayaletban", "unsban", "gban", "ungban", "whois",
+                    "shadowstats", "toprisk", "fednotes", "warns", "resetwarn",
+                }:
+                    surface_target_id = await self._resolve_moderation_target_id(
+                        update, context, command=command
+                    )
+                result = await self.guardian_surface.execute(
+                    command,
+                    chat_id=int(chat.id),
+                    user_id=int(getattr(update.effective_user, "id", 0) or 0),
+                    args=getattr(context, "args", None),
+                    is_group=is_group,
+                    is_admin=is_admin,
+                    target_user_id=surface_target_id,
+                    target_message_id=getattr(getattr(message, "reply_to_message", None), "message_id", None),
+                )
+            except Exception:
+                logger.warning("Embedded Guardian command failed command=%s", command, exc_info=True)
+                result = None
+            if result is not None:
+                if result.changed:
+                    try:
+                        await self.data_port.add_audit_log(
+                            int(getattr(update.effective_user, "id", 0) or 0),
+                            f"guardian_setting:{command}",
+                            chat_id=int(chat.id),
+                        )
+                    except Exception:
+                        logger.debug("Guardian setting audit unavailable", exc_info=True)
+                transport_action = str((result.metadata or {}).get("transport_action") or "")
+                if transport_action in {"settitle", "setdesc", "setpic"}:
+                    try:
+                        if transport_action == "settitle":
+                            await context.bot.set_chat_title(chat_id=int(chat.id), title=str((result.metadata or {}).get("value") or "")[:255])
+                        elif transport_action == "setdesc":
+                            await context.bot.set_chat_description(chat_id=int(chat.id), description=str((result.metadata or {}).get("value") or "")[:4096])
+                        else:
+                            reply = getattr(message, "reply_to_message", None)
+                            photo = getattr(reply, "photo", None)
+                            if not photo:
+                                await message.reply_text("/setpic komutunu bir fotoğrafa yanıt olarak kullan")
+                                return
+                            await context.bot.set_chat_photo(chat_id=int(chat.id), photo=photo[-1].file_id)
+                        await message.reply_text("grup bilgisi güncellendi")
+                    except Exception:
+                        logger.warning("Guardian chat profile action failed action=%s", transport_action, exc_info=True)
+                        await message.reply_text("grup bilgisi güncellenemedi; bot yetkisini kontrol et")
+                    return
+                if transport_action == "admin_permissions":
+                    target = int((result.metadata or {}).get("target_user_id") or 0)
+                    if not target:
+                        reply_user = getattr(getattr(message, "reply_to_message", None), "from_user", None)
+                        target = int(getattr(reply_user, "id", 0) or 0)
+                    if not target:
+                        await message.reply_text("hedef kullan\u0131c\u0131ya yan\u0131t ver veya kullan\u0131c\u0131 id yaz")
+                        return
+                    profile = str((result.metadata or {}).get("profile") or "none")
+                    ok = await self.guardian_telegram_service.apply_admin_permissions(
+                        bot=getattr(context, "bot", None), chat_id=int(chat.id), user_id=target, profile=profile
+                    )
+                    await message.reply_text("y\u00f6netici izinleri g\u00fcncellendi" if ok else "y\u00f6netici izinleri g\u00fcncellenemedi; bot yetkisini kontrol et")
+                    return
+                if transport_action == "admin_list":
+                    rows = await self.guardian_telegram_service.list_administrators(
+                        bot=getattr(context, "bot", None), chat_id=int(chat.id)
+                    )
+                    if not rows:
+                        await message.reply_text("yönetici listesi alınamadı; botun yönetici yetkisini kontrol et")
+                        return
+                    lines = ["🛡️ <b>Grup yöneticileri</b>"]
+                    for row in rows:
+                        name = html.escape(str(row.get("name") or "kullanıcı"))
+                        username = str(row.get("username") or "").strip()
+                        suffix = f" · @{html.escape(username)}" if username else ""
+                        lines.append(f"• {name}{suffix} <code>{int(row.get('user_id') or 0)}</code>")
+                    await message.reply_text("\n".join(lines)[:4096], parse_mode="HTML")
+                    return
+                if transport_action == "staff_list":
+                    rows = await self.guardian_telegram_service.list_administrators(
+                        bot=getattr(context, "bot", None), chat_id=int(chat.id)
+                    )
+                    role_map = await self.guardian_surface.get_staff_roles(int(chat.id))
+                    if not rows and not role_map:
+                        await message.reply_text("ekip listesi alınamadı; botun grup yöneticisi olduğundan emin ol")
+                        return
+                    lines = ["🛡️ <b>Grup ekibi</b>"]
+                    seen: set[int] = set()
+                    role_labels = {"mod": "moderatör", "staff": "ekip", "free": "koruma istisnası"}
+                    for row in rows:
+                        user_id = int(row.get("user_id") or 0)
+                        if user_id <= 0:
+                            continue
+                        seen.add(user_id)
+                        name = html.escape(str(row.get("name") or "kullanıcı"))
+                        username = str(row.get("username") or "").strip()
+                        suffix = f" · @{html.escape(username)}" if username else ""
+                        role = role_labels.get(role_map.get(str(user_id), ""), "Telegram yöneticisi")
+                        lines.append(f"• {name}{suffix} — {html.escape(role)} <code>{user_id}</code>")
+                    for raw_id, role in role_map.items():
+                        user_id = int(raw_id)
+                        if user_id in seen:
+                            continue
+                        lines.append(f"• <code>{user_id}</code> — {html.escape(role_labels.get(role, role))}")
+                    await message.reply_text("\n".join(lines)[:4096], parse_mode="HTML")
+                    return
+                if transport_action == "nightmode":
+                    # Night mode is a Telegram permission mutation. Keep it
+                    # behind the transport service so Guardian state remains
+                    # repository-backed and each group owns its own switch.
+                    locked = bool((result.metadata or {}).get("locked"))
+                    ok = await self.guardian_telegram_service.set_night_permissions(
+                        bot=getattr(context, "bot", None),
+                        chat_id=int(chat.id),
+                        locked=locked,
+                    )
+                    if ok:
+                        await message.reply_text(
+                            "gece modu açıldı; üyeler sabaha kadar yazamaz" if locked
+                            else "gece modu kapatıldı; yazma izinleri geri açıldı"
+                        )
+                    else:
+                        await message.reply_text("gece modu uygulanamadı; botun grup izinlerini değiştirme yetkisini kontrol et")
+                    return
+                if transport_action == "unpinall":
+                    ok = await self.guardian_telegram_service.unpin_all(bot=getattr(context, "bot", None), chat_id=int(chat.id))
+                    await message.reply_text("t\u00fcm sabitler kald\u0131r\u0131ld\u0131" if ok else "sabitler kald\u0131r\u0131lamad\u0131; bot yetkisini kontrol et")
+                    return
+                if transport_action == "purge":
+                    reply = getattr(message, "reply_to_message", None)
+                    end_id = int((result.metadata or {}).get("end_message_id") or getattr(reply, "message_id", 0) or getattr(message, "message_id", 0) or 0)
+                    amount = int((result.metadata or {}).get("amount") or 0)
+                    deleted = await self.guardian_telegram_service.purge_range(
+                        bot=getattr(context, "bot", None), chat_id=int(chat.id), end_message_id=end_id, amount=amount
+                    )
+                    await message.reply_text(f"{deleted} mesaj temizlendi")
+                    return
+                text = sanitize_html(result.text or "Guardian işlemi tamamlandı")
+                await message.reply_text(text, parse_mode="HTML")
+                return
+
+        info = GuardianCommandService.describe(command)
+        if not info.action:
+            if getattr(chat, "type", None) in {"group", "supergroup"} and not await self._is_group_admin(update, context):
+                return
+            await message.reply_text(f"/{command} Guardian komutu Arel içinde tanımlı; yönetici yetkisi gerekiyor")
+            return
+
+        if getattr(chat, "type", None) not in {"group", "supergroup"}:
+            await message.reply_text("bu Guardian komutu yalnızca gruplarda kullanılabilir")
+            return
+        if not await self._is_group_admin(update, context):
+            await message.reply_text(
+                await self._guardian_admin_denial_message(update, context, command=command),
+            )
+            return
+
+        if command in {"adminmute", "adminunmute"} and not self.sudo_manager.is_sudo(int(update.effective_user.id)):
+            await message.reply_text("bu Guardian ayr\u0131cal\u0131\u011f\u0131 yaln\u0131zca owner veya sudo kullanabilir")
+            return
+
+        replied = getattr(message, "reply_to_message", None)
+        replied_user = getattr(replied, "from_user", None)
+        target_user_id = getattr(replied_user, "id", None)
+        target_message_id = getattr(replied, "message_id", None)
+        if info.requires_target and target_user_id is None:
+            target_user_id = await self._resolve_moderation_target_id(
+                update, context, command=command
+            )
+        if info.requires_target and target_user_id is None:
+            logger.warning("Guardian target could not be resolved command=%s code=target_unresolved", command)
+            await message.reply_text("hedefin mesajına yanıt ver veya Telegram mention seçicisinden seç; @kullanıcı adı yalnızca Arel o kişiyi daha önce gördüyse çalışır")
+            return
+        if info.requires_message and target_message_id is None:
+            await message.reply_text("işlem yapmak istediğin mesaja yanıt ver")
+            return
+        if target_user_id == update.effective_user.id and info.action not in {"unban", "unmute"}:
+            await message.reply_text("kendi üzerinde bu işlemi uygulayamam")
+            return
+
+        generation_id = f"guardian:{chat.id}:{getattr(message, 'message_id', 0)}"
+        try:
+            action = GuardianCommandService.build_action(
+                command,
+                chat_id=int(chat.id),
+                actor_id=int(update.effective_user.id),
+                target_user_id=int(target_user_id) if target_user_id is not None else None,
+                target_message_id=int(target_message_id) if target_message_id is not None else None,
+                thread_id=getattr(message, "message_thread_id", None),
+                duration=((getattr(context, "args", None) or [None])[0]),
+                generation_id=generation_id,
+            )
+            executor = TelegramModerationActionExecutor(
+                getattr(context, "bot", None),
+                ledger=getattr(self, "moderation_action_ledger", None) or ModerationActionLedger(),
+                permission_checker=getattr(self, "authorization", None)
+                or TelegramModerationAuthorization(getattr(context, "bot", None)),
+            )
+            result = await executor.execute(action)
+        except (TypeError, ValueError) as exc:
+            logger.warning("Guardian command rejected code=%s", type(exc).__name__)
+            await message.reply_text("Guardian işlemi için hedefi ve komut biçimini kontrol et")
+            return
+        if result.ok:
+            if info.command == "warn" and target_user_id is not None:
+                try:
+                    count, limit, mode = await self.guardian_surface.record_warning(
+                        int(chat.id), int(target_user_id), reason="guardian_warn"
+                    )
+                    if count >= limit and mode in {"mute", "ban", "kick", "tban"}:
+                        escalation = "temp_mute" if mode in {"mute", "tban"} else mode
+                        escalation_name = "tmute" if escalation == "temp_mute" else mode
+                        escalation_action = GuardianCommandService.build_action(
+                            escalation_name,
+                            chat_id=int(chat.id),
+                            actor_id=int(update.effective_user.id),
+                            target_user_id=int(target_user_id),
+                            thread_id=getattr(message, "message_thread_id", None),
+                            duration="10m",
+                            generation_id=f"guardian:warn-escalation:{chat.id}:{target_user_id}:{count}",
+                        )
+                        await TelegramModerationActionExecutor(
+                            getattr(context, "bot", None),
+                            ledger=getattr(self, "moderation_action_ledger", None) or ModerationActionLedger(),
+                            permission_checker=getattr(self, "authorization", None)
+                            or TelegramModerationAuthorization(getattr(context, "bot", None)),
+                        ).execute(escalation_action)
+                except Exception:
+                    logger.warning("Guardian warning escalation failed", exc_info=True)
+            if command in {"fban", "funban"} and target_user_id is not None:
+                settings = await self.data_port.get_chat_settings(chat.id) or {}
+                bans = [
+                    int(item)
+                    for item in (settings.get("guardian_fed_bans") or [])
+                    if str(item).isdigit()
+                ]
+                if command == "fban" and int(target_user_id) not in bans:
+                    bans.append(int(target_user_id))
+                elif command == "funban":
+                    bans = [item for item in bans if item != int(target_user_id)]
+                await self._update_chat_setting(chat.id, "guardian_fed_bans", bans[:500])
+                await self.data_port.update_user(
+                    int(target_user_id),
+                    {"guardian_gban": ({"enabled": True, "reason": "federation ban"} if command == "fban" else {})},
+                )
+            if bool(action.metadata.get("silent")):
+                try:
+                    await message.delete()
+                except Exception:
+                    pass
+                try:
+                    await self.data_port.add_audit_log(
+                        int(update.effective_user.id),
+                        f"guardian_{command}",
+                        chat_id=int(chat.id),
+                        target_user_id=int(target_user_id or 0),
+                    )
+                except Exception:
+                    logger.debug("Silent Guardian audit unavailable", exc_info=True)
+                return
+            labels = {
+                "mute": "kullanıcı susturuldu",
+                "unmute": "kullanıcının susturması kaldırıldı",
+                "ban": "kullanıcı gruptan uzaklaştırıldı",
+                "temp_ban": "kullanıcı geçici olarak yasaklandı",
+                "kick": "kullanıcı gruptan çıkarıldı",
+                "temp_mute": "kullanıcı geçici olarak susturuldu",
+                "delete_message": "mesaj silindi",
+                "pin": "mesaj sabitlendi",
+                "unpin": "mesaj sabitlemesi kaldırıldı",
+                "warn": "uyarı kaydedildi",
+                "promote": "kullanıcıya sınırlı yönetici yetkisi verildi",
+                "demote": "kullanıcının yönetici yetkisi kaldırıldı",
+            }
+            await message.reply_text(labels.get(action.action, "Guardian işlemi uygulandı"))
+        elif result.status == "skipped":
+            await message.reply_text("bu işlem zaten uygulanmış")
+        elif result.error_code == "permission_denied":
+            logger.warning("Guardian authorization rejected command=%s code=%s", command, result.error_code)
+            await message.reply_text("bu işlem reddedildi; komutu kullanan hesap grup yöneticisi olmalı ve hedef başka bir yönetici olmamalı")
+        elif result.error_code == "target_is_admin":
+            logger.warning("Guardian target is admin command=%s code=%s", command, result.error_code)
+            await message.reply_text("hedef kullanıcı grup yöneticisi; yöneticiye bu işlemi uygulayamam")
+        elif result.error_code == "telegram_not_enough_rights":
+            logger.warning("Guardian Telegram rights failure command=%s code=%s", command, result.error_code)
+            await message.reply_text("Telegram yetkiyi reddetti; Arel'e üye kısıtlama ve mesaj silme yetkilerini ver")
+        elif result.error_code == "target_not_member":
+            logger.warning("Guardian target is not a member command=%s code=%s", command, result.error_code)
+            await message.reply_text("hedef artık bu grupta değil veya Telegram hedefi tanıyamadı")
+        elif result.error_code == "moderation_ledger_unavailable":
+            logger.error("Guardian action ledger unavailable command=%s code=%s", command, result.error_code)
+            await message.reply_text("moderasyon kaydı deposu yanıt vermedi; işlem güvenliğe alındı")
+        elif result.error_code == "telegram_bad_request":
+            logger.warning("Guardian Telegram bad request command=%s code=%s", command, result.error_code)
+            await message.reply_text("Telegram isteği geçersiz; hedefi mesaja yanıt vererek seçip tekrar dene")
+        elif result.error_code == "telegram_forbidden":
+            logger.warning("Guardian Telegram forbidden command=%s code=%s", command, result.error_code)
+            await message.reply_text("Telegram bu işleme izin vermedi; Arel'in grup yönetici yetkisini kontrol et")
+        else:
+            logger.warning("Guardian action failed command=%s status=%s code=%s", command, result.status, result.error_code or "unknown")
+            await message.reply_text("Guardian işlemi uygulanamadı; hedefi mesaja yanıt vererek seçip tekrar dene")
 
     async def handle_economy_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not self.economy_service:
@@ -1118,9 +1884,549 @@ class CommandHandler:
             [
                 InlineKeyboardButton("📚 Edebiyat", callback_data="quiz_cat_edebiyat")
             ]
+            ,[
+                InlineKeyboardButton("🎵 Müzik", callback_data="quiz_cat_muzik"),
+                InlineKeyboardButton("🇹🇷 Türkiye", callback_data="quiz_cat_turkiye")
+            ],
+            [
+                InlineKeyboardButton("🧠 Gündelik", callback_data="quiz_cat_gundelik"),
+                InlineKeyboardButton("🎮 Oyunlar", callback_data="quiz_cat_oyunlar")
+            ]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await update.message…4749 tokens truncated…ar."}
+        await update.message.reply_text(
+            "🎯 <b>Bilgi Yarışması Kategorisi Seçin!</b>\n\nBakalım hangi alanda daha iyisiniz? 😉",
+            reply_markup=reply_markup,
+            parse_mode='HTML'
+        )
+
+    async def handle_hangman_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        _category, difficulty = parse_word_game_request(context.args)
+        game_state = await self.tool_manager.get_tool("games_tool").execute(
+            game_type="hangman", difficulty=difficulty.key, user_id=update.effective_user.id
+        )
+        game_state["owner_id"] = int(update.effective_user.id)
+        game_state["players"] = [{
+            "id": int(update.effective_user.id),
+            "name": str(update.effective_user.first_name or "Oyuncu")[:64],
+        }]
+        game_state["round_id"] = uuid.uuid4().hex[:12]
+        game_state["last_actor_id"] = None
+        context.chat_data['hangman'] = game_state
+        await persist_game(self.data_port, update.effective_chat.id, "hangman", game_state)
+
+        prompt = await update.message.reply_text(
+            render_hangman_text(game_state),
+            reply_markup=hangman_keyboard(game_state),
+            parse_mode='HTML'
+        )
+        game_state["prompt_message_id"] = int(getattr(prompt, "message_id", 0) or 0)
+        await persist_game(self.data_port, update.effective_chat.id, "hangman", game_state)
+
+    async def handle_wordgame_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        requested_category, difficulty = parse_word_game_request(context.args)
+        game_state = await self.tool_manager.get_tool("games_tool").execute(
+            game_type="word_game", category=requested_category, difficulty=difficulty.key,
+            user_id=update.effective_user.id,
+        )
+        game_state["owner_id"] = int(update.effective_user.id)
+        game_state["players"] = [{
+            "id": int(update.effective_user.id),
+            "name": str(update.effective_user.first_name or "Oyuncu")[:64],
+        }]
+        game_state["round_id"] = uuid.uuid4().hex[:12]
+        game_state["last_actor_id"] = None
+        context.chat_data['word_game'] = game_state
+        await persist_game(self.data_port, update.effective_chat.id, "word_game", game_state)
+
+        prompt = await update.message.reply_text(
+            render_word_game_text(game_state),
+            reply_markup=word_game_keyboard(game_state),
+            parse_mode='HTML'
+        )
+        game_state["prompt_message_id"] = int(getattr(prompt, "message_id", 0) or 0)
+        await persist_game(self.data_port, update.effective_chat.id, "word_game", game_state)
+
+    async def handle_anlat_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        if 'word_guess' in context.chat_data:
+            await update.message.reply_text("⚠️ Zaten devam eden bir oyun var! Kelimeyi bilmeye çalışın.")
+            return
+        chat_id = update.effective_chat.id
+        requested_category, difficulty = parse_word_game_request(context.args)
+        await self._start_word_guess_game(
+            chat_id,
+            context,
+            difficulty=difficulty.key,
+            category=requested_category,
+            user_id=update.effective_user.id,
+        )
+
+    async def _start_word_guess_game(
+        self,
+        chat_id: int,
+        context: ContextTypes.DEFAULT_TYPE,
+        difficulty: object = "normal",
+        category: object | None = None,
+        user_id: int | None = None,
+    ):
+        from src.games.word_guess import WordGuessGame
+        word_guess_game = WordGuessGame(self.chat_engine)
+        result = word_guess_game.start(chat_id, difficulty=difficulty, category=category)
+
+        if "error" in result:
+            await context.bot.send_message(chat_id, f"⚠️ Hata: {result['error']}")
+            return
+
+        game_state = result['game_state']
+        if user_id is not None:
+            game_state['owner_id'] = int(user_id)
+            game_state['players'] = [{
+                'id': int(user_id),
+                'name': 'Oyuncu',
+            }]
+        game_state['round_id'] = str(game_state.get('round_id') or uuid.uuid4().hex[:12])
+        game_state['last_actor_id'] = None
+        chat_data = context.application.chat_data.get(chat_id) if context.application else None
+        if chat_data is None:
+            chat_data = context.chat_data if context.chat_data else {}
+            if context.application:
+                if chat_id not in context.application.chat_data:
+                    context.application.chat_data[chat_id] = {}
+                chat_data = context.application.chat_data[chat_id]
+
+        if chat_data is None:
+            await context.bot.send_message(chat_id, "⚠️ Hata: Oyun verisi oluşturulamadı.")
+            return
+
+        chat_data['word_guess'] = game_state
+        await persist_game(self.data_port, chat_id, "word_guess", game_state)
+
+        job_name_timeout = f"word_guess_timeout_{chat_id}"
+        self._remove_job_by_name(context, job_name_timeout)
+        context.job_queue.run_once(
+            self._word_guess_timeout_callback,
+            when=int(game_state.get("time_limit", 240)),
+            chat_id=chat_id,
+            name=job_name_timeout
+        )
+
+        game_state['hint_index'] = 0
+
+        prompt = await context.bot.send_message(
+            chat_id=chat_id,
+            text=render_word_guess_text(game_state),
+            reply_markup=word_guess_keyboard(game_state),
+            parse_mode='HTML'
+        )
+        # Keep all guesses and hint refreshes attached to the clue message.
+        # This matters in groups where several players are chatting at once.
+        prompt_id = getattr(prompt, "message_id", None)
+        if prompt_id is not None:
+            game_state["prompt_message_id"] = int(prompt_id)
+            await persist_game(self.data_port, chat_id, "word_guess", game_state)
+
+    def _remove_job_by_name(self, context, name):
+        remove_job_by_name(context, name)
+
+    async def handle_connect4_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Open a restart-safe, two-player Connect Four lobby.
+
+        The menu callback can invoke the same method, so this surface does not
+        require a second transport or a separate game process.
+        """
+        message = update.effective_message or update.message
+        if message is None or update.effective_chat is None or update.effective_user is None:
+            return
+        existing = context.chat_data.get("connect4")
+        if existing and str(existing.get("status")) in {"lobby", "playing"}:
+            await message.reply_text(
+                render_connect4_text(existing),
+                reply_markup=connect4_keyboard(existing),
+                parse_mode="HTML",
+            )
+            return
+        state = new_connect4_state(
+            owner_id=int(update.effective_user.id),
+            owner_name=str(update.effective_user.first_name or "Oyuncu"),
+            chat_id=int(update.effective_chat.id),
+        )
+        context.chat_data["connect4"] = state
+        await persist_game(self.data_port, update.effective_chat.id, "connect4", state)
+        prompt = await message.reply_text(
+            render_connect4_text(state),
+            reply_markup=connect4_keyboard(state),
+            parse_mode="HTML",
+        )
+        state["prompt_message_id"] = int(getattr(prompt, "message_id", 0) or 0)
+        await persist_game(self.data_port, update.effective_chat.id, "connect4", state)
+
+    async def handle_tictactoe_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Open a persistent two-player XOX lobby with round-scoped buttons."""
+        message = update.effective_message or update.message
+        if message is None or update.effective_chat is None or update.effective_user is None:
+            return
+        existing = context.chat_data.get("tictactoe")
+        if existing and str(existing.get("status")) in {"lobby", "playing"}:
+            reply_kwargs = {
+                "reply_markup": tictactoe_surface_keyboard(existing),
+                "parse_mode": "HTML",
+            }
+            thread_id = getattr(message, "message_thread_id", None)
+            if thread_id is not None:
+                reply_kwargs["message_thread_id"] = int(thread_id)
+            await message.reply_text(
+                render_tictactoe_text(existing),
+                **reply_kwargs,
+            )
+            return
+        state = new_tictactoe_state(
+            owner_id=int(update.effective_user.id),
+            owner_name=str(update.effective_user.first_name or "Oyuncu"),
+            chat_id=int(update.effective_chat.id),
+            board_size=6,
+        )
+        thread_id = getattr(message, "message_thread_id", None)
+        if thread_id is not None:
+            state["thread_id"] = int(thread_id)
+        context.chat_data["tictactoe"] = state
+        await persist_game(self.data_port, update.effective_chat.id, "tictactoe", state)
+        reply_kwargs = {
+            "reply_markup": tictactoe_surface_keyboard(state),
+            "parse_mode": "HTML",
+        }
+        if thread_id is not None:
+            reply_kwargs["message_thread_id"] = int(thread_id)
+        prompt = await message.reply_text(
+            render_tictactoe_text(state),
+            **reply_kwargs,
+        )
+        state["prompt_message_id"] = int(getattr(prompt, "message_id", 0) or 0)
+        await persist_game(self.data_port, update.effective_chat.id, "tictactoe", state)
+
+    async def handle_gomoku_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Open a persistent two-player Gomoku lobby with a selectable board."""
+        message = update.effective_message or update.message
+        if message is None or update.effective_chat is None or update.effective_user is None:
+            return
+        existing = context.chat_data.get("gomoku")
+        if existing and str(existing.get("status")) in {"lobby", "playing"}:
+            reply_kwargs = {
+                "reply_markup": gomoku_keyboard(existing),
+                "parse_mode": "HTML",
+            }
+            thread_id = getattr(message, "message_thread_id", None)
+            if thread_id is not None:
+                reply_kwargs["message_thread_id"] = int(thread_id)
+            await message.reply_text(render_gomoku_text(existing), **reply_kwargs)
+            return
+        thread_id = getattr(message, "message_thread_id", None)
+        state = new_gomoku_state(
+            owner_id=int(update.effective_user.id),
+            owner_name=str(update.effective_user.first_name or "Oyuncu"),
+            chat_id=int(update.effective_chat.id),
+            thread_id=int(thread_id) if thread_id is not None else None,
+        )
+        context.chat_data["gomoku"] = state
+        await persist_game(self.data_port, update.effective_chat.id, "gomoku", state)
+        reply_kwargs = {
+            "reply_markup": gomoku_keyboard(state),
+            "parse_mode": "HTML",
+        }
+        if thread_id is not None:
+            reply_kwargs["message_thread_id"] = int(thread_id)
+        prompt = await message.reply_text(render_gomoku_text(state), **reply_kwargs)
+        state["prompt_message_id"] = int(getattr(prompt, "message_id", 0) or 0)
+        await persist_game(self.data_port, update.effective_chat.id, "gomoku", state)
+
+    async def _word_guess_timeout_callback(self, context: ContextTypes.DEFAULT_TYPE):
+        job = context.job
+        chat_id = job.chat_id
+        chat_data = context.application.chat_data.get(chat_id)
+        if chat_data and 'word_guess' in chat_data:
+            game = chat_data['word_guess']
+            await context.bot.send_message(
+                chat_id=chat_id,
+                text=f"⏰ <b>SÜRE DOLDU!</b>\n\n"
+                     f"Maalesef kimse kelimeyi bilemedi. 😔\n"
+                     f"Doğru cevap: <b>{game['word']}</b> idi.\n\n"
+                     f"Yeni bir oyun başlatmak için /anlat veya /oyun yazın! ✨",
+                parse_mode='HTML'
+            )
+            del chat_data['word_guess']
+            await delete_game(self.data_port, chat_id, "word_guess")
+
+    async def handle_batak_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        if update.effective_chat.type == "private":
+            await update.message.reply_text("🃏 Batak sadece gruplarda oynanır! Hemen bir grubu neşelendirebiliriz. 😉", parse_mode='HTML')
+            return
+
+        if self.batak_service is not None:
+            try:
+                result = await self.batak_service.create_lobby(
+                    chat_id=update.effective_chat.id,
+                    owner_id=update.effective_user.id,
+                    owner_name=update.effective_user.first_name or "Oyuncu",
+                )
+            except ValueError as exc:
+                message = {"active_game": "Bu grupta zaten aktif bir Batak masası var."}.get(
+                    str(exc), "Batak masası oluşturulamadı."
+                )
+                await update.effective_message.reply_text(message)
+                return
+            keyboard = InlineKeyboardMarkup([
+                [InlineKeyboardButton("🃏 Masaya katıl", callback_data="batak:join")],
+                [InlineKeyboardButton("🏁 Oyunu başlat", callback_data="batak:start")],
+            ])
+            await update.effective_message.reply_text(
+                sanitize_html(result["text"]), reply_markup=keyboard, parse_mode="HTML"
+            )
+            return
+
+        from src.games.batak import BatakGame
+        batak_game = BatakGame(self.chat_engine)
+
+        context.chat_data['batak_players'] = [update.effective_user.id]
+        context.chat_data['batak_names'] = [update.effective_user.first_name]
+        await persist_game(self.data_port, update.effective_chat.id, "batak", {
+            "players": context.chat_data['batak_players'],
+            "names": context.chat_data['batak_names'],
+        })
+
+        status_text = batak_game.get_lobby_text(context.chat_data['batak_names'])
+        keyboard = batak_game.get_lobby_keyboard(len(context.chat_data['batak_players']))
+
+        await update.message.reply_text(
+            status_text,
+            reply_markup=keyboard,
+            parse_mode='HTML'
+        )
+
+    @staticmethod
+    def _blackjack_keyboard(user_id: int) -> InlineKeyboardMarkup:
+        owner = int(user_id)
+        return InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("➕ Kart çek", callback_data=f"bj:{owner}:hit"),
+                InlineKeyboardButton("✅ Dur", callback_data=f"bj:{owner}:stand"),
+            ],
+            [InlineKeyboardButton("2️⃣ Double", callback_data=f"bj:{owner}:double")],
+        ])
+
+    async def handle_blackjack_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Start an owner-scoped, persistent Blackjack hand."""
+        service = self.blackjack_service
+        message = update.effective_message
+        if message is None:
+            return
+        if service is None:
+            await message.reply_text("Blackjack servisi şu anda kullanılamıyor.")
+            return
+        raw_bet = (context.args or ["100"])[0]
+        try:
+            bet = service.validate_bet(raw_bet)
+            message_id = getattr(message, "message_id", 0) or 0
+            event_id = f"{update.effective_chat.id}:{message_id}:{update.effective_user.id}"
+            result = await service.start(
+                chat_id=update.effective_chat.id,
+                user_id=update.effective_user.id,
+                user_name=update.effective_user.first_name or "Oyuncu",
+                bet=bet,
+                event_id=event_id,
+            )
+        except ValueError as exc:
+            errors = {
+                "invalid_bet": "Bahis sayısal olmalı. Örnek: <code>/blackjack 100</code>",
+                "bet_out_of_range": f"Bahis {service.MIN_BET}–{service.MAX_BET} jeton arasında olmalı.",
+                "active_game": "Zaten devam eden bir Blackjack elin var. Önce mevcut eli bitir.",
+                "insufficient_balance": "Bu bahis için yeterli jetonun yok.",
+            }
+            code = normalize_error_code(exc, "GAME_ERROR").lower()
+            await message.reply_text(errors.get(code, "Blackjack eli başlatılamadı."), parse_mode="HTML")
+            return
+        except Exception as exc:
+            logger.error("Blackjack start failed: %s", summarize_exception(exc, label="blackjack_start"))
+            await message.reply_text("Blackjack şu anda başlatılamadı. Lütfen biraz sonra tekrar dene.")
+            return
+
+        text = sanitize_html(str(result.get("text", "Blackjack")))
+        markup = None if result.get("terminal") else self._blackjack_keyboard(update.effective_user.id)
+        await message.reply_text(text, reply_markup=markup, parse_mode="HTML")
+
+    async def handle_oyun_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        if self.menu_service:
+            text, markup = self.menu_service.games_menu(await self._get_language(update))
+            await update.message.reply_text(text, reply_markup=markup, parse_mode='HTML')
+            return
+
+        keyboard = [
+            [
+                InlineKeyboardButton("🗣️ Kelime Anlatmaca", callback_data="game_start_anlat"),
+                InlineKeyboardButton("🪑 Adam Asmaca", callback_data="game_start_hangman")
+            ],
+            [
+                InlineKeyboardButton("🔠 Kelime Türetme", callback_data="game_word_categories"),
+                InlineKeyboardButton("🎯 Bilgi Yarışması", callback_data="game_start_quiz")
+            ],
+            [
+                InlineKeyboardButton("🍾 Şişe Çevirmece", callback_data="game_start_sise"),
+                InlineKeyboardButton("🃏 Batak", callback_data="game_start_batak")
+            ],
+            [
+                InlineKeyboardButton("🔫 Rus Ruleti", callback_data="game_start_rusruleti"),
+                InlineKeyboardButton("⚔️ Düello", callback_data="game_start_duello")
+            ],
+            [InlineKeyboardButton("🔴 Connect Four", callback_data="game_start_connect4")],
+            [
+                InlineKeyboardButton("🛑 Oyunu Bitir / İptal", callback_data="game_stop_all")
+            ]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await update.message.reply_text(
+            "🎮 <b>AREL OYUN MERKEZİ</b> 🕹️\n\n"
+            "Hangi oyunu oynamak istersin? Arkadaşlarınla veya tek başına eğlenceye başla! ✨",
+            reply_markup=reply_markup,
+            parse_mode='HTML'
+        )
+
+    async def handle_oyunbitir_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        cancelled: list[str] = []
+        user_id = int(update.effective_user.id)
+        chat_id = int(update.effective_chat.id)
+
+        # Persistent game state must be cancelled through its domain service;
+        # clearing Telegram's in-memory chat data alone leaves a restart-safe
+        # game active in MongoDB.
+        if self.blackjack_service is not None:
+            try:
+                result = await self.blackjack_service.cancel(chat_id=chat_id, user_id=user_id)
+                if result.get("status") == "cancelled":
+                    cancelled.append("blackjack")
+            except ValueError as exc:
+                if str(exc) not in {"game_expired", "not_owner"}:
+                    logger.warning("Blackjack cancellation rejected: %s", summarize_exception(exc, label="blackjack_cancel"))
+
+        if self.batak_service is not None:
+            moderator = False
+            if update.effective_chat.type in {"group", "supergroup"}:
+                moderator = await is_admin(update, context, self.sudo_manager, authorization=self.authorization)
+            try:
+                result = await self.batak_service.cancel(
+                    chat_id=chat_id,
+                    user_id=user_id,
+                    moderator=moderator,
+                )
+                if result.get("status") == "cancelled":
+                    cancelled.append("batak")
+            except ValueError as exc:
+                if str(exc) not in {"game_expired", "not_owner"}:
+                    logger.warning("Batak cancellation rejected: %s", summarize_exception(exc, label="batak_cancel"))
+
+        if self.roulette_service is not None:
+            moderator = False
+            if update.effective_chat.type in {"group", "supergroup"}:
+                moderator = await is_admin(update, context, self.sudo_manager, authorization=self.authorization)
+            try:
+                result = await self.roulette_service.cancel(
+                    chat_id=chat_id,
+                    user_id=user_id,
+                    moderator=moderator,
+                )
+                if result.get("status") == "cancelled":
+                    cancelled.append("roulette")
+            except ValueError as exc:
+                if str(exc) not in {"game_expired", "not_owner"}:
+                    logger.warning("Roulette cancellation rejected: %s", summarize_exception(exc, label="roulette_cancel"))
+
+        game_keys = ['word_guess', 'hangman', 'word_game', 'connect4', 'tictactoe', 'gomoku', 'batak_players', 'sise_lobby', 'quiz_answer', 'quiz_question', 'quiz_round_id']
+        cleared = False
+        for key in game_keys:
+            if key in context.chat_data:
+                del context.chat_data[key]
+                cleared = True
+
+        # Text games also survive a process restart in the durable game-state
+        # collection.  Clearing only Telegram's in-memory chat_data would
+        # make a cancelled quiz or word game reappear after the next update.
+        for game_type in ("word_guess", "hangman", "word_game", "connect4", "tictactoe", "gomoku", "batak", "bottle", "quiz"):
+            await delete_game(self.data_port, chat_id, game_type)
+
+        job_name = f"word_guess_timeout_{update.effective_chat.id}"
+        current_jobs = context.job_queue.get_jobs_by_name(job_name)
+        for job in current_jobs:
+            job.schedule_removal()
+            cleared = True
+
+        if cancelled:
+            labels = ", ".join(cancelled)
+            await update.message.reply_text(
+                f"✅ Aktif oyun kapatıldı: <b>{labels}</b>. Kalıcı oyun durumu da temizlendi.",
+                parse_mode='HTML',
+            )
+        elif cleared:
+            await update.message.reply_text("✅ Aktif oyunlar ve lobi durumları temizlendi. Yeni bir oyuna başlayabilirsin!", parse_mode='HTML')
+        else:
+            await update.message.reply_text("🤔 Şu an aktif bir oyun görünmüyor.", parse_mode='HTML')
+
+    async def handle_sisecevir_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        context.chat_data['bottle_players'] = [update.effective_user.id]
+        user_name = update.effective_user.first_name
+
+        keyboard = [
+            [InlineKeyboardButton("🍾 Masaya Katıl", callback_data="game_bottle_join")],
+            [InlineKeyboardButton("🏁 Oyunu Başlat", callback_data="game_bottle_spin")]
+        ]
+
+        await update.message.reply_text(
+            f"🍾 <b>Şişe Çevirmece Lobisi</b>\n\nBakalım şişenin ucu kime dokunacak? 😏\n\n"
+            f"👥 <b>Oyuncular:</b> {user_name}",
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode='HTML'
+        )
+
+    async def handle_truth_dare_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        from src.games.truth_dare import TruthDareGame
+        truth_dare_game = TruthDareGame()
+        cmd = update.message.text.split()[0].lower().replace("/", "")
+        is_truth = "d" in cmd
+
+        if is_truth:
+            text = truth_dare_game.get_truth()
+            icon = "🕵️‍♂️"
+            label = "Doğruluk"
+        else:
+            text = truth_dare_game.get_dare()
+            icon = "🔥"
+            label = "Cesaret"
+
+        await update.message.reply_text(f"{icon} <b>Arel'in {label} Seçimi:</b>\n\n{text}", parse_mode='HTML')
+
+    @staticmethod
+    def _roulette_keyboard(state: dict) -> InlineKeyboardMarkup:
+        phase = state.get("phase")
+        if phase == "lobby":
+            return InlineKeyboardMarkup([
+                [InlineKeyboardButton("👤 Katıl", callback_data="roulette:join")],
+                [InlineKeyboardButton("🏁 Oyunu başlat", callback_data="roulette:start")],
+                [InlineKeyboardButton("🛑 Lobiyi kapat", callback_data="roulette:cancel")],
+            ])
+        return InlineKeyboardMarkup([
+            [InlineKeyboardButton("🔫 Tetiği çek", callback_data="roulette:pull")],
+            [InlineKeyboardButton("🛑 Oyunu bitir", callback_data="roulette:cancel")],
+        ])
+
+    async def handle_rusruleti_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        service = self.roulette_service
+        if service is None:
+            await update.effective_message.reply_text("Rus ruleti servisi şu anda kullanılamıyor.")
+            return
+        try:
+            result = await service.create_lobby(
+                chat_id=update.effective_chat.id,
+                owner_id=update.effective_user.id,
+                owner_name=update.effective_user.first_name or "Oyuncu",
+            )
+        except ValueError as exc:
+            messages = {"active_game": "Bu sohbette zaten aktif bir rulet masası var."}
             code = normalize_error_code(exc, "GAME_ERROR").lower()
             await update.effective_message.reply_text(messages.get(code, "Rulet lobisi oluşturulamadı."))
             return
@@ -2073,7 +3379,7 @@ class CommandHandler:
             return
 
         if chat.type not in {"group", "supergroup"} or not await self._is_admin(update, context):
-            await update.effective_message.reply_text("? Bu komut grup y?neticileri i?indir.")
+            await update.effective_message.reply_text("⚠️ Bu komut grup yöneticileri içindir.")
             return
 
         try:
@@ -2258,15 +3564,36 @@ class CommandHandler:
             return False
 
     async def _is_admin(self, update, context):
-        return await is_admin(update, context, self.sudo_manager)
+        return await is_admin(update, context, self.sudo_manager, authorization=self.authorization)
 
     async def _is_group_admin(self, update, context):
         """Require an actual Telegram admin role for shared group settings."""
-        if update.effective_chat.type not in {"group", "supergroup"}:
-            return False
-        try:
-            member = await context.bot.get_chat_member(update.effective_chat.id, update.effective_user.id)
-            return member.status in {"creator", "administrator"}
-        except Exception:
-            return False
+        return await is_group_admin(update, context, authorization=self.authorization)
 
+    async def _guardian_admin_denial_message(self, update, context, *, command: str) -> str:
+        """Explain whether the actor or Arel is missing Telegram access."""
+        auth = self.authorization or getattr(context, "arel_authorization", None)
+        if auth is None:
+            bot = getattr(context, "bot", None)
+            auth = TelegramModerationAuthorization(bot, bot_id=getattr(bot, "id", None))
+        diagnose = getattr(auth, "diagnose_group_access", None)
+        if not callable(diagnose):
+            return "bu i\u015flem grup y\u00f6neticilerine a\u00e7\u0131k; Telegram \u00fcyelik do\u011frulamas\u0131 yap\u0131lamad\u0131"
+        try:
+            state = await diagnose(int(update.effective_chat.id), int(update.effective_user.id))
+        except Exception:
+            return "bu i\u015flem grup y\u00f6neticilerine a\u00e7\u0131k; Telegram \u00fcyelik do\u011frulamas\u0131 yap\u0131lamad\u0131"
+        if not state.get("bot_is_admin"):
+            return (
+                "bu i\u015flem i\u00e7in Arel'in de grupta y\u00f6netici olmas\u0131 gerekiyor. "
+                "\u015eu an Arel y\u00f6netici de\u011fil veya grup \u00fcyeli\u011fi do\u011frulanamad\u0131; "
+                "Arel'i y\u00f6netici yap\u0131p gerekli yetkileri ver: \u00fcyeleri k\u0131s\u0131tlama, "
+                "\u00fcyeleri yasaklama ve mesajlar\u0131 silme. Sonra komutu tekrar dene."
+            )
+        if not state.get("actor_is_admin"):
+            status = html.escape(str(state.get("actor_status") or "do\u011frulanamad\u0131"))
+            return (
+                f"bu i\u015flem grup y\u00f6neticilerine a\u00e7\u0131k. Telegram'da senin mevcut rol\u00fcn "
+                f"<code>{status}</code>; y\u00f6netici/kurucu rol\u00fc gerekiyor."
+            )
+        return "Telegram y\u00f6netici do\u011frulamas\u0131 tamamlanamad\u0131; Arel'in gruptaki y\u00f6netici rol\u00fcn\u00fc ve yetkilerini kontrol et"

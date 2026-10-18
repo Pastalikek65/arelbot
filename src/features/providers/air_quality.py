@@ -93,15 +93,15 @@ class AirQualityProvider:
         if value is None:
             return "Bilinmiyor"
         if value <= 20:
-            return "Ä°yi"
+            return "İyi"
         if value <= 40:
             return "Orta"
         if value <= 60:
-            return "Hassas gruplar iÃ§in riskli"
+            return "Hassas gruplar için riskli"
         if value <= 80:
-            return "SaÄŸlÄ±ksÄ±z"
+            return "Sağlıksız"
         if value <= 100:
-            return "Ã‡ok saÄŸlÄ±ksÄ±z"
+            return "Çok sağlıksız"
         return "Tehlikeli"
 
     async def fetch(self, request: ProviderRequest) -> ProviderResponse[dict[str, Any]]:
@@ -144,12 +144,12 @@ class AirQualityProvider:
             value = metrics.get(key)
             if value is None:
                 return None
-            unit = html.escape(str(units.get(key) or ("Âµg/mÂ³" if key not in {"european_aqi", "us_aqi"} else "")))
+            unit = html.escape(str(units.get(key) or ("µg/m³" if key not in {"european_aqi", "us_aqi"} else "")))
             return f"{label_text}: <b>{html.escape(str(value))} {unit}</b>"
 
         lines = [
-            f"<b>ğŸŒ¿ {html.escape(city)} Hava Kalitesi</b>",
-            f"ğŸ“Š Avrupa AQI: <b>{html.escape(str(european_aqi if european_aqi is not None else metrics.get('us_aqi', 'â€”')))}</b> Â· {html.escape(label)}",
+            f"<b>🌿 {html.escape(city)} Hava Kalitesi</b>",
+            f"📊 Avrupa AQI: <b>{html.escape(str(european_aqi if european_aqi is not None else metrics.get('us_aqi', '—')))}</b> · {html.escape(label)}",
         ]
         for key, label_text in (("pm2_5", "PM2.5"), ("pm10", "PM10"), ("ozone", "Ozon"), ("nitrogen_dioxide", "Azot dioksit")):
             line = value_line(key, label_text)
@@ -162,7 +162,7 @@ class AirQualityProvider:
             if key.endswith("_pollen") and value is not None
         }
         if pollen:
-            lines.append("ğŸŒ¾ <b>Polen</b>: " + ", ".join(
+            lines.append("🌾 <b>Polen</b>: " + ", ".join(
                 f"{html.escape(key.removesuffix('_pollen'))} {html.escape(str(value))}"
                 for key, value in pollen.items()
             ))

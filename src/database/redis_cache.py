@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class MemoryBackend:
-    """Redis yoksa kullanÄ±lacak basit in-memory cache."""
+    """Redis yoksa kullanılacak basit in-memory cache."""
 
     def __init__(self):
         self._store: Dict[str, tuple] = {}
@@ -45,7 +45,7 @@ class MemoryBackend:
 
 
 class RedisBackend:
-    """GerÃ§ek Redis baÄŸlantÄ±sÄ±."""
+    """Gerçek Redis bağlantısı."""
 
     def __init__(self, redis_url: str = "redis://localhost:6379/0"):
         self._redis_url = redis_url
@@ -113,17 +113,17 @@ class RedisBackend:
                 socket_timeout=2
             )
             await self._redis.ping()
-            logger.info("âœ… Redis baÄŸlantÄ±sÄ± baÅŸarÄ±lÄ±")
+            logger.info("✅ Redis bağlantısı başarılı")
             return True
         except Exception as e:
-            logger.warning("Redis baÄŸlantÄ±sÄ± baÅŸarÄ±sÄ±z: %s", summarize_exception(e, label="redis_init"))
+            logger.warning("Redis bağlantısı başarısız: %s", summarize_exception(e, label="redis_init"))
             return False
 
 
 class RedisCache:
     """
-    BirleÅŸik Cache Sistemi â€” Redis var mÄ± diye kontrol eder,
-    yoksa MemoryBackend kullanÄ±r.
+    Birleşik Cache Sistemi — Redis var mı diye kontrol eder,
+    yoksa MemoryBackend kullanır.
 
     The application injects one instance through ``Container``.  A process-global
     singleton would make worker/test lifecycles share mutable cache state, so
@@ -151,20 +151,20 @@ class RedisCache:
         if self._initialized:
             return
 
-        # Ã–nce Redis'i dene
+        # Önce Redis'i dene
         redis_backend = RedisBackend(self._redis_url)
         redis_ok = await redis_backend.initialize()
 
         if redis_ok:
             self._backend = redis_backend
             self._redis_available = True
-            logger.info("âš¡ RedisCache: Redis backend aktif")
+            logger.info("⚡ RedisCache: Redis backend aktif")
         else:
             if self.required:
                 raise RuntimeError("Redis is required for this application role but is unavailable")
             self._backend = MemoryBackend()
             self._redis_available = False
-            logger.info("ğŸ§  RedisCache: Memory backend aktif (Redis yok)")
+            logger.info("🧠 RedisCache: Memory backend aktif (Redis yok)")
 
         self._initialized = True
 
@@ -209,4 +209,4 @@ class RedisCache:
     async def close(self):
         await self._backend.close()
         self._initialized = False
-        logger.info("RedisCache kapatÄ±ldÄ±.")
+        logger.info("RedisCache kapatıldı.")

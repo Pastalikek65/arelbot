@@ -1,5 +1,5 @@
 """
-Tool Testleri - TÃ¼m tool'larÄ±n temel davranÄ±ÅŸlarÄ±nÄ± test eder.
+Tool Testleri - Tüm tool'ların temel davranışlarını test eder.
 """
 import pytest
 import httpx
@@ -7,10 +7,10 @@ from unittest.mock import Mock, AsyncMock, patch
 
 
 class TestBaseToolInterface:
-    """BaseTool arayÃ¼zÃ¼ testleri."""
+    """BaseTool arayüzü testleri."""
 
     def test_tool_has_required_attributes(self):
-        """Tool'lar name ve description attribute'larÄ±na sahip olmalÄ±."""
+        """Tool'lar name ve description attribute'larına sahip olmalı."""
         from src.tools.web_search_tool import WebSearchTool
         from src.tools.memory_tool import MemoryTool
         from src.tools.web_reader_tool import WebReaderTool
@@ -32,7 +32,7 @@ class TestBaseToolInterface:
             assert isinstance(tool.description, str), f"{tool.__class__.__name__}.description must be str"
 
     def test_tool_to_openai_def_format(self):
-        """Tool'lar OpenAI formatÄ±nda doÄŸru yapÄ± dÃ¶ndÃ¼rmeli."""
+        """Tool'lar OpenAI formatında doğru yapı döndürmeli."""
         from src.tools.web_reader_tool import WebReaderTool
 
         tool = WebReaderTool()
@@ -46,7 +46,7 @@ class TestBaseToolInterface:
         assert "parameters" in openai_def["function"]
 
     def test_tool_to_gemini_def_format(self):
-        """Tool'lar Gemini formatÄ±nda doÄŸru yapÄ± dÃ¶ndÃ¼rmeli."""
+        """Tool'lar Gemini formatında doğru yapı döndürmeli."""
         from src.tools.web_reader_tool import WebReaderTool
 
         tool = WebReaderTool()
@@ -88,7 +88,7 @@ class TestMemoryTool:
 
     @pytest.mark.asyncio
     async def test_remember_without_value_returns_error(self, memory_tool):
-        """Value olmadan remember Ã§aÄŸrÄ±ldÄ±ÄŸÄ±nda hata dÃ¶nmeli."""
+        """Value olmadan remember çağrıldığında hata dönmeli."""
         result = await memory_tool.execute(
             action="remember",
             fact_key="favorite_team",
@@ -100,7 +100,7 @@ class TestMemoryTool:
 
     @pytest.mark.asyncio
     async def test_recall_returns_dict(self, memory_tool, mock_db):
-        """Recall fonksiyonu Dict dÃ¶ndÃ¼rmeli."""
+        """Recall fonksiyonu Dict döndürmeli."""
         mock_db.get_facts = AsyncMock(return_value=[
             {"key": "favorite_team", "value": "Galatasaray"}
         ])
@@ -116,7 +116,7 @@ class TestMemoryTool:
 
     @pytest.mark.asyncio
     async def test_invalid_action_returns_error(self, memory_tool):
-        """GeÃ§ersiz action iÃ§in hata dÃ¶nmeli."""
+        """Geçersiz action için hata dönmeli."""
         result = await memory_tool.execute(
             action="invalid",
             fact_key="test",
@@ -170,10 +170,10 @@ class TestWebReaderTool:
 
 
 class TestSpatulaTools:
-    """Spatula tool'larÄ±nÄ±n temel testleri."""
+    """Spatula tool'larının temel testleri."""
 
     def test_all_spatula_tools_have_proper_interface(self):
-        """TÃ¼m spatula tool'larÄ± doÄŸru arayÃ¼ze sahip olmalÄ±."""
+        """Tüm spatula tool'ları doğru arayüze sahip olmalı."""
         from src.tools.spatula_tool import (
             PharmacyTool, FuelTool, CurrencyTool, EarthquakeTool,
             BimDealsTool, NewsTool, WeatherTool, PrayerTimesTool,
@@ -204,13 +204,13 @@ class TestGamesTool:
         return GamesTool()
 
     def test_tool_has_proper_interface(self, games_tool):
-        """GamesTool doÄŸru arayÃ¼ze sahip olmalÄ±."""
+        """GamesTool doğru arayüze sahip olmalı."""
         assert games_tool.name == "games_tool"
         assert "game_type" in str(games_tool.parameters)
 
     @pytest.mark.asyncio
     async def test_zar_command_returns_result(self, games_tool):
-        """Zar atma komutu sonuÃ§ dÃ¶ndÃ¼rmeli."""
+        """Zar atma komutu sonuç döndürmeli."""
         result = await games_tool.execute(game_type="zar")
         assert result is not None
         assert isinstance(result, (str, dict))

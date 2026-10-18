@@ -51,7 +51,7 @@ DEPLOYMENT_REQUIRED_FILES = (
     "vds-backup-restore.json",
     "monitoring-alert-delivery.json",
     "provider-governance-approval.json",
-    "cleanapis-staging.json",
+    "evren-staging.json",
 )
 TOKEN_RE = re.compile(r"\b\d{6,}:[A-Za-z0-9_-]{20,}\b")
 SENSITIVE_TEXT_RE = re.compile(r"(?i)\b(?:bearer\s+|api[_-]?key\s*[=:]|password\s*[=:]|cookie\s*[=:])")
@@ -135,6 +135,23 @@ def _audit_live_invariants(filename: str, payload: dict[str, Any]) -> AuditCheck
         )
         return AuditCheck("cleanapis_probe:invariants", ok, None if ok else "cleanapis_probe_invariant_failed")
 
+    if filename == "evren-staging.json":
+        ok = (
+            payload.get("scope") == "evren-staging"
+            and _bool(payload, "ok")
+            and payload.get("mode") == "live-completion"
+            and payload.get("provider") == "evren"
+            and isinstance(payload.get("model"), str)
+            and bool(payload.get("model"))
+            and isinstance(payload.get("latency_ms"), (int, float))
+            and 0 <= float(payload.get("latency_ms")) <= 120_000
+            and isinstance(payload.get("response_chars"), int)
+            and 0 <= payload.get("response_chars", -1) <= 256_000
+            and isinstance(payload.get("usage_present"), bool)
+            and payload.get("secret_free") is True
+        )
+        return AuditCheck("evren_probe:invariants", ok, None if ok else "evren_probe_invariant_failed")
+
     if filename == "vds-readiness.json":
         checks = payload.get("checks")
         required_checks = {
@@ -147,6 +164,39 @@ def _audit_live_invariants(filename: str, payload: dict[str, Any]) -> AuditCheck
             "app_root_writable",
             "shared_env_present",
         }
+        runtime = payload.get("runtime_checks")
+        runtime_ok = runtime is None or (
+            isinstance(runtime, dict)
+            and set(runtime) == {
+                "compose_services_healthy",
+                "bot_healthy",
+                "worker_healthy",
+                "mongo_healthy",
+                "redis_healthy",
+            }
+            and all(type(value) is bool for value in runtime.values())
+        )
+        service_health = payload.get("service_health")
+        service_health_ok = service_health is None or (
+            isinstance(service_health, dict)
+            and set(service_health) == {"bot", "worker", "mongo", "redis"}
+            and all(type(value) is bool for value in service_health.values())
+        )
+        guardian = payload.get("guardian")
+        guardian_ok = guardian is None or (
+            isinstance(guardian, dict)
+            and set(guardian) == {"mode", "socket_present", "socket_readable"}
+            and guardian.get("mode") in {"disabled", "shadow", "active"}
+            and type(guardian.get("socket_present")) is bool
+            and type(guardian.get("socket_readable")) is bool
+        )
+        compose = payload.get("compose")
+        compose_ok = compose is None or (
+            isinstance(compose, dict)
+            and set(compose) == {"file_present", "config_valid"}
+            and type(compose.get("file_present")) is bool
+            and type(compose.get("config_valid")) is bool
+        )
         ok = (
             payload.get("scope") == "vds-readiness"
             and payload.get("mode") == "live-read-only"
@@ -167,8 +217,12 @@ def _audit_live_invariants(filename: str, payload: dict[str, Any]) -> AuditCheck
             and all(item in {80, 443, 8443} for item in payload.get("listening_ports", []))
             and isinstance(payload.get("blockers"), list)
             and all(isinstance(item, str) and re.fullmatch(r"[a-z0-9_]{1,80}", item) for item in payload.get("blockers", []))
+            and runtime_ok
+            and service_health_ok
+            and guardian_ok
+            and compose_ok
             and payload.get("ok") is (len(payload.get("blockers", [])) == 0)
-            and payload.get("ok") is all(checks.values())
+            and (payload.get("ok") is False or payload.get("ok") is all(checks.values()))
         )
         return AuditCheck("vds_readiness:invariants", ok, None if ok else "vds_readiness_invariant_failed")
 
@@ -189,22 +243,37 @@ def _audit_live_invariants(filename: str, payload: dict[str, Any]) -> AuditCheck
         platforms = payload.get("platforms")
         slo = payload.get("completion_slo")
         latency = payload.get("latency_ms")
+        waived_raw = payload.get("waived_platforms", [])
+        waived = {str(item).casefold() for item in waived_raw} if isinstance(waived_raw, list) else set()
+        waiver = payload.get("waiver")
+        waiver_ok = not waived
+        if waived:
+            waiver_ok = (
+                waived <= _LIVE_MEDIA_PLATFORMS
+                and isinstance(waiver, dict)
+                and isinstance(waiver.get("approved_by"), str)
+                and bool(re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9 .,_:/()'_-]{2,240}", waiver["approved_by"]))
+                and isinstance(waiver.get("reason"), str)
+                and bool(re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9 .,_:/()'_-]{2,240}", waiver["reason"]))
+            )
+        required_platforms = _LIVE_MEDIA_PLATFORMS - waived
         ok = (
             payload.get("scope") == "live-media-matrix"
             and _bool(payload, "ok")
             and payload.get("mode") == "live-download"
             and isinstance(payload.get("case_count"), int)
-            and payload.get("case_count", 0) >= len(_LIVE_MEDIA_PLATFORMS)
+            and payload.get("case_count", 0) >= len(required_platforms)
             and payload.get("passed") == payload.get("case_count")
             and payload.get("failed") == 0
             and isinstance(platforms, dict)
-            and set(platforms) >= _LIVE_MEDIA_PLATFORMS
+            and set(platforms) >= required_platforms
             and all(
                 isinstance(platforms[name], dict)
                 and platforms[name].get("jobs", 0) >= 1
                 and platforms[name].get("failed") == 0
-                for name in _LIVE_MEDIA_PLATFORMS
+                for name in required_platforms
             )
+            and waiver_ok
             and isinstance(slo, dict)
             and slo.get("met") is True
             and isinstance(slo.get("p95_ms"), (int, float))

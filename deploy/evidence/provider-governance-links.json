@@ -6,7 +6,7 @@
       {
         "feature_key": "pharmacy",
         "provider_key": "get_pharmacies",
-        "source_name": "NÃ¶betÃ§i Eczaneler",
+        "source_name": "Nöbetçi Eczaneler",
         "status": "pending",
         "robots_policy": "review_required",
         "terms_review": "review_required",
@@ -15,7 +15,7 @@
       {
         "feature_key": "fuel",
         "provider_key": "get_fuel_prices",
-        "source_name": "DÃ¶viz.com",
+        "source_name": "Döviz.com",
         "status": "pending",
         "robots_policy": "review_required",
         "terms_review": "review_required",
@@ -24,7 +24,7 @@
       {
         "feature_key": "currency",
         "provider_key": "get_currency_rates",
-        "source_name": "DÃ¶viz.com",
+        "source_name": "Döviz.com",
         "status": "pending",
         "robots_policy": "review_required",
         "terms_review": "review_required",
@@ -60,7 +60,7 @@
       {
         "feature_key": "bim_deals",
         "provider_key": "get_bim_deals",
-        "source_name": "BÄ°M",
+        "source_name": "BİM",
         "status": "pending",
         "robots_policy": "review_required",
         "terms_review": "review_required",
@@ -96,7 +96,7 @@
       {
         "feature_key": "prayer_times",
         "provider_key": "get_prayer_times",
-        "source_name": "HabertÃ¼rk",
+        "source_name": "Habertürk",
         "status": "pending",
         "robots_policy": "review_required",
         "terms_review": "review_required",
@@ -159,7 +159,7 @@
       {
         "feature_key": "news_digest",
         "provider_key": "rss_news_digest",
-        "source_name": "RSS haber akÄ±ÅŸlarÄ±",
+        "source_name": "RSS haber akışları",
         "status": "pending",
         "robots_policy": "review_required",
         "terms_review": "review_required",

@@ -31,7 +31,7 @@ class MarketChartService:
             color = "#23d18b" if values[-1] >= values[0] else "#ff5f56"
             axis.plot(range(len(values)), values, color=color, linewidth=2)
             axis.fill_between(range(len(values)), values, color=color, alpha=0.12)
-            axis.set_title(f"{symbol} Â· 7 gÃ¼nlÃ¼k piyasa hareketi")
+            axis.set_title(f"{symbol} · 7 günlük piyasa hareketi")
             axis.grid(True, alpha=0.15)
             figure.tight_layout()
             output = io.BytesIO()

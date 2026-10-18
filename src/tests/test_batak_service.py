@@ -50,7 +50,7 @@ async def test_batak_round_enforces_turns_follow_suit_and_settles_once():
     leaderboard = FakeLeaderboard()
     service = BatakService(database, leaderboard_service=leaderboard)
     await service.create_lobby(chat_id=-60, owner_id=1, owner_name="Bir")
-    await service.join(chat_id=-60, user_id=2, user_name="Ä°ki", action_id="join-2")
+    await service.join(chat_id=-60, user_id=2, user_name="İki", action_id="join-2")
     await service.start(chat_id=-60, user_id=1, action_id="start-2")
 
     with pytest.raises(ValueError, match="not_your_turn"):

@@ -45,7 +45,7 @@ class FontManager:
             "C:\\Windows\\Fonts\\arial.ttf",
             "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
         ]
-        # Comprehensive fallback list â€” order matters (best coverage first)
+        # Comprehensive fallback list — order matters (best coverage first)
         self.fallback_font_candidates = [
             "/usr/share/fonts/truetype/noto/NotoSansSymbols2-Regular.ttf",
             "/usr/share/fonts/truetype/noto/NotoSansMath-Regular.ttf",
@@ -114,7 +114,7 @@ class FontManager:
     def _font_can_render(self, font, char):
         """
         Check if a font can render a character by rendering it and comparing
-        against a known-missing character (U+FFFF â€” "tofu").
+        against a known-missing character (U+FFFF — "tofu").
         """
         try:
             # Create small canvas to test rendering

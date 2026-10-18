@@ -42,9 +42,9 @@ async def test_reply_quote_collects_requested_sequential_messages_without_duplic
     update = SimpleNamespace(message=SimpleNamespace(reply_to_message=replied))
     rows = [
         {"_id": "reply-db", "content": "Birinci", "user_id": 7, "user_info": {"first_name": "Ali"}},
-        {"_id": "second", "content": "Ä°kinci", "user_id": 8, "user_info": {"first_name": "AyÅŸe"}},
-        {"_id": "third", "content": "ÃœÃ§Ã¼ncÃ¼", "user_id": 9, "user_info": {"first_name": "Can"}},
-        {"_id": "fourth", "content": "DÃ¶rdÃ¼ncÃ¼", "user_id": 10, "user_info": {"first_name": "Deniz"}},
+        {"_id": "second", "content": "İkinci", "user_id": 8, "user_info": {"first_name": "Ayşe"}},
+        {"_id": "third", "content": "Üçüncü", "user_id": 9, "user_info": {"first_name": "Can"}},
+        {"_id": "fourth", "content": "Dördüncü", "user_id": 10, "user_info": {"first_name": "Deniz"}},
     ]
     handler = QuoteHandler(FakeEngine(FakeDatabase(rows)), None)
 
@@ -54,7 +54,7 @@ async def test_reply_quote_collects_requested_sequential_messages_without_duplic
         chat_id=100,
     )
 
-    assert [item["text"] for item in result] == ["Birinci", "Ä°kinci", "ÃœÃ§Ã¼ncÃ¼"]
+    assert [item["text"] for item in result] == ["Birinci", "İkinci", "Üçüncü"]
     assert len(result) == 3
 
 
@@ -77,8 +77,8 @@ async def test_reply_quote_falls_back_to_one_message_when_storage_is_unavailable
 
 @pytest.mark.asyncio
 async def test_reply_quote_show_reply_adds_parent_context_once():
-    parent = _telegram_message(text="Ã–nceki mesaj", user_id=3, message_id=10)
-    replied = _telegram_message(text="YanÄ±t", user_id=7, message_id=11, reply_to_message=parent)
+    parent = _telegram_message(text="Önceki mesaj", user_id=3, message_id=10)
+    replied = _telegram_message(text="Yanıt", user_id=7, message_id=11, reply_to_message=parent)
     update = SimpleNamespace(message=SimpleNamespace(reply_to_message=replied))
     database = FakeDatabase([])
     database.available = False
@@ -90,4 +90,4 @@ async def test_reply_quote_show_reply_adds_parent_context_once():
         chat_id=100,
     )
 
-    assert [item["text"] for item in result] == ["Ã–nceki mesaj", "YanÄ±t"]
+    assert [item["text"] for item in result] == ["Önceki mesaj", "Yanıt"]

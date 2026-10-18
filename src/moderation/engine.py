@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import re
+from urllib.parse import urlsplit
 import time
 from collections import defaultdict, deque
 from dataclasses import dataclass
@@ -33,6 +34,12 @@ class ModerationEngine:
         while violations and now - violations[0] > retention:
             violations.popleft()
         violations.append(now)
+        configured = str(settings.get("flood_mode") or "").casefold()
+        if configured:
+            if configured in {"delete", "mute"}:
+                return configured
+            if configured in {"ban", "tban", "kick"}:
+                return "ban"
         if settings.get("auto_ban") and len(violations) >= 3:
             return "ban"
         return "mute"
@@ -46,7 +53,18 @@ class ModerationEngine:
     def evaluate(self, chat_id: int, user_id: int, text: str, settings: dict | None = None,
                  is_admin: bool = False) -> ModerationDecision:
         settings = settings or {}
-        if is_admin or settings.get("moderation_enabled", False) is False:
+        guardian_policy_keys = {
+            "flood_limit", "link_filter", "antibotlink_enabled", "blocked_words",
+            "guardian_filters", "repeat_filter", "moderation_enabled",
+        }
+        policy_enabled = bool(settings.get("moderation_enabled")) or any(
+            key in settings and settings.get(key) not in (None, False, [], {}, "")
+            for key in guardian_policy_keys
+        )
+        approved = {str(item) for item in (settings.get("approved_users") or [])}
+        roles = settings.get("guardian_roles")
+        role = str(roles.get(str(user_id), "")).casefold() if isinstance(roles, dict) else ""
+        if is_admin or str(user_id) in approved or role == "free" or not policy_enabled:
             return ModerationDecision(True)
         now = time.monotonic()
         key = (chat_id, user_id)
@@ -58,15 +76,34 @@ class ModerationEngine:
         if len(events) > flood_limit:
             return ModerationDecision(False, "flood", self._flood_action(key, settings, now))
 
-        if settings.get("link_filter") and self.URL_RE.search(text or ""):
-            return ModerationDecision(False, "link_filter", "delete")
+        link_policy = bool(settings.get("link_filter"))
+        bot_link_policy = bool(settings.get("antibotlink_enabled")) and bool(settings.get("_sender_is_bot"))
+        if (link_policy or bot_link_policy) and self.URL_RE.search(text or ""):
+            allowed = {str(item).casefold().lstrip("@.") for item in (settings.get("allowed_domains") or []) if str(item).strip()}
+            urls = re.findall(r"https?://[^\s<>]+", text or "", flags=re.IGNORECASE)
+            blocked = False
+            for raw_url in urls or [""]:
+                host = (urlsplit(raw_url).hostname or "").casefold().lstrip("www.")
+                if host and any(host == item or host.endswith("." + item) for item in allowed):
+                    continue
+                blocked = True
+                break
+            if blocked:
+                return ModerationDecision(False, "bot_link_filter" if bot_link_policy and not link_policy else "link_filter", "delete")
 
-        blocked = {self._normalize(str(word)) for word in settings.get("blocked_words", []) if word}
+        blocked = {
+            self._normalize(str(word))
+            for word in (settings.get("blocked_words") or settings.get("guardian_filters") or [])
+            if word
+        }
         normalized_words = {
             self._normalize(word) for word in re.findall(r"\w+", text or "", flags=re.UNICODE)
         }
-        if any(word in normalized_words for word in blocked):
-            return ModerationDecision(False, "keyword_filter", "delete")
+        blocklist_enabled = settings.get("blocklist_mode_enabled", True)
+        if blocked and bool(blocklist_enabled) and any(word in normalized_words for word in blocked):
+            mode = str(settings.get("blocklist_mode") or "delete").casefold()
+            action = mode if mode in {"delete", "mute", "ban"} else "delete"
+            return ModerationDecision(False, "keyword_filter", action)
 
         digest = hashlib.sha256((text or "").strip().casefold().encode()).hexdigest()
         repeats = self._recent_hashes[key]

@@ -72,11 +72,11 @@ def test_group_history_keeps_stable_user_identity_and_current_turn_matching():
 
 def test_group_history_deduplication_uses_current_user_id_when_texts_match():
     history = [
-        {"role": "user", "content": "[telegram_user_id=17] [Ada]: aynÄ±"},
-        {"role": "user", "content": "[telegram_user_id=18] [Bora]: aynÄ±"},
+        {"role": "user", "content": "[telegram_user_id=17] [Ada]: aynı"},
+        {"role": "user", "content": "[telegram_user_id=18] [Bora]: aynı"},
     ]
 
-    result = history_without_current_user_turn(history, "aynÄ±", current_user_id=17)
+    result = history_without_current_user_turn(history, "aynı", current_user_id=17)
 
     assert result == [history[1]]
 

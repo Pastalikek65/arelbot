@@ -115,12 +115,11 @@ kontrollü kalır.
 Geçici sağlayıcı hatasında anahtar soğuma süresi 10 saniyedir; bu süre kota
 veya geçersiz anahtar askıya alma davranışından ayrıdır.
 
-Model endpointini deployment acmadan dogrulamak icin acik gate ile bounded probe calistirilabilir. Probe model ciktisini, anahtari veya upstream hata metnini kaydetmez:
-
-    $env:ARELBOT_CLEANAPIS_LIVE="1"
-    python scripts/cleanapis_staging.py --env-file .env --live --confirm-live --report deploy/evidence/cleanapis-staging.json
-
-Evidence yalnizca `cleanapis`, secili model, latency, yanit boyutu ve kullanim metadatasini tasir; bu probe provider terms/robots/production sign-off onayi yerine gecmez.
+EVREN model endpointi için bounded canlı probe yalnızca deployment secret ile,
+ayrı bir operatör işlemi olarak çalıştırılır. Probe prompt, model çıktısı veya
+anahtar yazmaz; secret-free `evren-staging.json` kanıtı üretir. Clean APIs
+probe'u ve canlı route'u artık release sürecinin parçası değildir. EVREN route'u
+üretime açılmadan önce provider terms ve governance onayı tamamlanmalıdır.
 
 ### Telegram staging probe
 
@@ -217,7 +216,7 @@ Canlı platform denetimi offline testlerin yerine geçmez. Matris varsayılan ol
     ARELBOT_MEDIA_STAGING_LIVE=1 python scripts/media_staging_matrix.py --config docs/media-live-matrix.example.json --live --confirm-live --report deploy/evidence/media-staging-live.json
 
 Gerçek dosya indirme ayrıca `--download` ister. Canlı indirme raporu `scope=live-media-matrix` taşır; tam URL, başlık, cookie ve upstream hata metni saklamaz; yalnızca platform, host, süre, boyut ve sabit hata kodu taşır. Her iş sonrası geçici medya klasörü temizlenir.
-Tam deployment kanıtı için matriste dört canlı vaka (Instagram, TikTok, YouTube Shorts ve X) etkinleştirildikten sonra `--require-platform-matrix --require-slo --report deploy/evidence/media-staging-full-matrix.json` kullanılır; eksik platform dış ağa çıkmadan reddedilir.
+Tam deployment kanıtı için TikTok, YouTube Shorts ve X vakaları etkinleştirilir; Instagram erişim kısıtı varsa owner waiver ile birlikte `--waive-platform instagram --waiver-approver owner --waiver-reason "source access restricted" --require-platform-matrix --require-slo --report deploy/evidence/media-staging-full-matrix.json` kullanılır. Waiver rapora yazılır ve release auditor tarafından doğrulanır.
 
 ## Immutable release
 
@@ -593,3 +592,96 @@ mesaj kayıtlarını silmez. Redis yeniden başlatıldığında aday index'i Mon
 yeniden okunur, delivery ledger ise Mongo'daki claim durumuyla duplicate
 gönderimi engeller.
 
+
+## Kek Guardian entegrasyonu
+
+Guardian Arel koduna kopyalanmaz; ayrı servis olarak değerlendirme yapar.
+Telegram gruplarında tek bot Arel olur ve Telegram moderasyon aksiyonlarını
+yalnızca Arel'in `ModerationActionExecutor` sınırı uygular. Guardian'ın kendi
+botu Arel tarafından yönetilen gruplarda aksiyon otoritesi olarak kullanılmaz.
+
+İlk rollout `GUARDIAN_MODE=disabled`, ardından `shadow`, son olarak owner
+grubunda `active` canary sırasını izler. Arel ile Guardian arasındaki hedef
+kanal Linux'ta `/run/kek-guardian/guardian.sock` Unix socket'idir. 2026-10-17
+salt-okunur VDS keşfinde Guardian Telegram polling servisi aktifti, ancak bu
+socket veya başka bir RPC endpoint'i bulunmadı. Gerçek evaluator-backed bridge
+kurulana kadar provider `disabled` kalır; yalnızca Arel'in yerel politikası
+çalışır. Socket sahipliği ve izinleri servis hesabına özel olmalı (`0660`);
+`GUARDIAN_PEER_UIDS` veya `GUARDIAN_PEER_GIDS` açıkça tanımlanmadan active moda
+geçilmez. Bridge hata verirse yerel politika çalışır ve hata kullanıcıya grup
+mesajı olarak yansıtılmaz. Ayrıntılı keşif kaydı `docs/GUARDIAN_DEPLOYMENT.md`
+içindedir.
+
+```text
+GUARDIAN_MODE=shadow
+GUARDIAN_SOCKET_PATH=/run/kek-guardian/guardian.sock
+GUARDIAN_TIMEOUT_SECONDS=0.15
+GUARDIAN_REQUIRE_PEER_CREDENTIALS=true
+```
+
+Staging canlı kapısı yalnızca bounded çıktı üretir; secret, ham mesaj, cookie
+veya tam URL rapora girmez:
+
+```text
+python scripts/guardian_staging.py
+ARELBOT_GUARDIAN_LIVE=1 python scripts/guardian_staging.py --live --confirm-live --shadow
+```
+
+Guardian systemd unit'inde veritabanı parolası veya Telegram token'ı
+`ExecStart`/unit metninde tutulmaz. Salt-okunur VDS keşfinde `DATABASE_URL`
+secret'ının doğrudan `Environment=` satırında bulunduğu görüldü; değer rapora
+alınmadı ve Arel'e taşınmadı. Bu **yüksek önemde bir secret exposure**
+bulgusudur. Guardian yeniden başlatılmadan önce veritabanı parolası rotate
+edilmeli, eski değer iptal edilmeli ve secret root'un okuyabildiği (`0600`)
+`EnvironmentFile` veya systemd `LoadCredential` kaynağına taşınmalıdır.
+Eski unit satırı kaldırıldıktan sonra `systemctl cat`, `systemctl show`, process
+environment ve journal sızıntı taraması yapılır; ancak bundan sonra kontrollü
+restart ve secret-free health kanıtı alınır. Bu kapılar geçilene kadar
+`GUARDIAN_MODE=disabled` korunur.
+
+### Kek Guardian bridge server (optional)
+
+`src/moderation/guardian_server.py` is a bounded Unix-socket bridge for
+deployments where the separate Kek Guardian decision engine needs a local
+transport endpoint. It is an integration scaffold, not a replacement for the
+Guardian engine: a deployment must inject the real evaluator and must not use
+the synthetic staging evaluator in production.
+
+The bridge validates the protocol version, request expiry, replay nonce,
+frame size, provider identity, response expiry, action vocabulary and Linux
+peer credentials before evaluation. It handles one request per connection,
+limits concurrent clients, and closes malformed or unauthorized connections
+without sending request details back to the caller. Provider exceptions are
+reduced to bounded error codes; message text, credentials and full URLs are
+never included in logs or reports.
+
+The socket parent directory should be created by systemd with a dedicated
+service account. Use a `0660` socket and configure the Arel client UID/GID in
+`GUARDIAN_PEER_UIDS` or `GUARDIAN_PEER_GIDS`. Do not set active mode until the
+real Guardian evaluator is installed and a staging canary is recorded.
+
+Secret-free local checks:
+
+```text
+python scripts/guardian_bridge_staging.py
+python scripts/guardian_bridge_staging.py --check --socket /run/kek-guardian/guardian.sock
+python scripts/guardian_bridge_staging.py --self-test
+```
+
+`--self-test` starts a temporary in-process bridge with a synthetic allow
+decision and proves only the transport contract. It does not contact Telegram,
+Guardian, MongoDB or Redis, and its report explicitly says that the real
+engine was not tested. Arel production remains `GUARDIAN_MODE=disabled` until
+the independent Guardian service is wired to the bridge and owner-group
+shadow/active canary evidence is collected.
+
+### MongoDB ve Redis üretim ağı
+
+Compose servisleri varsayılan olarak yalnızca iç Compose ağına bağlanır; bu
+tek başına kimlik doğrulama kanıtı değildir. Üretime geçmeden önce MongoDB için
+SCRAM kullanıcısı, Redis için ACL kullanıcısı ve ayrı secret dosyalarıyla
+kimlik doğrulama etkinleştirilmelidir. Bot ve worker yalnızca en az yetkili
+hesaplarla bağlanmalı, bağlantı dizeleri loglara veya `/health` çıktısına
+girmemelidir. Bu değişiklik için mevcut verinin korunacağı bir migration,
+backup/restore denemesi ve rollback kanıtı gerekir; kanıt oluşana kadar bu
+madde faz 9 operasyon önkoşulu olarak açık kalır.

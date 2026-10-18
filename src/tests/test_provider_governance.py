@@ -250,6 +250,7 @@ def test_approval_evidence_requires_every_external_row_to_have_an_id():
     assert valid["ok"] is True
     assert valid["approved_count"] == 1
     assert valid["pending_count"] == 0
+    assert valid["secret_free"] is True
 
     incomplete = build_approval_evidence(
         {
@@ -262,6 +263,7 @@ def test_approval_evidence_requires_every_external_row_to_have_an_id():
     )
     assert incomplete["ok"] is False
     assert incomplete["pending_count"] == 1
+    assert incomplete["secret_free"] is True
 
 
 def test_approval_review_template_is_safe_stable_and_not_loadable_as_approval():

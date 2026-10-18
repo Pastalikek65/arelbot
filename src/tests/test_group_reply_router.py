@@ -22,7 +22,7 @@ def message(
     seconds_ago: int = 0,
     chat_id: int = -100,
     thread_id: int | None = None,
-    display_name: str = "KullanÄ±cÄ±",
+    display_name: str = "Kullanıcı",
     message_kind: str = "text",
     already_replied: bool = False,
 ) -> GroupMessageRef:
@@ -51,12 +51,12 @@ def context(current: GroupMessageRef, *candidates: GroupMessageRef, **kwargs) ->
 
 def test_candidate_window_is_scoped_and_latest_message_per_user_is_selected():
     current = message(99, 8, seconds_ago=0, display_name="Tetikleyen")
-    newest_alice = message(20, 1, seconds_ago=20, display_name="AyÅŸe")
-    old_alice = message(19, 1, seconds_ago=30, display_name="AyÅŸe")
+    newest_alice = message(20, 1, seconds_ago=20, display_name="Ayşe")
+    old_alice = message(19, 1, seconds_ago=30, display_name="Ayşe")
     wrong_thread = message(30, 2, seconds_ago=10, thread_id=4, display_name="Kemal")
     stale = message(40, 3, seconds_ago=301, display_name="Deniz")
     command = message(50, 4, seconds_ago=5, display_name="Ece", message_kind="command")
-    other_chat = message(60, 5, seconds_ago=5, chat_id=-200, display_name="FÄ±rat")
+    other_chat = message(60, 5, seconds_ago=5, chat_id=-200, display_name="Fırat")
     ctx = context(current, newest_alice, old_alice, wrong_thread, stale, command, other_chat)
 
     selected = GroupReplyRouter().select_candidates(ctx)
@@ -74,7 +74,7 @@ def test_candidate_selection_is_bounded_to_three_users_and_is_deterministic():
 
 
 def test_valid_structured_response_creates_individual_reply_segments():
-    current = message(101, 1, display_name="AyÅŸe")
+    current = message(101, 1, display_name="Ayşe")
     kemal = message(202, 2, seconds_ago=10, display_name="Kemal")
     ctx = context(current, kemal)
 
@@ -99,12 +99,12 @@ def test_valid_structured_response_creates_individual_reply_segments():
     [
         ({"replies": [{"target_message_id": 999, "text": "selam"}]}, "unknown_target"),
         ({"replies": [{"target_message_id": 101, "text": "bir"}, {"target_message_id": 101, "text": "iki"}]}, "duplicate_target"),
-        ({"replies": [{"target_message_id": 101, "text": "AyÅŸe: selam\nKemal: nasÄ±lsÄ±n"}]}, "multi_address_prose"),
+        ({"replies": [{"target_message_id": 101, "text": "Ayşe: selam\nKemal: nasılsın"}]}, "multi_address_prose"),
         ({"replies": [{"target_message_id": 101, "text": ""}]}, "malformed_response"),
     ],
 )
 def test_invalid_model_plans_are_rejected(payload, reason):
-    current = message(101, 1, display_name="AyÅŸe")
+    current = message(101, 1, display_name="Ayşe")
     kemal = message(202, 2, seconds_ago=10, display_name="Kemal")
     plan = GroupReplyRouter().build_plan(context(current, kemal), json.dumps(payload))
 
@@ -113,12 +113,12 @@ def test_invalid_model_plans_are_rejected(payload, reason):
 
 
 def test_invalid_plan_falls_back_only_to_current_trigger_when_safe_text_is_given():
-    current = message(101, 1, display_name="AyÅŸe")
+    current = message(101, 1, display_name="Ayşe")
     ctx = context(current)
 
-    plan = GroupReplyRouter().build_plan(ctx, "not json", safe_fallback_text="ÅŸu an buradayÄ±m")
+    plan = GroupReplyRouter().build_plan(ctx, "not json", safe_fallback_text="şu an buradayım")
 
-    assert [(part.target_message.message_id, part.text) for part in plan.segments] == [(101, "ÅŸu an buradayÄ±m")]
+    assert [(part.target_message.message_id, part.text) for part in plan.segments] == [(101, "şu an buradayım")]
     assert plan.rejected_reason == "malformed_json"
 
     no_fallback = GroupReplyRouter().build_plan(ctx, "not json")
@@ -126,17 +126,17 @@ def test_invalid_plan_falls_back_only_to_current_trigger_when_safe_text_is_given
 
 
 def test_fallback_with_addressing_is_not_considered_safe():
-    current = message(101, 1, display_name="AyÅŸe")
+    current = message(101, 1, display_name="Ayşe")
     plan = GroupReplyRouter().build_plan(
         context(current),
         "not json",
-        safe_fallback_text="AyÅŸe: sana cevap veriyorum",
+        safe_fallback_text="Ayşe: sana cevap veriyorum",
     )
     assert plan.segments == ()
 
 
 def test_stale_current_message_cannot_be_used_as_target():
-    current = message(101, 1, seconds_ago=301, display_name="AyÅŸe")
+    current = message(101, 1, seconds_ago=301, display_name="Ayşe")
     plan = GroupReplyRouter().build_plan(
         context(current),
         json.dumps({"replies": [{"target_message_id": 101, "text": "selam"}]}),

@@ -14,8 +14,8 @@ class CityDirectoryTool(BaseTool):
         super().__init__(
             name="turkiye_city_lookup",
             description=(
-                "TÃ¼rkiye il, plaka, telefon alan kodu veya ilÃ§e adÄ±na gÃ¶re ÅŸehir bilgisi bulur. "
-                "SonuÃ§lar yerel sÃ¼rÃ¼mlÃ¼ veri setinden gelir."
+                "Türkiye il, plaka, telefon alan kodu veya ilçe adına göre şehir bilgisi bulur. "
+                "Sonuçlar yerel sürümlü veri setinden gelir."
             ),
         )
         self.directory = directory or CityDirectory()
@@ -25,7 +25,7 @@ class CityDirectoryTool(BaseTool):
         return {
             "type": "object",
             "properties": {
-                "query": {"type": "string", "description": "Ä°l, plaka, telefon kodu veya ilÃ§e adÄ±"},
+                "query": {"type": "string", "description": "İl, plaka, telefon kodu veya ilçe adı"},
                 "limit": {"type": "integer", "minimum": 1, "maximum": 8},
             },
             "required": ["query"],
@@ -36,11 +36,11 @@ class CityDirectoryTool(BaseTool):
         if not results:
             results = self.directory.search(query, limit=max(1, min(limit, 8)))
         if not results:
-            return {"error": "CITY_NOT_FOUND", "result": "Åehir veya ilÃ§e bulunamadÄ±."}
+            return {"error": "CITY_NOT_FOUND", "result": "Şehir veya ilçe bulunamadı."}
         limited = results[: max(1, min(limit, 8))]
         return {
             "result": "\n\n".join(self.directory.format_city(city) for city in limited)
-            + "\n\n<i>Kaynak: Arelbot sÃ¼rÃ¼mlÃ¼ yerel ÅŸehir veri seti</i>",
+            + "\n\n<i>Kaynak: Arelbot sürümlü yerel şehir veri seti</i>",
             "data": [city.as_dict() for city in limited],
             "source": "Arelbot local city snapshot",
         }

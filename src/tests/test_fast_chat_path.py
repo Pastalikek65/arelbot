@@ -7,12 +7,12 @@ def test_identity_questions_are_answered_by_stable_arel_identity():
 
 
 def test_casual_chat_does_not_attach_tool_schemas():
-    assert ChatEngine._should_attach_tools("merhaba, bugÃ¼n nasÄ±lsÄ±n?") is False
+    assert ChatEngine._should_attach_tools("merhaba, bugün nasılsın?") is False
 
 
 def test_explicit_data_request_attaches_tool_schemas():
-    assert ChatEngine._should_attach_tools("Ä°stanbul hava durumu") is True
-    assert ChatEngine._should_attach_tools("ÅŸu baÄŸlantÄ±yÄ± incele https://example.com") is True
+    assert ChatEngine._should_attach_tools("İstanbul hava durumu") is True
+    assert ChatEngine._should_attach_tools("şu bağlantıyı incele https://example.com") is True
 
 
 

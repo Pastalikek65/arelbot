@@ -73,6 +73,34 @@ _MARKDOWN_STRONG_RE = re.compile(r"\*\*(\S(?:.*?\S)?)\*\*|__(\S(?:.*?\S)?)__", r
 _MARKDOWN_EM_RE = re.compile(r"(?<!\*)\*(?!\s)([^*\n]{1,400}?)(?<!\s)\*(?!\*)")
 _MARKDOWN_TOKEN_RE = re.compile("\\ue000(\\d+)\\ue001")
 
+# These envelopes are transport-only metadata used to keep group replies
+# attached to the correct Telegram message. They must never reach a chat,
+# including when a model copies part of its context into the answer.
+_INTERNAL_ATTRIBUTION_TAG_RE = re.compile(
+    r"\[\s*(?:arel_)?(?:reply_to_user_id|telegram_user_id)\s*=\s*-?\d+"
+    r"(?:\s+(?:message_id|reply_to_message_id)\s*=\s*-?\d+)?\s*\]\s*",
+    re.IGNORECASE,
+)
+_INTERNAL_ATTRIBUTION_FIELD_RE = re.compile(
+    r"(?<![\w])(?:arel_reply_to_user_id|telegram_user_id|target_user_id|"
+    r"target_message_id|reply_to_message_id|telegram_message_id|message_id)"
+    r"\s*[:=]\s*-?\d+\b\s*",
+    re.IGNORECASE,
+)
+
+
+def strip_internal_attribution(text: str | None) -> str:
+    """Remove transport-only Telegram identity metadata from model output.
+
+    Telegram IDs remain available to the delivery ledger and persistence
+    layer, but are never part of the user-facing response. The patterns are
+    deliberately narrow so ordinary prose and numeric content stay intact.
+    """
+
+    source = str(text or "")
+    source = _INTERNAL_ATTRIBUTION_TAG_RE.sub("", source)
+    return _INTERNAL_ATTRIBUTION_FIELD_RE.sub("", source)
+
 
 def render_model_html(text: str | None) -> str:
     """Render the small Markdown subset commonly emitted by AI models.
@@ -85,7 +113,7 @@ def render_model_html(text: str | None) -> str:
     protected before conversion so their contents remain literal.
     """
 
-    source = str(text or "")
+    source = strip_internal_attribution(text)
     protected: dict[str, str] = {}
 
     def stash(value: str) -> str:
@@ -129,7 +157,7 @@ def render_model_plain_text(text: str | None) -> str:
     HTML mode but confusing when Telegram falls back to plain text. Strip the
     bounded emphasis/code delimiters while preserving the user's content.
     """
-    source = str(text or "")
+    source = strip_internal_attribution(text)
     source = _MARKDOWN_CODE_RE.sub(lambda match: match.group(1) or "", source)
     source = _MARKDOWN_INLINE_CODE_RE.sub(lambda match: match.group(1) or "", source)
     source = re.sub(r"\*\*|__", "", source)

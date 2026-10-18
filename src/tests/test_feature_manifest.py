@@ -17,8 +17,12 @@ def test_runtime_local_surfaces_have_one_typed_manifest_entry_each():
         "group_personality",
         "personal_personality",
         "games_leaderboard",
+        "connect4",
+        "tictactoe",
+            "gomoku",
         "notification_dedup",
-            "group_targeted_replies",
+        "group_targeted_replies",
+        "guardian_moderation_enforcement",
     }
     assert {definition.key for definition in registry.definitions()} == expected
     command_map = registry.command_map()

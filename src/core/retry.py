@@ -1,8 +1,8 @@
 """
-Retry ve Circuit Breaker yardÄ±mcÄ±larÄ±.
+Retry ve Circuit Breaker yardımcıları.
 
-API saÄŸlayÄ±cÄ±larÄ±, RSS kaynaklarÄ± ve medya servisleri gibi dÄ±ÅŸ baÄŸÄ±mlÄ±lÄ±klarda
-geÃ§ici hatalarÄ± kontrollÃ¼ ÅŸekilde yÃ¶netmek iÃ§in kullanÄ±lÄ±r.
+API sağlayıcıları, RSS kaynakları ve medya servisleri gibi dış bağımlılıklarda
+geçici hataları kontrollü şekilde yönetmek için kullanılır.
 """
 import asyncio
 import logging
@@ -60,7 +60,7 @@ class CircuitBreaker:
 
     async def call(self, func: Callable[..., Awaitable[T]], *args: Any, **kwargs: Any) -> T:
         if not self.can_execute():
-            raise RuntimeError(f"{self.name} servisi geÃ§ici olarak devre dÄ±ÅŸÄ±.")
+            raise RuntimeError(f"{self.name} servisi geçici olarak devre dışı.")
         try:
             result = await func(*args, **kwargs)
             self.record_success()

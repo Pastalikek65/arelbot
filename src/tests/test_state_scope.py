@@ -107,4 +107,4 @@ async def test_sticker_delete_callback_cannot_consume_state_from_another_chat():
     )
     await handler.handle_callback_query(update, SimpleNamespace(bot=None, chat_data={}))
     assert query.answers
-    assert "sÃ¼resi" in str(query.answers[-1][0][0])
+    assert "süresi" in str(query.answers[-1][0][0])

@@ -1,7 +1,7 @@
 """
-Message Handler - Ana mesaj iÅŸleme mantÄ±ÄŸÄ±
+Message Handler - Ana mesaj işleme mantığı
 
-Grup ve DM mesajlarÄ±nÄ± iÅŸler, AI yanÄ±tlarÄ±nÄ± Ã¼retir.
+Grup ve DM mesajlarını işler, AI yanıtlarını üretir.
 """
 import logging
 import asyncio
@@ -19,9 +19,14 @@ from telegram.ext import ContextTypes
 
 from config import Config
 from src.utils import tr_upper
-from .handler_utils import remove_job_by_name, log_event, log_error_event, should_respond
+from .handler_utils import remove_job_by_name, log_event, log_error_event, should_respond, is_group_admin
 from src.media.url_normalizer import extract_media_url
-from src.security.output_sanitizer import render_model_html, render_model_plain_text, sanitize_html
+from src.security.output_sanitizer import (
+    render_model_html,
+    render_model_plain_text,
+    sanitize_html,
+    strip_internal_attribution,
+)
 from src.security.error_codes import public_error_message
 from src.security.log_redaction import summarize_exception, summarize_private_attachment, summarize_private_text
 from src.stickers.validator import StickerValidationError, make_pack_name, validate_short_name, validate_emoji
@@ -39,6 +44,18 @@ from src.ai.conversation_style import NORMAL_MODE, is_normal_mode
 from src.group_replies import GroupMessageRef, GroupReplyPlan, GroupReplyRouter, GroupTurnContext, ReplySegment
 from src.storage.group_reply_store import RecentMessageIndex, ReplyDeliveryLedger
 from src.services.group_reply_delivery import GroupReplyDeliveryService
+from src.moderation.contracts import ModerationAction
+from src.moderation.action_executor import TelegramModerationActionExecutor
+from src.moderation.action_ledger import ModerationActionLedger
+from src.moderation.authorization import TelegramModerationAuthorization
+from src.moderation.event_normalizer import build_moderation_event
+from src.moderation.guardian_enforcement import (
+    build_guardian_generation_id,
+    evaluate_guardian_message,
+    new_guardian_challenge_nonce,
+)
+from src.moderation.telegram_guardian_service import GuardianTelegramService
+from src.moderation.guardian_surface import GuardianSurface
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +77,7 @@ class MessageHandler:
         group_reply_router=None,
         group_reply_delivery=None,
         group_reply_metrics=None,
+        authorization=None,
     ):
         self.chat_engine = chat_engine
         self.data_port = data_port or HandlerDataPort.from_engine(chat_engine)
@@ -77,6 +95,12 @@ class MessageHandler:
             ledger=self.reply_delivery_ledger,
         )
         self.group_reply_metrics = group_reply_metrics
+        self.authorization = authorization
+        self.guardian_telegram_service = GuardianTelegramService()
+        self.guardian_surface = GuardianSurface(self.data_port)
+        # The executor is created lazily with the current Telegram bot.  The
+        # ledger itself is injected by the orchestrator and survives retries.
+        self.moderation_action_ledger = None
         # A group/topic lock serializes candidate snapshot, model planning and
         # delivery. Incoming messages can still be recorded concurrently, but
         # two triggers cannot plan against a half-updated pending window.
@@ -95,6 +119,55 @@ class MessageHandler:
         observe = getattr(self.group_reply_metrics, "observe", None)
         if observe is not None:
             observe(name, seconds)
+
+    async def _enforce_moderation_decision(self, update: Update, context: ContextTypes.DEFAULT_TYPE, decision, event) -> bool:
+        """Apply one decision through the idempotent action boundary.
+
+        ``True`` means the update is consumed and must not continue into AI,
+        media or game routing.  Transport errors stay internal and never
+        become a group-facing error message.
+        """
+        if getattr(decision, "allowed", True):
+            return False
+        action_name = {"delete": "delete_message", "mute": "mute", "ban": "ban"}.get(
+            str(getattr(decision, "action", "") or "").casefold()
+        )
+        if not action_name:
+            return True
+        message_id = int(getattr(event, "message_id", 0) or 0)
+        actor_id = int(getattr(getattr(context, "bot", None), "id", 0) or 1)
+        action = ModerationAction(
+            action=action_name,
+            chat_id=int(event.chat_id),
+            actor_id=actor_id,
+            target_user_id=int(event.user_id),
+            target_message_id=message_id,
+            thread_id=event.thread_id,
+            reason=str(getattr(decision, "reason", None) or "moderation")[:128],
+            metadata={
+                "source": "local_moderation",
+                "policy_version": int(getattr(event, "settings_version", 1)),
+                "generation_id": f"telegram:{event.chat_id}:{event.message_id}",
+            },
+        )
+        ledger = getattr(self, "moderation_action_ledger", None)
+        if ledger is None:
+            ledger = ModerationActionLedger()
+        bot = getattr(context, "bot", None)
+        executor = TelegramModerationActionExecutor(
+            bot,
+            ledger=ledger,
+            permission_checker=TelegramModerationAuthorization(
+                bot,
+                bot_id=getattr(bot, "id", None),
+            ),
+        )
+        result = await executor.execute(action)
+        if getattr(result, "status", None) == "rejected" and getattr(result, "error_code", None) == "permission_denied":
+            # A stale or unavailable membership lookup must never consume a
+            # privileged member's message as if moderation succeeded.
+            return False
+        return True
 
     @staticmethod
     def _current_message_reply_kwargs(update: Update) -> dict:
@@ -161,16 +234,211 @@ class MessageHandler:
         except Exception:
             logger.warning("Could not load group member settings", exc_info=True)
             return
+        joined = getattr(old_member, "status", "") in {"left", "kicked"} and getattr(member, "status", "") in {"member", "restricted"}
+        if joined and bool(settings.get("antiraid_enabled")):
+            mode = str(settings.get("antiraid_mode") or "quarantine").casefold()
+            action_name = "ban" if mode in {"ban", "kick"} else "captcha_quarantine"
+            bot = getattr(context, "bot", None)
+            try:
+                action = ModerationAction(
+                    action=action_name,
+                    chat_id=int(event.chat.id),
+                    actor_id=int(getattr(bot, "id", 0) or 1),
+                    target_user_id=int(user.id),
+                    reason="guardian_antiraid",
+                    metadata={"source": "guardian_antiraid", "generation_id": f"antiraid:{event.chat.id}:{user.id}"},
+                )
+                await TelegramModerationActionExecutor(
+                    bot,
+                    ledger=self.moderation_action_ledger or ModerationActionLedger(),
+                    permission_checker=TelegramModerationAuthorization(bot, bot_id=getattr(bot, "id", None)),
+                ).execute(action)
+            except Exception:
+                logger.warning("Guardian anti-raid action failed", exc_info=True)
+        # Guardian's captcha is a scoped join challenge.  The pending map is
+        # bounded and persisted in the current chat document so a worker
+        # restart cannot turn every new member into an untracked challenge.
+        if (
+            getattr(old_member, "status", "") in {"left", "kicked"}
+            and bool(settings.get("captcha_enabled"))
+            and not getattr(user, "is_bot", False)
+        ):
+            captcha_type = str(settings.get("captcha_type") or "button").casefold()
+            challenge = {
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "message_id": None,
+                "chat_id": int(event.chat.id),
+                "user_id": int(user.id),
+                "nonce": new_guardian_challenge_nonce(),
+                "type": captcha_type if captcha_type in {"button", "math", "text"} else "button",
+            }
+            challenge["generation_id"] = build_guardian_generation_id(
+                "captcha", chat_id=int(event.chat.id), user_id=int(user.id), nonce=challenge["nonce"]
+            )
+            if challenge["type"] == "math":
+                left = secrets.randbelow(8) + 2
+                right = secrets.randbelow(8) + 2
+                challenge["answer"] = str(left + right)
+                challenge["prompt"] = f"{left} + {right} = ?"
+            elif challenge["type"] == "text":
+                token = "".join(secrets.choice("ABCDEFGHJKLMNPQRSTUVWXYZ23456789") for _ in range(5))
+                challenge["answer"] = token
+                challenge["prompt"] = token
+            pending = dict(settings.get("guardian_pending_captcha") or {})
+            pending[str(user.id)] = challenge
+            pending = dict(list(pending.items())[-200:])
+            await self.data_port.update_chat_setting_key(event.chat.id, "guardian_pending_captcha", pending)
+            try:
+                prompt = "gruba yazmadan önce doğrulama düğmesine bas"
+                if challenge["type"] == "math":
+                    prompt = f"gruba yazmadan önce işlemi çöz: <code>{escape(challenge['prompt'])}</code>"
+                elif challenge["type"] == "text":
+                    prompt = f"gruba yazmadan önce şu kodu gönder: <code>{escape(challenge['prompt'])}</code>"
+                markup = None
+                if challenge["type"] == "button":
+                    markup = InlineKeyboardMarkup([[
+                        InlineKeyboardButton(
+                            "✅ Doğrula",
+                            callback_data=f"guardian_captcha:{event.chat.id}:{user.id}:{challenge['nonce']}",
+                        )
+                    ]])
+                challenge = await context.bot.send_message(
+                    chat_id=event.chat.id,
+                    text=f"🛡️ <b>{escape(getattr(user, 'full_name', None) or getattr(user, 'first_name', 'yeni üye'))}</b>, {prompt}.",
+                    parse_mode="HTML",
+                    reply_markup=markup,
+                )
+                pending[str(user.id)]["message_id"] = getattr(challenge, "message_id", None)
+                await self.data_port.update_chat_setting_key(event.chat.id, "guardian_pending_captcha", pending)
+                job_queue = getattr(context, "job_queue", None)
+                if job_queue is not None:
+                    job_queue.run_once(
+                        self._captcha_timeout_callback,
+                        when=max(30, min(3600, int(settings.get("captcha_timeout_seconds", 300) or 300))),
+                        data={"chat_id": int(event.chat.id), "user_id": int(user.id)},
+                        name=f"guardian_captcha:{event.chat.id}:{user.id}",
+                    )
+            except Exception:
+                logger.warning("Guardian captcha challenge delivery failed", exc_info=True)
         text = GroupMemberService.render(
             old_status=getattr(old_member, "status", ""),
             new_status=getattr(member, "status", ""),
-            user_name=getattr(user, "full_name", None) or getattr(user, "first_name", "kullanÄ±cÄ±"),
+            user_name=getattr(user, "full_name", None) or getattr(user, "first_name", "kullanıcı"),
             username=getattr(user, "username", None),
             chat_title=getattr(event.chat, "title", None) or "grup",
             settings=settings,
         )
         if text:
             await context.bot.send_message(chat_id=event.chat.id, text=text, parse_mode="HTML")
+
+    async def _captcha_timeout_callback(self, context: ContextTypes.DEFAULT_TYPE):
+        """Remove an unanswered join challenge without group-facing errors."""
+        data = getattr(getattr(context, "job", None), "data", None) or {}
+        try:
+            chat_id, user_id = int(data["chat_id"]), int(data["user_id"])
+        except (KeyError, TypeError, ValueError):
+            return
+        settings = await self.data_port.get_chat_settings(chat_id) or {}
+        pending = dict(settings.get("guardian_pending_captcha") or {})
+        challenge = pending.get(str(user_id))
+        if not challenge:
+            return
+        bot = getattr(context, "bot", None)
+        try:
+            nonce = str(challenge.get("nonce") or "") if isinstance(challenge, dict) else ""
+            generation_id = (
+                build_guardian_generation_id("captcha-timeout", chat_id=chat_id, user_id=user_id, nonce=nonce)
+                if nonce
+                else f"captcha-timeout:{chat_id}:{user_id}"
+            )
+            action = ModerationAction(
+                action="ban",
+                chat_id=chat_id,
+                actor_id=int(getattr(bot, "id", 0) or 1),
+                target_user_id=user_id,
+                reason="guardian_captcha_timeout",
+                metadata={"source": "guardian_captcha", "generation_id": generation_id},
+            )
+            await TelegramModerationActionExecutor(
+                bot,
+                ledger=self.moderation_action_ledger or ModerationActionLedger(),
+                permission_checker=TelegramModerationAuthorization(bot, bot_id=getattr(bot, "id", None)),
+            ).execute(action)
+            message_id = challenge.get("message_id") if isinstance(challenge, dict) else None
+            if message_id:
+                try:
+                    await bot.delete_message(chat_id=chat_id, message_id=int(message_id))
+                except Exception:
+                    pass
+        finally:
+            pending.pop(str(user_id), None)
+            await self.data_port.update_chat_setting_key(chat_id, "guardian_pending_captcha", pending)
+
+    async def _handle_guardian_presence(self, update: Update) -> bool:
+        """Run Guardian's AFK and ``#note`` listeners for group text messages.
+
+        The upstream Guardian exposes these as message listeners rather than
+        slash commands.  Keep them scoped to groups and the injected Arel
+        repository so they never enter the AI path or read another chat's
+        state.  ``True`` means a note was rendered and normal routing should
+        stop; AFK notices alone do not suppress an explicit Arel mention.
+        """
+        message = getattr(update, "effective_message", None)
+        chat = getattr(update, "effective_chat", None)
+        user = getattr(update, "effective_user", None)
+        if not message or not chat or chat.type not in {"group", "supergroup"} or not user:
+            return False
+
+        now = datetime.now(timezone.utc)
+        own_afk = await self.guardian_surface.get_afk(int(user.id))
+        if own_afk:
+            raw_created = own_afk.get("updated_at") or own_afk.get("created_at")
+            created_at = None
+            if isinstance(raw_created, datetime):
+                created_at = raw_created if raw_created.tzinfo else raw_created.replace(tzinfo=timezone.utc)
+            elif raw_created:
+                try:
+                    created_at = datetime.fromisoformat(str(raw_created).replace("Z", "+00:00"))
+                    if created_at.tzinfo is None:
+                        created_at = created_at.replace(tzinfo=timezone.utc)
+                except (TypeError, ValueError):
+                    created_at = None
+            if created_at is None or (now - created_at).total_seconds() > 5:
+                if await self.guardian_surface.clear_afk(int(user.id)):
+                    await message.reply_text("hoş geldin, AFK kaydını kapattım")
+
+        notified: set[int] = set()
+
+        async def notify_afk(target_user: object) -> None:
+            target_id = int(getattr(target_user, "id", 0) or 0)
+            if target_id <= 0 or target_id in notified or target_id == int(user.id):
+                return
+            afk = await self.guardian_surface.get_afk(target_id)
+            if not afk:
+                return
+            notified.add(target_id)
+            name = escape(str(getattr(target_user, "full_name", None) or getattr(target_user, "first_name", "kullanıcı"))[:96])
+            reason = escape(str(afk.get("reason") or "bir süre uzakta")[:256])
+            await message.reply_text(f"{name} şu an AFK\nsebep: {reason}")
+
+        replied = getattr(message, "reply_to_message", None)
+        replied_user = getattr(replied, "from_user", None)
+        if replied_user is not None:
+            await notify_afk(replied_user)
+        for entity in list(getattr(message, "entities", None) or ()):
+            if str(getattr(entity, "type", "")) == "text_mention":
+                mentioned = getattr(entity, "user", None)
+                if mentioned is not None:
+                    await notify_afk(mentioned)
+
+        raw_text = str(getattr(message, "text", "") or "").strip()
+        match = re.match(r"^#([\w-]{1,64})", raw_text, flags=re.UNICODE)
+        if match:
+            note = await self.guardian_surface.get_note(int(chat.id), match.group(1))
+            if note is not None:
+                await message.reply_text(sanitize_html(note), parse_mode="HTML")
+                return True
+        return False
 
     async def handle_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not update.message or not update.message.text:
@@ -182,69 +450,84 @@ class MessageHandler:
 
         moderation = getattr(self, "moderation", None)
         if moderation and update.effective_chat.type in {"group", "supergroup"}:
+            settings_failed = False
             try:
                 settings = await self.data_port.get_chat_settings(update.effective_chat.id)
-            except Exception:
-                # Group moderation remains fail-open in local degraded mode;
-                # production roles require MongoDB during startup.
-                logger.warning("Could not load group moderation settings", exc_info=True)
-                settings = {}
-            is_admin = self.sudo_manager.is_sudo(update.effective_user.id)
-            if not is_admin:
-                try:
-                    member = await context.bot.get_chat_member(
-                        update.effective_chat.id, update.effective_user.id
-                    )
-                    is_admin = member.status in {"administrator", "creator"}
-                except Exception:
-                    is_admin = False
-            moderation_service = getattr(self, "moderation_service", None)
-            message_id = int(getattr(update.effective_message, "message_id", 0) or 0)
-            update_id = int(getattr(update, "update_id", 0) or 0)
-            event_id = (
-                f"{update.effective_chat.id}:{message_id}:{update_id}"
-                if message_id or update_id else None
+            except Exception as exc:
+                logger.warning("Could not load group moderation settings: type=%s", type(exc).__name__[:64])
+                settings_failed = True
+                settings = None
+            if isinstance(settings, dict):
+                settings = dict(settings)
+                settings["_sender_is_bot"] = bool(getattr(update.effective_user, "is_bot", False))
+            is_admin = self.sudo_manager.is_sudo(update.effective_user.id) or await is_group_admin(
+                update, context, authorization=self.authorization
             )
-            if moderation_service is not None:
-                decision = await moderation_service.evaluate(
-                    update.effective_chat.id,
-                    update.effective_user.id,
-                    text,
-                    settings,
-                    is_admin,
-                    event_id=event_id,
-                )
+            event = build_moderation_event(update, is_admin=is_admin)
+            moderation_service = getattr(self, "moderation_service", None)
+            if settings_failed:
+                # Do not execute destructive policy with unknown settings.
+                # Other independent flows (especially media downloads) are
+                # still allowed to proceed without a group-facing error.
+                logger.warning("moderation_degraded settings_unavailable chat=%s", update.effective_chat.id)
             else:
-                decision = moderation.evaluate(update.effective_chat.id, update.effective_user.id, text, settings, is_admin)
-            if media_url and decision.reason == "link_filter":
-                decision = type(decision)(True)
-            if not decision.allowed:
-                if decision.action == "delete":
+                # Forced-sub is a Telegram membership gate and must run
+                # before any AI/media/game routing.  It is scoped to this
+                # group and leaves privileged members untouched.
+                if await self.guardian_telegram_service.enforce_pending_captcha(
+                    bot=getattr(context, "bot", None),
+                    chat_id=int(update.effective_chat.id),
+                    user_id=int(update.effective_user.id),
+                    message=update.effective_message,
+                    settings=settings or {},
+                    is_admin=is_admin,
+                    data_port=self.data_port,
+                ):
+                    return
+                if await self.guardian_telegram_service.enforce_fsub(
+                    bot=getattr(context, "bot", None),
+                    chat_id=int(update.effective_chat.id),
+                    user_id=int(update.effective_user.id),
+                    message=update.effective_message,
+                    settings=settings or {},
+                    is_admin=is_admin,
+                ):
+                    return
+                guardian_user = {}
+                if event is not None:
                     try:
-                        await update.effective_message.delete()
+                        guardian_user = await self.data_port.get_user(int(event.user_id)) or {}
                     except Exception:
-                        pass
-                elif decision.action == "ban":
-                    try:
-                        await context.bot.ban_chat_member(
-                            update.effective_chat.id,
-                            update.effective_user.id,
-                            revoke_messages=True,
-                        )
-                    except Exception:
-                        logger.warning("Automatic group ban failed", exc_info=True)
-                elif decision.action == "mute":
-                    try:
-                        from datetime import timedelta
-                        from telegram import ChatPermissions
-                        await context.bot.restrict_chat_member(
-                            update.effective_chat.id, update.effective_user.id,
-                            permissions=ChatPermissions(can_send_messages=False),
-                            until_date=__import__("datetime").datetime.now() + timedelta(minutes=1),
-                        )
-                    except Exception:
-                        pass
-                return
+                        guardian_user = {}
+                guardian_decision = evaluate_guardian_message(
+                    attachment_type=getattr(event, "attachment_type", None),
+                    settings=settings,
+                    user=guardian_user,
+                    user_id=getattr(event, "user_id", None),
+                    text="\n".join(part for part in (event.text, event.caption or "") if part),
+                    sticker_set_name=getattr(event, "sticker_set_name", None),
+                    attachment_id=getattr(event, "attachment_id", None),
+                    is_edited=bool(getattr(event, "is_edited", False)),
+                    is_admin=is_admin,
+                ) if event is not None else None
+                if event is not None and guardian_decision is not None and not guardian_decision.allowed:
+                    decision = guardian_decision
+                elif event is not None and moderation_service is not None:
+                    decision = await moderation_service.evaluate_event(event, settings)
+                elif event is not None:
+                    decision = moderation.evaluate(
+                        event.chat_id,
+                        event.user_id,
+                        "\n".join(part for part in (event.text, event.caption or "") if part),
+                        settings,
+                        event.is_admin,
+                    )
+                else:
+                    decision = type("Decision", (), {"allowed": True, "reason": None})()
+                if media_url and decision.reason == "link_filter":
+                    decision = type(decision)(True)
+                if event is not None and await self._enforce_moderation_decision(update, context, decision, event):
+                    return
 
         # Social links are handled by the bounded media queue before AI chat.
         # This also works in groups where the bot is not explicitly mentioned.
@@ -284,7 +567,14 @@ class MessageHandler:
             "turn_id": turn_id,
         }
         try:
-            await self.chat_engine.record_message(chat_id, user_id, full_name, message.text, **record_kwargs)
+            await self.chat_engine.record_message(
+                chat_id,
+                user_id,
+                full_name,
+                message.text,
+                username=username,
+                **record_kwargs,
+            )
         except TypeError as exc:
             if "unexpected keyword" not in str(exc).casefold():
                 raise
@@ -298,6 +588,7 @@ class MessageHandler:
                     "thread_id": getattr(message, "message_thread_id", None),
                     "telegram_message_id": int(message.message_id),
                     "author_user_id": user_id,
+                    "username": username,
                     "display_name": full_name,
                     "text": message.text,
                     "created_at": datetime.now(timezone.utc),
@@ -306,6 +597,9 @@ class MessageHandler:
                     "role": "user",
                 }
             )
+
+        if await self._handle_guardian_presence(update):
+            return
 
         if not await self._should_respond(update, context):
             return
@@ -351,6 +645,7 @@ class MessageHandler:
                         username=username,
                         persona_mode=persona_mode,
                         context=search_text,
+                        is_group_admin=await is_group_admin(update, context, authorization=getattr(self, "authorization", None)),
                     )
                     await update.effective_message.reply_text(
                         render_model_html(response),
@@ -372,7 +667,7 @@ class MessageHandler:
             True,
         ):
             return
-        status = await update.effective_message.reply_text("ğŸ” BaÄŸlantÄ± analiz ediliyorâ€¦")
+        status = await update.effective_message.reply_text("🔎 Bağlantı analiz ediliyor…")
         try:
             job_id, duplicate = await self.media_service.submit(
                 url,
@@ -382,9 +677,9 @@ class MessageHandler:
                 chat_type=getattr(update.effective_chat, "type", "private"),
             )
             if duplicate:
-                await status.edit_text(f"â³ Bu baÄŸlantÄ± iÃ§in aktif bir iÅŸ var.\nÄ°ÅŸ: <code>{job_id}</code>", parse_mode="HTML")
+                await status.edit_text(f"⏳ Bu bağlantı için aktif bir iş var.\nİş: <code>{job_id}</code>", parse_mode="HTML")
             else:
-                await status.edit_text(f"â³ Ä°ndirme kuyruÄŸa alÄ±ndÄ±.\nÄ°ÅŸ: <code>{job_id}</code>", parse_mode="HTML")
+                await status.edit_text(f"⏳ İndirme kuyruğa alındı.\nİş: <code>{job_id}</code>", parse_mode="HTML")
         except Exception as exc:
             logger.error("Could not queue media URL: %s", summarize_exception(exc, label="media_enqueue"))
             if getattr(update.effective_chat, "type", None) in {"group", "supergroup"}:
@@ -396,9 +691,9 @@ class MessageHandler:
                     pass
                 return
             if str(exc) == "rate_limited":
-                await status.edit_text("âš ï¸ Ã‡ok sÄ±k medya isteÄŸi gÃ¶nderdin. LÃ¼tfen bir dakika bekle.")
+                await status.edit_text("⚠️ Çok sık medya isteği gönderdin. Lütfen bir dakika bekle.")
             else:
-                await status.edit_text("âš ï¸ Medya iÅŸi baÅŸlatÄ±lamadÄ±. LÃ¼tfen daha sonra tekrar deneyin.")
+                await status.edit_text("⚠️ Medya işi başlatılamadı. Lütfen daha sonra tekrar deneyin.")
 
     async def _check_game_inputs(self, update: Update, context: ContextTypes.DEFAULT_TYPE, text: str) -> bool:
         await hydrate_games(self.data_port, update.effective_chat.id, context.chat_data)
@@ -423,7 +718,7 @@ class MessageHandler:
             text = normalize_game_word(text).upper()
             game = context.chat_data['hangman']
             if text in game['guessed_letters']:
-                await update.message.reply_text(f"âš ï¸ <b>{text}</b> harfini zaten sÃ¶ylemiÅŸtin!", parse_mode='HTML')
+                await update.message.reply_text(f"⚠️ <b>{text}</b> harfini zaten söylemiştin!", parse_mode='HTML')
                 return True
 
             game['guessed_letters'].append(text)
@@ -442,7 +737,7 @@ class MessageHandler:
                         wrong_guesses=game.get("wrong_guesses", 0),
                     )
                     await self._record_game_result(update, "hangman", score, "win")
-                    await update.message.reply_text(f"ğŸ¥³ <b>TEBRÄ°KLER!</b> Kelimeyi buldun: <b>{game['word']}</b> ğŸ†", parse_mode='HTML')
+                    await update.message.reply_text(f"🥳 <b>TEBRİKLER!</b> Kelimeyi buldun: <b>{game['word']}</b> 🏆", parse_mode='HTML')
                     del context.chat_data['hangman']
                     await delete_game(self.data_port, update.effective_chat.id, "hangman")
                     return True
@@ -450,7 +745,7 @@ class MessageHandler:
                 game['lives'] -= 1
                 game['wrong_guesses'] = int(game.get('wrong_guesses', 0) or 0) + 1
                 if game['lives'] <= 0:
-                    await update.message.reply_text(f"ğŸ’€ <b>MAALESEF!</b> CanÄ±n bitti. Kelime: <b>{game['word']}</b> idi. ğŸª¦", parse_mode='HTML')
+                    await update.message.reply_text(f"💀 <b>MAALESEF!</b> Canın bitti. Kelime: <b>{game['word']}</b> idi. 🪦", parse_mode='HTML')
                     del context.chat_data['hangman']
                     await delete_game(self.data_port, update.effective_chat.id, "hangman")
                     return True
@@ -458,9 +753,9 @@ class MessageHandler:
             await persist_game(self.data_port, update.effective_chat.id, "hangman", game)
             display = " ".join(game['hidden'])
             await update.message.reply_text(
-                f"ğŸ“ <b>Adam Asmaca</b>\n\n"
+                f"📝 <b>Adam Asmaca</b>\n\n"
                 f"Kelime: <code>{display}</code>\n"
-                f"Kalan Can: <b>{game['lives']}</b> â¤ï¸\n"
+                f"Kalan Can: <b>{game['lives']}</b> ❤️\n"
                 f"Tahmin Edilenler: {', '.join(game['guessed_letters'])}",
                 parse_mode='HTML'
             )
@@ -480,8 +775,8 @@ class MessageHandler:
 
             if len(guess) < 3 or not is_valid:
                 await update.message.reply_text(
-                    "ğŸ§© Bu kelime sÃ¶zlÃ¼kte yok ya da raftaki harflerle kurulamÄ±yor. "
-                    "Harfleri yeniden karÄ±ÅŸtÄ±rÄ±p baÅŸka bir kelime dene.",
+                    "🧩 Bu kelime sözlükte yok ya da raftaki harflerle kurulamıyor. "
+                    "Harfleri yeniden karıştırıp başka bir kelime dene.",
                     reply_markup=word_game_keyboard(game),
                     parse_mode='HTML',
                 )
@@ -501,7 +796,7 @@ class MessageHandler:
 
             if guess in normalized_found:
                 await update.message.reply_text(
-                    f"âš ï¸ <b>{escape(text.strip())}</b> zaten bulundu!",
+                    f"⚠️ <b>{escape(text.strip())}</b> zaten bulundu!",
                     reply_markup=word_game_keyboard(game),
                     parse_mode='HTML',
                 )
@@ -518,7 +813,7 @@ class MessageHandler:
                         hints_used=game.get("hints_used", 0),
                     )
                     await self._record_game_result(update, "word_game", score, "win")
-                    await update.message.reply_text(f"ğŸ† <b>TEBRÄ°KLER!</b> {game['target_count']} kelimeyi buldunuz ve oyunu kazandÄ±nÄ±z! ğŸ”¥", parse_mode='HTML')
+                    await update.message.reply_text(f"🏆 <b>TEBRİKLER!</b> {game['target_count']} kelimeyi buldunuz ve oyunu kazandınız! 🔥", parse_mode='HTML')
                     del context.chat_data['word_game']
                     await delete_game(self.data_port, update.effective_chat.id, "word_game")
                 else:
@@ -526,7 +821,7 @@ class MessageHandler:
                     await update.message.reply_text(
                         render_word_game_text(
                             game,
-                            note=f"âœ… <b>{escape(text.strip())}</b> kabul edildi.",
+                            note=f"✅ <b>{escape(text.strip())}</b> kabul edildi.",
                         ),
                         reply_markup=word_game_keyboard(game),
                         parse_mode='HTML',
@@ -550,11 +845,11 @@ class MessageHandler:
 
             if match:
                 await update.message.reply_text(
-                    f"ğŸ¥³ <b>TEBRÄ°KLER!</b>\n\n"
-                    f"Kelimeyi doÄŸru bildiniz: <b>{escape(str(game['word']))}</b> ğŸ†\n\n"
-                    f"âœï¸ Bildiren: {update.effective_user.mention_html()}\n"
-                    f"ğŸ§  <i>{escape(str(game['word']))} hakkÄ±nda aÃ§Ä±klama yukarÄ±daydÄ±.</i>\n"
-                    f"â³ <b>3 saniye sonra yeni kelime geliyor...</b>",
+                    f"🥳 <b>TEBRİKLER!</b>\n\n"
+                    f"Kelimeyi doğru bildiniz: <b>{escape(str(game['word']))}</b> 🏆\n\n"
+                    f"✍️ Bildiren: {update.effective_user.mention_html()}\n"
+                    f"🧠 <i>{escape(str(game['word']))} hakkında açıklama yukarıdaydı.</i>\n"
+                    f"⏳ <b>3 saniye sonra yeni kelime geliyor...</b>",
                     parse_mode='HTML',
                     **self._game_reply_kwargs(update, game),
                 )
@@ -593,7 +888,7 @@ class MessageHandler:
             if not callable(getattr(reply_message, "reply_text", None)):
                 return True
             await reply_message.reply_text(
-                "âŒ Bu kelime olmadÄ±. Ä°pucu aÃ§ veya baÅŸka bir tahmin dene.",
+                "❌ Bu kelime olmadı. İpucu aç veya başka bir tahmin dene.",
                 reply_markup=word_guess_keyboard(game),
                 parse_mode="HTML",
                 **self._game_reply_kwargs(update, game),
@@ -615,8 +910,8 @@ class MessageHandler:
         await context.bot.send_message(
             chat_id=chat_id,
             text=(
-                "â° <b>SÃ¼re doldu!</b>\n\n"
-                f"DoÄŸru cevap: <b>{escape(str(game.get('word', 'bilinmiyor')))}</b>"
+                "⏰ <b>Süre doldu!</b>\n\n"
+                f"Doğru cevap: <b>{escape(str(game.get('word', 'bilinmiyor')))}</b>"
             ),
             parse_mode="HTML",
         )
@@ -632,7 +927,7 @@ class MessageHandler:
         chat_data = context.application.chat_data.get(chat_id)
         if chat_data and 'word_guess' in chat_data:
             return
-        await context.bot.send_message(chat_id, "ğŸ”„ <b>Yeni kelime geliyor...</b>", parse_mode='HTML')
+        await context.bot.send_message(chat_id, "🔄 <b>Yeni kelime geliyor...</b>", parse_mode='HTML')
         from src.handlers.command_handler import CommandHandler
         cmd_handler = CommandHandler(self.chat_engine, self.sudo_manager, self.image_router, self.tool_manager)
         await cmd_handler._start_word_guess_game(chat_id, context)
@@ -684,13 +979,13 @@ class MessageHandler:
             if target_thread_id == 1:
                 target_thread_id = None
 
-            actor_label = "assistant_output" if user_info == "Sistem YanÄ±tÄ±" else "user_input"
+            actor_label = "assistant_output" if user_info == "Sistem Yanıtı" else "user_input"
             actor = "assistant" if actor_label == "assistant_output" else "user"
-            log_text = f"ğŸš¨ <b>SÄ°STEM KAYDI</b>\nğŸ‘¤ <b>Actor:</b> {actor}\n"
-            log_text += f"ğŸ  <b>Tip:</b> {chat_type.upper()}\n\n"
-            log_text += f"ğŸ“ <b>Payload:</b> {summarize_private_text(message, label=actor_label)}"
+            log_text = f"🚨 <b>SİSTEM KAYDI</b>\n👤 <b>Actor:</b> {actor}\n"
+            log_text += f"🏠 <b>Tip:</b> {chat_type.upper()}\n\n"
+            log_text += f"📝 <b>Payload:</b> {summarize_private_text(message, label=actor_label)}"
             if photo_path:
-                log_text += f"\nğŸ“ {summarize_private_attachment(photo_path)}"
+                log_text += f"\n📎 {summarize_private_attachment(photo_path)}"
 
             # Operational channels must never become a copy of user uploads.
             # Keep the safe summary in a text event and discard the attachment
@@ -743,7 +1038,7 @@ class MessageHandler:
                 thread_id=(int(row["thread_id"]) if row.get("thread_id") is not None else None),
                 message_id=int(row.get("telegram_message_id", row.get("message_id"))),
                 user_id=int(row.get("author_user_id", row.get("user_id"))),
-                display_name=str(row.get("display_name") or "KullanÄ±cÄ±")[:80],
+                display_name=str(row.get("display_name") or "Kullanıcı")[:80],
                 text=str(row.get("text", row.get("content", "")))[:4096],
                 created_at=created_at,
                 message_kind=str(row.get("message_kind") or "text"),
@@ -762,6 +1057,12 @@ class MessageHandler:
         turn_id: str | None = None,
     ) -> bool:
         """Serialize one group/topic targeted-reply turn."""
+
+        tool_intent = getattr(self.chat_engine, "_should_attach_tools", None)
+        if callable(tool_intent) and tool_intent(text) is True:
+            # The reply planner only writes conversational text. Feature
+            # requests must continue through get_response's actual tool path.
+            return False
 
         message = update.effective_message
         thread_id = getattr(message, "message_thread_id", None)
@@ -819,8 +1120,9 @@ class MessageHandler:
         refs = tuple(ref for row in rows if (ref := self._group_message_ref(row)) is not None)
         current_ref = next((ref for ref in refs if ref.message_id == int(current_id)), None)
         if current_ref is not None and current_ref.already_replied:
-            # A Telegram retry or a concurrent trigger must not reopen a
-            # message that already has a successful delivery attribution.
+            # The persistent attribution is authoritative for Telegram retry
+            # delivery.  Reopening it would send a second reply when two
+            # concurrent updates share the same pending window.
             return True
         refs = tuple(ref for ref in refs if not ref.already_replied)
         if current_ref is None:
@@ -829,7 +1131,7 @@ class MessageHandler:
                 thread_id=(int(thread_id) if thread_id is not None else None),
                 message_id=int(current_id),
                 user_id=int(update.effective_user.id),
-                display_name=str(update.effective_user.full_name or "KullanÄ±cÄ±")[:80],
+                display_name=str(update.effective_user.full_name or "Kullanıcı")[:80],
                 text=str(text or "")[:4096],
                 created_at=now,
             )
@@ -858,6 +1160,7 @@ class MessageHandler:
                     username=update.effective_user.username,
                     persist_conversation=False,
                     purpose="group_targeted_reply_fallback",
+                    is_group_admin=await is_group_admin(update, context, authorization=getattr(self, "authorization", None)),
                 )
             except TypeError as exc:
                 if "unexpected keyword" not in str(exc).casefold():
@@ -873,7 +1176,7 @@ class MessageHandler:
             except Exception as exc:
                 logger.warning("Group reply fallback failed: %s", summarize_exception(exc, label="group_reply_fallback"))
             if not safe_fallback:
-                safe_fallback = "mesajÄ±nÄ± gÃ¶rdÃ¼m, ama ÅŸu an cevap Ã¼retirken takÄ±ldÄ±m."
+                safe_fallback = "mesajını gördüm, ama şu an cevap üretirken takıldım."
             raw_plan = "{}"
         plan = self.group_reply_router.build_plan(
             turn_context,
@@ -884,7 +1187,37 @@ class MessageHandler:
         if getattr(Config, "GROUP_TARGETED_REPLIES_SHADOW", False):
             return True
         if not plan.segments:
-            return True
+            # An empty JSON plan is valid for a passive group turn, but this
+            # method is called only after an explicit mention/reply trigger.
+            # Never leave that trigger unanswered just because the fast route
+            # returned an empty list or a provider response was malformed.
+            if current_ref.message_id == int(current_id):
+                if not safe_fallback:
+                    try:
+                        safe_fallback = await self.chat_engine.get_response(
+                            chat_id,
+                            text,
+                            user_display_name=update.effective_user.full_name,
+                            user_id=update.effective_user.id,
+                            username=update.effective_user.username,
+                            persist_conversation=False,
+                            purpose="group_targeted_reply_empty_plan_fallback",
+                            is_group_admin=await is_group_admin(update, context, authorization=getattr(self, "authorization", None)),
+                        )
+                    except Exception as exc:
+                        logger.warning(
+                            "Group empty-plan fallback failed: %s",
+                            summarize_exception(exc, label="group_reply_empty_fallback"),
+                        )
+                if not safe_fallback:
+                    safe_fallback = "buradayım ya, bağlantı bi an tökezledi 😅"
+                plan = GroupReplyPlan(
+                    (ReplySegment(current_ref, str(safe_fallback).strip()[:4096]),),
+                    plan.rejected_reason or "empty_plan_fallback",
+                    plan.correlation_id,
+                )
+            if not plan.segments:
+                return True
         generation_id = turn_id or plan.correlation_id or str(uuid.uuid4())
         delivery = await self.group_reply_delivery.deliver(
             bot=context.bot,
@@ -1011,14 +1344,23 @@ class MessageHandler:
 
                 response = await self.chat_engine.get_response(
                     chat_id, text, image_path=image_path, user_display_name=full_name,
-                    user_id=user_id, username=username, persona_mode=persona_mode
+                    user_id=user_id, username=username, persona_mode=persona_mode,
+                    is_group_admin=await is_group_admin(update, context, authorization=getattr(self, "authorization", None)),
                 )
 
                 if not response:
                     logger.info("Arel chose to stay silent")
                     return
 
-                await self._log_event(context, message=f"ğŸ¤– <b>Bot YanÄ±tÄ±:</b>\n{response}", user_info="Sistem YanÄ±tÄ±", chat_type=chat_type)
+                # Reply attribution is persistence/delivery metadata. Strip it
+                # before logging or rendering so Telegram IDs cannot leak into
+                # a group conversation when a model echoes its context.
+                response = strip_internal_attribution(response).strip()
+                if not response:
+                    logger.info("Arel response contained only internal metadata")
+                    return
+
+                await self._log_event(context, message=f"🤖 <b>Bot Yanıtı:</b>\n{response}", user_info="Sistem Yanıtı", chat_type=chat_type)
 
                 if re.search(r'\[?<?NO_REPLY>?\]?', response, re.I):
                     logger.info("Bot chose silence")
@@ -1066,7 +1408,7 @@ class MessageHandler:
 
             except Exception as e:
                 error_str = str(e).lower()
-                is_quota = any(x in error_str for x in ["quota", "429", "rate limit", "limit aÅŸÄ±ldÄ±"])
+                is_quota = any(x in error_str for x in ["quota", "429", "rate limit", "limit aşıldı"])
 
                 if is_quota:
                     if attempt < max_retries:
@@ -1074,7 +1416,7 @@ class MessageHandler:
                         await asyncio.sleep(1)
                         continue
                     else:
-                        msg = "âš ï¸ <b>Zihin Kapasitesi Dolu</b>\n\nÅu an tÃ¼m dÃ¼ÅŸÃ¼nce kanallarÄ±m limitlerine ulaÅŸtÄ±. LÃ¼tfen birkaÃ§ dakika sonra tekrar dene."
+                        msg = "⚠️ <b>Zihin Kapasitesi Dolu</b>\n\nŞu an tüm düşünce kanallarım limitlerine ulaştı. Lütfen birkaç dakika sonra tekrar dene."
                         await update.effective_message.reply_text(
                             msg,
                             parse_mode='HTML',
@@ -1107,8 +1449,8 @@ class MessageHandler:
                         return
 
                     readable_error = (
-                        "âŒ <b>Bir Sorun OluÅŸtu</b>\n\n"
-                        + escape(public_error_message(e, "Ä°ÅŸlem tamamlanamadÄ±; biraz sonra tekrar dene."))
+                        "❌ <b>Bir Sorun Oluştu</b>\n\n"
+                        + escape(public_error_message(e, "İşlem tamamlanamadı; biraz sonra tekrar dene."))
                     )
                     try:
                         await update.effective_message.reply_text(
@@ -1118,7 +1460,7 @@ class MessageHandler:
                         )
                     except:
                         await update.effective_message.reply_text(
-                            "âŒ Sistemde teknik bir aksaklÄ±k oluÅŸtu.",
+                            "❌ Sistemde teknik bir aksaklık oluştu.",
                             parse_mode=None,
                             **self._current_message_reply_kwargs(update),
                         )
@@ -1135,9 +1477,9 @@ class MessageHandler:
     async def process_image_request(self, update: Update, prompt: str, context: ContextTypes.DEFAULT_TYPE):
         """Enqueue AI image generation; the worker owns all provider I/O."""
         if self.image_generation_service is None:
-            await update.effective_message.reply_text("âš ï¸ GÃ¶rsel servisi ÅŸu an hazÄ±r deÄŸil.")
+            await update.effective_message.reply_text("⚠️ Görsel servisi şu an hazır değil.")
             return
-        status = await update.effective_message.reply_text("ğŸ–¼ï¸ GÃ¶rsel isteÄŸi kuyruÄŸa alÄ±nÄ±yorâ€¦")
+        status = await update.effective_message.reply_text("🖼️ Görsel isteği kuyruğa alınıyor…")
         try:
             job_id, duplicate = await self.image_generation_service.submit(
                 chat_id=update.effective_chat.id,
@@ -1147,12 +1489,12 @@ class MessageHandler:
                 reply_to_message_id=getattr(update.effective_message, "message_id", None),
                 message_thread_id=getattr(update.effective_message, "message_thread_id", None),
             )
-            label = "Bu aÃ§Ä±klama iÃ§in aktif bir iÅŸ var" if duplicate else "GÃ¶rsel isteÄŸi kuyruÄŸa alÄ±ndÄ±"
-            await status.edit_text(f"âœ… {label}.\nğŸ†”: <code>{job_id}</code>", parse_mode="HTML")
+            label = "Bu açıklama için aktif bir iş var" if duplicate else "Görsel isteği kuyruğa alındı"
+            await status.edit_text(f"✅ {label}.\n🆔: <code>{job_id}</code>", parse_mode="HTML")
         except Exception as exc:
             code = getattr(exc, "code", "image_generation_error")
-            message = "GÃ¶rsel aÃ§Ä±klamasÄ± geÃ§ersiz." if code == "image_prompt_invalid" else "GÃ¶rsel isteÄŸi baÅŸlatÄ±lamadÄ±."
-            await status.edit_text(f"âŒ {message}", parse_mode="HTML")
+            message = "Görsel açıklaması geçersiz." if code == "image_prompt_invalid" else "Görsel isteği başlatılamadı."
+            await status.edit_text(f"❌ {message}", parse_mode="HTML")
 
     async def _handle_pack_title_input(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_id = update.effective_user.id
@@ -1167,18 +1509,18 @@ class MessageHandler:
             return
         title = update.message.text
         if len(title) > 64:
-            await update.message.reply_text("âš ï¸ BaÅŸlÄ±k Ã§ok uzun (max 64 karakter).")
+            await update.message.reply_text("⚠️ Başlık çok uzun (max 64 karakter).")
             return
 
         title = " ".join(title.split())
         if not title or any(ord(char) < 32 for char in title):
-            await update.message.reply_text("âš ï¸ BaÅŸlÄ±k boÅŸ olamaz.")
+            await update.message.reply_text("⚠️ Başlık boş olamaz.")
             return
         state['data']['title'] = title
         state['state'] = 'awaiting_pack_emoji'
         await update.message.reply_text(
-            "âœ… BaÅŸlÄ±k kaydedildi. Åimdi paket sticker'Ä± iÃ§in 1-3 emoji gÃ¶nderin "
-            "(Ã¶rnek: ğŸ˜€ ğŸ˜‚).",
+            "✅ Başlık kaydedildi. Şimdi paket sticker'ı için 1-3 emoji gönderin "
+            "(örnek: 😀 😂).",
             parse_mode='HTML'
         )
 
@@ -1195,18 +1537,18 @@ class MessageHandler:
             return
         values = [value for value in (update.message.text or '').split() if value]
         if not 1 <= len(values) <= 3:
-            await update.message.reply_text("âš ï¸ 1-3 emoji yazmalÄ±sÄ±n. Ã–rn: ğŸ˜€ ğŸ˜‚")
+            await update.message.reply_text("⚠️ 1-3 emoji yazmalısın. Örn: 😀 😂")
             return
         try:
             normalized = [validate_emoji(value) for value in values]
         except StickerValidationError:
-            await update.message.reply_text("âš ï¸ LÃ¼tfen boÅŸluksuz, geÃ§erli emoji deÄŸerleri kullan.")
+            await update.message.reply_text("⚠️ Lütfen boşluksuz, geçerli emoji değerleri kullan.")
             return
         state['data']['emojis'] = normalized
         state['state'] = 'awaiting_pack_name'
         await update.message.reply_text(
-            "âœ… Emoji kaydedildi. Åimdi paket iÃ§in kÄ±sa bir <b>baÄŸlantÄ± ismi</b> belirle.\n"
-            "<i>(Sadece Ä°ngilizce kÃ¼Ã§Ã¼k harf, sayÄ± ve alt Ã§izgi; Ã¶rn: arel_komik)</i>",
+            "✅ Emoji kaydedildi. Şimdi paket için kısa bir <b>bağlantı ismi</b> belirle.\n"
+            "<i>(Sadece İngilizce küçük harf, sayı ve alt çizgi; örn: arel_komik)</i>",
             parse_mode='HTML'
         )
 
@@ -1227,9 +1569,9 @@ class MessageHandler:
             validate_short_name(short_name)
         except StickerValidationError:
             await update.message.reply_text(
-                "âš ï¸ <b>GeÃ§ersiz isim!</b>\n\n"
-                "Paket adÄ± yalnÄ±zca <b>kÃ¼Ã§Ã¼k harf, sayÄ± ve alt Ã§izgi (_)</b> iÃ§erebilir.\n\n"
-                "Ã–rn: <code>arel_komik</code> veya <code>benim_paketim1</code>",
+                "⚠️ <b>Geçersiz isim!</b>\n\n"
+                "Paket adı yalnızca <b>küçük harf, sayı ve alt çizgi (_)</b> içerebilir.\n\n"
+                "Örn: <code>arel_komik</code> veya <code>benim_paketim1</code>",
                 parse_mode='HTML'
             )
             return
@@ -1237,28 +1579,28 @@ class MessageHandler:
         state_data = state['data']
         title = state_data.get('title')
         if not title:
-            await update.message.reply_text("âš ï¸ Paket baÅŸlÄ±ÄŸÄ± bulunamadÄ±; iÅŸlemi yeniden baÅŸlat.")
+            await update.message.reply_text("⚠️ Paket başlığı bulunamadı; işlemi yeniden başlat.")
             return
         bot_info = await context.bot.get_me()
         try:
             full_pack_name = make_pack_name(short_name, bot_info.username)
         except StickerValidationError as exc:
-            await update.message.reply_text("âš ï¸ Paket kÄ±sa adÄ± geÃ§ersiz; yalnÄ±zca kÃ¼Ã§Ã¼k harf, sayÄ± ve alt Ã§izgi kullan.")
+            await update.message.reply_text("⚠️ Paket kısa adı geçersiz; yalnızca küçük harf, sayı ve alt çizgi kullan.")
             return
 
         state_data['short_name'] = short_name
         state_data['full_pack_name'] = full_pack_name
         state['state'] = 'awaiting_pack_confirmation'
         keyboard = [[
-            InlineKeyboardButton("âœ… Paketi oluÅŸtur", callback_data=f"stk_confirm_pack:{user_id}"),
-            InlineKeyboardButton("Ä°ptal", callback_data=f"stk_cancel_pack:{user_id}"),
+            InlineKeyboardButton("✅ Paketi oluştur", callback_data=f"stk_confirm_pack:{user_id}"),
+            InlineKeyboardButton("İptal", callback_data=f"stk_cancel_pack:{user_id}"),
         ]]
         await update.message.reply_text(
-            "<b>Sticker paketi hazÄ±r</b>\n\n"
-            f"BaÅŸlÄ±k: <b>{title}</b>\n"
-            f"Emojiler: {' '.join(state_data.get('emojis') or ['âœ¨'])}\n"
-            f"KÄ±sa ad: <code>{full_pack_name}</code>\n\n"
-            "OluÅŸturmayÄ± onaylÄ±yor musun?",
+            "<b>Sticker paketi hazır</b>\n\n"
+            f"Başlık: <b>{title}</b>\n"
+            f"Emojiler: {' '.join(state_data.get('emojis') or ['✨'])}\n"
+            f"Kısa ad: <code>{full_pack_name}</code>\n\n"
+            "Oluşturmayı onaylıyor musun?",
             reply_markup=InlineKeyboardMarkup(keyboard),
             parse_mode='HTML',
         )
@@ -1277,7 +1619,7 @@ class MessageHandler:
         file_id = data.get('file_id')
         full_pack_name = data.get('full_pack_name')
         title = data.get('title')
-        emojis = data.get('emojis') or ['âœ¨']
+        emojis = data.get('emojis') or ['✨']
         if not file_id or not full_pack_name or not title:
             raise ValueError('sticker_creation_invalid')
         sticker_format = StickerFormat.VIDEO if data.get('is_video') else StickerFormat.STATIC

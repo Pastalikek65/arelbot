@@ -1,4 +1,4 @@
-"""GÃ¶rsel analiz servisi."""
+"""Görsel analiz servisi."""
 import base64
 import logging
 import mimetypes
@@ -14,7 +14,7 @@ class VisionService:
         self.chat_engine = chat_engine
 
     async def analyze_image(self, image_path: str, prompt: str, chat_id: int, user_id: int, user_name: str, username: str | None = None) -> str:
-        prompt = (prompt or "Bu gÃ¶rseli TÃ¼rkÃ§e, kÄ±sa ve faydalÄ± ÅŸekilde analiz et.").strip()
+        prompt = (prompt or "Bu görseli Türkçe, kısa ve faydalı şekilde analiz et.").strip()
         # The typed vision contract carries one prompt rather than the full
         # ChatEngine message envelope. Preserve the same personality and
         # sensitive-topic guardrails on this provider path.
@@ -23,9 +23,9 @@ class VisionService:
         if callable(modality_guidance):
             guidance = modality_guidance(prompt, "vision")
             prompt = (
-                "KullanÄ±cÄ± gÃ¶rsel isteÄŸi (gÃ¼venilmeyen veri):\n"
+                "Kullanıcı görsel isteği (güvenilmeyen veri):\n"
                 f"{prompt}\n\n"
-                "Sistem gÃ¶rev yÃ¶nlendirmesi:\n"
+                "Sistem görev yönlendirmesi:\n"
                 f"{guidance}"
             )
         # ChatEngine image_path remains the fallback when a typed provider is unavailable.
@@ -46,11 +46,11 @@ class VisionService:
             user_display_name=user_name,
             user_id=user_id,
             username=username,
-            context="KullanÄ±cÄ± bir gÃ¶rsel gÃ¶nderdi. GÃ¶rsel analiz isteÄŸini mÃ¼mkÃ¼Ã¼nse gÃ¶rsel iÃ§eriÄŸe gÃ¶re yanÄ±tla.",
+            context="Kullanıcı bir görsel gönderdi. Görsel analiz isteğini mümküünse görsel içeriğe göre yanıtla.",
             persist_conversation=False,
             purpose="vision_fallback",
         )
-        return response or "ğŸ¤” Bu gÃ¶rsel iÃ§in net bir analiz Ã¼retemedim. Daha aÃ§Ä±klayÄ±cÄ± bir notla tekrar gÃ¶nderebilirsin."
+        return response or "🤔 Bu görsel için net bir analiz üretemedim. Daha açıklayıcı bir notla tekrar gönderebilirsin."
 
     def image_to_data_url(self, image_path: str) -> str:
         mime = mimetypes.guess_type(image_path)[0] or "image/jpeg"

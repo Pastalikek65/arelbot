@@ -175,6 +175,13 @@ class FeatureDefinition:
     robots_policy: str = "not_applicable"
     terms_review: str = "not_applicable"
     production_signoff: str = "not_required"
+    # Optional durable-state metadata.  Board games use the same fields as
+    # GameDefinition so the runtime manifest and persisted sessions cannot
+    # silently drift apart.
+    schema_version: int = 1
+    state_key: str | None = None
+    board_size: tuple[int, int] | None = None
+    connect_length: int | None = None
 
 
 class DataProvider(Protocol):

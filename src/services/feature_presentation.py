@@ -35,19 +35,19 @@ def format_feature_result(result: Any, fallback: str) -> str:
     """Render a typed result with bounded source and freshness annotations."""
 
     if not getattr(result, "ok", False):
-        return sanitize_html(str(fallback or "Veri alÄ±namadÄ±."))
+        return sanitize_html(str(fallback or "Veri alınamadı."))
 
     blocks = getattr(result, "display_blocks", ()) or ()
-    content = sanitize_html(str(blocks[0] if blocks else "Veri bulunamadÄ±."))
+    content = "\n\n".join(sanitize_html(str(block)) for block in blocks if str(block).strip()) if blocks else "Veri bulunamadı."
     annotations: list[str] = []
     metadata = getattr(result, "metadata", {}) or {}
     if getattr(result, "stale", False):
         annotations.append(
-            "<i>Kaynak geÃ§ici olarak kullanÄ±lamadÄ±; Ã¶nbellekteki son veri gÃ¶steriliyor.</i>"
+            "<i>Kaynak geçici olarak kullanılamadı; önbellekteki son veri gösteriliyor.</i>"
         )
     elif metadata.get("fresh") is False:
         annotations.append(
-            "<i>UyarÄ±: Veri tazelik hedefinin dÄ±ÅŸÄ±nda; kaynak zamanÄ±nÄ± kontrol edin.</i>"
+            "<i>Uyarı: Veri tazelik hedefinin dışında; kaynak zamanını kontrol edin.</i>"
         )
 
     source = str(getattr(result, "source", "") or "").strip()
@@ -68,6 +68,6 @@ def format_feature_result(result: Any, fallback: str) -> str:
         except (AttributeError, TypeError, ValueError):
             fetched = ""
         if fetched:
-            annotations.append(f"<i>Veri zamanÄ±: {escape(fetched)}</i>")
+            annotations.append(f"<i>Veri zamanı: {escape(fetched)}</i>")
 
     return content + (("\n\n" + "\n".join(annotations)) if annotations else "")

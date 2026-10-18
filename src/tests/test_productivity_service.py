@@ -16,14 +16,14 @@ def test_reminder_parser_accepts_turkish_absolute_datetime():
     now = datetime(2026, 10, 5, 8, 0, tzinfo=timezone.utc)
 
     request = service.parse(
-        ["yarÄ±n", "10:30", "Doktor", "randevusu"],
+        ["yarın", "10:30", "Doktor", "randevusu"],
         now=now,
         timezone_name="Europe/Istanbul",
     )
 
     expected = datetime(2026, 10, 6, 10, 30, tzinfo=ZoneInfo("Europe/Istanbul"))
     assert request.due_at == expected.astimezone(timezone.utc)
-    assert request.human_delay == "yarÄ±n 10:30"
+    assert request.human_delay == "yarın 10:30"
     assert request.text == "Doktor randevusu"
 
 
@@ -31,10 +31,10 @@ def test_reminder_parser_accepts_turkish_duration_words():
     service = ReminderService()
     now = datetime(2026, 10, 5, 8, 0, tzinfo=timezone.utc)
 
-    daily = service.parse(["1g\u00fcn", "Su iÃ§"], now=now)
+    daily = service.parse(["1g\u00fcn", "Su iç"], now=now)
     assert daily.delay_seconds == 24 * 60 * 60
 
-    weekly = service.parse(["1haftal\u0131k", "HaftalÄ±k plan"], now=now)
+    weekly = service.parse(["1haftal\u0131k", "Haftalık plan"], now=now)
     assert weekly.delay_seconds == 7 * 24 * 60 * 60
 
 
@@ -43,12 +43,12 @@ def test_reminder_parser_accepts_weekday_and_numeric_date():
     now = datetime(2026, 10, 5, 8, 0, tzinfo=timezone.utc)
 
     monday = service.parse(
-        ["pazartesi", "09:00", "HaftalÄ±k", "plan"],
+        ["pazartesi", "09:00", "Haftalık", "plan"],
         now=now,
         timezone_name="Europe/Istanbul",
     )
     assert monday.due_at > now
-    assert monday.text == "HaftalÄ±k plan"
+    assert monday.text == "Haftalık plan"
 
     dated = service.parse(
         ["10.10.2026", "14:15", "Proje", "teslimi"],
@@ -63,11 +63,11 @@ def test_reminder_parser_rejects_past_and_invalid_absolute_datetime():
     service = ReminderService()
     now = datetime(2026, 10, 5, 12, 0, tzinfo=timezone.utc)
 
-    with pytest.raises(ValueError, match="geÃ§miÅŸ"):
-        service.parse(["bugÃ¼n", "10:00", "GeÃ§miÅŸ"], now=now)
+    with pytest.raises(ValueError, match="geçmiş"):
+        service.parse(["bugün", "10:00", "Geçmiş"], now=now)
 
     with pytest.raises(ValueError, match="tarih"):
-        service.parse(["yarÄ±n", "25:00", "GeÃ§ersiz"], now=now)
+        service.parse(["yarın", "25:00", "Geçersiz"], now=now)
 
 
 def test_reminder_parser_supports_daily_and_weekly_recurrence():
@@ -75,15 +75,15 @@ def test_reminder_parser_supports_daily_and_weekly_recurrence():
     now = datetime(2026, 10, 5, 8, 0, tzinfo=timezone.utc)
 
     daily = service.parse(
-        ["her", "gÃ¼n", "10:30", "GÃ¼nlÃ¼k", "plan"],
+        ["her", "gün", "10:30", "Günlük", "plan"],
         now=now,
         timezone_name="Europe/Istanbul",
     )
     assert daily.recurrence == {"kind": "daily"}
-    assert daily.text == "GÃ¼nlÃ¼k plan"
+    assert daily.text == "Günlük plan"
 
     weekly = service.parse(
-        ["her", "pazartesi", "09:00", "HaftalÄ±k", "plan"],
+        ["her", "pazartesi", "09:00", "Haftalık", "plan"],
         now=now,
         timezone_name="Europe/Istanbul",
     )
@@ -98,7 +98,7 @@ async def test_productivity_service_reschedules_recurring_reminder_without_marki
     reminder = await service.add_reminder(
         user_id=7,
         chat_id=7,
-        text="GÃ¼nlÃ¼k plan",
+        text="Günlük plan",
         due_at=due,
         recurrence={"kind": "daily"},
         timezone_name="Europe/Istanbul",
@@ -130,9 +130,9 @@ def test_next_occurrence_preserves_local_time_across_daily_and_weekly_rules():
 async def test_productivity_export_and_bulk_delete_are_user_scoped():
     service = ProductivityService(db=None)
     await service.add_note(1, 1, "Birinci not")
-    await service.add_note(2, 2, "BaÅŸka kullanÄ±cÄ±")
-    await service.add_task(1, 1, "Birinci gÃ¶rev")
-    reminder = await service.add_reminder(1, 1, "Birinci hatÄ±rlatÄ±cÄ±", datetime.now(timezone.utc))
+    await service.add_note(2, 2, "Başka kullanıcı")
+    await service.add_task(1, 1, "Birinci görev")
+    reminder = await service.add_reminder(1, 1, "Birinci hatırlatıcı", datetime.now(timezone.utc))
 
     exported = await service.export_user_data(1)
     assert len(exported["notes"]) == 1
@@ -189,7 +189,7 @@ async def test_reminder_claim_is_atomic_until_lease_expires():
     reminder = await service.add_reminder(
         user_id=7,
         chat_id=-100,
-        text="ToplantÄ±",
+        text="Toplantı",
         due_at=datetime.now(timezone.utc) + timedelta(minutes=1),
     )
 
@@ -210,7 +210,7 @@ async def test_reminder_delivery_clears_lease_and_release_is_retryable():
     reminder = await service.add_reminder(
         user_id=8,
         chat_id=-101,
-        text="Su iÃ§",
+        text="Su iç",
         due_at=datetime.now(timezone.utc),
     )
     reminder_id = reminder["reminder_id"]
@@ -228,7 +228,7 @@ async def test_reminder_delivery_clears_lease_and_release_is_retryable():
 @pytest.mark.asyncio
 async def test_productivity_delete_operations_are_user_scoped():
     service = ProductivityService(db=None)
-    note = await service.add_note(1, 1, "Ã–zel not")
+    note = await service.add_note(1, 1, "Özel not")
     task = await service.add_task(1, 1, "Sunum")
     reminder = await service.add_reminder(1, 1, "Ara", datetime.now(timezone.utc))
 
@@ -285,9 +285,9 @@ async def test_productivity_callback_requires_confirmation_for_bulk_clear():
 async def test_daily_summary_splits_overdue_and_local_window():
     service = ProductivityService(db=None)
     now = datetime(2026, 10, 5, 8, 0, tzinfo=timezone.utc)
-    await service.add_task(1, 1, "BugÃ¼nÃ¼n iÅŸi", priority="high")
+    await service.add_task(1, 1, "Bugünün işi", priority="high")
     await service.add_reminder(1, 1, "Geciken", now - timedelta(hours=1))
-    await service.add_reminder(1, 1, "BugÃ¼nkÃ¼ toplantÄ±", now + timedelta(hours=2))
+    await service.add_reminder(1, 1, "Bugünkü toplantı", now + timedelta(hours=2))
     await service.add_reminder(1, 1, "Gelecek hafta", now + timedelta(days=8))
 
     summary = await service.daily_summary(1, days=1, timezone_name="Europe/Istanbul", now=now)
@@ -298,14 +298,14 @@ async def test_daily_summary_splits_overdue_and_local_window():
     assert summary["overdue_count"] == 1
     assert summary["upcoming_count"] == 1
     assert summary["overdue_reminders"][0]["text"] == "Geciken"
-    assert summary["upcoming_reminders"][0]["text"] == "BugÃ¼nkÃ¼ toplantÄ±"
+    assert summary["upcoming_reminders"][0]["text"] == "Bugünkü toplantı"
 
 
 @pytest.mark.asyncio
 async def test_daily_summary_counts_records_beyond_display_limit():
     service = ProductivityService(db=None)
     for index in range(27):
-        await service.add_task(1, 1, f"GÃ¶rev {index}")
+        await service.add_task(1, 1, f"Görev {index}")
     now = datetime(2026, 10, 5, 8, 0, tzinfo=timezone.utc)
 
     summary = await service.daily_summary(1, now=now, limit=5)
@@ -319,22 +319,22 @@ async def test_daily_summary_counts_records_beyond_display_limit():
 async def test_daily_summary_week_view_uses_seven_day_window_and_falls_back_timezone():
     service = ProductivityService(db=None)
     now = datetime(2026, 10, 5, 8, 0, tzinfo=timezone.utc)
-    await service.add_reminder(1, 1, "HaftalÄ±k iÅŸ", now + timedelta(days=6))
-    await service.add_reminder(1, 1, "Pencere dÄ±ÅŸÄ±", now + timedelta(days=8))
+    await service.add_reminder(1, 1, "Haftalık iş", now + timedelta(days=6))
+    await service.add_reminder(1, 1, "Pencere dışı", now + timedelta(days=8))
 
     summary = await service.daily_summary(1, days=7, timezone_name="Invalid/Zone", now=now)
 
     assert summary["timezone"] == "Europe/Istanbul"
     assert summary["days"] == 7
     assert summary["upcoming_count"] == 1
-    assert summary["upcoming_reminders"][0]["text"] == "HaftalÄ±k iÅŸ"
+    assert summary["upcoming_reminders"][0]["text"] == "Haftalık iş"
 
 
 @pytest.mark.asyncio
 async def test_plan_command_renders_owner_scoped_action_buttons():
     service = ProductivityService(db=None)
     task = await service.add_task(1, 1, "Sunumu tamamla")
-    await service.add_reminder(1, 1, "ToplantÄ±", datetime.now(timezone.utc) + timedelta(minutes=10))
+    await service.add_reminder(1, 1, "Toplantı", datetime.now(timezone.utc) + timedelta(minutes=10))
     replies = []
 
     class Message:
@@ -355,7 +355,7 @@ async def test_plan_command_renders_owner_scoped_action_buttons():
     )
     await handler.handle_plan_command(update, SimpleNamespace(args=[]))
 
-    assert replies and "AÃ§Ä±k gÃ¶revler" in replies[0][0]
+    assert replies and "Açık görevler" in replies[0][0]
     callbacks = [
         button.callback_data
         for row in replies[0][1]["reply_markup"].inline_keyboard
@@ -391,4 +391,4 @@ async def test_plan_command_refuses_to_disclose_personal_data_in_groups():
 
     await handler.handle_plan_command(update, SimpleNamespace(args=[]))
 
-    assert replies and "yalnÄ±zca Ã¶zel sohbetinde" in replies[0]
+    assert replies and "yalnızca özel sohbetinde" in replies[0]

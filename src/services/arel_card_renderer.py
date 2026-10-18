@@ -72,12 +72,12 @@ class ArelCardRenderer:
         draw.rectangle((x1, y1, x1 + int(width), y2), fill=fill)
 
     def render_welcome(self, destination: str | Path, first_name: str):
-        image, draw = self._base("PASTALÄ°KEK", "AREL â€¢ TELEGRAM ASÄ°STANI")
+        image, draw = self._base("PASTALİKEK", "AREL • TELEGRAM ASİSTANI")
         self._panel(draw, (28, 164, 612, 302))
-        draw.text((50, 188), f"HOÅ GELDÄ°N, {first_name[:24].upper()}!", font=self._font(27, True), fill=self.YELLOW)
-        draw.text((50, 237), "Sohbet, medya, oyun ve Ã¼retkenlik", font=self._font(21), fill=self.TEXT)
-        draw.text((50, 270), "tek bir menÃ¼de. Komut yaz; gerisini Arel dÃ¼ÅŸÃ¼nsÃ¼n.", font=self._font(18), fill=self.MUTED)
-        draw.text((28, 430), "AREL // PASTALÄ°KEK", font=self._font(15, True), fill=self.TEAL)
+        draw.text((50, 188), f"HOŞ GELDİN, {first_name[:24].upper()}!", font=self._font(27, True), fill=self.YELLOW)
+        draw.text((50, 237), "Sohbet, medya, oyun ve üretkenlik", font=self._font(21), fill=self.TEXT)
+        draw.text((50, 270), "tek bir menüde. Komut yaz; gerisini Arel düşünsün.", font=self._font(18), fill=self.MUTED)
+        draw.text((28, 430), "AREL // PASTALİKEK", font=self._font(15, True), fill=self.TEAL)
         self._save(image, destination)
 
     def render_profile(self, destination: str | Path, stats: Mapping, display_name: str):
@@ -87,21 +87,21 @@ class ArelCardRenderer:
         coins = int(stats.get("coins", 0) or 0)
         games = int(stats.get("games", stats.get("games_played", 0)) or 0)
         wins = int(stats.get("wins", 0) or 0)
-        image, draw = self._base(display_name[:22].upper(), "OYUNCU PROFÄ°LÄ°")
+        image, draw = self._base(display_name[:22].upper(), "OYUNCU PROFİLİ")
         self._panel(draw, (28, 164, 612, 240))
-        draw.text((46, 179), f"SEVÄ°YE {level}", font=self._font(22, True), fill=self.TEXT)
+        draw.text((46, 179), f"SEVİYE {level}", font=self._font(22, True), fill=self.TEXT)
         draw.text((188, 179), f"{xp}/{next_xp} XP", font=self._font(20), fill=self.TEXT)
         self._bar(draw, (46, 216, 594, 228), xp / next_xp, self.TEAL)
         self._panel(draw, (28, 258, 612, 322))
-        draw.text((48, 279), f"â— {coins} COIN", font=self._font(24, True), fill=self.YELLOW)
+        draw.text((48, 279), f"● {coins} COIN", font=self._font(24, True), fill=self.YELLOW)
         self._panel(draw, (28, 340, 612, 410))
-        draw.text((48, 355), f"OYUN {games}    GALÄ°BÄ°YET {wins}", font=self._font(18, True), fill=self.TEXT)
+        draw.text((48, 355), f"OYUN {games}    GALİBİYET {wins}", font=self._font(18, True), fill=self.TEXT)
         ratio = (wins / games) if games else 0
         draw.text((48, 383), f"KAZANMA ORANI %{ratio * 100:.0f}", font=self._font(15), fill=self.MUTED)
-        draw.text((28, 442), "AREL PROFÄ°L // PASTALÄ°KEK", font=self._font(14, True), fill=self.TEAL)
+        draw.text((28, 442), "AREL PROFİL // PASTALİKEK", font=self._font(14, True), fill=self.TEAL)
         self._save(image, destination)
 
-    def render_leaderboard(self, destination: str | Path, rows: Iterable[Mapping], title: str = "LÄ°DERLÄ°K TABLOSU"):
+    def render_leaderboard(self, destination: str | Path, rows: Iterable[Mapping], title: str = "LİDERLİK TABLOSU"):
         image, draw = self._base(title[:24], "SEZON PERFORMANSI")
         rows = list(rows)[:7]
         y = 158
@@ -116,19 +116,19 @@ class ArelCardRenderer:
         self._save(image, destination)
 
     def render_achievements(self, destination: str | Path, rows: Iterable[Mapping], display_name: str):
-        image, draw = self._base(display_name[:22].upper(), "BAÅARIMLAR")
+        image, draw = self._base(display_name[:22].upper(), "BAŞARIMLAR")
         rows = list(rows)[:7]
         y = 164
         for row in rows:
-            title = str(row.get("title") or row.get("name") or row.get("achievement") or "BaÅŸarÄ±m")[:31]
-            detail = str(row.get("description") or row.get("text") or "TamamlandÄ±")[:43]
+            title = str(row.get("title") or row.get("name") or row.get("achievement") or "Başarım")[:31]
+            detail = str(row.get("description") or row.get("text") or "Tamamlandı")[:43]
             self._panel(draw, (28, y, 612, y + 54))
-            draw.text((46, y + 9), f"â˜… {title}", font=self._font(18, True), fill=self.YELLOW)
+            draw.text((46, y + 9), f"★ {title}", font=self._font(18, True), fill=self.YELLOW)
             draw.text((70, y + 33), detail, font=self._font(14), fill=self.MUTED)
             y += 61
         if not rows:
-            draw.text((48, 194), "Ä°lk baÅŸarÄ±mÄ±n burada gÃ¶rÃ¼necek.", font=self._font(20), fill=self.TEXT)
-        draw.text((28, 442), "AREL BAÅARIM ARÅÄ°VÄ°", font=self._font(14, True), fill=self.TEAL)
+            draw.text((48, 194), "İlk başarımın burada görünecek.", font=self._font(20), fill=self.TEXT)
+        draw.text((28, 442), "AREL BAŞARIM ARŞİVİ", font=self._font(14, True), fill=self.TEAL)
         self._save(image, destination)
 
     @staticmethod

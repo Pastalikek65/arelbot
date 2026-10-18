@@ -53,22 +53,22 @@ class MemoryTool(BaseTool):
                 if not fact_value:
                     return {"error": "value is required to remember a fact."}
                 if not consent:
-                    return {"error": "KiÅŸisel hafÄ±za kapalÄ±. Ã–nce /hafiza on komutuyla aÃ§Ä±k rÄ±za verin."}
+                    return {"error": "Kişisel hafıza kapalı. Önce /hafiza on komutuyla açık rıza verin."}
                 
                 # Use high-level MongoDB method
                 await self.db.save_fact(user_id, fact_key, fact_value)
-                return {"result": f"AnlaÅŸÄ±ldÄ±! Bunu aklÄ±ma yazdÄ±m: {fact_key} = {fact_value}"}
+                return {"result": f"Anlaşıldı! Bunu aklıma yazdım: {fact_key} = {fact_value}"}
 
             elif action == "recall":
                 if not consent:
-                    return {"result": "KiÅŸisel hafÄ±za bu kullanÄ±cÄ± iÃ§in etkin deÄŸil."}
+                    return {"result": "Kişisel hafıza bu kullanıcı için etkin değil."}
                 # Use high-level MongoDB method
                 facts = await self.db.get_facts(user_id, fact_key)
                 
                 if not facts:
-                    return {"result": f"{user_id} hakkÄ±nda henÃ¼z bu bilgiyi bilmiyorum."}
+                    return {"result": f"{user_id} hakkında henüz bu bilgiyi bilmiyorum."}
                 
-                result = f"{user_id} hakkÄ±nda bildiklerim:\n"
+                result = f"{user_id} hakkında bildiklerim:\n"
                 for f in facts:
                     result += f"- {f['key']}: {f['value']}\n"
                 return {"result": result}

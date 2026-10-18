@@ -1,11 +1,11 @@
 {
-  "menu.title": "ğŸ  <b>AREL ANA MENÃœ</b>",
-  "menu.subtitle": "AÅŸaÄŸÄ±daki merkezlerden birini seÃ§erek hÄ±zlÄ±ca devam edebilirsin.",
-  "games.title": "ğŸ® <b>AREL OYUN SALONU</b>",
-  "games.subtitle": "Oyun seÃ§, lobi kur veya liderlik tablosuna bak.",
-  "leaderboard.empty": "ğŸ† Bu sohbet iÃ§in henÃ¼z liderlik kaydÄ± yok.",
-  "leaderboard.title": "ğŸ† <b>LÄ°DERLÄ°K TABLOSU</b>",
-  "reminder.usage": "ğŸ”” KullanÄ±m: <code>/remind 10dk Su iÃ§</code>",
-  "reminder.ok": "âœ… Tamam! {when} sonra hatÄ±rlatacaÄŸÄ±m: {text}",
-  "language.changed": "âœ… Dil tercihi TÃ¼rkÃ§e olarak gÃ¼ncellendi."
+  "menu.title": "<b>Arel</b> · Ana menü",
+  "menu.subtitle": "Sohbet, günlük işler ve topluluk araçları.",
+  "games.title": "🎮 <b>Oyun salonu</b>",
+  "games.subtitle": "Bir oyun seç. Kurallar ve başlangıç seçenekleri açılan ekranda görünecek.",
+  "leaderboard.empty": "🏆 Bu sohbet için henüz liderlik kaydı yok.",
+  "leaderboard.title": "🏆 <b>LİDERLİK TABLOSU</b>",
+  "reminder.usage": "🔔 Kullanım: <code>/remind 10dk Su iç</code>",
+  "reminder.ok": "✅ Tamam! {when} sonra hatırlatacağım: {text}",
+  "language.changed": "✅ Dil tercihi Türkçe olarak güncellendi."
 }

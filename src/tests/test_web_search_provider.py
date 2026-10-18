@@ -28,15 +28,15 @@ async def test_tavily_provider_normalizes_results_without_leaking_key():
     async def handler(request: httpx.Request) -> httpx.Response:
         payload = json.loads(request.content)
         assert payload["api_key"] == "test-tavily-key"
-        assert payload["query"] == "Ä°stanbul hava durumu"
+        assert payload["query"] == "İstanbul hava durumu"
         return httpx.Response(
             200,
             json={
-                "answer": "KÄ±sa yanÄ±t",
+                "answer": "Kısa yanıt",
                 "results": [
                     {
-                        "title": "<BaÅŸlÄ±k>",
-                        "content": "GÃ¼venilmeyen <script>alert(1)</script> iÃ§erik",
+                        "title": "<Başlık>",
+                        "content": "Güvenilmeyen <script>alert(1)</script> içerik",
                         "url": "https://example.com/result",
                     }
                 ],
@@ -49,13 +49,13 @@ async def test_tavily_provider_normalizes_results_without_leaking_key():
         response = await provider.fetch(
             ProviderRequest(
                 operation="web_search",
-                params={"query": "Ä°stanbul hava durumu", "topic": "general"},
+                params={"query": "İstanbul hava durumu", "topic": "general"},
             )
         )
 
     assert response.source == "Tavily Search"
     assert response.metadata["untrusted"] is True
-    assert response.data["results"][0]["title"] == "<BaÅŸlÄ±k>"
+    assert response.data["results"][0]["title"] == "<Başlık>"
     assert "&lt;script&gt;" in response.data["content"]
     assert "test-tavily-key" not in str(response.data)
 
@@ -96,7 +96,7 @@ async def test_tavily_provider_rejects_invalid_input_before_transport():
 @pytest.mark.asyncio
 async def test_web_search_tool_is_a_typed_provider_wrapper():
     async def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, json={"results": [{"title": "SonuÃ§", "content": "Ä°Ã§erik", "url": "https://example.com"}]}, request=request)
+        return httpx.Response(200, json={"results": [{"title": "Sonuç", "content": "İçerik", "url": "https://example.com"}]}, request=request)
 
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
         provider = TavilySearchProvider(_key_manager(), client=client)
@@ -104,7 +104,7 @@ async def test_web_search_tool_is_a_typed_provider_wrapper():
         result = await tool.execute(query="test")
 
     assert result["source"] == "Tavily Search"
-    assert "SonuÃ§" in result["result"]
+    assert "Sonuç" in result["result"]
 
 @pytest.mark.asyncio
 async def test_search_uses_bounded_duckduckgo_fallback_without_tavily_key():

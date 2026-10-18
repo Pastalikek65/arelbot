@@ -35,26 +35,26 @@ class DailyBriefService:
                 int(user_id), timezone_name=timezone_name, days=1, limit=5
             ),
         )
-        lines = ["\U0001f4c5 <b>Arel'in gÃ¼nlÃ¼k Ã¶zeti</b>", f"ğŸ“ <b>{html.escape(str(city))}</b>", ""]
+        lines = ["\U0001f4c5 <b>Arel'in günlük özeti</b>", f"📍 <b>{html.escape(str(city))}</b>", ""]
         sections = (
-            ("ğŸŒ¤ Hava", weather, "Hava verisi ÅŸu an alÄ±namadÄ±."),
-            ("ğŸŒ Deprem", earthquakes, "Deprem verisi ÅŸu an alÄ±namadÄ±."),
-            ("ğŸ“° GÃ¼ndem", news, "Haber akÄ±ÅŸÄ± ÅŸu an alÄ±namadÄ±."),
+            ("🌤 Hava", weather, "Hava verisi şu an alınamadı."),
+            ("🌍 Deprem", earthquakes, "Deprem verisi şu an alınamadı."),
+            ("📰 Gündem", news, "Haber akışı şu an alınamadı."),
         )
         for title, result, fallback in sections:
             lines.append(f"<b>{title}</b>")
             lines.append(format_feature_result(result, fallback) if result is not None else fallback)
             lines.append("")
-        lines.append("<b>ğŸ“Œ KiÅŸisel plan</b>")
+        lines.append("<b>📌 Kişisel plan</b>")
         if summary.get("overdue_count"):
-            lines.append(f"ğŸ”´ Geciken hatÄ±rlatÄ±cÄ±: <b>{int(summary['overdue_count'])}</b>")
+            lines.append(f"🔴 Geciken hatırlatıcı: <b>{int(summary['overdue_count'])}</b>")
         if summary.get("upcoming_count"):
-            lines.append(f"â° BugÃ¼nkÃ¼ yaklaÅŸan hatÄ±rlatÄ±cÄ±: <b>{int(summary['upcoming_count'])}</b>")
+            lines.append(f"⏰ Bugünkü yaklaşan hatırlatıcı: <b>{int(summary['upcoming_count'])}</b>")
         if summary.get("open_task_count"):
-            lines.append(f"âœ… AÃ§Ä±k gÃ¶rev: <b>{int(summary['open_task_count'])}</b>")
+            lines.append(f"✅ Açık görev: <b>{int(summary['open_task_count'])}</b>")
         for task in (summary.get("tasks") or [])[:5]:
-            lines.append(f"â€¢ {html.escape(str(task.get('text') or 'GÃ¶rev'))[:180]}")
+            lines.append(f"• {html.escape(str(task.get('text') or 'Görev'))[:180]}")
         if not any(summary.get(key) for key in ("overdue_count", "upcoming_count", "open_task_count")):
-            lines.append("BugÃ¼n iÃ§in aÃ§Ä±k gÃ¶rev veya hatÄ±rlatÄ±cÄ± yok. Takvim sana kÃ¼smemiÅŸ; sadece boÅŸ bakÄ±yor.")
+            lines.append("Bugün için açık görev veya hatırlatıcı yok. Takvim sana küsmemiş; sadece boş bakıyor.")
         return "\n".join(lines).strip()
 

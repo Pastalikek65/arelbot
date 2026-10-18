@@ -18,7 +18,7 @@ async def test_group_analytics_renders_weekly_summary_with_safe_names():
                 "peak_hour": 21,
                 "top_users": [
                     {"name": "<Admin>", "count": 44},
-                    {"name": "AyÅŸe", "count": 21},
+                    {"name": "Ayşe", "count": 21},
                 ],
             }
 
@@ -26,10 +26,10 @@ async def test_group_analytics_renders_weekly_summary_with_safe_names():
 
     result = await service.render(chat_id=-1001, days=7)
 
-    assert "HAFTALIK GRUP ANALÄ°ZÄ°" in result
+    assert "HAFTALIK GRUP ANALİZİ" in result
     assert "128" in result
     assert "9" in result
-    assert "21:00â€“22:00" in result
+    assert "21:00–22:00" in result
     assert "&lt;Admin&gt;" in result
     assert "<Admin>" not in result
 
@@ -67,7 +67,7 @@ async def test_group_analytics_command_rechecks_admin_and_only_then_reads_data()
 
         async def render(self, chat_id, days):
             self.calls.append((chat_id, days))
-            return "ğŸ“Š Ã–zet"
+            return "📊 Özet"
 
     class Engine:
         db = object()
@@ -102,7 +102,7 @@ async def test_group_analytics_command_rechecks_admin_and_only_then_reads_data()
     await handler.handle_group_analytics_command(Update(), Context())
 
     assert service.calls == [(-1001, 30)]
-    assert message.sent == ["ğŸ“Š Ã–zet"]
+    assert message.sent == ["📊 Özet"]
 
 
 @pytest.mark.asyncio
@@ -156,4 +156,4 @@ async def test_group_analytics_command_blocks_non_admin_before_service_call():
     await handler.handle_group_analytics_command(Update(), Context())
 
     assert len(message.sent) == 1
-    assert "yalnÄ±zca yÃ¶neticiler" in message.sent[0]
+    assert "yalnızca yöneticiler" in message.sent[0]

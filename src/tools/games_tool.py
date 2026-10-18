@@ -20,18 +20,18 @@ logger = logging.getLogger(__name__)
 # theme.  The bank is deliberately local and deterministic in shape so a
 # provider outage can never make a game unusable.
 WORD_GAME_CATEGORIES = {
-    "hayvanlar": ("KEDÄ°LER", "Evcil ve vahÅŸi canlÄ±larÄ± Ã§aÄŸrÄ±ÅŸtÄ±ran kelimeler"),
+    "hayvanlar": ("KEDİLER", "Evcil ve vahşi canlıları çağrıştıran kelimeler"),
     "yemekler": ("MAKARNASI", "Mutfak, tat ve sofra kelimeleri"),
-    "ÅŸehirler": ("Ä°STANBUL", "TÃ¼rkiye ÅŸehirleri ve ÅŸehir yaÅŸamÄ±"),
-    "doÄŸa": ("ORMANLAR", "DoÄŸa, iklim ve arazi kelimeleri"),
-    "bilim": ("BÄ°LÄ°MLER", "Bilim, teknoloji ve keÅŸif kelimeleri"),
-    "spor": ("SPORCULAR", "Spor dallarÄ± ve saha terimleri"),
-    "sanat": ("RESÄ°MLER", "Sanat, mÃ¼zik ve sahne kelimeleri"),
+    "şehirler": ("İSTANBUL", "Türkiye şehirleri ve şehir yaşamı"),
+    "doğa": ("ORMANLAR", "Doğa, iklim ve arazi kelimeleri"),
+    "bilim": ("BİLİMLER", "Bilim, teknoloji ve keşif kelimeleri"),
+    "spor": ("SPORCULAR", "Spor dalları ve saha terimleri"),
+    "sanat": ("RESİMLER", "Sanat, müzik ve sahne kelimeleri"),
     "tarih": ("OSMANLILAR", "Tarih, toplum ve medeniyet kelimeleri"),
-    "teknoloji": ("BÄ°LGÄ°SAYAR", "YazÄ±lÄ±m, internet ve donanÄ±m kelimeleri"),
-    "meslekler": ("DOKTORLAR", "Meslekler ve Ã§alÄ±ÅŸma hayatÄ±"),
-    "uzay": ("YILDIZLAR", "Uzay, gÃ¶k cisimleri ve astronomi"),
-    "genel": ("KELÄ°MELER", "Her konudan dengeli bir kelime havuzu"),
+    "teknoloji": ("BİLGİSAYAR", "Yazılım, internet ve donanım kelimeleri"),
+    "meslekler": ("DOKTORLAR", "Meslekler ve çalışma hayatı"),
+    "uzay": ("YILDIZLAR", "Uzay, gök cisimleri ve astronomi"),
+    "genel": ("KELİMELER", "Her konudan dengeli bir kelime havuzu"),
 }
 
 class GamesTool(BaseTool):
@@ -101,7 +101,7 @@ class GamesTool(BaseTool):
 
             elif game_type == "duel":
                 if not duel_participants or len(duel_participants) < 2:
-                    return "DÃ¼ello iÃ§in bir rakip seÃ§melisin!"
+                    return "Düello için bir rakip seçmelisin!"
                 return self.roulette_game.duel(duel_participants[0], duel_participants[1])
 
             elif game_type == "dice_roll":
@@ -111,18 +111,18 @@ class GamesTool(BaseTool):
                 return self.roulette_game.coin_flip()
 
             elif game_type == "slot_machine":
-                items = ["ğŸ’", "ğŸ‹", "ğŸ‡", "ğŸ’", "7ï¸âƒ£"]
+                items = ["🍒", "🍋", "🍇", "💎", "7️⃣"]
                 result = [random.choice(items) for _ in range(3)]
                 
-                msg = f"ğŸ° <b>SLOT MAKÄ°NESÄ°</b> ğŸ°\n\n"
+                msg = f"🎰 <b>SLOT MAKİNESİ</b> 🎰\n\n"
                 msg += f"| {result[0]} | {result[1]} | {result[2]} |\n\n"
                 
                 if result[0] == result[1] == result[2]:
-                    msg += "ğŸ‰ <b>JACKPOT! KAZANDIN!</b> ğŸ’°"
+                    msg += "🎉 <b>JACKPOT! KAZANDIN!</b> 💰"
                 elif result[0] == result[1] or result[1] == result[2]:
-                    msg += "âœ¨ <b>KÃ¼Ã§Ã¼k Ã–dÃ¼l!</b> Ä°kili yakaladÄ±n!"
+                    msg += "✨ <b>Küçük Ödül!</b> İkili yakaladın!"
                 else:
-                    msg += "âŒ <b>Kaybettin...</b> Tekrar dene! ğŸ€"
+                    msg += "❌ <b>Kaybettin...</b> Tekrar dene! 🍀"
                 return msg
 
             elif game_type == "hangman":
@@ -199,7 +199,7 @@ class GamesTool(BaseTool):
             elif game_type == "batak":
                 # Logic is now mostly in BatakGame, this might be a placeholder or extra logic
                 # Orchestrator calls BatakGame directly for start/join, this might be unused or for different flow
-                return "Batak oyunu baÅŸlatÄ±ldÄ±!"
+                return "Batak oyunu başlatıldı!"
 
             elif game_type == "blackjack":
                 # Returns 1-round simulation result for now
@@ -212,12 +212,12 @@ class GamesTool(BaseTool):
                 # Telegram quiz callbacks keep the answer in their durable
                 # session state and reveal it only after a selection.
                 return (
-                    f"â“ <b>SORU:</b> {qa['question']}\n\n"
-                    f"<i>Kategori: {qa['category']} Â· CevabÄ±nÄ± butondan seÃ§.</i>"
+                    f"❓ <b>SORU:</b> {qa['question']}\n\n"
+                    f"<i>Kategori: {qa['category']} · Cevabını butondan seç.</i>"
                 )
                 
-            return "Oyun tÃ¼rÃ¼ bulunamadÄ±."
+            return "Oyun türü bulunamadı."
             
         except Exception as e:
             logger.error("GamesTool execution failed: %s", summarize_exception(e, label="games"))
-            return "Oyun servisi geÃ§ici olarak kullanÄ±lamÄ±yor."
+            return "Oyun servisi geçici olarak kullanılamıyor."

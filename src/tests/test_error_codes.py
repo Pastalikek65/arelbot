@@ -12,11 +12,11 @@ def test_public_error_message_uses_controlled_code_mapping():
 
     result = public_error_message(
         error,
-        "Ä°ÅŸlem baÅŸarÄ±sÄ±z.",
-        messages={"IMAGE_POLICY_REJECTED": "Ä°stek gÃ¼venlik politikasÄ± nedeniyle reddedildi."},
+        "İşlem başarısız.",
+        messages={"IMAGE_POLICY_REJECTED": "İstek güvenlik politikası nedeniyle reddedildi."},
     )
 
-    assert result == "Ä°stek gÃ¼venlik politikasÄ± nedeniyle reddedildi."
+    assert result == "İstek güvenlik politikası nedeniyle reddedildi."
     assert "private.example" not in result
     assert "secret" not in result
 
@@ -24,7 +24,7 @@ def test_public_error_message_uses_controlled_code_mapping():
 def test_public_error_message_never_echoes_unknown_exception_text():
     error = RuntimeError("token=super-secret /opt/private/config")
 
-    assert public_error_message(error, "GÃ¼venli hata mesajÄ±.") == "GÃ¼venli hata mesajÄ±."
+    assert public_error_message(error, "Güvenli hata mesajı.") == "Güvenli hata mesajı."
 
 
 def test_normalize_error_code_collapses_untrusted_text():
@@ -32,14 +32,14 @@ def test_normalize_error_code_collapses_untrusted_text():
 
 
 def test_public_validation_message_preserves_bounded_parser_feedback():
-    assert public_validation_message(ValueError("Saat 00:00 ile 23:59 arasÄ±nda olmalÄ±."), "GeÃ§ersiz giriÅŸ.") == (
-        "Saat 00:00 ile 23:59 arasÄ±nda olmalÄ±."
+    assert public_validation_message(ValueError("Saat 00:00 ile 23:59 arasında olmalı."), "Geçersiz giriş.") == (
+        "Saat 00:00 ile 23:59 arasında olmalı."
     )
 
 
 def test_public_validation_message_rejects_embedded_secret_or_unbounded_text():
     error = ValueError("token=super-secret https://private.example/config")
-    assert public_validation_message(error, "GeÃ§ersiz giriÅŸ.") == "GeÃ§ersiz giriÅŸ."
+    assert public_validation_message(error, "Geçersiz giriş.") == "Geçersiz giriş."
 
 
 def test_media_error_presentation_never_echoes_provider_text():

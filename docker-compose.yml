@@ -48,6 +48,11 @@ services:
       OBSERVABILITY_PORT: ${OBSERVABILITY_PORT:-9108}
       OBSERVABILITY_WORKER_PORT: ${OBSERVABILITY_WORKER_PORT:-9109}
       OBSERVABILITY_TOKEN_FILE: /run/secrets/arelbot_observability_token
+      GUARDIAN_MODE: ${GUARDIAN_MODE:-disabled}
+      GUARDIAN_SOCKET_PATH: /run/kek-guardian/guardian.sock
+      GUARDIAN_REQUIRE_PEER_CREDENTIALS: ${GUARDIAN_REQUIRE_PEER_CREDENTIALS:-true}
+      GUARDIAN_PEER_UIDS: ${GUARDIAN_PEER_UIDS:-}
+      GUARDIAN_PEER_GIDS: ${GUARDIAN_PEER_GIDS:-}
     # Bind only to the VDS loopback; an HTTPS reverse proxy terminates TLS.
     # WEBHOOK_PORT is intentionally shared by host and container so the
     # operator can change it without an undocumented second setting.
@@ -65,6 +70,7 @@ services:
       - arel_data:/app/data
       - arel_downloads:/app/downloads
       - chroma_data:/app/chroma_db
+      - /run/kek-guardian:/run/kek-guardian:ro
     secrets:
       - arelbot_ca
       - arelbot_observability_token
@@ -116,7 +122,9 @@ services:
     # include both when only the monitoring profile is selected.
     profiles: ["prod", "monitoring"]
     restart: unless-stopped
-    command: ["python", "-m", "src.worker"]
+    # Route the worker through entrypoint.sh so an explicitly mounted extra CA
+    # is merged before provider HTTP clients are initialized.
+    command: ["./entrypoint.sh", "python", "-m", "src.worker"]
     env_file: .env
     environment:
       APP_ROLE: worker
@@ -131,6 +139,11 @@ services:
       OBSERVABILITY_PORT: ${OBSERVABILITY_PORT:-9108}
       OBSERVABILITY_WORKER_PORT: ${OBSERVABILITY_WORKER_PORT:-9109}
       OBSERVABILITY_TOKEN_FILE: /run/secrets/arelbot_observability_token
+      GUARDIAN_MODE: ${GUARDIAN_MODE:-disabled}
+      GUARDIAN_SOCKET_PATH: /run/kek-guardian/guardian.sock
+      GUARDIAN_REQUIRE_PEER_CREDENTIALS: ${GUARDIAN_REQUIRE_PEER_CREDENTIALS:-true}
+      GUARDIAN_PEER_UIDS: ${GUARDIAN_PEER_UIDS:-}
+      GUARDIAN_PEER_GIDS: ${GUARDIAN_PEER_GIDS:-}
     depends_on:
       mongo: { condition: service_healthy }
       redis: { condition: service_healthy }
@@ -143,7 +156,9 @@ services:
       - arel_data:/app/data
       - arel_downloads:/app/downloads
       - chroma_data:/app/chroma_db
+      - /run/kek-guardian:/run/kek-guardian:ro
     secrets:
+      - arelbot_ca
       - arelbot_observability_token
 
   alertmanager:

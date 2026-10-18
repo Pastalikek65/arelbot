@@ -16,7 +16,7 @@ from urllib.parse import urlencode
 from ..contracts import ProviderHealth, ProviderRequest, ProviderResponse
 
 
-_LOCATION_RE = re.compile(r"^[\w][\w .()'â€™/-]{0,78}[\w)]$|^[\w]$", re.UNICODE)
+_LOCATION_RE = re.compile(r"^[\w][\w .()'’/-]{0,78}[\w)]$|^[\w]$", re.UNICODE)
 
 
 def _location(value: Any, field_name: str) -> str:
@@ -46,7 +46,7 @@ class FlightSearchLinkProvider:
 
     name = "search_flights"
     capabilities = {"flight_search", "travel_search_links"}
-    source_name = "Arelbot uÃ§uÅŸ arama baÄŸlantÄ±larÄ±"
+    source_name = "Arelbot uçuş arama bağlantıları"
 
     @staticmethod
     def _build(request: ProviderRequest) -> ProviderResponse[dict[str, Any]]:
@@ -67,26 +67,26 @@ class FlightSearchLinkProvider:
             {
                 "provider": "Google arama",
                 "url": "https://www.google.com/search?" + urlencode(
-                    {"q": f'"{origin}" "{destination}" uÃ§ak bileti {normalized_date or ""}'.strip(), "hl": "tr"}
+                    {"q": f'"{origin}" "{destination}" uçak bileti {normalized_date or ""}'.strip(), "hl": "tr"}
                 ),
             },
             {
                 "provider": "Bing arama",
                 "url": "https://www.bing.com/search?" + urlencode(
-                    {"q": f'"{origin}" "{destination}" uÃ§ak bileti {normalized_date or ""}'.strip(), "cc": "TR"}
+                    {"q": f'"{origin}" "{destination}" uçak bileti {normalized_date or ""}'.strip(), "cc": "TR"}
                 ),
             },
         ]
 
-        route = f"{html.escape(origin)} â†’ {html.escape(destination)}"
-        lines = [f"<b>âœˆï¸ {route} uÃ§uÅŸ aramasÄ±</b>", ""]
+        route = f"{html.escape(origin)} → {html.escape(destination)}"
+        lines = [f"<b>✈️ {route} uçuş araması</b>", ""]
         if normalized_date:
-            lines.extend((f"ğŸ“… Tarih: <b>{html.escape(normalized_date)}</b>", ""))
-        lines.append("GÃ¼ncel sefer ve fiyatlarÄ± arama servislerinde gÃ¶rÃ¼ntÃ¼leyebilirsiniz:")
+            lines.extend((f"📅 Tarih: <b>{html.escape(normalized_date)}</b>", ""))
+        lines.append("Güncel sefer ve fiyatları arama servislerinde görüntüleyebilirsiniz:")
         for item in links:
             safe_url = html.escape(item["url"], quote=True)
-            lines.append(f'â€¢ <a href="{safe_url}">{html.escape(item["provider"])}</a>')
-        lines.extend(("", "<i>Fiyat bilgisi bu botta doÄŸrulanmaz; baÄŸlantÄ±lar arama sayfalarÄ±nÄ± aÃ§ar.</i>"))
+            lines.append(f'• <a href="{safe_url}">{html.escape(item["provider"])}</a>')
+        lines.extend(("", "<i>Fiyat bilgisi bu botta doğrulanmaz; bağlantılar arama sayfalarını açar.</i>"))
         return ProviderResponse(
             data={
                 "origin": origin,

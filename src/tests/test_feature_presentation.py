@@ -21,13 +21,13 @@ def test_feature_result_presentation_is_safe_and_exposes_freshness_metadata():
     rendered = format_feature_result(result, "fallback")
 
     assert rendered.startswith("<b>Kur</b>")
-    assert "Kaynak geÃ§ici olarak kullanÄ±lamadÄ±" in rendered
+    assert "Kaynak geçici olarak kullanılamadı" in rendered
     assert "Kaynak: Fixture provider" in rendered
     assert "javascript:" not in rendered
-    assert "Veri zamanÄ±: 10.10.2026 10:00" in rendered
+    assert "Veri zamanı: 10.10.2026 10:00" in rendered
 
 
 def test_feature_result_presentation_uses_controlled_fallback_for_failure():
     result = FeatureResult.failure("PROVIDER_UNAVAILABLE", "private upstream detail")
 
-    assert format_feature_result(result, "<b>Veri alÄ±namadÄ±.</b>") == "<b>Veri alÄ±namadÄ±.</b>"
+    assert format_feature_result(result, "<b>Veri alınamadı.</b>") == "<b>Veri alınamadı.</b>"

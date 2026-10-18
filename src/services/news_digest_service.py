@@ -63,9 +63,9 @@ class NewsDigestService:
                 response=response,
             )
         except ValueError as exc:
-            return FeatureResult.failure(str(exc).upper(), "Haber sayÄ±sÄ± isteÄŸini kontrol edin.")
+            return FeatureResult.failure(str(exc).upper(), "Haber sayısı isteğini kontrol edin.")
         except Exception:
-            return FeatureResult.failure("NEWS_PROVIDER_UNAVAILABLE", "Haber akÄ±ÅŸÄ± ÅŸu an alÄ±namÄ±yor.")
+            return FeatureResult.failure("NEWS_PROVIDER_UNAVAILABLE", "Haber akışı şu an alınamıyor.")
 
     async def fetch_items(self, limit: int = 8) -> list[dict[str, str]]:
         result = await self.fetch_result(limit)
@@ -77,13 +77,13 @@ class NewsDigestService:
         result = await self.fetch_result()
         items = list((result.data or {}).get("items") or []) if result.ok else []
         if not items:
-            return "ğŸ“° Haber akÄ±ÅŸÄ± ÅŸu an alÄ±namÄ±yor. Biraz sonra tekrar dene."
+            return "📰 Haber akışı şu an alınamıyor. Biraz sonra tekrar dene."
 
         raw = "\n".join(f"- {item.get('title', '')}" for item in items[:8])
         if self.chat_engine and chat_id:
             prompt = (
-                "AÅŸaÄŸÄ±daki haber baÅŸlÄ±klarÄ±nÄ± TÃ¼rkÃ§e, tarafsÄ±z ve beÅŸ maddelik kÄ±sa "
-                "gÃ¼nlÃ¼k Ã¶zet haline getir. Kaynakta olmayan ayrÄ±ntÄ± uydurma:\n" + raw
+                "Aşağıdaki haber başlıklarını Türkçe, tarafsız ve beş maddelik kısa "
+                "günlük özet haline getir. Kaynakta olmayan ayrıntı uydurma:\n" + raw
             )
             summary = await self.chat_engine.get_response(
                 chat_id,
@@ -94,20 +94,20 @@ class NewsDigestService:
                 purpose="news_digest_summary",
             )
             if summary:
-                return f"ğŸ“° <b>AI HABER Ã–ZETÄ°</b>\n\n{sanitize_html(summary)}"
+                return f"📰 <b>AI HABER ÖZETİ</b>\n\n{sanitize_html(summary)}"
 
-        lines = ["ğŸ“° <b>GÃœNCEL HABER Ã–ZETÄ°</b>", ""]
+        lines = ["📰 <b>GÜNCEL HABER ÖZETİ</b>", ""]
         for index, item in enumerate(items[:5], 1):
             title = html.escape(str(item.get("title", "")))
             link = html.escape(str(item.get("link", "")), quote=True)
             lines.append(f'{index}. <a href="{link}">{title}</a>' if link else f"{index}. {title}")
         if result.stale:
-            lines.append("\n<i>Kaynak geÃ§ici olarak kullanÄ±lamadÄ±; Ã¶nbellekteki son veri gÃ¶steriliyor.</i>")
+            lines.append("\n<i>Kaynak geçici olarak kullanılamadı; önbellekteki son veri gösteriliyor.</i>")
         if result.source:
             source = html.escape(result.source)
             lines.append(f"<i>Kaynak: {source}</i>")
         if result.fetched_at:
             fetched = result.fetched_at.astimezone().strftime("%d.%m.%Y %H:%M")
-            lines.append(f"<i>Veri zamanÄ±: {html.escape(fetched)}</i>")
+            lines.append(f"<i>Veri zamanı: {html.escape(fetched)}</i>")
         return "\n".join(lines)
 

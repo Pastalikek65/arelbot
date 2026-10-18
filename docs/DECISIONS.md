@@ -1,33 +1,33 @@
 # Mimari Kararlar
 
-## ADR-001 â€” Yerel ÅŸehir snapshot'Ä±
+## ADR-001 — Yerel şehir snapshot'ı
 
-Åehir sorgularÄ± dÄ±ÅŸ API'ye baÄŸlÄ± olmadan deterministik ve hÄ±zlÄ± Ã§alÄ±ÅŸmalÄ±dÄ±r.
-Bu nedenle 81 il/973 ilÃ§e verisi sÃ¼rÃ¼mlÃ¼ snapshot olarak tutulur ve kontrollÃ¼
-script ile gÃ¼ncellenir.
+Şehir sorguları dış API'ye bağlı olmadan deterministik ve hızlı çalışmalıdır.
+Bu nedenle 81 il/973 ilçe verisi sürümlü snapshot olarak tutulur ve kontrollü
+script ile güncellenir.
 
-## ADR-002 â€” Typed feature registry
+## ADR-002 — Typed feature registry
 
-Komut, callback, inline ve AI yÃ¼zlerinin aynÄ± iÅŸ kuralÄ±nÄ± kullanmasÄ± iÃ§in
-feature metadata ve provider sÃ¶zleÅŸmesi Telegram katmanÄ±ndan ayrÄ±lmÄ±ÅŸtÄ±r.
+Komut, callback, inline ve AI yüzlerinin aynı iş kuralını kullanması için
+feature metadata ve provider sözleşmesi Telegram katmanından ayrılmıştır.
 
-## ADR-003 â€” Harici hesap yok
+## ADR-003 — Harici hesap yok
 
-KullanÄ±cÄ±dan ekstra hesap, parola veya cookie kurulumu istenmez. KiÅŸisel not,
-gÃ¶rev ve hatÄ±rlatÄ±cÄ±lar Telegram kimliÄŸiyle yerel MongoDB kaydÄ±nda tutulur.
+Kullanıcıdan ekstra hesap, parola veya cookie kurulumu istenmez. Kişisel not,
+görev ve hatırlatıcılar Telegram kimliğiyle yerel MongoDB kaydında tutulur.
 
-## ADR-004 â€” GPL kod kopyalanmaz
+## ADR-004 — GPL kod kopyalanmaz
 
-KekikSpatula ve TRSehirler Ã¶zellik kapsamÄ± referans alÄ±nÄ±r; kaynak kodu
-doÄŸrudan kopyalanmaz. KullanÄ±lan veri ve paketler lisans envanterine eklenir.
+KekikSpatula ve TRSehirler özellik kapsamı referans alınır; kaynak kodu
+doğrudan kopyalanmaz. Kullanılan veri ve paketler lisans envanterine eklenir.
 
-## ADR-005 â€” UÃ§uÅŸlarda doÄŸrulanmÄ±ÅŸ arama baÄŸlantÄ±larÄ±
+## ADR-005 — Uçuşlarda doğrulanmış arama bağlantıları
 
-Google Flights ve benzeri arama sayfalarÄ±nÄ±n HTML yapÄ±sÄ± kararsÄ±zdÄ±r; scraping
-ile gÃ¶sterilen fiyatlar eksik veya yanlÄ±ÅŸ olabilir. `/ucak` bu nedenle canlÄ±
+Google Flights ve benzeri arama sayfalarının HTML yapısı kararsızdır; scraping
+ile gösterilen fiyatlar eksik veya yanlış olabilir. `/ucak` bu nedenle canlı
 fiyat uydurmaz ve harici hesap istemez. Typed local provider, route ve tarih
-alanlarÄ±nÄ± doÄŸrular, sabit HTTPS host'larÄ±na arama baÄŸlantÄ±larÄ± Ã¼retir ve
-kullanÄ±cÄ±ya fiyatÄ±n hedef sitede doÄŸrulanmasÄ± gerektiÄŸini bildirir.
+alanlarını doğrular, sabit HTTPS host'larına arama bağlantıları üretir ve
+kullanıcıya fiyatın hedef sitede doğrulanması gerektiğini bildirir.
 
 
 ## ADR-006 - User notification quiet hours
@@ -74,40 +74,40 @@ the operation records whether catalog reconciliation is still needed.
 
 ## ADR-012 - Telegram bootstrap boundary
 
-`main.py` yalnÄ±zca uygulama oluÅŸturma, lifecycle callback'leri, komut kaydÄ± ve Ã§alÄ±ÅŸma modunu seÃ§er. KullanÄ±cÄ±ya gÃ¶rÃ¼nen start/help yÃ¼zeyleri ve yÃ¶netim iÅŸ kurallarÄ± `Orchestrator` iÃ§inde tutulur; bÃ¶ylece testler Telegram Application baÅŸlatmadan Ã§alÄ±ÅŸtÄ±rÄ±labilir ve handler katmanÄ± repository/provider sÄ±nÄ±rlarÄ±nÄ± ihlal etmez.
+`main.py` yalnızca uygulama oluşturma, lifecycle callback'leri, komut kaydı ve çalışma modunu seçer. Kullanıcıya görünen start/help yüzeyleri ve yönetim iş kuralları `Orchestrator` içinde tutulur; böylece testler Telegram Application başlatmadan çalıştırılabilir ve handler katmanı repository/provider sınırlarını ihlal etmez.
 
-## ADR-013 - YÃ¶netim Ã§Ä±ktÄ±larÄ±nda gÃ¼venli HTML
+## ADR-013 - Yönetim çıktılarında güvenli HTML
 
-## ADR-048 - EVREN geÃ§ici hata dayanÄ±klÄ±lÄ±ÄŸÄ±
+## ADR-048 - EVREN geçici hata dayanıklılığı
 
-EVREN tekil birincil sohbet saÄŸlayÄ±cÄ±sÄ± olarak kullanÄ±lÄ±r; geÃ§ici 429, baÄŸlantÄ±
-kopmasÄ± ve zaman aÅŸÄ±mÄ± yanÄ±tlarÄ± kota tÃ¼kenmesiyle aynÄ± ÅŸey deÄŸildir. OpenAI
-uyumlu adapter bu hatalarÄ± sÄ±nÄ±rlÄ± geri Ã§ekilmeyle yeniden dener ve yalnÄ±zca
-upstream aÃ§Ä±kÃ§a kota sinyali verirse uzun cooldown uygular. YanÄ±t gÃ¶vdesi
-saklanmaz veya loglanmaz; kalÄ±cÄ± kota/kimlik hatasÄ± kullanÄ±cÄ±ya gÃ¼venli genel
-hata ile dÃ¶ner.
+EVREN tekil birincil sohbet sağlayıcısı olarak kullanılır; geçici 429, bağlantı
+kopması ve zaman aşımı yanıtları kota tükenmesiyle aynı şey değildir. OpenAI
+uyumlu adapter bu hataları sınırlı geri çekilmeyle yeniden dener ve yalnızca
+upstream açıkça kota sinyali verirse uzun cooldown uygular. Yanıt gövdesi
+saklanmaz veya loglanmaz; kalıcı kota/kimlik hatası kullanıcıya güvenli genel
+hata ile döner.
 
-YÃ¶netici duyurularÄ± ve grup listeleri Telegram HTML parse moduna girmeden Ã¶nce dinamik metinleri escape eder. Yetki reddi sessizce iÅŸlenir; baÅŸarÄ±lÄ±/baÅŸarÄ±sÄ±z yÃ¶netim iÅŸlemleri maskeli audit kayÄ±tlarÄ±yla izlenir.
+Yönetici duyuruları ve grup listeleri Telegram HTML parse moduna girmeden önce dinamik metinleri escape eder. Yetki reddi sessizce işlenir; başarılı/başarısız yönetim işlemleri maskeli audit kayıtlarıyla izlenir.
 
 
 ## ADR-014 - Local coordinate resolution for public geo providers
 
-Hava kalitesi gibi konum tabanlÄ± public provider'lar koordinatÄ± Telegram metninden veya kullanÄ±cÄ±nÄ±n verdiÄŸi URL'den almaz. Åehir ve plaka yerel checksum'lÄ± snapshot'tan Ã§Ã¶zÃ¼lÃ¼r; bÃ¶ylece TÃ¼rkÃ§e karakterler, cache anahtarlarÄ± ve SSRF sÄ±nÄ±rlarÄ± aynÄ± domain kuralÄ±yla korunur.
+Hava kalitesi gibi konum tabanlı public provider'lar koordinatı Telegram metninden veya kullanıcının verdiği URL'den almaz. Şehir ve plaka yerel checksum'lı snapshot'tan çözülür; böylece Türkçe karakterler, cache anahtarları ve SSRF sınırları aynı domain kuralıyla korunur.
 
 ## ADR-015 - Observable nested FSM state
 
-Redis'teki geÃ§ici sihirbaz payload'larÄ± JSON uyumlu ve kullanÄ±cÄ± kapsamÄ±dÄ±r.
-Ä°Ã§ iÃ§e sÃ¶zlÃ¼k ve liste mutasyonlarÄ±nÄ± izleyen tracked container'lar kullanÄ±lÄ±r;
-aksi halde bir sticker/quote adÄ±mÄ±nda yapÄ±lan `append` veya `pop` iÅŸlemi state
-haritasÄ±nda gÃ¶rÃ¼nÃ¼rken Redis'e yazÄ±lmayabilir ve yeniden baÅŸlatma sonrasÄ± akÄ±ÅŸ
-bozulurdu. Memory backend yalnÄ±zca test ve geliÅŸtirme iÃ§indir.
+Redis'teki geçici sihirbaz payload'ları JSON uyumlu ve kullanıcı kapsamıdır.
+İç içe sözlük ve liste mutasyonlarını izleyen tracked container'lar kullanılır;
+aksi halde bir sticker/quote adımında yapılan `append` veya `pop` işlemi state
+haritasında görünürken Redis'e yazılmayabilir ve yeniden başlatma sonrası akış
+bozulurdu. Memory backend yalnızca test ve geliştirme içindir.
 
-## ADR-016 - KullanÄ±cÄ± odaklÄ± bildirim yÃ¼zeyi
+## ADR-016 - Kullanıcı odaklı bildirim yüzeyi
 
-Bildirim merkezi `/bildirim` ve kÄ±sa iÅŸlem akÄ±ÅŸlarÄ± `/takip` Ã¼zerinden sunulur.
-Eski teknik `/abonelik` alias'Ä± komut menÃ¼sÃ¼nden kaldÄ±rÄ±ldÄ±; kullanÄ±cÄ±ya aynÄ±
-iÅŸi anlatan iki eÅŸdeÄŸer olmayan kavram gÃ¶sterilmez. Grup bildirimleri yine
-yalnÄ±zca admin yetkisiyle ve inline panel Ã¼zerinden yÃ¶netilir.
+Bildirim merkezi `/bildirim` ve kısa işlem akışları `/takip` üzerinden sunulur.
+Eski teknik `/abonelik` alias'ı komut menüsünden kaldırıldı; kullanıcıya aynı
+işi anlatan iki eşdeğer olmayan kavram gösterilmez. Grup bildirimleri yine
+yalnızca admin yetkisiyle ve inline panel üzerinden yönetilir.
 
 
 ## ADR-017 - Global media inflight coalescing
@@ -174,7 +174,7 @@ without exposing upstream response bodies.
 
 ## ADR-024 - Bounded OpenAI-compatible AI transport
 
-OpenAI-compatible providers, including Clean APIs, use one adapter contract
+OpenAI-compatible providers such as EVREN and NVIDIA use one adapter contract
 that rejects non-HTTPS, credential-bearing, private or query-bearing base URLs
 before a request is made. Completion messages, response text, transcription
 output, embeddings and token budgets are bounded and validated. Deterministic
@@ -295,7 +295,7 @@ error immediately, records a separate validation metric, and leaves circuit
 health and fallback order unchanged. Upstream protocol or transport failures
 remain provider failures and continue to participate in health scoring and
 failover. This prevents one oversized or malformed request from disabling a
-healthy Clean APIs/DeepSeek route for unrelated users.
+healthy active AI route for unrelated users.
 
 ## ADR-037 - User labels use one bounded turn envelope
 
@@ -323,16 +323,9 @@ when it passes the shared validation boundary. Unknown provider text falls back
 to a generic message, while the original typed exception remains available to
 internal retry and telemetry paths.
 
-## ADR-040 - Clean APIs live checks archive metadata, never model content
+## ADR-040 - Clean APIs retirement is fail-closed
 
-The configured Clean APIs/DeepSeek route is a production dependency, so a
-successful unit fixture is not enough to prove its deployment configuration.
-`scripts/cleanapis_staging.py` provides an explicit three-signal live gate and
-sends one bounded fixed prompt. Its evidence records only provider identity,
-model identity, latency, response size and whether usage metadata exists. API
-keys, prompts, completions and upstream exception text are excluded. The probe
-is a connectivity/configuration signal and does not imply the separate source
-terms or production-governance approval required by the release preflight.
+Clean APIs is retired from the active Arelbot provider route by product decision. The legacy adapter and historical evidence remain only for backwards-compatible fixture inspection. Runtime routing drops stale cleanapis entries and never sends credentials or requests to that gateway. EVREN is the replacement route and uses the bounded evren-staging evidence contract; no Clean APIs live probe is part of release validation.
 
 ## ADR-041 - Provider approval reviews use a non-loadable worksheet
 
@@ -358,7 +351,7 @@ while repetitive sarcasm is discouraged before provider routing.
 ## ADR-043 - Current-information chat uses governed web evidence
 
 Natural-language questions that combine a high-signal current-information
-entity (for example KPSS, Ã–SYM, an exam or an application) with a date/time
+entity (for example KPSS, ÖSYM, an exam or an application) with a date/time
 request are routed through the typed `web_search` feature. The chat engine
 prefetches one bounded result when possible, labels it as untrusted external
 context, and still exposes the allowlisted search tool for clarification.
@@ -413,3 +406,105 @@ update, then the status message is removed after the final attempt. Private
 chats retain the safe, mapped error message. This keeps provider diagnostics
 out of group timelines without weakening SSRF, file-size or public-source
 policies.
+
+## ADR-2026-10-17 Guardian as a sidecar provider
+
+Decision: keep Kek Guardian as a separate server-side moderation engine and do not copy its code into Arel. Only Arel remains in Telegram groups and performs Telegram actions. The current VDS process is a Telegram polling bot without the Unix/RPC bridge required by Arel, so the integration remains disabled until a real evaluator-backed bridge is deployed.
+
+Reasons: one action authority prevents duplicate bans/deletes, the Unix socket gives a bounded local trust boundary, and the separation allows independent Guardian upgrades and rollback. The rollout is disabled -> shadow -> owner canary -> active.
+
+## ADR-2026-10-17 Guardian command surface inside Arel
+
+The Telegram command surface is embedded in Arel through a typed
+`GuardianCommandService`. Guardian's canonical moderation names are published
+by Arel and the older Turkish/Arel names are compatibility aliases only. Every
+destructive operation passes through the existing authorization, idempotency
+ledger and Telegram action executor. The optional `/root/guardian` process
+remains an evaluator/provider and is not required for Arel to expose the
+commands.
+## ADR-048 — Guardian full surface port
+
+The complete Kek Guardian command vocabulary and its group-scoped operational
+features are now owned by Arel's `GuardianSurface`. The port preserves the
+Guardian command names and behavior categories (administration, anti-link,
+anti-flood, captcha, locks, blocklists, greetings, notes, aliases, roles,
+federation state, global bans and recurring settings) while translating them
+to Arel's Mongo repository, typed Telegram action executor and callback
+boundary. Legacy Guardian SQLAlchemy/Telethon modules, databases and login
+sessions are not imported into the bot process.
+
+The separate VDS `kek-guardian.service` is disabled for the Arel bot token.
+Running both polling processes would create duplicate updates and two action
+authorities. Arel remains the only Telegram bot in groups; a future external
+Guardian evaluator may still be attached through the authenticated socket
+contract, but it is optional and cannot override Arel's authorization or
+idempotency ledger.
+
+## ADR-049 — Guardian compatibility depth and Telegram limits
+
+Guardian'ın kalan operasyon komutları typed, grup kapsamlı durum değişiklikleri
+ve sınırlandırılmış transport işlemleri olarak uygulanır. Admin izin profilleri,
+hayalet ban, reaksiyon/medya paketi korumaları, saklama tabanlı üye inceleme,
+federasyon not/log/abonelikleri, risk özetleri ve yedek içe/dışa aktarma Arel'in
+repository, yetkilendirme ve audit sınırlarını kullanır. Telegram işlemi
+başarısızsa komut sahte başarı mesajı üretmez.
+
+Telegram botları geçmiş üye dizinini veya sınırsız mesaj aramasını açmaz. Bu
+nedenle zombie/member-log özellikleri Arel'in saklanan aktivite penceresini,
+purge ise ardışık mesaj kimliklerinden oluşan sınırlı aralığı kullanır. Bu,
+gizli bir kullanıcı hesabı veya sınırsız ikinci veri deposu eklememek için
+bilinçli bir protokol kararıdır.
+
+## ADR-050 - Shared game session and round-scoped actions
+
+Interactive games use one versioned session contract instead of separate
+callback-only state machines. Every session is scoped to a chat, has bounded
+players and expiry, and is persisted with compare-and-set semantics. Telegram
+buttons carry a round identifier and every mutation is claimed through the
+idempotent game action ledger. This prevents stale buttons, duplicate rewards
+and restart races while keeping the existing word, card and social game
+surfaces backward compatible.
+
+Connect Four is the first new board game on this contract: a two-player,
+six-by-seven game with a lobby, turn ownership, column validation, win/draw
+detection and owner/admin cancellation. It is exposed through `/connect4`, the
+button-based game menu and the feature registry.
+
+## ADR-051 - Expanded board-game surface with XOX
+
+XOX uses the same persisted chat-scoped state and round-scoped callback contract as Connect Four. New rounds select 6x6, 7x7 or 8x8 and require four consecutive marks; the domain still reads legacy 3x3 snapshots during recovery. Its transitions stay in `src/services/tictactoe_ui.py`; Telegram handlers only validate scope, claim the action ledger, persist state and render the next panel. This keeps a restarted process, an old inline panel, or a repeated callback from changing another round.
+
+## ADR-052 - Versioned board metadata and atomic game recovery
+
+Game definitions own the durable state schema. XOX and Connect Four publish a
+schema version, stable state key, board dimensions and connect length in both
+the runtime feature registry and each `GameSession` record. The persistence
+boundary validates these fields before accepting a snapshot. In-memory and
+durable implementations must expose compare-and-set saves, chat/game scoped
+state keys, defensive reads and all-or-nothing recovery. This prevents a stale
+or malformed callback from mutating a different board and gives migrations a
+safe compatibility check before a new schema is enabled.
+
+## ADR-053 - Gomoku core and replayable progression
+
+Gomoku is implemented as an immutable, dependency-free Connect-N core rather
+than embedding board rules in Telegram callbacks. Arel exposes bounded 6–15
+boards with five-in-a-row, canonical move replay and round/message/topic
+callback binding. The same persistence and action-ledger contracts used by
+XOX and Connect Four protect restart recovery and duplicate callbacks.
+
+Game rewards are accepted as bounded progression events with an idempotency
+key. Cooldown, rolling-window and daily caps prevent score farming; seasonal
+leaderboards and achievements are deterministic projections that can be
+rebuilt from the event ledger. The progression domain has no network or
+Telegram dependency, so a provider or handler cannot bypass score policy.
+
+## ADR-054 - Guardian target resolution
+
+Guardian kullanıcı hedefleri reply, sayısal Telegram ID veya Arel'in daha
+önce gözlemlediği kullanıcı adı ile çözümlenir. Bot API genel bir kullanıcı adı
+arama uç noktası sunmadığı için kullanıcı adı önce repository profilinden
+bulunur, ardından aynı grup için `get_chat_member` ile doğrulanır. Kayıtlı veya
+aktif üyeliği doğrulanamayan hedeflerde işlem fail-closed olur ve kullanıcıdan
+hedef mesaja yanıt vermesi istenir; böylece başka gruptaki aynı görünen isim
+üzerinden moderasyon yapılamaz.

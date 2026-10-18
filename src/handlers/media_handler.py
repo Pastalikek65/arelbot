@@ -12,12 +12,21 @@ from telegram.ext import ContextTypes
 from src.media.cookie_vault import CookieVaultError
 from src.security.log_redaction import summarize_exception
 from src.storage.state_scope import get_scoped_state, pop_scoped_state, set_scoped_state
+from src.media.url_normalizer import extract_media_url
+from src.moderation.event_normalizer import build_moderation_event
+from src.moderation.contracts import ModerationAction
+from src.moderation.action_executor import TelegramModerationActionExecutor
+from src.moderation.action_ledger import ModerationActionLedger
+from src.moderation.authorization import TelegramModerationAuthorization
+from src.moderation.guardian_enforcement import evaluate_guardian_message
+from src.moderation.telegram_guardian_service import GuardianTelegramService
+from src.handlers.handler_utils import is_group_admin
 
 logger = logging.getLogger(__name__)
 
 
 class MediaHandler:
-    def __init__(self, chat_engine, sudo_manager, tool_manager, vision_service=None, stt_service=None, tts_service=None, media_service=None, sticker_render_service=None, document_service=None, attachment_service=None):
+    def __init__(self, chat_engine, sudo_manager, tool_manager, vision_service=None, stt_service=None, tts_service=None, media_service=None, sticker_render_service=None, document_service=None, attachment_service=None, moderation_service=None, moderation_action_ledger=None, authorization=None):
         self.chat_engine = chat_engine
         self.sudo_manager = sudo_manager
         self.tool_manager = tool_manager
@@ -28,10 +37,116 @@ class MediaHandler:
         self.document_service = document_service
         self.sticker_render_service = sticker_render_service
         self.attachment_service = attachment_service
+        self.moderation_service = moderation_service
+        self.moderation_action_ledger = moderation_action_ledger
+        self.authorization = authorization
+        self.guardian_telegram_service = GuardianTelegramService()
+        self.data_port = None
         self.user_states = {}
 
-    async def handle_photo(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+    async def moderate_update(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
+        """Consume a blocked media update through the shared action boundary."""
+        chat = getattr(update, "effective_chat", None)
+        if getattr(chat, "type", None) not in {"group", "supergroup"} or not self.moderation_service:
+            return False
+        user = getattr(update, "effective_user", None)
+        if user is None:
+            return False
+        is_admin = bool(self.sudo_manager and self.sudo_manager.is_sudo(getattr(user, "id", 0))) or await is_group_admin(
+            update, context, authorization=self.authorization
+        )
+        event = build_moderation_event(update, is_admin=is_admin)
+        if event is None:
+            return False
+        try:
+            settings = await self.data_port.get_chat_settings(chat.id) if hasattr(self, "data_port") and self.data_port else None
+        except Exception:
+            logger.warning("Could not load group media moderation settings")
+            # Do not emit a group-facing error or execute a default policy;
+            # independent media routing may continue.
+            return False
+        if settings is None:
+            return False
+        settings = dict(settings)
+        settings["_sender_is_bot"] = bool(getattr(user, "is_bot", False))
+        if await self.guardian_telegram_service.enforce_pending_captcha(
+            bot=getattr(context, "bot", None),
+            chat_id=int(chat.id),
+            user_id=int(user.id),
+            message=update.effective_message,
+            settings=settings,
+            is_admin=is_admin,
+            data_port=self.data_port,
+        ):
+            return True
+        if await self.guardian_telegram_service.enforce_fsub(
+            bot=getattr(context, "bot", None),
+            chat_id=int(chat.id),
+            user_id=int(user.id),
+            message=update.effective_message,
+            settings=settings,
+            is_admin=is_admin,
+        ):
+            return True
+        guardian_user = {}
+        try:
+            if self.data_port and hasattr(self.data_port, "get_user"):
+                guardian_user = await self.data_port.get_user(int(event.user_id)) or {}
+        except Exception:
+            guardian_user = {}
+        guardian_decision = evaluate_guardian_message(
+            attachment_type=event.attachment_type,
+            settings=settings,
+            user=guardian_user,
+            user_id=getattr(event, "user_id", None),
+            text=getattr(event, "caption", None) or "",
+            sticker_set_name=getattr(event, "sticker_set_name", None),
+            attachment_id=getattr(event, "attachment_id", None),
+            is_edited=bool(getattr(event, "is_edited", False)),
+            is_admin=is_admin,
+        )
+        decision = guardian_decision if not guardian_decision.allowed else await self.moderation_service.evaluate_event(event, settings)
+        media_url = extract_media_url(getattr(update.effective_message, "caption", None) or "")
+        if media_url and getattr(decision, "reason", None) == "link_filter":
+            return False
+        if getattr(decision, "allowed", True):
+            return False
+        action_name = {"delete": "delete_message", "mute": "mute", "ban": "ban"}.get(
+            str(getattr(decision, "action", "") or "").casefold()
+        )
+        if action_name:
+            actor_id = int(getattr(getattr(context, "bot", None), "id", 0) or 1)
+            action = ModerationAction(
+                action=action_name,
+                chat_id=event.chat_id,
+                actor_id=actor_id,
+                target_user_id=event.user_id,
+                target_message_id=event.message_id,
+                thread_id=event.thread_id,
+                reason=str(getattr(decision, "reason", None) or "moderation")[:128],
+                metadata={
+                    "source": "local_moderation",
+                    "policy_version": int(getattr(event, "settings_version", 1)),
+                    "generation_id": f"telegram:{event.chat_id}:{event.message_id}",
+                },
+            )
+            executor = TelegramModerationActionExecutor(
+                context.bot,
+                ledger=self.moderation_action_ledger or ModerationActionLedger(),
+                permission_checker=TelegramModerationAuthorization(
+                    context.bot,
+                    bot_id=getattr(context.bot, "id", None),
+                ),
+            )
+            result = await executor.execute(action)
+            if getattr(result, "status", None) == "rejected" and getattr(result, "error_code", None) == "permission_denied":
+                return False
+        return True
+
+    async def handle_photo(self, update: Update, context: ContextTypes.DEFAULT_TYPE, *, skip_moderation: bool = False):
         if not update.message or not update.message.photo:
+            return
+        if not skip_moderation and await self.moderate_update(update, context):
             return
 
         # A photo is passive input by default.  It enters the attachment
@@ -166,8 +281,10 @@ class MediaHandler:
             sticker_kind="static" if action == "sticker" else None,
         )
 
-    async def handle_document(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+    async def handle_document(self, update: Update, context: ContextTypes.DEFAULT_TYPE, *, skip_moderation: bool = False):
         if not update.message or not update.message.document:
+            return
+        if not skip_moderation and await self.moderate_update(update, context):
             return
 
         doc = update.message.document
@@ -260,8 +377,10 @@ class MediaHandler:
             logger.warning("Document enqueue failed: %s", summarize_exception(exc, label="document_enqueue"))
             await status_msg.edit_text("❌ Belge kuyruğa alınamadı; dosya sınırlarını kontrol edip tekrar dene.", parse_mode="HTML")
 
-    async def handle_voice(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+    async def handle_voice(self, update: Update, context: ContextTypes.DEFAULT_TYPE, *, skip_moderation: bool = False):
         if not update.message or not update.message.voice:
+            return
+        if not skip_moderation and await self.moderate_update(update, context):
             return
 
         if not await self._should_respond(update, context):
@@ -353,5 +472,4 @@ class MediaHandler:
             return True
 
         return False
-
 

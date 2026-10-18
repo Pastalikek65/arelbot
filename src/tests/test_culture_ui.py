@@ -13,7 +13,7 @@ def _buttons(markup):
 
 def test_culture_category_panel_is_owner_scoped_and_bounded():
     text, markup = culture_category_panel(123)
-    assert "KÃ¼ltÃ¼r Ã¶nerileri" in text
+    assert "Kültür önerileri" in text
     callbacks = [button.callback_data for button in _buttons(markup)]
     assert callbacks == ["culture:123:movie", "culture:123:series", "culture:123:book", "culture:123:music"]
     assert all(len(value.encode("utf-8")) <= 64 for value in callbacks)
@@ -45,7 +45,7 @@ async def test_culture_callback_rejects_other_owner():
     handler = CallbackHandler(SimpleNamespace(), SimpleNamespace(owner_id=1), None)
     await handler._handle_culture_callback(update, query, "culture:123:book")
     assert query.edited is None
-    assert query.answer_args and "baÅŸka bir kullanÄ±cÄ±ya" in query.answer_args[0][0]
+    assert query.answer_args and "başka bir kullanıcıya" in query.answer_args[0][0]
 
 
 @pytest.mark.asyncio

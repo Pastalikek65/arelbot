@@ -103,7 +103,7 @@ async def test_stpack_rename_is_owner_scoped_and_uses_typed_service():
         effective_user=SimpleNamespace(id=42),
         effective_chat=SimpleNamespace(id=42, type="private"),
     )
-    context = SimpleNamespace(args=["yenile", "arel_fun_by_bot", "Yeni", "BaÅŸlÄ±k"], bot=bot)
+    context = SimpleNamespace(args=["yenile", "arel_fun_by_bot", "Yeni", "Başlık"], bot=bot)
     handler = CommandHandler(
         SimpleNamespace(db=db), None, None, None,
         sticker_pack_service=StickerPackService(db),
@@ -111,8 +111,8 @@ async def test_stpack_rename_is_owner_scoped_and_uses_typed_service():
 
     await handler.handle_stpack_command(update, context)
 
-    assert bot.calls == [("rename", "arel_fun_by_bot", "Yeni BaÅŸlÄ±k")]
-    assert "gÃ¼ncellendi" in message.replies[-1][0]
+    assert bot.calls == [("rename", "arel_fun_by_bot", "Yeni Başlık")]
+    assert "güncellendi" in message.replies[-1][0]
 
 
 @pytest.mark.asyncio
@@ -139,7 +139,7 @@ async def test_packs_command_explains_pending_private_wizard_step():
     await handler.handle_packs_command(update, _Context())
 
     assert "1-3 emoji" in message.replies[-1][0]
-    assert "Ã¶zel sohbette" in message.replies[-1][0]
+    assert "özel sohbette" in message.replies[-1][0]
     markup = message.replies[-1][1]["reply_markup"]
     assert markup.inline_keyboard[0][0].callback_data == "stk_cancel_pack:42"
 
@@ -162,7 +162,7 @@ async def test_packs_command_in_group_offers_private_chat_button():
 
     markup = message.replies[-1][1]["reply_markup"]
     assert markup.inline_keyboard[0][0].url == "https://t.me/arel_test_bot"
-    assert "Ã¶zel sohbette" in message.replies[-1][0]
+    assert "özel sohbette" in message.replies[-1][0]
 
 
 @pytest.mark.asyncio
@@ -196,7 +196,7 @@ async def test_stpack_delete_callback_requires_owner_before_remote_delete():
 
     assert bot.calls == []
     assert db.deleted == []
-    assert any(args and "baÅŸka" in str(args[0]).lower() for args, _ in query.answers)
+    assert any(args and "başka" in str(args[0]).lower() for args, _ in query.answers)
 
 
 @pytest.mark.asyncio
@@ -315,10 +315,10 @@ async def test_sticker_creation_fsm_persists_title_emoji_and_waits_for_name():
     assert "1-3 emoji" in sent[-1][0]
     assert "**" not in sent[-1][0]
 
-    update.message.text = "ğŸ˜€ ğŸ˜‚"
+    update.message.text = "😀 😂"
     await handler._handle_pack_emoji_input(update, context)
     assert handler.user_states[42]["state"] == "awaiting_pack_name"
-    assert handler.user_states[42]["data"]["emojis"] == ["ğŸ˜€", "ğŸ˜‚"]
+    assert handler.user_states[42]["data"]["emojis"] == ["😀", "😂"]
     update.message.text = "arel_komik"
     await handler._handle_pack_name_input(update, context)
     assert handler.user_states[42]["state"] == "awaiting_pack_confirmation"
@@ -366,7 +366,7 @@ async def test_sticker_creation_confirmation_calls_telegram_once_and_clears_stat
                 "file_id": "file-1",
                 "full_pack_name": "arel_fun_by_bot",
                 "title": "Arel Fun",
-                "emojis": ["ğŸ˜€", "ğŸ˜‚"],
+                "emojis": ["😀", "😂"],
                 "is_video": False,
             },
         }
@@ -395,10 +395,10 @@ async def test_sticker_creation_confirmation_calls_telegram_once_and_clears_stat
     await handler.handle_callback_query(update, context)
 
     assert bot.calls[0][0] == "create"
-    assert list(bot.calls[0][1]["stickers"][0].emoji_list) == ["ğŸ˜€", "ğŸ˜‚"]
+    assert list(bot.calls[0][1]["stickers"][0].emoji_list) == ["😀", "😂"]
     assert db.created[0]["pack_name"] == "arel_fun_by_bot"
     assert 42 not in message_handler.user_states
-    assert "Paket oluÅŸturuldu" in query.text
+    assert "Paket oluşturuldu" in query.text
 
     # Verify the user-facing recovery path: /packs exposes the pack and a direct link button.
     from src.handlers.command_handler import CommandHandler
@@ -444,7 +444,7 @@ async def test_sticker_creation_does_not_claim_success_when_pack_persistence_is_
                 "file_id": "file-1",
                 "full_pack_name": "arel_fun_by_bot",
                 "title": "Arel Fun",
-                "emojis": ["ğŸ˜€"],
+                "emojis": ["😀"],
                 "is_video": False,
             },
         }

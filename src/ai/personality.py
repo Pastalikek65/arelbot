@@ -331,4 +331,3 @@ class PersonalityPolicy:
         # operational branches are evaluated before this guard.
         interval = 4 if self.sarcasm_level == 1 else 2
         return turns % interval == 0
-

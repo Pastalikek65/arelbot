@@ -25,8 +25,8 @@ class FakeFeatureExecutor:
         return SimpleNamespace(
             ok=True,
             data={"items": [
-                {"title": "Ä°stanbul ulaÅŸÄ±m duyurusu", "link": "https://example.com/news", "description": "KÄ±sa aÃ§Ä±klama"},
-                {"title": "Ankara hava raporu", "link": "javascript:bad", "description": "GÃ¼venli olmayan baÄŸlantÄ±"},
+                {"title": "İstanbul ulaşım duyurusu", "link": "https://example.com/news", "description": "Kısa açıklama"},
+                {"title": "Ankara hava raporu", "link": "javascript:bad", "description": "Güvenli olmayan bağlantı"},
             ]},
         )
 
@@ -59,16 +59,16 @@ class FakeWebExecutor:
                 ok=True,
                 data={
                     "results": [
-                        {"title": "GÃ¼venilir sonuÃ§", "content": "KÄ±sa Ã¶zet", "url": "https://example.com/result"},
-                        {"title": "Ã–zel aÄŸ sonucu", "content": "Engellenmeli", "url": "http://127.0.0.1/private"},
+                        {"title": "Güvenilir sonuç", "content": "Kısa özet", "url": "https://example.com/result"},
+                        {"title": "Özel ağ sonucu", "content": "Engellenmeli", "url": "http://127.0.0.1/private"},
                     ]
                 },
             )
         assert key == "lyrics"
-        assert params == {"song": "Bir ÅarkÄ±", "artist": "SanatÃ§Ä±"}
+        assert params == {"song": "Bir Şarkı", "artist": "Sanatçı"}
         return SimpleNamespace(
             ok=True,
-            data={"title": "Bir ÅarkÄ± - SanatÃ§Ä±", "excerpt": "KÄ±sa alÄ±ntÄ±"},
+            data={"title": "Bir Şarkı - Sanatçı", "excerpt": "Kısa alıntı"},
             source_url="https://genius.com/song",
         )
 
@@ -86,13 +86,13 @@ class FakeCultureExecutor:
             data={
                 "items": [
                     {
-                        "title": "GÃ¼venli kitap",
+                        "title": "Güvenli kitap",
                         "author": "Yazar",
                         "year": 2024,
                         "url": "https://openlibrary.org/works/OL1W",
                     },
                     {
-                        "title": "Kimlik sÄ±zdÄ±rmayan sonuÃ§",
+                        "title": "Kimlik sızdırmayan sonuç",
                         "url": "https://user:secret@example.com/item",
                     },
                 ]
@@ -103,12 +103,12 @@ class FakeCultureExecutor:
 @pytest.mark.asyncio
 async def test_inline_city_search_supports_turkish_aliases_and_bounded_pagination():
     service = InlineQueryService(CityDirectory(), FakeDatabase())
-    page = await service.search("ÅEHÄ°R Ä°stanbul", "0")
-    assert page.articles[0].title.startswith("Ä°stanbul")
+    page = await service.search("ŞEHİR İstanbul", "0")
+    assert page.articles[0].title.startswith("İstanbul")
     assert page.cache_time == 3600
     assert service.parse_offset("-100") == 0
     assert service.parse_offset("not-a-number") == 0
-    assert service.normalize_query("  ÅŸehir   Ä°stanbul  ") == "ÅŸehir Ä°stanbul"
+    assert service.normalize_query("  şehir   İstanbul  ") == "şehir İstanbul"
 
 
 @pytest.mark.asyncio
@@ -139,7 +139,7 @@ async def test_inline_news_uses_typed_provider_and_filters_unsafe_links():
     service = InlineQueryService(CityDirectory(), FakeDatabase(), FakeFeatureExecutor())
     page = await service.search("haber istanbul", "0")
     assert len(page.articles) == 1
-    assert page.articles[0].title.startswith("Ä°stanbul")
+    assert page.articles[0].title.startswith("İstanbul")
     assert page.articles[0].text.endswith("https://example.com/news")
     assert page.cache_time == 120
 
@@ -171,7 +171,7 @@ async def test_inline_web_search_is_typed_bounded_and_filters_private_links():
     service = InlineQueryService(CityDirectory(), FakeDatabase(), FakeWebExecutor())
     page = await service.search("ara yapay zeka", "0")
     assert len(page.articles) == 1
-    assert page.articles[0].title == "GÃ¼venilir sonuÃ§"
+    assert page.articles[0].title == "Güvenilir sonuç"
     assert page.articles[0].text.endswith("https://example.com/result")
     assert page.cache_time == 60
 
@@ -179,10 +179,10 @@ async def test_inline_web_search_is_typed_bounded_and_filters_private_links():
 @pytest.mark.asyncio
 async def test_inline_lyrics_returns_bounded_excerpt_with_source():
     service = InlineQueryService(CityDirectory(), FakeDatabase(), FakeWebExecutor())
-    page = await service.search("soz Bir ÅarkÄ± - SanatÃ§Ä±", "0")
+    page = await service.search("soz Bir Şarkı - Sanatçı", "0")
     assert len(page.articles) == 1
-    assert "KÄ±sa alÄ±ntÄ±" in page.articles[0].text
-    assert page.articles[0].text.endswith("Tam ÅŸarkÄ± sÃ¶zleri yeniden Ã¼retilmez.")
+    assert "Kısa alıntı" in page.articles[0].text
+    assert page.articles[0].text.endswith("Tam şarkı sözleri yeniden üretilmez.")
     assert page.cache_time == 300
 
 
@@ -190,16 +190,16 @@ async def test_inline_lyrics_returns_bounded_excerpt_with_source():
 async def test_inline_culture_without_category_returns_bounded_category_hints():
     service = InlineQueryService(CityDirectory(), FakeDatabase(), FakeCultureExecutor())
     page = await service.search("kultur", "0")
-    assert [article.title for article in page.articles] == ["ğŸ¬ Film", "ğŸ“º Dizi", "ğŸ“š Kitap", "ğŸµ MÃ¼zik"]
+    assert [article.title for article in page.articles] == ["🎬 Film", "📺 Dizi", "📚 Kitap", "🎵 Müzik"]
     assert page.cache_time == 30
 
 
 @pytest.mark.asyncio
 async def test_inline_culture_calls_typed_provider_and_filters_unsafe_item_links():
     service = InlineQueryService(CityDirectory(), FakeDatabase(), FakeCultureExecutor())
-    page = await service.search("kÃ¼ltÃ¼r kitap fantastik", "0")
+    page = await service.search("kültür kitap fantastik", "0")
     assert len(page.articles) == 2
-    assert page.articles[0].title == "GÃ¼venli kitap"
+    assert page.articles[0].title == "Güvenli kitap"
     assert "Kaynak: https://openlibrary.org/works/OL1W" in page.articles[0].text
     assert "secret" not in page.articles[1].text
     assert page.cache_time == 900

@@ -16,15 +16,15 @@ from pathlib import Path
 from typing import Iterable
 
 
-_TR_TRANSLATION = str.maketrans({"Ã§": "c", "ÄŸ": "g", "Ä±": "i", "Ã¶": "o", "ÅŸ": "s", "Ã¼": "u"})
+_TR_TRANSLATION = str.maketrans({"ç": "c", "ğ": "g", "ı": "i", "ö": "o", "ş": "s", "ü": "u"})
 
 
 def normalize_text(value: str) -> str:
     # Apply Turkish casing before diacritic stripping so short forms such as
-    # ``ist`` and names such as ``ÅanlÄ±urfa`` resolve consistently.
+    # ``ist`` and names such as ``Şanlıurfa`` resolve consistently.
     value = value.translate(str.maketrans({
-        "Ã§": "c", "Ã‡": "c", "ÄŸ": "g", "Ä": "g", "Ä±": "i", "Ä°": "i",
-        "Ã¶": "o", "Ã–": "o", "ÅŸ": "s", "Å": "s", "Ã¼": "u", "Ãœ": "u",
+        "ç": "c", "Ç": "c", "ğ": "g", "Ğ": "g", "ı": "i", "İ": "i",
+        "ö": "o", "Ö": "o", "ş": "s", "Ş": "s", "ü": "u", "Ü": "u",
     }))
     value = unicodedata.normalize("NFKD", value.strip().casefold())
     value = "".join(char for char in value if not unicodedata.combining(char))
@@ -185,13 +185,13 @@ class CityDirectory:
 
     @staticmethod
     def format_city(city: CityRecord) -> str:
-        districts = ", ".join(city.districts) if city.districts else "Veri setinde ilÃ§e listesi yok"
+        districts = ", ".join(city.districts) if city.districts else "Veri setinde ilçe listesi yok"
         phone = ", ".join(str(code) for code in city.phone) or "-"
         region = city.region or "-"
         return (
             f"<b>{city.name}</b>\n"
             f"Plaka: <code>{city.plate:02d}</code>\n"
             f"Telefon: <code>{phone}</code>\n"
-            f"BÃ¶lge: {region}\n"
-            f"Ä°lÃ§eler: {districts}"
+            f"Bölge: {region}\n"
+            f"İlçeler: {districts}"
         )

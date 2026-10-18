@@ -1,8 +1,8 @@
 """
-Input Validator â€” KullanÄ±cÄ± girdilerini temizleme ve doÄŸrulama.
+Input Validator — Kullanıcı girdilerini temizleme ve doğrulama.
 
-Injection saldÄ±rÄ±larÄ±na (HTML, SQL, path traversal) karÅŸÄ± koruma.
-TÃ¼m kullanÄ±cÄ± girdileri handler'lara gelmeden Ã¶nce buradan geÃ§er.
+Injection saldırılarına (HTML, SQL, path traversal) karşı koruma.
+Tüm kullanıcı girdileri handler'lara gelmeden önce buradan geçer.
 """
 import os
 import re
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class InputValidator:
-    """KullanÄ±cÄ± girdisi doÄŸrulama ve temizleme yardÄ±mcÄ±sÄ±."""
+    """Kullanıcı girdisi doğrulama ve temizleme yardımcısı."""
 
     HTML_TAG_PATTERN = re.compile(r'<[^>]*>', re.DOTALL)
     SCRIPT_PATTERN = re.compile(r'<script.*?>.*?</script>', re.DOTALL | re.IGNORECASE)
@@ -33,7 +33,7 @@ class InputValidator:
     @classmethod
     def sanitize_text(cls, text: str) -> Tuple[str, bool]:
         """
-        KullanÄ±cÄ± mesajÄ±nÄ± temizler. (True, clean_text) dÃ¶ndÃ¼rÃ¼r.
+        Kullanıcı mesajını temizler. (True, clean_text) döndürür.
 
         Returns:
             (is_safe, sanitized_text)
@@ -55,7 +55,7 @@ class InputValidator:
 
     @classmethod
     def sanitize_html_entities(cls, text: str) -> str:
-        """HTML entity'leri temizler, safe HTML formatÄ±na dÃ¶nÃ¼ÅŸtÃ¼rÃ¼r."""
+        """HTML entity'leri temizler, safe HTML formatına dönüştürür."""
         if not text:
             return ""
         text = html_lib.escape(text, quote=False)
@@ -86,18 +86,18 @@ class InputValidator:
 
     @classmethod
     def validate_length(cls, text: str, min_len: int = 1, max_len: int = 5000) -> Tuple[bool, str]:
-        """Metin uzunluÄŸunu kontrol eder."""
+        """Metin uzunluğunu kontrol eder."""
         if not text or not isinstance(text, str):
-            return False, f"Metin {min_len}-{max_len} karakter arasÄ±nda olmalÄ±dÄ±r."
+            return False, f"Metin {min_len}-{max_len} karakter arasında olmalıdır."
         if len(text) < min_len:
-            return False, f"Metin en az {min_len} karakter olmalÄ±dÄ±r."
+            return False, f"Metin en az {min_len} karakter olmalıdır."
         if len(text) > max_len:
             return False, f"Metin en fazla {max_len} karakter olabilir."
         return True, text
 
     @classmethod
     def validate_command_args(cls, args: List[str], allowed_count: int = 10) -> Tuple[bool, List[str]]:
-        """Komut argÃ¼manlarÄ±nÄ± doÄŸrular."""
+        """Komut argümanlarını doğrular."""
         if not args:
             return True, []
 
@@ -118,7 +118,7 @@ class InputValidator:
         Tehlikeli pattern'leri tespit eder.
 
         Returns:
-            True = ÅŸÃ¼pheli pattern bulundu
+            True = şüpheli pattern bulundu
         """
         if not text:
             return False
@@ -138,10 +138,10 @@ class InputValidator:
     @classmethod
     def validate_user_input(cls, text: Optional[str]) -> str:
         """
-        Ana doÄŸrulama giriÅŸ noktasÄ±. TÃ¼m kullanÄ±cÄ± girdileri iÃ§in kullanÄ±lÄ±r.
+        Ana doğrulama giriş noktası. Tüm kullanıcı girdileri için kullanılır.
 
         Returns:
-            TemizlenmiÅŸ metin
+            Temizlenmiş metin
         """
         if text is None:
             return ""

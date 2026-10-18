@@ -91,7 +91,7 @@ async def test_document_service_downloads_in_worker_and_removes_temp_file(tmp_pa
         async def ingest_file(self, path, *, user_id, mime_type):
             assert Path(path).exists()
             assert user_id == 11
-            return "memo.txt hafÄ±zaya alÄ±ndÄ±; 1 parÃ§a hazÄ±rlandÄ± (DOCUMENT_INGESTED)."
+            return "memo.txt hafızaya alındı; 1 parça hazırlandı (DOCUMENT_INGESTED)."
 
     class FakeTelegramFile:
         async def download_to_drive(self, path):
@@ -130,7 +130,7 @@ async def test_document_service_downloads_in_worker_and_removes_temp_file(tmp_pa
             await asyncio.sleep(0.01)
         assert (await service.queue.get_job(job_id))["status"] == "completed"
         assert not list(tmp_path.iterdir())
-        assert any("hazÄ±rlandÄ±" in value for value in service.bot.edits)
+        assert any("hazırlandı" in value for value in service.bot.edits)
         metrics = await service.get_metrics()
         assert metrics["counters"]["document_jobs_completed"] == 1
         assert metrics["latency"]["document_job_seconds"]["count"] == 1

@@ -19,9 +19,9 @@ class AlertService:
         values = cls._values(data, str(condition.get("metric") or ""))
         operator = str(condition.get("operator") or "").casefold()
         for value in values:
-            if operator in {"above", "gte", ">=", "Ã¼stÃ¼", "Ã¼zeri"} and value >= target:
+            if operator in {"above", "gte", ">=", "üstü", "üzeri"} and value >= target:
                 return True
-            if operator in {"below", "lte", "<=", "altÄ±", "altÄ±nda"} and value <= target:
+            if operator in {"below", "lte", "<=", "altı", "altında"} and value <= target:
                 return True
             if operator in {"gt", ">"} and value > target:
                 return True

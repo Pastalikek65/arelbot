@@ -85,7 +85,10 @@ class KeyManager:
             ServiceType.IAMHC: self._maybe_decrypt([Config.IAMHC_KEY]) if Config.IAMHC_KEY else [],
             ServiceType.EVREN: self._maybe_decrypt([Config.EVREN_KEY]) if Config.EVREN_KEY else [],
             ServiceType.NVIDIA: self._maybe_decrypt([Config.NVIDIA_KEY]) if Config.NVIDIA_KEY else [],
-            ServiceType.CLEANAPIS: self._maybe_decrypt([Config.CLEANAPIS_KEY]) if Config.CLEANAPIS_KEY else [],
+            # Clean APIs is retired. Keep an empty compatibility slot so old
+            # enum-based fixtures remain importable, but never load its
+            # deployment secret into the runtime key inventory.
+            ServiceType.CLEANAPIS: [],
             ServiceType.NINEROUTER: self._maybe_decrypt([Config.NINEROUTER_KEY]) if Config.NINEROUTER_KEY else [],
             ServiceType.CEREBRAS: self._maybe_decrypt(Config.CEREBRAS_KEYS),
             ServiceType.GEMINI: self._maybe_decrypt(Config.GEMINI_KEYS),
@@ -288,4 +291,3 @@ class KeyManager:
         keys_list = self.keys[service_type]
         current = self.current_indices[service_type]
         self.current_indices[service_type] = (current + 1) % len(keys_list)
-

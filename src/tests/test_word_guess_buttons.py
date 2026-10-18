@@ -4,10 +4,10 @@ from src.services.word_guess_ui import render_word_guess_text, word_guess_keyboa
 def _state():
     return {
         "category": "Bilim",
-        "description": "Bir ÅŸeyi aÃ§Ä±klayan, gÃ¼nlÃ¼k hayatta kullanÄ±lan gÃ¼venli bir tanÄ±m.",
+        "description": "Bir şeyi açıklayan, günlük hayatta kullanılan güvenli bir tanım.",
         "attempts": 2,
         "hint_index": 1,
-        "hints": ["Ä°lk ipucu"],
+        "hints": ["İlk ipucu"],
         "difficulty": "normal",
         "time_limit": 240,
     }
@@ -25,10 +25,10 @@ def test_word_guess_panel_exposes_hint_skip_and_stop_controls():
 
 
 def test_word_guess_render_does_not_expose_answer_and_shows_progress():
-    text = render_word_guess_text(_state(), note="ğŸ’¡ Yeni ipucu gÃ¶sterildi.")
+    text = render_word_guess_text(_state(), note="💡 Yeni ipucu gösterildi.")
 
     assert "Bilim" in text
     assert "Deneme: <b>2</b>" in text
-    assert "Ä°pucu: <b>1/1</b>" in text
-    assert "Bir ÅŸeyi aÃ§Ä±klayan" in text
+    assert "İpucu: <b>1/1</b>" in text
+    assert "Bir şeyi açıklayan" in text
     assert "word" not in text.casefold()

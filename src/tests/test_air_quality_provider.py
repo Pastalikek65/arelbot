@@ -33,11 +33,11 @@ async def test_air_quality_provider_resolves_turkish_city_and_normalizes_metrics
                     "grass_pollen": 0.4,
                 },
                 "current_units": {
-                    "pm2_5": "Î¼g/mÂ³",
-                    "pm10": "Î¼g/mÂ³",
-                    "ozone": "Î¼g/mÂ³",
-                    "nitrogen_dioxide": "Î¼g/mÂ³",
-                    "grass_pollen": "grains/mÂ³",
+                    "pm2_5": "μg/m³",
+                    "pm10": "μg/m³",
+                    "ozone": "μg/m³",
+                    "nitrogen_dioxide": "μg/m³",
+                    "grass_pollen": "grains/m³",
                 },
             },
             request=request,
@@ -46,10 +46,10 @@ async def test_air_quality_provider_resolves_turkish_city_and_normalizes_metrics
     async with _client(handler) as client:
         provider = AirQualityProvider(CityDirectory(), client=client)
         result = await provider.fetch(
-            ProviderRequest(operation="air_quality", params={"city": "Ä°stanbul"})
+            ProviderRequest(operation="air_quality", params={"city": "İstanbul"})
         )
 
-    assert result.data["city"] == "Ä°stanbul"
+    assert result.data["city"] == "İstanbul"
     assert result.data["aqi"] == 24.0
     assert result.data["aqi_label"] == "Orta"
     assert result.data["metrics"]["pm2_5"] == 8.4
@@ -70,7 +70,7 @@ async def test_air_quality_provider_rejects_unknown_city_and_invalid_schema():
             await provider.fetch(
                 ProviderRequest(
                     operation="air_quality",
-                    params={"city": "Ä°stanbul"},
+                    params={"city": "İstanbul"},
                 )
             )
 
@@ -82,11 +82,11 @@ async def test_air_quality_tool_returns_typed_result_or_safe_error():
             from src.features.contracts import ProviderResponse
 
             return ProviderResponse(
-                data={"content": "ğŸŒ¿ AQI"},
+                data={"content": "🌿 AQI"},
                 source="fixture",
                 source_url="https://fixture.invalid/aqi",
             )
 
     result = await AirQualityTool(Provider()).execute(city="Ankara")
-    assert result["result"] == "ğŸŒ¿ AQI"
+    assert result["result"] == "🌿 AQI"
     assert result["metadata"] == {}

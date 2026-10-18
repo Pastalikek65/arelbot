@@ -22,9 +22,9 @@ def test_difficulty_aliases_are_turkish_aware_and_bounded():
 
 
 def test_word_game_request_separates_category_and_difficulty():
-    category, difficulty = parse_word_game_request(["ÅŸehirler", "zor"])
+    category, difficulty = parse_word_game_request(["şehirler", "zor"])
 
-    assert category == "ÅŸehirler"
+    assert category == "şehirler"
     assert difficulty.key == "hard"
 
 

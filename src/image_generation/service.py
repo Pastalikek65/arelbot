@@ -59,9 +59,9 @@ class ImageGenerationService:
     def normalize_prompt(prompt: str) -> str:
         value = " ".join(str(prompt or "").replace("\x00", " ").split())
         if not value:
-            raise ImageGenerationJobError("image_prompt_invalid", "GÃ¶rsel aÃ§Ä±klamasÄ± boÅŸ olamaz.")
+            raise ImageGenerationJobError("image_prompt_invalid", "Görsel açıklaması boş olamaz.")
         if len(value) > Config.IMAGE_MAX_PROMPT_CHARS:
-            raise ImageGenerationJobError("image_prompt_invalid", f"GÃ¶rsel aÃ§Ä±klamasÄ± en fazla {Config.IMAGE_MAX_PROMPT_CHARS} karakter olabilir.")
+            raise ImageGenerationJobError("image_prompt_invalid", f"Görsel açıklaması en fazla {Config.IMAGE_MAX_PROMPT_CHARS} karakter olabilir.")
         return value
 
     async def submit(self, *, chat_id: int, user_id: int, status_message_id: int, prompt: str,
@@ -70,7 +70,7 @@ class ImageGenerationService:
         now = time.monotonic()
         recent = [item for item in self._request_times[int(user_id)] if now - item < 60]
         if len(recent) >= Config.IMAGE_RATE_LIMIT_PER_MINUTE:
-            raise ImageGenerationJobError("image_rate_limited", "GÃ¶rsel kuyruÄŸuna Ã§ok hÄ±zlÄ± istek gÃ¶nderildi.")
+            raise ImageGenerationJobError("image_rate_limited", "Görsel kuyruğuna çok hızlı istek gönderildi.")
         self._request_times[int(user_id)] = recent + [now]
         source_key = hashlib.sha256(prompt.encode("utf-8")).hexdigest()
         payload = {
@@ -100,26 +100,26 @@ class ImageGenerationService:
         self.metrics_registry.inc("image_jobs_total")
         try:
             if self.bot is None:
-                raise ImageGenerationJobError("telegram_unavailable", "Telegram istemcisi hazÄ±r deÄŸil.")
-            await self._edit(payload, "ğŸ¨ GÃ¶rsel hazÄ±rlanÄ±yorâ€¦")
+                raise ImageGenerationJobError("telegram_unavailable", "Telegram istemcisi hazır değil.")
+            await self._edit(payload, "🎨 Görsel hazırlanıyor…")
             await self.queue._set_status(payload, "processing")
             output = await asyncio.wait_for(
                 self.image_router.generate_image(payload["prompt"], max_output_bytes=Config.IMAGE_MAX_OUTPUT_BYTES),
                 timeout=Config.IMAGE_JOB_TIMEOUT_SECONDS,
             )
             if not output:
-                raise ImageGenerationJobError("image_provider_unavailable", "GÃ¶rsel saÄŸlayÄ±cÄ±sÄ± boÅŸ Ã§Ä±ktÄ± dÃ¶ndÃ¼rdÃ¼.")
+                raise ImageGenerationJobError("image_provider_unavailable", "Görsel sağlayıcısı boş çıktı döndürdü.")
             output_path = Path(str(output))
             if output_path.is_file():
                 with output_path.open("rb") as image_file:
                     await self._deliver(payload, lambda: self.bot.send_photo(
-                        chat_id=payload["chat_id"], photo=image_file, caption="ğŸ¨ Ä°ÅŸte gÃ¶rseliniz.",
+                        chat_id=payload["chat_id"], photo=image_file, caption="🎨 İşte görseliniz.",
                         reply_to_message_id=payload.get("reply_to_message_id"),
                         message_thread_id=payload.get("message_thread_id"),
                     ))
             else:
                 await self._deliver(payload, lambda: self.bot.send_photo(
-                    chat_id=payload["chat_id"], photo=str(output), caption="ğŸ¨ Ä°ÅŸte gÃ¶rseliniz.",
+                    chat_id=payload["chat_id"], photo=str(output), caption="🎨 İşte görseliniz.",
                     reply_to_message_id=payload.get("reply_to_message_id"),
                     message_thread_id=payload.get("message_thread_id"),
                 ))
@@ -129,37 +129,37 @@ class ImageGenerationService:
                 audit = getattr(self.database, "add_audit_log", None)
                 if audit:
                     await audit(payload["user_id"], "image_generated", job_id=payload["job_id"])
-            await self._edit(payload, "âœ… GÃ¶rsel gÃ¶nderildi.")
+            await self._edit(payload, "✅ Görsel gönderildi.")
         except ImageGenerationJobError as exc:
             self.metrics_registry.inc("image_jobs_failed")
             message = public_error_message(
                 exc,
-                "GÃ¶rsel Ã¼retilemedi.",
+                "Görsel üretilemedi.",
                 messages={
-                    "IMAGE_PROMPT_INVALID": "GÃ¶rsel aÃ§Ä±klamasÄ± geÃ§ersiz.",
-                    "IMAGE_RATE_LIMITED": "GÃ¶rsel kuyruÄŸuna Ã§ok hÄ±zlÄ± istek gÃ¶nderildi.",
-                    "IMAGE_POLICY_REJECTED": "Bu gÃ¶rsel isteÄŸi gÃ¼venlik politikasÄ± nedeniyle iÅŸlenemiyor.",
-                    "IMAGE_OUTPUT_TOO_LARGE": "Ãœretilen gÃ¶rsel Telegram boyut sÄ±nÄ±rÄ±nÄ± aÅŸÄ±yor.",
-                    "IMAGE_PROVIDER_UNAVAILABLE": "GÃ¶rsel saÄŸlayÄ±cÄ±sÄ± ÅŸu an yanÄ±t vermiyor.",
-                    "TELEGRAM_UNAVAILABLE": "Telegram istemcisi ÅŸu an hazÄ±r deÄŸil.",
+                    "IMAGE_PROMPT_INVALID": "Görsel açıklaması geçersiz.",
+                    "IMAGE_RATE_LIMITED": "Görsel kuyruğuna çok hızlı istek gönderildi.",
+                    "IMAGE_POLICY_REJECTED": "Bu görsel isteği güvenlik politikası nedeniyle işlenemiyor.",
+                    "IMAGE_OUTPUT_TOO_LARGE": "Üretilen görsel Telegram boyut sınırını aşıyor.",
+                    "IMAGE_PROVIDER_UNAVAILABLE": "Görsel sağlayıcısı şu an yanıt vermiyor.",
+                    "TELEGRAM_UNAVAILABLE": "Telegram istemcisi şu an hazır değil.",
                 },
             )
-            await self._edit(payload, f"âŒ {sanitize_html(message)} Ä°ÅŸ: <code>{payload['job_id']}</code>")
+            await self._edit(payload, f"❌ {sanitize_html(message)} İş: <code>{payload['job_id']}</code>")
             raise
         except asyncio.TimeoutError as exc:
             self.metrics_registry.inc("image_jobs_failed")
-            await self._edit(payload, f"â±ï¸ GÃ¶rsel Ã¼retimi zaman aÅŸÄ±mÄ±na uÄŸradÄ±. Ä°ÅŸ: <code>{payload['job_id']}</code>")
-            raise ImageGenerationJobError("timeout", "GÃ¶rsel Ã¼retimi zaman aÅŸÄ±mÄ±na uÄŸradÄ±.") from exc
+            await self._edit(payload, f"⏱️ Görsel üretimi zaman aşımına uğradı. İş: <code>{payload['job_id']}</code>")
+            raise ImageGenerationJobError("timeout", "Görsel üretimi zaman aşımına uğradı.") from exc
         except Exception as exc:
             self.metrics_registry.inc("image_jobs_failed")
             detail = str(exc)
             if "NSFW_REJECTED" in detail:
-                code, message = "image_policy_rejected", "Bu gÃ¶rsel isteÄŸini gÃ¼venlik politikasÄ± nedeniyle iÅŸleyemiyorum."
+                code, message = "image_policy_rejected", "Bu görsel isteğini güvenlik politikası nedeniyle işleyemiyorum."
             elif "IMAGE_OUTPUT_TOO_LARGE" in detail:
-                code, message = "image_output_too_large", "Ãœretilen gÃ¶rsel Telegram boyut sÄ±nÄ±rÄ±nÄ± aÅŸÄ±yor."
+                code, message = "image_output_too_large", "Üretilen görsel Telegram boyut sınırını aşıyor."
             else:
-                code, message = "image_generation_error", "GÃ¶rsel Ã¼retilemedi."
-            await self._edit(payload, f"âŒ {message} Ä°ÅŸ: <code>{payload['job_id']}</code>")
+                code, message = "image_generation_error", "Görsel üretilemedi."
+            await self._edit(payload, f"❌ {message} İş: <code>{payload['job_id']}</code>")
             raise ImageGenerationJobError(code, message) from exc
         finally:
             if output and Path(str(output)).is_file():

@@ -1,50 +1,50 @@
-# Arelbot Ajan ve Mimari KurallarÄ±
+# Arelbot Ajan ve Mimari Kuralları
 
-Bu dosya bÃ¼tÃ¼n kodlama ajanlarÄ± iÃ§in zorunludur. Yeni kod bu kurallardan
-birini ihlal ediyorsa gÃ¶rev tamamlanmÄ±ÅŸ sayÄ±lmaz.
+Bu dosya bütün kodlama ajanları için zorunludur. Yeni kod bu kurallardan
+birini ihlal ediyorsa görev tamamlanmış sayılmaz.
 
-## Kod sÄ±nÄ±rlarÄ±
+## Kod sınırları
 
-- `main.py` yalnÄ±zca uygulama bootstrap ve Telegram handler kaydÄ±dÄ±r.
-- Handler'larda HTTP, MongoDB, Redis veya FFmpeg Ã§aÄŸrÄ±sÄ± yapÄ±lmaz.
-- DÄ±ÅŸ kaynak Ã§aÄŸrÄ±larÄ± `src/features` provider'larÄ± veya `src/media` servisleri Ã¼zerinden yapÄ±lÄ±r.
-- MongoDB eriÅŸimi repository/database katmanÄ±ndan, Redis eriÅŸimi store/queue katmanÄ±ndan yapÄ±lÄ±r.
-- Her public Ã¶zellik `FeatureDefinition` ile registry'ye kaydedilir.
-- Her provider `DataProvider` sÃ¶zleÅŸmesine ve health kontrolÃ¼ne uyar.
-- AÄŸÄ±r iÅŸler Telegram update callback'i iÃ§inde Ã§alÄ±ÅŸtÄ±rÄ±lmaz; queue/worker kullanÄ±lÄ±r.
-- Global mutable state yerine dependency injection ve aÃ§Ä±k kapsam kullanÄ±lÄ±r.
+- `main.py` yalnızca uygulama bootstrap ve Telegram handler kaydıdır.
+- Handler'larda HTTP, MongoDB, Redis veya FFmpeg çağrısı yapılmaz.
+- Dış kaynak çağrıları `src/features` provider'ları veya `src/media` servisleri üzerinden yapılır.
+- MongoDB erişimi repository/database katmanından, Redis erişimi store/queue katmanından yapılır.
+- Her public özellik `FeatureDefinition` ile registry'ye kaydedilir.
+- Her provider `DataProvider` sözleşmesine ve health kontrolüne uyar.
+- Ağır işler Telegram update callback'i içinde çalıştırılmaz; queue/worker kullanılır.
+- Global mutable state yerine dependency injection ve açık kapsam kullanılır.
 
-## GÃ¼venlik ve gizlilik
+## Güvenlik ve gizlilik
 
-- Token, cookie, secret, tam medya URL'si, dosya yolu ve kullanÄ±cÄ± Ã¶zel verisi loglanmaz.
-- KullanÄ±cÄ±dan harici hesap parolasÄ± veya cookie istenmez.
-- SSRF, private IP, redirect, archive traversal ve path traversal kontrolleri ortak katmandadÄ±r.
-- AI yalnÄ±zca allowlist araÃ§larÄ±nÄ± Ã§aÄŸÄ±rabilir; model argÃ¼manÄ± kullanÄ±cÄ± yetkisini yÃ¼kseltemez.
-- Harici dokÃ¼man ve web iÃ§eriÄŸi gÃ¼venilmeyen veri kabul edilir.
-- KullanÄ±cÄ± hafÄ±zasÄ± aÃ§Ä±k opt-in olmadan kalÄ±cÄ± tutulmaz.
-- YÃ¶netici iÅŸlemleri audit log'a gÃ¼venli, maskeli biÃ§imde yazÄ±lÄ±r.
+- Token, cookie, secret, tam medya URL'si, dosya yolu ve kullanıcı özel verisi loglanmaz.
+- Kullanıcıdan harici hesap parolası veya cookie istenmez.
+- SSRF, private IP, redirect, archive traversal ve path traversal kontrolleri ortak katmandadır.
+- AI yalnızca allowlist araçlarını çağırabilir; model argümanı kullanıcı yetkisini yükseltemez.
+- Harici doküman ve web içeriği güvenilmeyen veri kabul edilir.
+- Kullanıcı hafızası açık opt-in olmadan kalıcı tutulmaz.
+- Yönetici işlemleri audit log'a güvenli, maskeli biçimde yazılır.
 
 ## Kalite
 
-- BÃ¼tÃ¼n kaynak dosyalarÄ± UTF-8 olmalÄ±dÄ±r; mojibake commit edilemez.
+- Bütün kaynak dosyaları UTF-8 olmalıdır; mojibake commit edilemez.
 - Telegram handler user-facing text is audited by `src/tests/test_turkish_user_text.py`; command/callback protocol identifiers may remain ASCII, displayed Turkish phrases may not.
-- Yeni Ã¶zellik; hata kodu, metric, audit politikasÄ± ve provider metadata'sÄ± olmadan tamamlanmÄ±ÅŸ sayÄ±lmaz.
-- Timeout, retry, cache sÃ¼resi ve freshness hedefi feature manifestinde tanÄ±mlanÄ±r.
-- DÄ±ÅŸ veri kaynaÄŸÄ± lisans/attribution/terms bilgisi `docs/DATA_SOURCES.md` ve `licenses.json` iÃ§ine eklenir.
-- Migration geriye uyumlu ve geri alÄ±nabilir tasarlanÄ±r.
-- CanlÄ± sitelere baÄŸÄ±mlÄ± kabul yerine fixture/replay provider testi kullanÄ±lÄ±r.
+- Yeni özellik; hata kodu, metric, audit politikası ve provider metadata'sı olmadan tamamlanmış sayılmaz.
+- Timeout, retry, cache süresi ve freshness hedefi feature manifestinde tanımlanır.
+- Dış veri kaynağı lisans/attribution/terms bilgisi `docs/DATA_SOURCES.md` ve `licenses.json` içine eklenir.
+- Migration geriye uyumlu ve geri alınabilir tasarlanır.
+- Canlı sitelere bağımlı kabul yerine fixture/replay provider testi kullanılır.
 - `docs/FEATURE_CATALOG.md` runtime `FeatureRegistry` ile birebir tutulur; her
-  key tek satÄ±rda yer alÄ±r ve `python scripts/feature_catalog_audit.py` geÃ§meden
-  release tamamlanmÄ±ÅŸ sayÄ±lmaz.
+  key tek satırda yer alır ve `python scripts/feature_catalog_audit.py` geçmeden
+  release tamamlanmış sayılmaz.
 
-## Ã‡alÄ±ÅŸma yÃ¶ntemi
+## Çalışma yöntemi
 
-1. Ã–nce mevcut repository, schema ve handler akÄ±ÅŸÄ± okunur.
-2. Yeni davranÄ±ÅŸ typed domain katmanÄ±nda uygulanÄ±r.
-3. Telegram yÃ¼zeyi domain sonucunu sadece biÃ§imlendirir.
-4. DokÃ¼mantasyon, feature manifesti ve operasyon notlarÄ± aynÄ± deÄŸiÅŸiklikte gÃ¼ncellenir.
-5. Kritik yapÄ±landÄ±rma ve secret deÄŸerleri Ã¶rnek dosyalara yazÄ±lmaz.
+1. Önce mevcut repository, schema ve handler akışı okunur.
+2. Yeni davranış typed domain katmanında uygulanır.
+3. Telegram yüzeyi domain sonucunu sadece biçimlendirir.
+4. Dokümantasyon, feature manifesti ve operasyon notları aynı değişiklikte güncellenir.
+5. Kritik yapılandırma ve secret değerleri örnek dosyalara yazılmaz.
 
-Her faz ilerlemesi `docs/PHASE_STATUS.json` iÃ§indeki sÃ¶zleÅŸmeye yazÄ±lÄ±r ve
-`python scripts/phase_audit.py` ile release gate/evidence kayÄ±tlarÄ±na karÅŸÄ±
-denetlenir. CanlÄ± kanÄ±tÄ± olmayan faz `verified` olarak iÅŸaretlenmez.
+Her faz ilerlemesi `docs/PHASE_STATUS.json` içindeki sözleşmeye yazılır ve
+`python scripts/phase_audit.py` ile release gate/evidence kayıtlarına karşı
+denetlenir. Canlı kanıtı olmayan faz `verified` olarak işaretlenmez.

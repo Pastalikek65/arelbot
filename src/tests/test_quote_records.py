@@ -10,7 +10,7 @@ def test_quote_record_preserves_bounded_batch_and_render_options():
         chat_id=-100,
         messages=[
             {"text": "Birinci", "name": "Ali", "user_id": 7, "message_id": 42},
-            {"text": "Ä°kinci", "name": "AyÅŸe", "user_id": 8, "message_id": 43},
+            {"text": "İkinci", "name": "Ayşe", "user_id": 8, "message_id": 43},
         ],
         options={"theme": "telegram", "scale": 1.5, "is_png": True},
         sticker_file_id=None,

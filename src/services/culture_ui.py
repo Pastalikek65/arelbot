@@ -12,10 +12,10 @@ from src.features.culture_categories import normalize_culture_category
 
 
 CULTURE_CATEGORIES: tuple[tuple[str, str, str], ...] = (
-    ("movie", "ğŸ¬ Film", "film"),
-    ("series", "ğŸ“º Dizi", "dizi"),
-    ("book", "ğŸ“š Kitap", "kitap"),
-    ("music", "ğŸµ MÃ¼zik", "mÃ¼zik"),
+    ("movie", "🎬 Film", "film"),
+    ("series", "📺 Dizi", "dizi"),
+    ("book", "📚 Kitap", "kitap"),
+    ("music", "🎵 Müzik", "müzik"),
 )
 
 CULTURE_CATEGORY_LABELS = {key: label for key, label, _ in CULTURE_CATEGORIES}
@@ -41,9 +41,9 @@ def culture_category_panel(user_id: int) -> tuple[str, InlineKeyboardMarkup]:
         )
     ]
     return (
-        "ğŸ­ <b>KÃ¼ltÃ¼r Ã¶nerileri</b>\n\n"
-        "Film, dizi, kitap veya mÃ¼zik seÃ§; istersen tÃ¼r ya da konu da ekle. "
-        "Arel kaynaklÄ± sonuÃ§larÄ± toparlar, kristal kÃ¼reyi deÄŸil.",
+        "🎭 <b>Kültür önerileri</b>\n\n"
+        "Film, dizi, kitap veya müzik seç. Daha ilgili sonuçlar için "
+        "bir eser, sanatçı veya konu adı ekleyebilirsin.",
         InlineKeyboardMarkup(keyboard),
     )
 
@@ -57,17 +57,17 @@ def culture_category_help(user_id: int, category: str) -> tuple[str, InlineKeybo
         "movie": ("film", "bilim kurgu"),
         "series": ("dizi", "komedi"),
         "book": ("kitap", "fantastik"),
-        "music": ("mÃ¼zik", "rock"),
+        "music": ("müzik", "rock"),
     }
     if normalized not in labels:
         return culture_category_panel(owner)
     command, example = labels[normalized]
     title = CULTURE_CATEGORY_LABELS[normalized]
     return (
-        f"{title} seÃ§ildi.\n\n"
+        f"{title} seçildi.\n\n"
         f"<code>/kultur {command} {example}</code>\n"
-        f"veya doÄŸrudan <code>/kultur {command}</code> yazabilirsin.",
+        f"veya doğrudan <code>/kultur {command}</code> yazabilirsin.",
         InlineKeyboardMarkup(
-            [[InlineKeyboardButton("ğŸ­ Kategori deÄŸiÅŸtir", callback_data=f"culture_menu:{owner}")]]
+            [[InlineKeyboardButton("🎭 Kategori değiştir", callback_data=f"culture_menu:{owner}")]]
         ),
     )

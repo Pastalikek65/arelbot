@@ -40,7 +40,7 @@ def test_turkish_keyboard_has_callback_buttons_and_hides_used_normalized_letters
     keys = available_keys(state)
     labels = {label for _token, label in keys}
     assert "C" not in labels
-    assert "Ã‡" not in labels
+    assert "Ç" not in labels
 
     markup = hangman_keyboard(state)
     callbacks = [

@@ -24,7 +24,7 @@ class GroupMemberService:
         settings = settings or {}
         old_status = str(old_status or "").casefold()
         new_status = str(new_status or "").casefold()
-        safe_name = escape(str(user_name or "kullanÄ±cÄ±"))
+        safe_name = escape(str(user_name or "kullanıcı"))
         safe_chat = escape(str(chat_title or "grup"))
         mention = f"@{escape(username)}" if username else safe_name
 
@@ -33,7 +33,7 @@ class GroupMemberService:
                 return None
             template = settings.get(
                 "welcome_text",
-                "ğŸ‘‹ <b>{name}</b>, <b>{chat}</b> grubuna hoÅŸ geldin! {mention}",
+                "👋 <b>{name}</b>, <b>{chat}</b> grubuna hoş geldin! {mention}",
             )
             return cls._format(template, name=safe_name, chat=safe_chat, mention=mention)
 
@@ -42,7 +42,7 @@ class GroupMemberService:
                 return None
             template = settings.get(
                 "goodbye_text",
-                "ğŸ‘‹ <b>{name}</b> gruptan ayrÄ±ldÄ±. GÃ¼le gÃ¼le!",
+                "👋 <b>{name}</b> gruptan ayrıldı. Güle güle!",
             )
             return cls._format(template, name=safe_name, chat=safe_chat, mention=mention)
         return None

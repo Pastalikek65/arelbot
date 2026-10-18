@@ -31,7 +31,7 @@ async def test_group_reply_plan_requests_structured_ids_only_on_fast_route():
 
     engine._request_with_failover = request
     current = ref(202, 2, "arel naber")
-    previous = ref(101, 1, "sÄ±navÄ± geÃ§tim")
+    previous = ref(101, 1, "sınavı geçtim")
     context = GroupTurnContext(current, (current, previous), "mention")
 
     result = await engine.get_group_reply_plan(context)

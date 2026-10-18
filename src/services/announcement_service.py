@@ -32,11 +32,11 @@ class AnnouncementService:
     _TIME_RE = re.compile(r"^(?P<hour>[01]?\d|2[0-3]):(?P<minute>[0-5]\d)$")
     _WEEKDAYS = {
         "pazartesi": 0,
-        "salÄ±": 1,
+        "salı": 1,
         "sali": 1,
-        "Ã§arÅŸamba": 2,
+        "çarşamba": 2,
         "carsamba": 2,
-        "perÅŸembe": 3,
+        "perşembe": 3,
         "persembe": 3,
         "cuma": 4,
         "cumartesi": 5,
@@ -48,21 +48,21 @@ class AnnouncementService:
 
     @classmethod
     def parse(cls, args: list[str]) -> AnnouncementRequest:
-        """Parse ``/duyuru her gÃ¼n 10:00 metin`` or weekly variants."""
+        """Parse ``/duyuru her gün 10:00 metin`` or weekly variants."""
         if len(args) < 3:
             raise ValueError(
-                "KullanÄ±m: /duyuru her gÃ¼n 10:00 MesajÄ±n veya "
-                "/duyuru her pazartesi 09:00 MesajÄ±n"
+                "Kullanım: /duyuru her gün 10:00 Mesajın veya "
+                "/duyuru her pazartesi 09:00 Mesajın"
             )
         words = [str(value).strip() for value in args]
         if words[0].casefold() != "her":
-            raise ValueError("Plan yalnÄ±zca 'her gÃ¼n' veya 'her <gÃ¼n>' biÃ§iminde kurulabilir.")
+            raise ValueError("Plan yalnızca 'her gün' veya 'her <gün>' biçiminde kurulabilir.")
 
         schedule_kind = "daily"
         weekday: int | None = None
         time_index = 2
         frequency = words[1].casefold()
-        if frequency == "gÃ¼n" or frequency == "gun":
+        if frequency == "gün" or frequency == "gun":
             pass
         elif frequency == "hafta":
             schedule_kind = "weekly"
@@ -76,18 +76,18 @@ class AnnouncementService:
             schedule_kind = "weekly"
             weekday = cls._WEEKDAYS[frequency]
         else:
-            raise ValueError("SÄ±klÄ±k 'her gÃ¼n', 'her hafta' veya 'her pazartesi' olmalÄ±.")
+            raise ValueError("Sıklık 'her gün', 'her hafta' veya 'her pazartesi' olmalı.")
 
         if len(words) <= time_index + 1:
-            raise ValueError("Saat ve duyuru metni gerekli. Ã–rn: /duyuru her gÃ¼n 10:00 ToplantÄ±")
+            raise ValueError("Saat ve duyuru metni gerekli. Örn: /duyuru her gün 10:00 Toplantı")
         time_value = words[time_index]
         if not cls._TIME_RE.fullmatch(time_value):
-            raise ValueError("Saat HH:MM biÃ§iminde olmalÄ±; Ã¶rn. 10:00.")
+            raise ValueError("Saat HH:MM biçiminde olmalı; örn. 10:00.")
         text = " ".join(words[time_index + 1:]).strip()
         if len(text) < 2:
-            raise ValueError("Duyuru metni en az 2 karakter olmalÄ±.")
+            raise ValueError("Duyuru metni en az 2 karakter olmalı.")
         if len(text) > cls.MAX_TEXT_LENGTH:
-            raise ValueError(f"Duyuru metni {cls.MAX_TEXT_LENGTH} karakteri geÃ§emez.")
+            raise ValueError(f"Duyuru metni {cls.MAX_TEXT_LENGTH} karakteri geçemez.")
         return AnnouncementRequest(schedule_kind, time_value, weekday, text)
 
     def next_run_for(self, item: dict[str, Any], now: datetime | None = None) -> datetime:

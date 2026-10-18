@@ -123,7 +123,7 @@ class _TelegramApiReplay:
                             "height": 2,
                             "is_animated": False,
                             "is_video": False,
-                            "emoji": "ğŸ˜€",
+                            "emoji": "😀",
                         },
                     },
                 },
@@ -240,7 +240,7 @@ async def test_real_ptb_client_replay_covers_forum_callback_sticker_and_document
         sticker = await bot.send_sticker(
             chat_id=-1001,
             sticker=io.BytesIO(b"fixture-sticker"),
-            emoji="ğŸ˜€",
+            emoji="😀",
         )
     finally:
         await bot.shutdown()

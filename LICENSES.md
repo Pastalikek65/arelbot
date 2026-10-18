@@ -1,18 +1,18 @@
-# BaÄŸÄ±mlÄ±lÄ±k ve veri lisanslarÄ±
+# Bağımlılık ve veri lisansları
 
-Bu dosya Ã¼Ã§Ã¼ncÃ¼ taraf kod ve veri iÃ§in insan okunabilir envanterdir. Makine
-okunabilir karÅŸÄ±lÄ±ÄŸÄ± `licenses.json` dosyasÄ±ndadÄ±r.
+Bu dosya üçüncü taraf kod ve veri için insan okunabilir envanterdir. Makine
+okunabilir karşılığı `licenses.json` dosyasındadır.
 
 - `turkiye-data` administrative snapshot: MIT; kaynak ve upstream bilgisi
-  `src/data/turkish_cities.json` metadata alanÄ±nda tutulur.
-- BTK telefon alan kodlarÄ±: resmi kamu kaynaÄŸÄ±; URL `docs/DATA_SOURCES.md`
-  iÃ§inde tutulur.
-- KekikSpatula: GPLv3+; davranÄ±ÅŸ referansÄ±dÄ±r, kaynak kodu kopyalanmamÄ±ÅŸtÄ±r.
-- TRSehirler: GPLv3+; davranÄ±ÅŸ referansÄ±dÄ±r, kaynak kodu kopyalanmamÄ±ÅŸtÄ±r.
-- Cloudflare Workers AI: saÄŸlayÄ±cÄ± hizmet ÅŸartlarÄ± ve hesap yetkilendirmesi;
-  gÃ¶rsel Ã¼retim provider'Ä± Ã¼retim sign-off bekler.
-- Tavily Search API: API hizmet ÅŸartlarÄ± ve attribution gereksinimleri;
-  kaynak governance kaydÄ± `licenses.json` iÃ§inde tutulur.
+  `src/data/turkish_cities.json` metadata alanında tutulur.
+- BTK telefon alan kodları: resmi kamu kaynağı; URL `docs/DATA_SOURCES.md`
+  içinde tutulur.
+- KekikSpatula: GPLv3+; davranış referansıdır, kaynak kodu kopyalanmamıştır.
+- TRSehirler: GPLv3+; davranış referansıdır, kaynak kodu kopyalanmamıştır.
+- Cloudflare Workers AI: sağlayıcı hizmet şartları ve hesap yetkilendirmesi;
+  görsel üretim provider'ı üretim sign-off bekler.
+- Tavily Search API: API hizmet şartları ve attribution gereksinimleri;
+  kaynak governance kaydı `licenses.json` içinde tutulur.
 
 The machine-readable package inventory in `licenses.json` covers every direct
 constraint entry. It is checked by `scripts/architecture_check.py --strict`;

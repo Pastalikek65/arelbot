@@ -73,7 +73,7 @@ class InlineQueryService:
         offset = self.parse_offset(raw_offset)
         lowered = tr_lower(query)
 
-        city_prefixes = ("sehir ", "ÅŸehir ", "il ")
+        city_prefixes = ("sehir ", "şehir ", "il ")
         for prefix in city_prefixes:
             if lowered.startswith(prefix):
                 return self._city_page(query[len(prefix):].strip(), offset)
@@ -94,7 +94,7 @@ class InlineQueryService:
             term = query.split(" ", 1)[1].strip()
             return await self._lyrics_page(term, offset)
 
-        if lowered in {"kultur", "kÃ¼ltÃ¼r"} or lowered.startswith(("kultur ", "kÃ¼ltÃ¼r ", "culture ")):
+        if lowered in {"kultur", "kültür"} or lowered.startswith(("kultur ", "kültür ", "culture ")):
             term = query.split(" ", 1)[1].strip() if " " in query else ""
             return await self._culture_page(term, offset)
 
@@ -171,7 +171,7 @@ class InlineQueryService:
                 InlineArticle(
                     result_id=self._result_id("web", link or f"{term}:{index}"),
                     title=title,
-                    description=(snippet or "KaynaklÄ± web sonucu")[:256],
+                    description=(snippet or "Kaynaklı web sonucu")[:256],
                     text=text,
                 )
             )
@@ -197,8 +197,8 @@ class InlineQueryService:
         article = InlineArticle(
             result_id=self._result_id("lyrics", link),
             title=title,
-            description="SÄ±nÄ±rlÄ± kaynak alÄ±ntÄ±sÄ± ve kaynak baÄŸlantÄ±sÄ±",
-            text=f"{title}\n{excerpt}\nKaynak: {link}\nTam ÅŸarkÄ± sÃ¶zleri yeniden Ã¼retilmez.",
+            description="Sınırlı kaynak alıntısı ve kaynak bağlantısı",
+            text=f"{title}\n{excerpt}\nKaynak: {link}\nTam şarkı sözleri yeniden üretilmez.",
         )
         return InlinePage(articles=(article,) if offset == 0 else (), cache_time=300)
 
@@ -207,17 +207,17 @@ class InlineQueryService:
 
         if not term:
             suggestions = (
-                ("ğŸ¬ Film", "kultur film "),
-                ("ğŸ“º Dizi", "kultur dizi "),
-                ("ğŸ“š Kitap", "kultur kitap "),
-                ("ğŸµ MÃ¼zik", "kultur mÃ¼zik "),
+                ("🎬 Film", "kultur film "),
+                ("📺 Dizi", "kultur dizi "),
+                ("📚 Kitap", "kultur kitap "),
+                ("🎵 Müzik", "kultur müzik "),
             )
             articles = tuple(
                 InlineArticle(
                     result_id=self._result_id("culture-help", query),
                     title=title,
-                    description="Kategori ve konu yazarak Ã¶neri getir",
-                    text=f"Inline aramada ÅŸu biÃ§imi kullan: @{query}",
+                    description="Kategori ve konu yazarak öneri getir",
+                    text=f"Inline aramada şu biçimi kullan: @{query}",
                 )
                 for title, query in suggestions
             )
@@ -247,7 +247,7 @@ class InlineQueryService:
                 if value is not None and str(value).strip():
                     details.append(f"{key}: {str(value).strip()[:80]}")
             link = self._safe_link(item.get("url"))
-            description = " Â· ".join(details)[:256] or "KaynaklÄ± kÃ¼ltÃ¼r Ã¶nerisi"
+            description = " · ".join(details)[:256] or "Kaynaklı kültür önerisi"
             text = f"{title}\n{description}"
             if link:
                 text += f"\nKaynak: {link}"
@@ -290,7 +290,7 @@ class InlineQueryService:
             InlineArticle(
                 result_id=self._result_id("news", link or title),
                 title=title[:128],
-                description=(description or "Kaynak baÄŸlantÄ±sÄ±nÄ± aÃ§arak ayrÄ±ntÄ±yÄ± gÃ¶r.")[:256],
+                description=(description or "Kaynak bağlantısını açarak ayrıntıyı gör.")[:256],
                 text=f"{title}\n{link}" if link else title,
             )
             for title, link, description in page
@@ -325,7 +325,7 @@ class InlineQueryService:
                 if not isinstance(price, (int, float)):
                     continue
                 change_text = f"{float(change):+.2f}%" if isinstance(change, (int, float)) else "veri yok"
-                title = f"{symbol} â€¢ {float(price):,.4f} {currency}"
+                title = f"{symbol} • {float(price):,.4f} {currency}"
                 description = f"24 saat: {change_text}"
                 text = f"{title}\n{description}"
                 if safe_source:
@@ -337,8 +337,8 @@ class InlineQueryService:
             change = result.data.get("change_pct")
             if isinstance(price, (int, float)):
                 change_text = f"{float(change):+.2f}%" if isinstance(change, (int, float)) else "veri yok"
-                title = f"{symbol} â€¢ {float(price):,.4f}"
-                description = f"7 gÃ¼nlÃ¼k deÄŸiÅŸim: {change_text}"
+                title = f"{symbol} • {float(price):,.4f}"
+                description = f"7 günlük değişim: {change_text}"
                 text = f"{title}\n{description}"
                 if safe_source:
                     text += f"\nKaynak: {safe_source}"
@@ -358,13 +358,13 @@ class InlineQueryService:
                 result_id=f"city:{city.plate}",
                 title=f"{city.name} ({city.plate:02d})",
                 description=(
-                    f"Plaka {city.plate:02d} â€¢ Telefon {', '.join(map(str, city.phone))} â€¢ "
+                    f"Plaka {city.plate:02d} • Telefon {', '.join(map(str, city.phone))} • "
                     f"{city.region or '-'}"
                 ),
                 text=(
                     f"{city.name} | Plaka {city.plate:02d} | "
                     f"Telefon {', '.join(map(str, city.phone))}\n"
-                    f"BÃ¶lge: {city.region or '-'} | Ä°lÃ§e sayÄ±sÄ±: {len(city.districts)}"
+                    f"Bölge: {city.region or '-'} | İlçe sayısı: {len(city.districts)}"
                 ),
             )
             for city in page

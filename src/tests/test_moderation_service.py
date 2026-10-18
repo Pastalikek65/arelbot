@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from src.moderation import ModerationEngine, ModerationService
+from src.moderation.contracts import ModerationEvent
 
 
 class FakeModerationDB:
@@ -103,7 +104,7 @@ async def test_moderation_summary_is_bounded_and_escapes_admin_report():
     service = ModerationService(db)
     rendered = await service.render_summary(-100, days=7)
 
-    assert "Ä°hlal: <b>4</b>" in rendered
+    assert "İhlal: <b>4</b>" in rendered
     assert "&lt;admin?&amp;&gt;" in rendered
     assert "mesaj" not in rendered.casefold()
 
@@ -117,3 +118,62 @@ async def test_moderation_strike_clear_is_audited():
     assert deleted == 2
     assert db.audits[-1][1] == "moderation_strikes_cleared"
     assert db.audits[-1][2]["chat_id"] == -100
+
+
+@pytest.mark.asyncio
+async def test_moderation_service_evaluates_attachment_event_caption():
+    db = FakeModerationDB()
+    service = ModerationService(db, ModerationEngine(window_seconds=10))
+    event = ModerationEvent(
+        chat_id=-100,
+        message_id=44,
+        user_id=7,
+        event_kind="animation",
+        caption="https://bad.example",
+        attachment_type="animation",
+    )
+    decision = await service.evaluate_event(
+        event,
+        {"moderation_enabled": True, "link_filter": True},
+    )
+    assert decision.allowed is False
+    assert decision.reason == "link_filter"
+
+
+@pytest.mark.asyncio
+async def test_moderation_service_uses_active_guardian_deny_before_local_policy():
+    class Guardian:
+        async def evaluate(self, event):
+            return type("GuardianResult", (), {
+                "decision": "deny",
+                "enforce": True,
+                "actions": ("mute",),
+                "reason_code": "guardian_rule",
+            })()
+
+    service = ModerationService(FakeModerationDB(), guardian_adapter=Guardian())
+    event = ModerationEvent(chat_id=-100, message_id=45, user_id=7, event_kind="text", text="normal")
+    decision = await service.evaluate_event(event, {"moderation_enabled": True})
+    assert decision.allowed is False
+    assert decision.action == "mute"
+    assert decision.reason == "guardian_rule"
+
+
+@pytest.mark.asyncio
+async def test_moderation_service_fails_closed_on_guardian_unavailable_quarantine():
+    class Guardian:
+        async def evaluate(self, event):
+            return type("GuardianResult", (), {
+                "decision": "unavailable",
+                "enforce": True,
+                "enforcement_required": True,
+                "actions": ("quarantine",),
+                "reason_code": "guardian_unavailable",
+            })()
+
+    service = ModerationService(FakeModerationDB(), guardian_adapter=Guardian())
+    event = ModerationEvent(chat_id=-100, message_id=46, user_id=7, event_kind="text", text="normal")
+    decision = await service.evaluate_event(event, {"moderation_enabled": True})
+    assert decision.allowed is False
+    assert decision.action == "mute"
+    assert decision.reason == "guardian_unavailable"

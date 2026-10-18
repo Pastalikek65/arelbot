@@ -49,7 +49,7 @@ def test_template_name_is_bounded_and_html_safe(value):
     with pytest.raises(QuoteOptionsError, match="template_name_invalid"):
         normalize_template_name(value)
 
-    assert normalize_template_name("  GÃ¼nlÃ¼k_Not  ") == "gÃ¼nlÃ¼k_not"
+    assert normalize_template_name("  Günlük_Not  ") == "günlük_not"
 
 
 @pytest.mark.asyncio

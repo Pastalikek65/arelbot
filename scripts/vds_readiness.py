@@ -33,6 +33,8 @@ _PORT_RE = re.compile(r"(?:^|:)\s*(?P<port>[0-9]{1,5})\s+\S")
 _COUNT_RE = re.compile(r"^[0-9]+$")
 _ALLOWED_PORTS = frozenset({80, 443, 8443})
 _MIN_FREE_SPACE_KB = 512 * 1024
+_EXPECTED_SERVICES = frozenset({"bot", "worker", "mongo", "redis"})
+_GUARDIAN_MODES = frozenset({"disabled", "shadow", "active"})
 
 
 def validate_live_gate(*, live: bool, confirm_live: bool, env_value: str | None) -> None:
@@ -76,6 +78,32 @@ def _bool_marker(output: str, expected: str) -> bool:
     return str(output or "").strip() == expected
 
 
+def parse_service_health(output: str) -> dict[str, bool]:
+    """Parse bounded Docker service status output without retaining names/details.
+
+    The remote probe emits ``service|status`` rows.  Only the four production
+    services are accepted and a service is healthy when Docker reports the
+    healthcheck as ``(healthy)``.  Unknown rows are ignored so an unrelated
+    container cannot accidentally satisfy a readiness check.
+    """
+
+    result = {service: False for service in _EXPECTED_SERVICES}
+    for raw_line in str(output or "").splitlines()[:64]:
+        service, separator, status = raw_line.partition("|")
+        if not separator or service not in _EXPECTED_SERVICES:
+            continue
+        normalized = status.strip().casefold()
+        result[service] = "(healthy)" in normalized or normalized == "healthy"
+    return result
+
+
+def parse_guardian_mode(output: str) -> str:
+    """Normalize the non-secret Guardian mode read from the shared env."""
+
+    mode = str(output or "").strip().casefold()
+    return mode if mode in _GUARDIAN_MODES else "disabled"
+
+
 def build_report(snapshot: Mapping[str, Any]) -> dict[str, Any]:
     """Build the stable, secret-free readiness artifact from parsed facts."""
 
@@ -110,7 +138,36 @@ def build_report(snapshot: Mapping[str, Any]) -> dict[str, Any]:
     if free_space_kb < _MIN_FREE_SPACE_KB:
         blockers.append("disk_space_low")
 
-    return {
+    if "compose_file_present" in snapshot and not bool(snapshot.get("compose_file_present")):
+        blockers.append("compose_file_missing")
+    if "compose_config_valid" in snapshot and not bool(snapshot.get("compose_config_valid")):
+        blockers.append("compose_config_invalid")
+
+    service_health_raw = snapshot.get("service_health")
+    service_health: dict[str, bool] | None = None
+    if isinstance(service_health_raw, Mapping):
+        service_health = {
+            service: bool(service_health_raw.get(service))
+            for service in sorted(_EXPECTED_SERVICES)
+        }
+        for service, healthy in service_health.items():
+            if not healthy:
+                blockers.append(f"{service}_unhealthy")
+
+    guardian_mode = parse_guardian_mode(snapshot.get("guardian_mode", "disabled"))
+    guardian_socket_present = bool(snapshot.get("guardian_socket_present"))
+    guardian_socket_readable = bool(snapshot.get("guardian_socket_readable"))
+    guardian = {
+        "mode": guardian_mode,
+        "socket_present": guardian_socket_present,
+        "socket_readable": guardian_socket_readable,
+    }
+    if guardian_mode in {"shadow", "active"} and not guardian_socket_present:
+        blockers.append("guardian_socket_missing")
+    if guardian_mode in {"shadow", "active"} and guardian_socket_present and not guardian_socket_readable:
+        blockers.append("guardian_socket_unreadable")
+
+    report = {
         "scope": "vds-readiness",
         "ok": not blockers,
         "mode": "live-read-only",
@@ -125,6 +182,24 @@ def build_report(snapshot: Mapping[str, Any]) -> dict[str, Any]:
         "blockers": blockers,
         "secret_free": True,
     }
+    # These details are included only for a real remote probe.  Keeping them
+    # optional preserves compatibility with older local fixture snapshots.
+    if service_health is not None:
+        report["service_health"] = service_health
+        report["runtime_checks"] = {
+            "compose_services_healthy": all(service_health.values()),
+            "bot_healthy": service_health["bot"],
+            "worker_healthy": service_health["worker"],
+            "mongo_healthy": service_health["mongo"],
+            "redis_healthy": service_health["redis"],
+        }
+    if "compose_file_present" in snapshot or "compose_config_valid" in snapshot:
+        report["compose"] = {
+            "file_present": bool(snapshot.get("compose_file_present")),
+            "config_valid": bool(snapshot.get("compose_config_valid")),
+        }
+    report["guardian"] = guardian
+    return report
 
 
 def _remote_snapshot(client: Any, *, app_root: str) -> dict[str, Any]:
@@ -146,6 +221,12 @@ def _remote_snapshot(client: Any, *, app_root: str) -> dict[str, Any]:
         "ports": "ss -ltnH 2>/dev/null || true",
         "containers": "docker ps -q 2>/dev/null | wc -l",
         "target_containers": "docker ps -q --filter label=com.docker.compose.project=arelbot-prod 2>/dev/null | wc -l",
+        "compose_file": f"test -f {root}/current/docker-compose.yml && echo yes || echo no",
+        "compose_config": f"cd {root}/current 2>/dev/null && docker compose --profile prod config --quiet >/dev/null 2>&1 && echo yes || echo no",
+        "services": "docker ps --filter label=com.docker.compose.project=arelbot-prod --format '{{.Label \"com.docker.compose.service\"}}|{{.Status}}' 2>/dev/null",
+        "guardian_mode": f"awk -F= '$1==\"GUARDIAN_MODE\" {{print $2; exit}}' {root}/shared/.env 2>/dev/null",
+        "guardian_socket": "test -S /run/kek-guardian/guardian.sock && echo yes || echo no",
+        "guardian_socket_readable": "test -S /run/kek-guardian/guardian.sock && test -r /run/kek-guardian/guardian.sock && echo yes || echo no",
     }
     outputs: dict[str, str] = {}
     for key, command in commands.items():
@@ -160,6 +241,7 @@ def _remote_snapshot(client: Any, *, app_root: str) -> dict[str, Any]:
     free_space_kb = parse_free_space_kb(outputs["disk"])
     if release_count is None or container_count is None or target_container_count is None or free_space_kb is None:
         raise VdsReadinessError("remote_counter_invalid")
+    service_health = parse_service_health(outputs["services"])
     return {
         "ssh_authenticated": True,
         "host_key_verified": True,
@@ -175,6 +257,12 @@ def _remote_snapshot(client: Any, *, app_root: str) -> dict[str, Any]:
         "nginx_active": _bool_marker(outputs["nginx"], "active"),
         "listening_ports": parse_port_list(outputs["ports"]),
         "existing_container_count": container_count,
+        "compose_file_present": _bool_marker(outputs["compose_file"], "yes"),
+        "compose_config_valid": _bool_marker(outputs["compose_config"], "yes"),
+        "service_health": service_health,
+        "guardian_mode": parse_guardian_mode(outputs["guardian_mode"]),
+        "guardian_socket_present": _bool_marker(outputs["guardian_socket"], "yes"),
+        "guardian_socket_readable": _bool_marker(outputs["guardian_socket_readable"], "yes"),
     }
 
 

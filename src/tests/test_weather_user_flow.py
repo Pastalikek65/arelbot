@@ -18,9 +18,9 @@ from src.storage.subscription_store import SubscriptionStore
 
 def test_turkish_city_normalization_supports_short_forms_and_diacritics():
     directory = CityDirectory(Config.CITY_DATA_PATH)
-    assert directory.search("ist", limit=1)[0].name == "Ä°stanbul"
-    assert directory.by_name("ÅanlÄ±urfa").name == "ÅanlÄ±urfa"
-    assert normalize_text("Ã‡eÅŸme") == "cesme"
+    assert directory.search("ist", limit=1)[0].name == "İstanbul"
+    assert directory.by_name("Şanlıurfa").name == "Şanlıurfa"
+    assert normalize_text("Çeşme") == "cesme"
 
 
 def test_weather_keyboard_callbacks_are_owner_scoped_and_compact():

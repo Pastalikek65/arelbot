@@ -39,12 +39,12 @@ class SubscriptionService:
     MAX_INTERVAL_SECONDS = 30 * 86400
     # Keep the Turkish spellings as real Unicode in the pattern.  A raw
     # string treats ``\u00fc``/``\u0131`` as literal backslash sequences,
-    # which silently rejected otherwise valid input such as ``1gÃ¼n``.
+    # which silently rejected otherwise valid input such as ``1gün``.
     DURATION_RE_TR = re.compile(
-        r"^(?P<num>\d+)\s*(?P<unit>dk|dakika|m|sa|saat|h|gÃ¼n|gun|gÃ¼nlÃ¼k|gunluk|d|hf|hafta|haftalÄ±k)$",
+        r"^(?P<num>\d+)\s*(?P<unit>dk|dakika|m|sa|saat|h|gün|gun|günlük|gunluk|d|hf|hafta|haftalık)$",
         re.IGNORECASE,
     )
-    DURATION_RE = re.compile(r"^(?P<num>\d+)\s*(?P<unit>dk|m|sa|h|gÃ¼n|gun|d)$", re.IGNORECASE)
+    DURATION_RE = re.compile(r"^(?P<num>\d+)\s*(?P<unit>dk|m|sa|h|gün|gun|d)$", re.IGNORECASE)
     ALLOWED_FEATURES = {
         "weather",
         "air_quality",
@@ -138,15 +138,15 @@ class SubscriptionService:
     @classmethod
     def _validate_request(cls, request: SubscriptionRequest) -> None:
         if request.feature_key not in cls.ALLOWED_FEATURES:
-            raise ValueError("Bu bildirim Ã¶zelliÄŸi desteklenmiyor.")
+            raise ValueError("Bu bildirim özelliği desteklenmiyor.")
         try:
             interval = int(request.interval_seconds)
         except (TypeError, ValueError) as exc:
-            raise ValueError("Bildirim aralÄ±ÄŸÄ± geÃ§ersiz.") from exc
+            raise ValueError("Bildirim aralığı geçersiz.") from exc
         if not cls.MIN_INTERVAL_SECONDS <= interval <= cls.MAX_INTERVAL_SECONDS:
-            raise ValueError("Bildirim aralÄ±ÄŸÄ± 15 dakika ile 30 gÃ¼n arasÄ±nda olmalÄ±.")
+            raise ValueError("Bildirim aralığı 15 dakika ile 30 gün arasında olmalı.")
         if not isinstance(request.params, dict) or len(request.params) > 8:
-            raise ValueError("Bildirim parametreleri geÃ§ersiz.")
+            raise ValueError("Bildirim parametreleri geçersiz.")
 
     async def _audit_group_schedule(
         self,
@@ -196,9 +196,9 @@ class SubscriptionService:
             hour, minute = (int(value) for value in local_time.split(":", 1))
             zone = ZoneInfo(timezone_name)
         except (ValueError, TypeError, KeyError) as exc:
-            raise ValueError("GeÃ§ersiz saat veya saat dilimi.") from exc
+            raise ValueError("Geçersiz saat veya saat dilimi.") from exc
         if not 0 <= hour <= 23 or not 0 <= minute <= 59:
-            raise ValueError("Saat 00:00 ile 23:59 arasÄ±nda olmalÄ±dÄ±r.")
+            raise ValueError("Saat 00:00 ile 23:59 arasında olmalıdır.")
         current = (now or datetime.now(timezone.utc)).astimezone(zone)
         candidate = current.replace(hour=hour, minute=minute, second=0, microsecond=0)
         if schedule_kind == "weekly":
@@ -224,7 +224,7 @@ class SubscriptionService:
 
     def parse(self, args: list[str]) -> SubscriptionRequest:
         if not args:
-            raise ValueError("KullanÄ±m: /takip hava istanbul")
+            raise ValueError("Kullanım: /takip hava istanbul")
         first = args[0].casefold()
         # Keep the natural Turkish form while routing to the typed feature.
         if first in {"hava", "weather"} and len(args) > 1 and args[1].casefold() in {
@@ -236,8 +236,8 @@ class SubscriptionService:
             feature = self.ALIASES.get(first, first)
             feature_args = args[1:]
         if feature not in self.ALLOWED_FEATURES:
-            raise ValueError("Bu Ã¶zellik iÃ§in abonelik desteklenmiyor.")
-        interval_raw = "varsayÄ±lan"
+            raise ValueError("Bu özellik için abonelik desteklenmiyor.")
+        interval_raw = "varsayılan"
         body = feature_args
         interval = self.DEFAULT_INTERVALS[feature]
         if feature_args:
@@ -250,13 +250,13 @@ class SubscriptionService:
                 multiplier = (
                     60 if unit in {"dk", "dakika", "m"}
                     else 3600 if unit in {"sa", "saat", "h"}
-                    else 604800 if unit in {"hf", "hafta", "haftalÄ±k"}
+                    else 604800 if unit in {"hf", "hafta", "haftalık"}
                     else 86400
                 )
                 interval = value * multiplier
                 body = feature_args[:-1]
         if interval < 15 * 60 or interval > 30 * 86400:
-            raise ValueError("AralÄ±k 15dk ile 30gÃ¼n arasÄ±nda olmalÄ±dÄ±r.")
+            raise ValueError("Aralık 15dk ile 30gün arasında olmalıdır.")
         params: dict[str, Any] = {}
         if feature in {"weather", "air_quality", "prayer_times", "crypto"}:
             if not body:
@@ -265,56 +265,56 @@ class SubscriptionService:
                     else "/takip hava kalite istanbul 3sa" if feature == "air_quality"
                     else "/takip hava istanbul 1sa"
                 )
-                raise ValueError(f"{'Coin' if feature == 'crypto' else 'Åehir'} belirtin. Ã–rnek: {example}")
+                raise ValueError(f"{'Coin' if feature == 'crypto' else 'Şehir'} belirtin. Örnek: {example}")
             params["symbol" if feature == "crypto" else "city"] = " ".join(body)[:80]
         elif body:
-            raise ValueError("Bu Ã¶zellik iÃ§in yalnÄ±zca aralÄ±k yazÄ±lmalÄ±dÄ±r.")
+            raise ValueError("Bu özellik için yalnızca aralık yazılmalıdır.")
         return SubscriptionRequest(feature, params, interval, interval_raw)
 
     def parse_threshold(self, args: list[str]) -> ThresholdRequest:
         """Parse a currency, fuel or crypto threshold alert."""
         if len(args) < 3:
-            raise ValueError("KullanÄ±m: /alarm kur usd 40 Ã¼stÃ¼")
+            raise ValueError("Kullanım: /alarm kur usd 40 üstü")
         first = args[0].casefold()
         feature = self.ALIASES.get(first, first)
         if feature in self.ALERT_FEATURES:
             metric = args[1].casefold()
             value_raw = args[2]
-            operator_raw = args[3].casefold() if len(args) >= 4 else "Ã¼stÃ¼"
-        elif first in {"usd", "dolar", "eur", "euro", "gbp", "sterlin", "altin", "altÄ±n"}:
+            operator_raw = args[3].casefold() if len(args) >= 4 else "üstü"
+        elif first in {"usd", "dolar", "eur", "euro", "gbp", "sterlin", "altin", "altın"}:
             feature = "currency"
             metric = first
             value_raw = args[1]
-            operator_raw = args[2].casefold() if len(args) >= 3 else "Ã¼stÃ¼"
+            operator_raw = args[2].casefold() if len(args) >= 3 else "üstü"
         elif first in {"btc", "bitcoin", "eth", "ethereum", "sol", "solana", "xrp", "doge", "dogecoin", "avax", "dot", "link"}:
             feature = "crypto"
             metric = first
             value_raw = args[1]
-            operator_raw = args[2].casefold() if len(args) >= 3 else "Ã¼stÃ¼"
+            operator_raw = args[2].casefold() if len(args) >= 3 else "üstü"
         elif first in {"gasoline", "benzin", "diesel", "motorin", "lpg"}:
             feature = "fuel"
             metric = first
             value_raw = args[1]
-            operator_raw = args[2].casefold() if len(args) >= 3 else "Ã¼stÃ¼"
+            operator_raw = args[2].casefold() if len(args) >= 3 else "üstü"
         else:
-            raise ValueError("Bu veri iÃ§in eÅŸik alarmÄ± desteklenmiyor.")
+            raise ValueError("Bu veri için eşik alarmı desteklenmiyor.")
         operators = {
-            "Ã¼stÃ¼": "above", "Ã¼zeri": "above", "above": "above", ">": "above",
-            "altÄ±": "below", "altÄ±nda": "below", "below": "below", "<": "below",
+            "üstü": "above", "üzeri": "above", "above": "above", ">": "above",
+            "altı": "below", "altında": "below", "below": "below", "<": "below",
         }
         operator = operators.get(operator_raw)
         if operator is None:
-            raise ValueError("YÃ¶n belirtin: Ã¼stÃ¼ veya altÄ±.")
+            raise ValueError("Yön belirtin: üstü veya altı.")
         try:
             value = float(value_raw.replace(",", "."))
         except ValueError as exc:
-            raise ValueError("EÅŸik sayÄ±sal olmalÄ±.") from exc
+            raise ValueError("Eşik sayısal olmalı.") from exc
         if value <= 0 or value > 1_000_000:
-            raise ValueError("EÅŸik 0 ile 1.000.000 arasÄ±nda olmalÄ±.")
+            raise ValueError("Eşik 0 ile 1.000.000 arasında olmalı.")
         if feature == "currency" and len(metric) < 2:
-            raise ValueError("Kur kodu belirtin; Ã¶rn: usd veya euro.")
+            raise ValueError("Kur kodu belirtin; örn: usd veya euro.")
         if feature == "fuel" and metric not in {"gasoline", "benzin", "diesel", "motorin", "lpg"}:
-            raise ValueError("YakÄ±t metriÄŸi benzin, motorin veya lpg olmalÄ±.")
+            raise ValueError("Yakıt metriği benzin, motorin veya lpg olmalı.")
         metric = {"benzin": "gasoline", "motorin": "diesel"}.get(metric, metric)
         metric = {
             "btc": "bitcoin", "eth": "ethereum", "sol": "solana", "xrp": "ripple",
@@ -329,9 +329,9 @@ class SubscriptionService:
 
     async def create_threshold(self, user_id: int, chat_id: int, request: ThresholdRequest) -> dict[str, Any]:
         if request.feature_key not in self.ALERT_FEATURES:
-            raise ValueError("Bu veri iÃ§in eÅŸik alarmÄ± desteklenmiyor.")
+            raise ValueError("Bu veri için eşik alarmı desteklenmiyor.")
         if not self.MIN_INTERVAL_SECONDS <= int(request.interval_seconds) <= self.MAX_INTERVAL_SECONDS:
-            raise ValueError("Alarm aralÄ±ÄŸÄ± 15 dakika ile 30 gÃ¼n arasÄ±nda olmalÄ±.")
+            raise ValueError("Alarm aralığı 15 dakika ile 30 gün arasında olmalı.")
         params = {"symbol": request.condition.get("metric"), "vs_currency": "usd"} if request.feature_key == "crypto" else {}
         existing = await self.store.find_active(user_id, request.feature_key, params, request.condition)
         if existing:
@@ -378,9 +378,9 @@ class SubscriptionService:
         message_thread_id: int | None = None,
     ) -> dict[str, Any]:
         if feature_key not in self.ALLOWED_FEATURES:
-            raise ValueError("Bu bildirim Ã¶zelliÄŸi desteklenmiyor.")
+            raise ValueError("Bu bildirim özelliği desteklenmiyor.")
         if schedule_kind not in {"daily", "weekly"}:
-            raise ValueError("Grup planÄ± gÃ¼nlÃ¼k veya haftalÄ±k olmalÄ±dÄ±r.")
+            raise ValueError("Grup planı günlük veya haftalık olmalıdır.")
         interval = 86400 if schedule_kind == "daily" else 604800
         next_run = self._next_local_run(
             local_time,

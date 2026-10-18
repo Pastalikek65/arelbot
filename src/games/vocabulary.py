@@ -161,7 +161,7 @@ WORD_GAME_RACKS: dict[str, str] = {
 def normalize_game_word(value: object) -> str:
     """Normalise Turkish case and diacritics for fair answer comparison."""
 
-    text = str(value or "").strip().casefold().replace("Ä±", "i")
+    text = str(value or "").strip().casefold().replace("ı", "i")
     return "".join(
         char for char in unicodedata.normalize("NFKD", text)
         if not unicodedata.combining(char)
@@ -224,7 +224,7 @@ def vocabulary_entries() -> list[dict[str, object]]:
                 {
                     "word": display,
                     "category": category,
-                    "description": "Bu turda seÃ§ilen, gunluk hayatta veya genel kulturde karsilasabilecegin bir kavram.",
+                    "description": "Bu turda seçilen, gunluk hayatta veya genel kulturde karsilasabilecegin bir kavram.",
                     "hints": [
                         f"{len(normalized)} harflidir.",
                         f"{display[0]} harfi ile baslar.",

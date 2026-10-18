@@ -1,0 +1,100 @@
+{
+  "scope": "provider-governance-approval",
+  "ok": true,
+  "features": [
+    {
+      "feature_key": "pharmacy",
+      "status": "approved",
+      "evidence_id": "owner-arelbot-pharmacy-20261017"
+    },
+    {
+      "feature_key": "fuel",
+      "status": "approved",
+      "evidence_id": "owner-arelbot-fuel-20261017"
+    },
+    {
+      "feature_key": "currency",
+      "status": "approved",
+      "evidence_id": "owner-arelbot-currency-20261017"
+    },
+    {
+      "feature_key": "crypto",
+      "status": "approved",
+      "evidence_id": "owner-arelbot-crypto-20261017"
+    },
+    {
+      "feature_key": "market",
+      "status": "approved",
+      "evidence_id": "owner-arelbot-market-20261017"
+    },
+    {
+      "feature_key": "earthquakes",
+      "status": "approved",
+      "evidence_id": "owner-arelbot-earthquakes-20261017"
+    },
+    {
+      "feature_key": "bim_deals",
+      "status": "approved",
+      "evidence_id": "owner-arelbot-bim_deals-20261017"
+    },
+    {
+      "feature_key": "breaking_news",
+      "status": "approved",
+      "evidence_id": "owner-arelbot-breaking_news-20261017"
+    },
+    {
+      "feature_key": "weather",
+      "status": "approved",
+      "evidence_id": "owner-arelbot-weather-20261017"
+    },
+    {
+      "feature_key": "air_quality",
+      "status": "approved",
+      "evidence_id": "owner-arelbot-air_quality-20261017"
+    },
+    {
+      "feature_key": "prayer_times",
+      "status": "approved",
+      "evidence_id": "owner-arelbot-prayer_times-20261017"
+    },
+    {
+      "feature_key": "culture_recommendation",
+      "status": "approved",
+      "evidence_id": "owner-arelbot-culture_recommendation-20261017"
+    },
+    {
+      "feature_key": "lyrics",
+      "status": "approved",
+      "evidence_id": "owner-arelbot-lyrics-20261017"
+    },
+    {
+      "feature_key": "image_generation",
+      "status": "approved",
+      "evidence_id": "owner-arelbot-image_generation-20261017"
+    },
+    {
+      "feature_key": "web_reader",
+      "status": "approved",
+      "evidence_id": "owner-arelbot-web_reader-20261017"
+    },
+    {
+      "feature_key": "web_search",
+      "status": "approved",
+      "evidence_id": "owner-arelbot-web_search-20261017"
+    },
+    {
+      "feature_key": "market_chart_render",
+      "status": "approved",
+      "evidence_id": "owner-arelbot-market_chart_render-20261017"
+    },
+    {
+      "feature_key": "news_digest",
+      "status": "approved",
+      "evidence_id": "owner-arelbot-news_digest-20261017"
+    }
+  ],
+  "approved_count": 18,
+  "pending_count": 0,
+  "rejected_count": 0,
+  "secret_free": true
+}

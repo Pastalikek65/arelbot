@@ -75,9 +75,9 @@ class AttachmentProcessingService:
     def validate(cls, job_type: str, file_size: int | None) -> str:
         kind = str(job_type or "").casefold().strip()
         if kind not in cls.ALLOWED_TYPES:
-            raise AttachmentJobError("attachment_type_unsupported", "Bu medya tÃ¼rÃ¼ desteklenmiyor.")
+            raise AttachmentJobError("attachment_type_unsupported", "Bu medya türü desteklenmiyor.")
         if file_size and int(file_size) > Config.ATTACHMENT_MAX_FILE_BYTES:
-            raise AttachmentJobError("attachment_too_large", "Medya boyutu izin verilen sÄ±nÄ±rÄ± aÅŸÄ±yor.")
+            raise AttachmentJobError("attachment_too_large", "Medya boyutu izin verilen sınırı aşıyor.")
         return kind
 
     async def submit(self, *, job_type: str, chat_id: int, user_id: int, status_message_id: int,
@@ -88,7 +88,7 @@ class AttachmentProcessingService:
         now = time.monotonic()
         recent = [x for x in self._request_times[user_id] if now - x < 60]
         if len(recent) >= 20:
-            raise AttachmentJobError("attachment_rate_limited", "Medya kuyruÄŸuna Ã§ok hÄ±zlÄ± istek gÃ¶nderildi.")
+            raise AttachmentJobError("attachment_rate_limited", "Medya kuyruğuna çok hızlı istek gönderildi.")
         self._request_times[user_id] = recent + [now]
         payload = {
             "job_type": kind, "chat_id": int(chat_id), "user_id": int(user_id),
@@ -122,8 +122,8 @@ class AttachmentProcessingService:
         self.metrics_registry.inc("attachment_jobs_total")
         try:
             if self.bot is None:
-                raise AttachmentJobError("telegram_unavailable", "Telegram istemcisi hazÄ±r deÄŸil.")
-            await self._edit_status(payload, "ğŸ“¥ Medya indiriliyorâ€¦")
+                raise AttachmentJobError("telegram_unavailable", "Telegram istemcisi hazır değil.")
+            await self._edit_status(payload, "📥 Medya indiriliyor…")
             telegram_file = await self.bot.get_file(payload["source_file_id"])
             os.makedirs(Config.ATTACHMENT_TEMP_DIR, exist_ok=True)
             suffix = Path(payload.get("filename") or ".bin").suffix[:10] or ".bin"
@@ -145,16 +145,16 @@ class AttachmentProcessingService:
                     logger.debug("Attachment audit write failed", exc_info=True)
         except AttachmentJobError as exc:
             self.metrics_registry.inc("attachment_jobs_failed")
-            await self._edit_status(payload, f"âŒ {exc} Ä°ÅŸ: <code>{job_id}</code>")
+            await self._edit_status(payload, f"❌ {exc} İş: <code>{job_id}</code>")
             raise
         except asyncio.TimeoutError as exc:
             self.metrics_registry.inc("attachment_jobs_failed")
-            await self._edit_status(payload, f"â±ï¸ Medya iÅŸleme zaman aÅŸÄ±mÄ±na uÄŸradÄ±. Ä°ÅŸ: <code>{job_id}</code>")
-            raise AttachmentJobError("timeout", "Medya iÅŸleme zaman aÅŸÄ±mÄ±na uÄŸradÄ±.") from exc
+            await self._edit_status(payload, f"⏱️ Medya işleme zaman aşımına uğradı. İş: <code>{job_id}</code>")
+            raise AttachmentJobError("timeout", "Medya işleme zaman aşımına uğradı.") from exc
         except Exception as exc:
             self.metrics_registry.inc("attachment_jobs_failed")
-            await self._edit_status(payload, f"âŒ Medya iÅŸlenemedi (ATTACHMENT_PROCESSING_ERROR). Ä°ÅŸ: <code>{job_id}</code>")
-            raise AttachmentJobError("attachment_processing_error", "Medya iÅŸlenemedi.") from exc
+            await self._edit_status(payload, f"❌ Medya işlenemedi (ATTACHMENT_PROCESSING_ERROR). İş: <code>{job_id}</code>")
+            raise AttachmentJobError("attachment_processing_error", "Medya işlenemedi.") from exc
         finally:
             if path:
                 try:
@@ -165,26 +165,26 @@ class AttachmentProcessingService:
 
     async def _process_vision(self, payload, path):
         if self.vision_service is None:
-            raise AttachmentJobError("ai_provider_unavailable", "GÃ¶rsel analiz servisi hazÄ±r deÄŸil.")
-        await self._edit_status(payload, "ğŸ§  GÃ¶rsel analiz ediliyorâ€¦")
+            raise AttachmentJobError("ai_provider_unavailable", "Görsel analiz servisi hazır değil.")
+        await self._edit_status(payload, "🧠 Görsel analiz ediliyor…")
         result = await asyncio.wait_for(self.vision_service.analyze_image(
             path, payload.get("caption", ""), payload["chat_id"], payload["user_id"],
             payload.get("user_name", ""), payload.get("username") or None,
         ), timeout=Config.ATTACHMENT_JOB_TIMEOUT_SECONDS)
-        text = sanitize_html(str(result or "GÃ¶rsel iÃ§in yanÄ±t Ã¼retilemedi."))
+        text = sanitize_html(str(result or "Görsel için yanıt üretilemedi."))
         await self._deliver(payload, "vision", lambda: self.bot.send_message(chat_id=payload["chat_id"], text=text, parse_mode="HTML", reply_to_message_id=payload.get("reply_to_message_id")))
         payload["output_type"] = "telegram_html"
 
     async def _process_voice(self, payload, path):
         if self.stt_service is None:
-            raise AttachmentJobError("ai_provider_unavailable", "Ses Ã§Ã¶zÃ¼mleme servisi hazÄ±r deÄŸil.")
-        await self._edit_status(payload, "ğŸ§ Ses Ã§Ã¶zÃ¼mleniyorâ€¦")
+            raise AttachmentJobError("ai_provider_unavailable", "Ses çözümleme servisi hazır değil.")
+        await self._edit_status(payload, "🎧 Ses çözümleniyor…")
         response = await asyncio.wait_for(self.stt_service.transcribe_or_respond(
             path, payload["chat_id"], payload["user_id"], payload.get("user_name", ""), payload.get("username") or None,
         ), timeout=Config.ATTACHMENT_JOB_TIMEOUT_SECONDS)
         response = str(response or "")
         if not response:
-            await self._edit_status(payload, "âœ… Ses iÅŸlendi; yanÄ±t Ã¼retilecek iÃ§erik bulunamadÄ±.")
+            await self._edit_status(payload, "✅ Ses işlendi; yanıt üretilecek içerik bulunamadı.")
             return
         if len(response) > 500 or self.tts_service is None:
             await self._deliver(payload, "voice_text", lambda: self.bot.send_message(chat_id=payload["chat_id"], text=sanitize_html(response), parse_mode="HTML", reply_to_message_id=payload.get("reply_to_message_id")))
@@ -205,13 +205,13 @@ class AttachmentProcessingService:
 
     async def _process_sticker(self, payload, path):
         if self.sticker_render_service is None:
-            raise AttachmentJobError("sticker_renderer_unavailable", "Sticker render servisi hazÄ±r deÄŸil.")
-        await self._edit_status(payload, "âœ¨ Sticker hazÄ±rlanÄ±yorâ€¦")
+            raise AttachmentJobError("sticker_renderer_unavailable", "Sticker render servisi hazır değil.")
+        await self._edit_status(payload, "✨ Sticker hazırlanıyor…")
         data = await asyncio.to_thread(Path(path).read_bytes)
         artifact = await asyncio.wait_for(self.sticker_render_service.render(data, kind=payload.get("sticker_kind", "static")), timeout=Config.ATTACHMENT_JOB_TIMEOUT_SECONDS)
         stream = io.BytesIO(artifact.content)
         stream.name = artifact.filename
-        keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("â• Pakete ekle / yeni paket", callback_data=f"stk_select_pack_{payload.get('sticker_kind', 'static')}")]])
+        keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("➕ Pakete ekle / yeni paket", callback_data=f"stk_select_pack_{payload.get('sticker_kind', 'static')}")]])
         await self._deliver(payload, "sticker", lambda: self.bot.send_sticker(chat_id=payload["chat_id"], sticker=stream, reply_markup=keyboard, reply_to_message_id=payload.get("reply_to_message_id")))
         payload["output_type"] = "telegram_sticker"
 

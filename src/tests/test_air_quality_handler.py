@@ -23,8 +23,8 @@ async def test_hava_quality_alias_uses_typed_feature_and_navigation():
         async def execute(self, feature_key, params):
             self.calls.append((feature_key, params))
             return FeatureResult.success(
-                {"content": "<b>ğŸŒ¿ AQI</b>"},
-                display_blocks=("<b>ğŸŒ¿ AQI</b>",),
+                {"content": "<b>🌿 AQI</b>"},
+                display_blocks=("<b>🌿 AQI</b>",),
             )
 
     executor = Executor()
@@ -34,12 +34,12 @@ async def test_hava_quality_alias_uses_typed_feature_and_navigation():
         effective_chat=SimpleNamespace(id=7, type="private"),
         effective_message=Message(),
     )
-    context = SimpleNamespace(args=["kalite", "Ä°stanbul"])
+    context = SimpleNamespace(args=["kalite", "İstanbul"])
     handler = CommandHandler(engine, SimpleNamespace(), None, None)
 
     await handler.handle_hava_command(update, context)
 
-    assert executor.calls == [("air_quality", {"city": "Ä°stanbul"})]
+    assert executor.calls == [("air_quality", {"city": "İstanbul"})]
     assert sent and "AQI" in sent[0][0]
     callbacks = [
         button.callback_data
@@ -55,8 +55,8 @@ async def test_air_quality_callback_is_owner_scoped_in_private_chats():
         async def execute(self, feature_key, params):
             assert feature_key == "air_quality"
             return FeatureResult.success(
-                {"content": "<b>ğŸŒ¿ AQI</b>"},
-                display_blocks=("<b>ğŸŒ¿ AQI</b>",),
+                {"content": "<b>🌿 AQI</b>"},
+                display_blocks=("<b>🌿 AQI</b>",),
             )
 
     class Query:
@@ -79,7 +79,7 @@ async def test_air_quality_callback_is_owner_scoped_in_private_chats():
     )
     await handler._handle_air_quality_callback(denied, query, SimpleNamespace(), "air_quality:7:34")
     assert query.edited is None
-    assert query.answers and "baÅŸka" in query.answers[-1][0][0]
+    assert query.answers and "başka" in query.answers[-1][0][0]
 
     allowed = SimpleNamespace(
         effective_user=SimpleNamespace(id=7),

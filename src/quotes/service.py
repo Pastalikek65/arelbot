@@ -68,7 +68,7 @@ class QuoteProcessingService:
                 "entities": list(item.get("entities") or [])[:32],
             })
         if not bounded_messages:
-            raise QuoteJobError("quote_empty", "AlÄ±ntÄ±lanacak mesaj bulunamadÄ±.")
+            raise QuoteJobError("quote_empty", "Alıntılanacak mesaj bulunamadı.")
         safe_options = dict(options or {})
         source_key = hashlib.sha256(json.dumps({"messages": bounded_messages, "options": safe_options}, sort_keys=True, default=str).encode()).hexdigest()
         payload = {
@@ -97,8 +97,8 @@ class QuoteProcessingService:
         avatar_paths = []
         try:
             if self.bot is None:
-                raise QuoteJobError("telegram_unavailable", "Telegram istemcisi hazÄ±r deÄŸil.")
-            await self._edit(payload, "ğŸ–¼ï¸ AlÄ±ntÄ± gÃ¶rseli hazÄ±rlanÄ±yorâ€¦")
+                raise QuoteJobError("telegram_unavailable", "Telegram istemcisi hazır değil.")
+            await self._edit(payload, "🖼️ Alıntı görseli hazırlanıyor…")
             messages = payload["messages"]
             for item in messages:
                 uid = int(item.get("user_id") or 0)
@@ -126,7 +126,7 @@ class QuoteProcessingService:
             else:
                 keyboard = None
                 if options.get("rate_enabled"):
-                    keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("ğŸ‘", callback_data=f"qrate_up_{messages[0]['user_id']}"), InlineKeyboardButton("ğŸ‘", callback_data=f"qrate_down_{messages[0]['user_id']}")]])
+                    keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("👍", callback_data=f"qrate_up_{messages[0]['user_id']}"), InlineKeyboardButton("👎", callback_data=f"qrate_down_{messages[0]['user_id']}")]])
                 with open(artifact_path, "rb") as quote_file:
                     result = await self._deliver(payload, "sticker", lambda: self.bot.send_sticker(chat_id=payload["chat_id"], sticker=quote_file, reply_markup=keyboard, reply_to_message_id=payload.get("reply_to_message_id")))
                 payload["output_type"] = "telegram_sticker"
@@ -137,16 +137,16 @@ class QuoteProcessingService:
             self.metrics_registry.inc("quote_jobs_completed")
         except QuoteJobError as exc:
             self.metrics_registry.inc("quote_jobs_failed")
-            await self._edit(payload, f"âŒ {exc} Ä°ÅŸ: <code>{payload['job_id']}</code>")
+            await self._edit(payload, f"❌ {exc} İş: <code>{payload['job_id']}</code>")
             raise
         except asyncio.TimeoutError as exc:
             self.metrics_registry.inc("quote_jobs_failed")
-            await self._edit(payload, f"â±ï¸ Quote iÅŸlemi zaman aÅŸÄ±mÄ±na uÄŸradÄ±. Ä°ÅŸ: <code>{payload['job_id']}</code>")
-            raise QuoteJobError("timeout", "AlÄ±ntÄ± oluÅŸturma zaman aÅŸÄ±mÄ±na uÄŸradÄ±.") from exc
+            await self._edit(payload, f"⏱️ Quote işlemi zaman aşımına uğradı. İş: <code>{payload['job_id']}</code>")
+            raise QuoteJobError("timeout", "Alıntı oluşturma zaman aşımına uğradı.") from exc
         except Exception as exc:
             self.metrics_registry.inc("quote_jobs_failed")
-            await self._edit(payload, f"âŒ AlÄ±ntÄ± oluÅŸturulamadÄ±. Ä°ÅŸ: <code>{payload['job_id']}</code>")
-            raise QuoteJobError("quote_processing_error", "AlÄ±ntÄ± oluÅŸturulamadÄ±.") from exc
+            await self._edit(payload, f"❌ Alıntı oluşturulamadı. İş: <code>{payload['job_id']}</code>")
+            raise QuoteJobError("quote_processing_error", "Alıntı oluşturulamadı.") from exc
         finally:
             if artifact_path:
                 Path(artifact_path).unlink(missing_ok=True)

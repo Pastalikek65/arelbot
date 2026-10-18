@@ -18,13 +18,13 @@ def test_provider_health_report_escapes_detail_and_bounds_rows():
     assert "typed&lt;one&gt;" in text
     assert "safe &amp; detail" in text
     assert "legacy" not in text
-    assert "saÄŸlayÄ±cÄ±" in text
+    assert "sağlayıcı" in text
 
 
 def test_provider_health_report_handles_missing_metrics():
     text = format_provider_health([SimpleNamespace(name="x", healthy=True)], title="Health")
 
-    assert "hata â€”" in text
+    assert "hata —" in text
 
 
 def test_ai_provider_health_report_is_bounded_and_safe():
@@ -67,5 +67,5 @@ def test_provider_governance_formatter_is_bounded_and_secret_free():
 def test_provider_governance_formatter_handles_invalid_rows_without_crashing():
     rendered = format_provider_governance({"features": [None, "bad"], "errors": ["hidden"]})
 
-    assert "Kaynak yÃ¶netiÅŸimi" in rendered
+    assert "Kaynak yönetişimi" in rendered
     assert "hata" in rendered

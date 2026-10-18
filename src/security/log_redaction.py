@@ -93,4 +93,3 @@ class RedactionFilter(Filter):
             else:
                 record.args = _redact_argument(record.args)
         return True
-

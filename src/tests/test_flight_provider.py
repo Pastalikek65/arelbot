@@ -16,11 +16,11 @@ async def test_flight_provider_builds_route_and_date_search_links_without_networ
     response = await provider.fetch(
         ProviderRequest(
             operation="flight_search",
-            params={"origin": "Ä°stanbul", "destination": "Ankara", "date": "05/11/2026"},
+            params={"origin": "İstanbul", "destination": "Ankara", "date": "05/11/2026"},
         )
     )
 
-    assert response.data["origin"] == "Ä°stanbul"
+    assert response.data["origin"] == "İstanbul"
     assert response.data["destination"] == "Ankara"
     assert response.data["date"] == "2026-11-05"
     assert response.metadata["live_prices"] is False
@@ -30,7 +30,7 @@ async def test_flight_provider_builds_route_and_date_search_links_without_networ
         assert parsed.scheme == "https"
         assert parsed.netloc in {"www.google.com", "www.bing.com"}
         query = parse_qs(parsed.query)
-        assert "Ä°stanbul" in query["q"][0]
+        assert "İstanbul" in query["q"][0]
         assert "Ankara" in query["q"][0]
         assert "2026-11-05" in query["q"][0]
 
@@ -61,7 +61,7 @@ async def test_flight_provider_rejects_invalid_input(origin, destination, date, 
 
 @pytest.mark.asyncio
 async def test_ai_flight_tool_uses_link_provider_and_does_not_scrape_live_results():
-    result = await FlightTool().execute("Ä°stanbul", "Ä°zmir", "2026-11-05")
+    result = await FlightTool().execute("İstanbul", "İzmir", "2026-11-05")
 
     assert "Google Flights" in result["result"]
     assert len(result["links"]) == 3

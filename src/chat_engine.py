@@ -259,11 +259,13 @@ class ChatEngine:
         ServiceType.IAMHC,
         ServiceType.EVREN,
         ServiceType.NVIDIA,
-        # CLEANAPIS remains constructible for explicitly pinned legacy tests
-        # or rollback manifests, but is never part of production defaults.
-        ServiceType.CLEANAPIS,
         ServiceType.NINEROUTER,
     ]
+    # Clean APIs was explicitly retired from the product route.  The enum and
+    # adapter remain importable only for old fixture tests and rollback
+    # inspection; this set is the single runtime guard that prevents a stale
+    # environment value from registering or selecting that provider.
+    RETIRED_PROVIDERS = frozenset({ServiceType.CLEANAPIS})
 
     def __init__(self, key_manager: KeyManager, mcp_manager: Any = None):
         
@@ -954,7 +956,10 @@ class ChatEngine:
 
     def _build_ai_router(self) -> AIProviderRouter:
         service_configs = self._service_configs()
-        services = self.SERVICE_PRIORITY + self.SECONDARY_PROVIDERS
+        services = [
+            service for service in self.SERVICE_PRIORITY + self.SECONDARY_PROVIDERS
+            if service not in self.RETIRED_PROVIDERS
+        ]
         configured_names = [
             service.value for service in services
             if service_configs[service].get("url") and service_configs[service].get("model")
@@ -970,16 +975,24 @@ class ChatEngine:
         default_names = keyed_names or configured_names
         raw_routes = getattr(Config, "AI_PROVIDER_ROUTES", {}) or {}
         # A previous deployment may still carry a `cleanapis` route in its
-        # shared .env. Once EVREN is configured, migrate that stale route in
-        # memory so no request or metric is sent through the retired gateway.
-        if getattr(Config, "EVREN_KEY", None):
-            raw_routes = {
-                task: [
-                    ServiceType.EVREN.value if str(name).casefold() == ServiceType.CLEANAPIS.value else name
-                    for name in names
-                ]
-                for task, names in raw_routes.items()
-            }
+        # shared `.env`. Drop it unconditionally. If the route becomes empty,
+        # the normal keyed/default-provider fallback below selects EVREN (or
+        # NVIDIA -> EVREN) without sending any request to the retired gateway.
+        sanitized_routes = {}
+        for task, names in raw_routes.items():
+            if not isinstance(names, (list, tuple)):
+                continue
+            selected = []
+            for name in names:
+                if str(name).casefold() == ServiceType.CLEANAPIS.value:
+                    if ServiceType.EVREN.value in default_names:
+                        name = ServiceType.EVREN.value
+                    else:
+                        continue
+                if name not in selected:
+                    selected.append(name)
+            sanitized_routes[task] = selected
+        raw_routes = sanitized_routes
         if not raw_routes:
             # Keep the product default deterministic even when an older
             # .env explicitly contains ``AI_PROVIDER_ROUTES={}``.  The
@@ -1009,7 +1022,7 @@ class ChatEngine:
         retry_attempts = max(0, min(2, int(getattr(Config, "AI_PROVIDER_RETRY_ATTEMPTS", 1))))
         retry_backoff_ms = max(25, min(1000, int(getattr(Config, "AI_PROVIDER_RETRY_BACKOFF_MS", 150))))
         router = AIProviderRouter(routes=routes)
-        for service in self.SERVICE_PRIORITY + self.SECONDARY_PROVIDERS:
+        for service in services:
             config = service_configs[service]
             if config.get("url") and config.get("model"):
                 router.register(
@@ -1157,11 +1170,11 @@ class ChatEngine:
                 content = msg.get("content", "")
                 if role == "user" and msg.get("user_id") is not None:
                     content = format_user_history_turn(msg.get("user_id"), content)
-                elif role == "assistant" and msg.get("target_user_id") is not None:
-                    target_id = int(msg.get("target_user_id"))
-                    target_message_id = msg.get("reply_to_message_id")
-                    suffix = f" message_id={int(target_message_id)}" if target_message_id is not None else ""
-                    content = f"[arel_reply_to_user_id={target_id}{suffix}] {content}"
+                # Reply attribution is persistence/delivery metadata. It must
+                # never be embedded in model-visible prose, otherwise a model
+                # can copy Telegram IDs into a user-facing answer. Group
+                # targeting already receives typed message refs through
+                # ``get_group_reply_plan``.
                 history.append({"role": role, "content": content})
             return history
         except Exception as e:
@@ -1176,6 +1189,7 @@ class ChatEngine:
         text: str,
         role: str = "user",
         *,
+        username: str | None = None,
         schema_version: int = 1,
         turn_id: str | None = None,
         telegram_message_id: int | None = None,
@@ -1205,7 +1219,7 @@ class ChatEngine:
                 if not user:
                     user = {
                         "_id": user_id,
-                        "username": safe_name,
+                        "username": str(username or "").strip()[:64] or safe_name,
                         "first_name": safe_name,
                         "message_count": 0,
                         "avg_message_length": 0,
@@ -1231,13 +1245,21 @@ class ChatEngine:
                 elif new_avg > 25: style = "formal"
                 elif has_emojis and new_avg < 15: style = "casual_emoji"
                 
-                profile_update = self.db.update_user(user_id, {
+                profile_fields = {
                     "first_name": safe_name,
                     "message_count": message_count,
                     "avg_message_length": new_avg,
                     "uses_emojis": user.get("uses_emojis") or has_emojis,
                     "communication_style": style
-                })
+                }
+                # Telegram usernames are the only stable human-readable
+                # target that can be supplied to moderation commands.  Keep
+                # the field separate from the display name and update it only
+                # when Telegram actually supplied one.
+                normalized_username = str(username or "").strip().lstrip("@").strip()
+                if normalized_username:
+                    profile_fields["username"] = normalized_username[:64]
+                profile_update = self.db.update_user(user_id, profile_fields)
                 content = format_user_turn(safe_name, text)
             else:
                 await chat_update
@@ -1320,6 +1342,7 @@ class ChatEngine:
                            persona_mode: str | None = None, **kwargs) -> str:
         persist_conversation = bool(kwargs.pop("persist_conversation", True))
         purpose = str(kwargs.pop("purpose", "chat") or "chat")[:64]
+        is_group_admin = kwargs.pop("is_group_admin", False) is True
         if self._is_identity_query(message_text):
             return AREL_IDENTITY_RESPONSE
         if session_id not in self.locks:
@@ -1488,6 +1511,7 @@ class ChatEngine:
                                         "session_id": session_id,
                                         "user_id": user_id,
                                         "chat_type": "group" if session_id < 0 else "private",
+                                        "is_group_admin": is_group_admin,
                                     },
                                 )
                                 if func_name == "image_generation" and "handover_tag" in tool_result:
@@ -1509,10 +1533,11 @@ class ChatEngine:
                                 )
                                 final_text = follow_up.content or ""
                             except AIProviderUnavailable:
-                                return (
-                                    "Şu an AI servisine erişemiyorum. "
-                                    "Lütfen biraz sonra tekrar dene."
-                                )
+                                # Keep provider/routing diagnostics out of the
+                                # user-facing response.  Tool follow-up
+                                # failures use the same short conversational
+                                # fallback as the normal completion path.
+                                return "buradayım ya, bağlantı bi an tökezledi 😅"
                             for tag in handover_tags:
                                 if tag not in final_text: final_text += f"\n\n{tag}"
                 else:
@@ -1544,8 +1569,11 @@ class ChatEngine:
                             return final_text
 
         # If ALL services failed
+        # Do not expose provider state as a user-facing error.  A transient
+        # upstream outage should still produce a short, human-sounding reply;
+        # the provider/router metrics and logs retain the diagnostic detail.
         logger.error("ALL AI services failed")
-        return "✨ Şu an tüm AI servislerim yoğun. Biraz sonra tekrar dener misin? 😇"
+        return "buradayım ya, bağlantı bi an tökezledi 😅"
 
     async def close(self):
         """HTTP client'ı temizler."""
@@ -1559,4 +1587,3 @@ class ChatEngine:
                     logger.debug("Feature provider close failed", exc_info=True)
         await self.http_client.aclose()
         await self.db.close_async()
-

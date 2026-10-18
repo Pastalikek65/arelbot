@@ -113,7 +113,8 @@ class RecentMessageIndex:
             "thread_id": thread_id,
             "telegram_message_id": message_id,
             "author_user_id": author_id,
-            "display_name": str(message.get("display_name") or message.get("full_name") or "KullanÄ±cÄ±")[:80],
+            "username": str(message.get("username") or "")[:64],
+            "display_name": str(message.get("display_name") or message.get("full_name") or "Kullanıcı")[:80],
             "text": str(message.get("text", message.get("content", "")))[:4096],
             "created_at": created_at,
             "reply_to_message_id": _as_int(message.get("reply_to_message_id")),
@@ -139,7 +140,8 @@ class RecentMessageIndex:
             )
             await collection.create_index(
                 [("chat_id", 1), ("thread_id", 1), ("telegram_message_id", 1)],
-                sparse=True,
+                unique=True,
+                partialFilterExpression={"telegram_message_id": {"$exists": True}},
                 name="group_reply_telegram_message_unique",
             )
         except Exception as exc:

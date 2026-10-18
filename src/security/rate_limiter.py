@@ -1,13 +1,13 @@
 """
-Rate Limiter â€” Token Bucket algoritmasÄ± ile kullanÄ±cÄ± bazlÄ± hÄ±z sÄ±nÄ±rlama.
+Rate Limiter — Token Bucket algoritması ile kullanıcı bazlı hız sınırlama.
 
-Her kullanÄ±cÄ±/sohbet iÃ§in ayrÄ± bir bucket tutar.
-Redis varsa daÄŸÄ±tÄ±k rate limiting, yoksa in-memory.
+Her kullanıcı/sohbet için ayrı bir bucket tutar.
+Redis varsa dağıtık rate limiting, yoksa in-memory.
 
-KullanÄ±m:
+Kullanım:
     limiter = RateLimiter(redis_cache)
     if await limiter.is_rate_limited(user_id):
-        return "YavaÅŸla!"
+        return "Yavaşla!"
 """
 import time
 import logging
@@ -18,11 +18,11 @@ logger = logging.getLogger(__name__)
 
 class TokenBucket:
     """
-    Token Bucket algoritmasÄ± implementasyonu.
+    Token Bucket algoritması implementasyonu.
 
     - Her saniye `tokens_per_second` token eklenir
     - Maksimum `bucket_size` kadar token birikebilir
-    - Her istek 1 token tÃ¼ketir
+    - Her istek 1 token tüketir
     """
 
     def __init__(self, tokens_per_second: float = 1.0, bucket_size: int = 10):
@@ -40,7 +40,7 @@ class TokenBucket:
         return new_tokens
 
     def consume(self, key: str) -> bool:
-        """1 token tÃ¼ketir. False dÃ¶nerse rate limit aÅŸÄ±ldÄ±."""
+        """1 token tüketir. False dönerse rate limit aşıldı."""
         tokens = self._refill(key)
         if tokens >= 1.0:
             self._tokens[key] = (tokens - 1.0, self._tokens[key][1])
@@ -48,7 +48,7 @@ class TokenBucket:
         return False
 
     def get_wait_time(self, key: str) -> float:
-        """Rate limit aÅŸÄ±mÄ±nda beklenecek sÃ¼re (saniye)."""
+        """Rate limit aşımında beklenecek süre (saniye)."""
         tokens = self._refill(key)
         if tokens >= 1.0:
             return 0.0
@@ -63,12 +63,12 @@ class TokenBucket:
 
 class RateLimiter:
     """
-    BirleÅŸik Rate Limiter.
+    Birleşik Rate Limiter.
 
-    KullanÄ±m:
+    Kullanım:
         limiter = RateLimiter(redis_cache)
         if await limiter.is_rate_limited(user_id):
-            await message.reply_text("Ã‡ok hÄ±zlÄ±sÄ±n, yavaÅŸla! â³")
+            await message.reply_text("Çok hızlısın, yavaşla! ⏳")
             return
     """
 
@@ -102,10 +102,10 @@ class RateLimiter:
         key: Optional[str] = None
     ) -> bool:
         """
-        KullanÄ±cÄ±nÄ±n rate limit aÅŸÄ±p aÅŸmadÄ±ÄŸÄ±nÄ± kontrol eder.
+        Kullanıcının rate limit aşıp aşmadığını kontrol eder.
 
         Returns:
-            True = rate limit aÅŸÄ±ldÄ±, False = devam edebilir
+            True = rate limit aşıldı, False = devam edebilir
         """
         uid = str(user_id)
         cache_key = f"ratelimit:{uid}"
@@ -158,4 +158,4 @@ class RateLimiter:
             limiter.clear()
         if self._redis and self._redis.is_redis_available:
             await self._redis.clear()
-        logger.info("RateLimiter sÄ±fÄ±rlandÄ±.")
+        logger.info("RateLimiter sıfırlandı.")

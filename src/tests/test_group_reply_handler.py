@@ -74,8 +74,16 @@ class Engine:
         self.plans.append(context)
         ids = [item.message_id for item in context.candidates]
         return '{"replies": [' + ",".join(
-            '{"target_message_id": %d, "text": "ayrÄ± yanÄ±t"}' % item_id for item_id in ids
+            '{"target_message_id": %d, "text": "ayrı yanıt"}' % item_id for item_id in ids
         ) + ']}'
+
+
+class EmptyPlanEngine(Engine):
+    async def get_group_reply_plan(self, context):
+        return '{"replies": []}'
+
+    async def get_response(self, *args, **kwargs):
+        return "tamam buraday?m"
 
 
 @pytest.mark.asyncio
@@ -98,12 +106,38 @@ async def test_triggered_group_turn_replies_to_each_recent_user_message_separate
     handler._log_event = AsyncMock()
     context = SimpleNamespace(bot=bot, chat_data={}, job_queue=None, application=None)
 
-    await handler.handle_message(update(101, "sÄ±navÄ± geÃ§tim", 1, "X"), context)
+    await handler.handle_message(update(101, "sınavı geçtim", 1, "X"), context)
     await handler.handle_message(update(202, "Arel naber", 2, "Y"), context)
 
     assert [call["reply_to_message_id"] for call in bot.calls] == [101, 202]
     assert all(call["chat_id"] == -100 for call in bot.calls)
     assert len(engine.plans) == 1
+
+
+@pytest.mark.asyncio
+async def test_explicit_group_trigger_never_silently_drops_an_empty_plan():
+    engine = EmptyPlanEngine()
+    bot = Bot()
+    handler = MessageHandler(
+        engine,
+        Sudo(),
+        None,
+        None,
+        data_port=SimpleNamespace(
+            reachable=True,
+            get_chat_settings=DB().get_chat_settings,
+            get_game_state=DB().get_game_state,
+        ),
+        recent_message_index=RecentMessageIndex(),
+        reply_delivery_ledger=ReplyDeliveryLedger(),
+    )
+    context = SimpleNamespace(bot=bot, chat_data={}, job_queue=None, application=None)
+    handler._log_event = AsyncMock()
+
+    await handler.handle_message(update(303, "Arel ses var m?", 3, "Z"), context)
+
+    assert len(bot.calls) == 1
+    assert bot.calls[0]["reply_to_message_id"] == 303
 
 
 @pytest.mark.asyncio

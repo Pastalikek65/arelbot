@@ -54,7 +54,7 @@ Node.js, and Windows development should have Node.js on `PATH`.
 
 For administrator-only authenticated downloads, set a random `ENCRYPTION_KEY`
 of at least 32 characters, keep `MEDIA_COOKIE_ENABLED=false` until a Netscape
-cookie file is uploaded with `/medya_cookie yÃ¼kle <platform>`, then enable it
+cookie file is uploaded with `/medya_cookie yükle <platform>`, then enable it
 with `/medya_cookie on`.
 
 Windows development uses `TELEGRAM_MODE=polling`. A Linux host with a public

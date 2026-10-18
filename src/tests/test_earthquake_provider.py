@@ -12,7 +12,7 @@ async def test_afad_provider_parses_fixture_table_and_escapes_text():
     fixture = """
     <html><body><table>
       <tr><th>Tarih</th><th>Enlem</th><th>Boylam</th><th>Derinlik</th><th>x</th><th>ML</th><th>Yer</th></tr>
-      <tr><td>2026-10-04 10:00</td><td>39.1</td><td>27.2</td><td>7.4</td><td>x</td><td>4.2</td><td>A&amp;B yakÄ±nlarÄ±</td></tr>
+      <tr><td>2026-10-04 10:00</td><td>39.1</td><td>27.2</td><td>7.4</td><td>x</td><td>4.2</td><td>A&amp;B yakınları</td></tr>
     </table></body></html>
     """
 
@@ -50,7 +50,7 @@ async def test_afad_provider_prefers_event_json_service():
                 "longitude": 27.2,
                 "depth": 7.4,
                 "magnitude": 4.2,
-                "location": "A&B yakÄ±nlarÄ±",
+                "location": "A&B yakınları",
             }
         ]
     }

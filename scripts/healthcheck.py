@@ -21,28 +21,34 @@ def check_url(value: str, default_port: int, timeout: float = 1.0) -> bool:
 
 def check_mongo(value: str) -> bool:
     """Run a bounded Mongo ping when the driver is present."""
+    client = None
     try:
         from pymongo import MongoClient
 
         client = MongoClient(value, serverSelectionTimeoutMS=700, connectTimeoutMS=500)
         client.admin.command("ping")
-        client.close()
         return True
     except Exception:
-        return check_url(value, 27017, timeout=0.5)
+        return False
+    finally:
+        if client is not None:
+            client.close()
 
 
 def check_redis(value: str) -> bool:
     """Run Redis PING without printing credentials from the URI."""
+    client = None
     try:
         import redis
 
         client = redis.Redis.from_url(value, socket_connect_timeout=0.5, socket_timeout=0.5)
         result = client.ping()
-        client.close()
         return bool(result)
     except Exception:
-        return check_url(value, 6379, timeout=0.5)
+        return False
+    finally:
+        if client is not None:
+            client.close()
 
 
 def check_binary(name: str) -> bool:

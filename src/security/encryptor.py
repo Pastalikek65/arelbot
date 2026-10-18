@@ -1,8 +1,8 @@
 """
-Encryptor â€” API anahtarlarÄ±nÄ± ÅŸifreleme/deÅŸifreleme.
+Encryptor — API anahtarlarını şifreleme/deşifreleme.
 
-Fernet (symmetric encryption) kullanÄ±r.
-Master key .env'de ENCRYPTION_KEY olarak saklanÄ±r.
+Fernet (symmetric encryption) kullanır.
+Master key .env'de ENCRYPTION_KEY olarak saklanır.
 """
 import os
 import base64
@@ -19,9 +19,9 @@ logger = logging.getLogger(__name__)
 
 class Encryptor:
     """
-    API anahtarlarÄ±nÄ± ve hassas verileri ÅŸifreler.
+    API anahtarlarını ve hassas verileri şifreler.
 
-    KullanÄ±m:
+    Kullanım:
         encryptor = Encryptor()
         encrypted = encryptor.encrypt("my-api-key")
         decrypted = encryptor.decrypt(encrypted)
@@ -34,7 +34,7 @@ class Encryptor:
         if self._master_key:
             self._init_fernet()
         else:
-            logger.warning("ENCRYPTION_KEY bulunamadÄ±. Åifreleme devre dÄ±ÅŸÄ±.")
+            logger.warning("ENCRYPTION_KEY bulunamadı. Şifreleme devre dışı.")
 
     def _init_fernet(self):
         try:
@@ -54,33 +54,33 @@ class Encryptor:
                 key = base64.urlsafe_b64encode(key.ljust(32, b'\0'))
 
             self._fernet = Fernet(key)
-            logger.info("âœ… Encryptor baÅŸarÄ±yla baÅŸlatÄ±ldÄ±.")
+            logger.info("✅ Encryptor başarıyla başlatıldı.")
         except Exception as e:
-            logger.error("Encryptor baÅŸlatÄ±lamadÄ±: %s", summarize_exception(e, label="encryptor_init"))
+            logger.error("Encryptor başlatılamadı: %s", summarize_exception(e, label="encryptor_init"))
             self._fernet = None
 
     def encrypt(self, plain_text: str) -> Optional[str]:
-        """Metni ÅŸifreler."""
+        """Metni şifreler."""
         if not self._fernet or not plain_text:
             return plain_text
         try:
             return self._fernet.encrypt(plain_text.encode()).decode()
         except Exception as e:
-            logger.error("Åifreleme hatasÄ±: %s", summarize_exception(e, label="encrypt"))
+            logger.error("Şifreleme hatası: %s", summarize_exception(e, label="encrypt"))
             return plain_text
 
     def decrypt(self, encrypted_text: str) -> Optional[str]:
-        """ÅifrelenmiÅŸ metni Ã§Ã¶zer."""
+        """Şifrelenmiş metni çözer."""
         if not self._fernet or not encrypted_text:
             return encrypted_text
         try:
             return self._fernet.decrypt(encrypted_text.encode()).decode()
         except Exception as e:
-            logger.error("DeÅŸifreleme hatasÄ±: %s", summarize_exception(e, label="decrypt"))
+            logger.error("Deşifreleme hatası: %s", summarize_exception(e, label="decrypt"))
             return encrypted_text
 
     def is_encrypted(self, text: str) -> bool:
-        """Metnin ÅŸifreli olup olmadÄ±ÄŸÄ±nÄ± kontrol eder."""
+        """Metnin şifreli olup olmadığını kontrol eder."""
         if not text:
             return False
         try:

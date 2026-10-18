@@ -1,0 +1,11 @@
+{
+  "scope": "evren-staging",
+  "ok": true,
+  "provider": "evren",
+  "model": "deepseek-v4.1-flash",
+  "latency_ms": 503.71,
+  "response_chars": 1,
+  "usage_present": true,
+  "secret_free": true,
+  "mode": "live-completion"
+}

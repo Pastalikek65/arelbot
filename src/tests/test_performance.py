@@ -1,5 +1,5 @@
 """
-RedisCache, RateLimiter, Encryptor iÃ§in testler.
+RedisCache, RateLimiter, Encryptor için testler.
 """
 import pytest
 from src.database.redis_cache import RedisCache, MemoryBackend

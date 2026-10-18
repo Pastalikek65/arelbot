@@ -67,7 +67,7 @@ def test_chat_engine_applies_configured_task_routes(monkeypatch):
     assert router.routes["transcribe"] == ["cerebras"]
     # Tasks without an explicit preference retain the configured provider set.
     assert set(router.routes["summary"]) == {
-        "freemodel", "groq", "gemini", "cerebras", "iamhc", "evren", "nvidia", "cleanapis", "ninerouter"
+        "freemodel", "groq", "gemini", "cerebras", "iamhc", "evren", "nvidia", "ninerouter"
     }
 
 
@@ -116,7 +116,7 @@ def test_chat_engine_migrates_stale_cleanapis_route_to_evren(monkeypatch):
     assert router.routes["chat"] == ["evren"]
 
 
-def test_chat_engine_exposes_cleanapis_as_an_openai_compatible_provider(monkeypatch):
+def test_chat_engine_retires_cleanapis_route_without_registering_provider(monkeypatch):
     monkeypatch.setattr(Config, "CLEANAPIS_URL", "https://cleanapis.com/v1")
     monkeypatch.setattr(Config, "CLEANAPIS_MODEL", "deepseek-v4-flash-0731")
     monkeypatch.setattr(Config, "CLEANAPIS_KEY", "fixture-cleanapis-key")
@@ -129,10 +129,9 @@ def test_chat_engine_exposes_cleanapis_as_an_openai_compatible_provider(monkeypa
 
     router = engine._build_ai_router()
 
-    assert router.routes["chat"] == ["cleanapis"]
-    provider = router.providers["cleanapis"]
-    assert provider.base_url == "https://cleanapis.com/v1"
-    assert provider.model == "deepseek-v4-flash-0731"
+    assert "cleanapis" not in router.routes["chat"]
+    assert "cleanapis" not in router.providers
+    assert router.routes["chat"] == ["evren"]
 
 
 def test_chat_engine_exposes_nvidia_nim_provider_without_relabeling_evren(monkeypatch):
@@ -239,4 +238,3 @@ async def test_deterministic_ai_request_error_does_not_fallback_or_open_circuit(
     assert snapshot["counters"]["ai_provider_validation_errors_total_primary"] == 1
     assert snapshot["counters"].get("ai_provider_success_total_fallback", 0) == 0
     assert snapshot["counters"].get("ai_provider_errors_total_primary", 0) == 0
-

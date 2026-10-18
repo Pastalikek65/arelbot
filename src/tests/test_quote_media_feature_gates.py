@@ -72,7 +72,7 @@ async def test_quote_option_commands_are_silent_when_quote_is_disabled():
     )
     for method_name, args in (
         ("handle_qcolor_command", ["#ffffff"]),
-        ("handle_qemoji_command", ["âœ¨"]),
+        ("handle_qemoji_command", ["✨"]),
         ("handle_qrate_command", []),
         ("handle_qtheme_command", ["dark"]),
     ):

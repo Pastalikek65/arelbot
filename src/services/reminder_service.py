@@ -1,4 +1,4 @@
-"""Telegram hatirlatmalarini zamanlayan ve sure metnini ayrÄ±ÅŸtÄ±ran servis."""
+"""Telegram hatirlatmalarini zamanlayan ve sure metnini ayrıştıran servis."""
 
 from __future__ import annotations
 
@@ -20,9 +20,9 @@ class ReminderRequest:
 
 class ReminderService:
     # These spellings must be Unicode characters, not literal ``\u`` text;
-    # otherwise ``/remind 1gÃ¼n`` falls through to the absolute-date parser.
+    # otherwise ``/remind 1gün`` falls through to the absolute-date parser.
     DURATION_RE = re.compile(
-        r"^(?P<num>\d+)\s*(?P<unit>sn|s|dk|m|sa|h|gÃ¼n|gun|gÃ¼nlÃ¼k|gunluk|d|hf|hafta|haftalÄ±k)$",
+        r"^(?P<num>\d+)\s*(?P<unit>sn|s|dk|m|sa|h|gün|gun|günlük|gunluk|d|hf|hafta|haftalık)$",
         re.IGNORECASE,
     )
     CLOCK_RE = re.compile(r"^(?P<hour>[01]?\d|2[0-3]):(?P<minute>[0-5]\d)$")
@@ -73,7 +73,7 @@ class ReminderService:
                 1 if unit in {"sn", "s"}
                 else 60 if unit in {"dk", "m"}
                 else 3600 if unit in {"sa", "h"}
-                else 604800 if unit in {"hf", "hafta", "haftalÄ±k"}
+                else 604800 if unit in {"hf", "hafta", "haftalık"}
                 else 86400
             )
             delay_seconds = value * multiplier

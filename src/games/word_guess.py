@@ -10,15 +10,25 @@ from src.security.log_redaction import summarize_exception
 from src.games.vocabulary import vocabulary_entries
 from src.games.engine import normalize_difficulty
 from src.games.catalog import WORD_GAME_CATEGORY_LABELS, normalize_word_game_category
+from src.games.word_catalog_adapter import WordCatalogAdapter
 
 logger = logging.getLogger(__name__)
 
 class WordGuessGame:
     """Tabu-style word guessing game. Descriptions never contain the answer."""
     
-    def __init__(self, chat_engine=None):
+    def __init__(self, chat_engine=None, *, seed: int = 0):
         self.chat_engine = chat_engine
         self.words = self._load_word_list()
+        # The adapter owns deterministic category/difficulty selection and the
+        # per-scope repeat guard.  ``self.words`` remains public for legacy
+        # tooling and tests, while active rounds use the typed catalog.
+        try:
+            self.catalog_adapter = WordCatalogAdapter(self.words, seed=int(seed))
+        except ValueError:
+            # Keep the old empty-list error path intact when a corrupt snapshot
+            # leaves no safe entries to adapt.
+            self.catalog_adapter = None
         # Track recently used words per chat to avoid repeats
         self._recent: Dict[int, List[str]] = {}
 
@@ -33,12 +43,12 @@ class WordGuessGame:
         # playable while preventing the legacy "Eski Kelimeler" bucket from
         # swallowing the modern category picker.
         legacy = {
-            "genel kÃ¼ltÃ¼r": "genel",
+            "genel kültür": "genel",
             "genel kultur": "genel",
             "eski kelimeler": "tarih",
-            "eÄŸitim": "genel",
+            "eğitim": "genel",
             "egitim": "genel",
-            "saÄŸlÄ±k": "genel",
+            "sağlık": "genel",
             "saglik": "genel",
         }
         return legacy.get(folded, "genel")
@@ -47,7 +57,7 @@ class WordGuessGame:
     def _display_category(category: str) -> str:
         """Return a readable label even for snapshots with mojibake ids."""
         labels = dict(WORD_GAME_CATEGORY_LABELS)
-        labels.update({"ÅŸehirler": "Åehirler", "doÄŸa": "DoÄŸa"})
+        labels.update({"şehirler": "Şehirler", "doğa": "Doğa"})
         return labels.get(category, category.title())
 
     @classmethod
@@ -59,22 +69,22 @@ class WordGuessGame:
         entries alike, without an AI/network call during a round.
         """
         target = str(word or "").strip()
-        letters = re.sub(r"[^\wÃ‡ÄÄ°Ã–ÅÃœÃ§ÄŸÄ±Ã¶ÅŸÃ¼]", "", target, flags=re.UNICODE)
+        letters = re.sub(r"[^\wÇĞİÖŞÜçğıöşü]", "", target, flags=re.UNICODE)
         if not letters:
             return [str(item).strip() for item in (existing or []) if str(item).strip()]
         existing_items = [str(item).strip() for item in (existing or []) if str(item).strip()]
         generated = [
             f"{len(letters)} harflidir.",
-            f"{letters[0].upper()} harfi ile baÅŸlar.",
+            f"{letters[0].upper()} harfi ile başlar.",
             f"{letters[-1].upper()} harfi ile biter.",
-            f"Ä°Ã§inde {sum(ch.casefold() in 'aeÄ±ioÃ¶uÃ¼' for ch in letters)} sesli harf bulunur.",
-            f"{cls._display_category(category)} kategorisiyle baÄŸlantÄ±lÄ±dÄ±r.",
+            f"İçinde {sum(ch.casefold() in 'aeıioöuü' for ch in letters)} sesli harf bulunur.",
+            f"{cls._display_category(category)} kategorisiyle bağlantılıdır.",
         ]
         if len(letters) >= 5:
-            generated.append(f"Ä°lk iki harfi {letters[:2].upper()} ÅŸeklindedir.")
+            generated.append(f"İlk iki harfi {letters[:2].upper()} şeklindedir.")
             generated.append(f"Ortadaki harfi {letters[len(letters) // 2].upper()} harfidir.")
         else:
-            generated.append(f"Ä°lk iki harfi {letters[:2].upper()} ÅŸeklindedir.")
+            generated.append(f"İlk iki harfi {letters[:2].upper()} şeklindedir.")
         merged: List[str] = []
         seen = set()
         for hint in [*existing_items, *generated]:
@@ -114,7 +124,7 @@ class WordGuessGame:
                     continue
                 if not desc or len(desc) < 15:
                     continue
-                if "hazÄ±rlanÄ±yor" in desc.lower():
+                if "hazırlanıyor" in desc.lower():
                     continue
                 # CRITICAL: Answer must NOT appear in the description
                 if word.lower() in desc.lower():
@@ -148,15 +158,15 @@ class WordGuessGame:
             return text
         # Full word replacement
         pattern = re.compile(re.escape(word), re.IGNORECASE)
-        text = pattern.sub("â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ", text)
+        text = pattern.sub("█████", text)
         # Individual significant parts
         for part in word.split():
             clean = part.strip("()")
             if len(clean) >= 3:
                 part_pattern = re.compile(r'\b' + re.escape(clean) + r'\b', re.IGNORECASE)
-                text = part_pattern.sub("â–ˆâ–ˆâ–ˆâ–ˆâ–ˆ", text)
+                text = part_pattern.sub("█████", text)
         # Clean AI prefixes
-        text = re.sub(r'^(Terim|Kelime|Term|Cevap|TanÄ±m)(\s*:\s*)', '', text, flags=re.IGNORECASE).strip()
+        text = re.sub(r'^(Terim|Kelime|Term|Cevap|Tanım)(\s*:\s*)', '', text, flags=re.IGNORECASE).strip()
         return text
 
     def start(
@@ -165,9 +175,9 @@ class WordGuessGame:
         difficulty: object = "normal",
         category: object | None = None,
     ) -> Dict[str, Any]:
-        """Starts a new game. Fully synchronous â€” instant start."""
+        """Starts a new game. Fully synchronous — instant start."""
         if not self.words:
-            return {"error": "Kelime listesi yÃ¼klenemedi."}
+            return {"error": "Kelime listesi yüklenemedi."}
 
         profile = normalize_difficulty(difficulty)
         requested_category = self._category(category) if category else None
@@ -184,14 +194,37 @@ class WordGuessGame:
         if not eligible:
             eligible = category_pool
 
-        # Avoid recently used words
+        picked: Dict[str, Any]
+        catalog_metadata: Dict[str, Any] = {}
         recent = self._recent.get(chat_id, [])
-        available = [w for w in eligible if w['word'] not in recent]
-        if not available:
-            available = eligible
-            self._recent[chat_id] = []
+        if self.catalog_adapter is not None:
+            try:
+                draw = self.catalog_adapter.draw(
+                    scope=f"chat:{int(chat_id)}",
+                    category=requested_category,
+                    difficulty=profile.key,
+                )
+                picked = draw.to_legacy(self.catalog_adapter.catalog)
+                catalog_metadata = {
+                    "catalog_key": draw.entry.key,
+                    "catalog_cycle_reset": draw.cycle_reset,
+                    "catalog_remaining": draw.remaining,
+                    "catalog_scope": f"chat:{int(chat_id)}",
+                }
+            except LookupError:
+                # A tiny custom/legacy snapshot may not have a matching bucket;
+                # retain the historical selection path as a safe fallback.
+                picked = {}
+        else:
+            picked = {}
 
-        picked = random.choice(available)
+        if not picked:
+            # Avoid recently used words in the legacy fallback path.
+            available = [w for w in eligible if w['word'] not in recent]
+            if not available:
+                available = eligible
+                self._recent[chat_id] = []
+            picked = random.choice(available)
         
         # Track recent
         recent.append(picked['word'])
@@ -208,7 +241,7 @@ class WordGuessGame:
 
         # Generate letter hint (first and last letter + length)
         clean_word = target_word.strip()
-        letter_hint = f"ğŸ”¤ {len(clean_word)} harf: {clean_word[0]}{'_' * (len(clean_word)-2)}{clean_word[-1]}" if len(clean_word) > 2 else ""
+        letter_hint = f"🔤 {len(clean_word)} harf: {clean_word[0]}{'_' * (len(clean_word)-2)}{clean_word[-1]}" if len(clean_word) > 2 else ""
         
         # Add letter hint at the end of hints list
         if letter_hint:
@@ -226,6 +259,7 @@ class WordGuessGame:
             'time_limit': profile.time_limit_seconds,
             'score_multiplier': profile.score_multiplier,
         }
+        game_state.update(catalog_metadata)
         
         return {"game_state": game_state}
 
@@ -240,7 +274,7 @@ class WordGuessGame:
             elapsed = time.time() - game_state.get('start_time', time.time())
             return {"correct": True, "elapsed": elapsed, "attempts": game_state['attempts']}
         
-        # Match without parenthetical part: "MR (MANYETÄ°K REZONANS)" matches "mr"
+        # Match without parenthetical part: "MR (MANYETİK REZONANS)" matches "mr"
         if "(" in target:
             main_part = target.split("(")[0].strip()
             if guess_clean == main_part:

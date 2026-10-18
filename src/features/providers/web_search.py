@@ -77,14 +77,14 @@ class TavilySearchProvider:
 
     @staticmethod
     def _format_content(answer: str | None, rows: list[dict[str, str]]) -> str:
-        lines = ["<b>ğŸŒ Web arama sonuÃ§larÄ±</b>"]
+        lines = ["<b>🌐 Web arama sonuçları</b>"]
         if answer:
-            lines.extend([f"<b>Ã–zet:</b> {html.escape(answer[:1200])}", ""])
+            lines.extend([f"<b>Özet:</b> {html.escape(answer[:1200])}", ""])
         for index, row in enumerate(rows, 1):
             title = html.escape(row["title"][:300])
             content = html.escape(row["content"][:500])
             url = html.escape(row["url"], quote=True)
-            lines.append(f'{index}. <a href="{url}"><b>{title}</b></a> â€” {content}')
+            lines.append(f'{index}. <a href="{url}"><b>{title}</b></a> — {content}')
         return "\n".join(lines)
 
     async def fetch(self, request: ProviderRequest) -> ProviderResponse[dict[str, Any]]:
@@ -223,7 +223,7 @@ class TavilySearchProvider:
         abstract = str(payload.get("AbstractText") or "").strip()
         abstract_url = str(payload.get("AbstractURL") or "").strip()
         if abstract and abstract_url.startswith(("http://", "https://")):
-            rows.append({"title": str(payload.get("Heading") or "Ã–zet")[:300], "content": abstract[:500], "url": abstract_url})
+            rows.append({"title": str(payload.get("Heading") or "Özet")[:300], "content": abstract[:500], "url": abstract_url})
         collect(payload.get("RelatedTopics"))
         if not rows:
             raise RuntimeError("web_search_empty")

@@ -11,6 +11,7 @@ from scripts.media_staging_matrix import (
     run_live,
     validate_live_gate,
     validate_platform_matrix,
+    validate_platform_waiver,
 )
 
 
@@ -55,6 +56,26 @@ def test_media_matrix_can_require_the_complete_live_platform_set():
         validate_platform_matrix(cases[:3], required=True)
 
     validate_platform_matrix(cases[:1], required=False)
+
+
+def test_media_matrix_owner_waiver_allows_one_unavailable_platform():
+    cases = [
+        {"id": "tiktok", "platform": "tiktok", "enabled": True},
+        {"id": "youtube", "platform": "youtube", "enabled": True},
+        {"id": "x", "platform": "x", "enabled": True},
+    ]
+    waived = validate_platform_waiver(
+        ["instagram"],
+        approver="owner",
+        reason="source access restricted",
+    )
+    validate_platform_matrix(cases, required=True, waived_platforms=waived)
+
+    with pytest.raises(MatrixError, match="live_platform_waiver_reason_invalid"):
+        validate_platform_waiver(["instagram"], approver="owner", reason="bad\nreason")
+
+    with pytest.raises(MatrixError, match="live_platform_matrix_incomplete"):
+        validate_platform_matrix(cases[:2], required=True, waived_platforms=waived)
 
 
 @pytest.mark.parametrize(

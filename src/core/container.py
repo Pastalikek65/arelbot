@@ -1,10 +1,10 @@
 """
-Dependency Injection Container â€” TÃ¼m servislerin merkezi yÃ¶netimi.
+Dependency Injection Container — Tüm servislerin merkezi yönetimi.
 
-Orchestrator'a gerek kalmadan tÃ¼m bileÅŸenleri buradan eriÅŸilebilir yapar.
-Global singleton'larÄ± ortadan kaldÄ±rÄ±r, test edilebilirliÄŸi artÄ±rÄ±r.
+Orchestrator'a gerek kalmadan tüm bileşenleri buradan erişilebilir yapar.
+Global singleton'ları ortadan kaldırır, test edilebilirliği artırır.
 
-KullanÄ±m:
+Kullanım:
     container = Container()
     await container.initialize()
     chat_engine = container.chat_engine
@@ -17,13 +17,13 @@ logger = logging.getLogger(__name__)
 
 class Container:
     """
-    DI Container â€” TÃ¼m servisleri baÅŸlatÄ±r, yÃ¶netir ve inject eder.
+    DI Container — Tüm servisleri başlatır, yönetir ve inject eder.
 
-    Ã–zellikler:
-    - Lazy initialization: Servisler ilk eriÅŸimde baÅŸlatÄ±lÄ±r
-    - Singleton yÃ¶netimi: Her servisten tek instance
-    - Test mock'larÄ±: Testlerde kolayca mock servis enjekte edilebilir
-    - Graceful shutdown: TÃ¼m servisleri dÃ¼zgÃ¼n ÅŸekilde kapatÄ±r
+    Özellikler:
+    - Lazy initialization: Servisler ilk erişimde başlatılır
+    - Singleton yönetimi: Her servisten tek instance
+    - Test mock'ları: Testlerde kolayca mock servis enjekte edilebilir
+    - Graceful shutdown: Tüm servisleri düzgün şekilde kapatır
     """
 
     def __init__(self):
@@ -31,21 +31,21 @@ class Container:
         self._services: Dict[str, Any] = {}
 
     async def initialize(self):
-        """TÃ¼m servisleri baÅŸlatÄ±r."""
+        """Tüm servisleri başlatır."""
         if self._initialized:
-            logger.warning("Container zaten baÅŸlatÄ±lmÄ±ÅŸ, tekrar baÅŸlatÄ±lÄ±yor...")
+            logger.warning("Container zaten başlatılmış, tekrar başlatılıyor...")
             await self.shutdown()
 
-        logger.info("ğŸš€ Container baÅŸlatÄ±lÄ±yor...")
+        logger.info("🚀 Container başlatılıyor...")
 
-        # BaÄŸÄ±mlÄ±lÄ±k sÄ±rasÄ±na gÃ¶re servisleri baÅŸlat
-        # (Ã¶nce baÄŸÄ±msÄ±z olanlar, sonra baÄŸÄ±mlÄ± olanlar)
+        # Bağımlılık sırasına göre servisleri başlat
+        # (önce bağımsız olanlar, sonra bağımlı olanlar)
 
         # 1. Config
         from config import Config
         self._services["config"] = Config
 
-        # 2. VeritabanÄ±
+        # 2. Veritabanı
         from src.database.redis_cache import RedisCache
         self._services["redis"] = RedisCache(
             required=(
@@ -56,7 +56,7 @@ class Container:
         )
         await self._services["redis"].initialize()
 
-        # 3. GÃ¼venlik
+        # 3. Güvenlik
         from src.security.rate_limiter import RateLimiter
         from src.security.encryptor import Encryptor
         self._services["rate_limiter"] = RateLimiter(self._services["redis"])
@@ -79,7 +79,7 @@ class Container:
         from src.sudo_manager import SudoManager
         self._services["sudo_manager"] = SudoManager(Config.OWNER_ID)
 
-        # 6. Chat Engine (diÄŸer servislere baÄŸÄ±mlÄ±)
+        # 6. Chat Engine (diğer servislere bağımlı)
         from src.chat_engine import ChatEngine
         self._services["chat_engine"] = ChatEngine(
             key_manager=self._services["key_manager"],
@@ -87,11 +87,11 @@ class Container:
         )
 
         self._initialized = True
-        logger.info("âœ… Container baÅŸarÄ±yla baÅŸlatÄ±ldÄ±")
+        logger.info("✅ Container başarıyla başlatıldı")
 
     async def shutdown(self):
-        """TÃ¼m servisleri dÃ¼zgÃ¼n ÅŸekilde kapatÄ±r."""
-        logger.info("ğŸ›‘ Container kapatÄ±lÄ±yor...")
+        """Tüm servisleri düzgün şekilde kapatır."""
+        logger.info("🛑 Container kapatılıyor...")
 
         if "redis" in self._services:
             await self._services["redis"].close()
@@ -104,14 +104,14 @@ class Container:
 
         self._services.clear()
         self._initialized = False
-        logger.info("âœ… Container kapatÄ±ldÄ±")
+        logger.info("✅ Container kapatıldı")
 
     def get(self, service_name: str, default=None):
-        """Bir servisi adÄ±yla getirir."""
+        """Bir servisi adıyla getirir."""
         return self._services.get(service_name, default)
 
     def register(self, name: str, instance: Any):
-        """Test mock'larÄ± iÃ§in servis kaydetme."""
+        """Test mock'ları için servis kaydetme."""
         self._services[name] = instance
         logger.debug(f"Test mock kaydedildi: {name}")
 

@@ -77,7 +77,7 @@ async def test_word_game_accepts_turkish_character_free_category_alias():
     tool = GamesTool()
     result = await tool.execute(game_type="word_game", category="sehirler")
 
-    assert result["category"] == "ÅŸehirler"
+    assert result["category"] == "şehirler"
 
 
 def test_word_vocabulary_is_large_deduplicated_and_turkish_aware():
@@ -87,13 +87,13 @@ def test_word_vocabulary_is_large_deduplicated_and_turkish_aware():
     assert len(words) == len({normalize_game_word(word) for word in words})
     assert all(len(normalize_game_word(word)) >= 3 for word in words)
     assert all(len(items) >= 20 for items in WORD_GAME_VOCABULARY.values())
-    assert normalize_game_word("Ã‡IÄLIK") == "ciglik"
+    assert normalize_game_word("ÇIĞLIK") == "ciglik"
 
 
 def test_word_bank_can_validate_words_against_a_letter_rack():
-    assert can_form_word("Ä°STANBUL", "Ä°STANBUL")
-    assert can_form_word("bal", "Ä°STANBUL")
-    assert not can_form_word("kalem", "Ä°STANBUL")
+    assert can_form_word("İSTANBUL", "İSTANBUL")
+    assert can_form_word("bal", "İSTANBUL")
+    assert not can_form_word("kalem", "İSTANBUL")
 
 
 def test_every_category_has_at_least_seven_dictionary_answers():
@@ -123,9 +123,9 @@ def test_anlatmaca_filters_requested_category_and_has_a_complete_hint_chain():
 def test_anlatmaca_accepts_turkish_category_aliases():
     game = WordGuessGame()
 
-    state = game.start(42, category="doÄŸa")["game_state"]
+    state = game.start(42, category="doğa")["game_state"]
 
-    assert state["category"] == "doÄŸa"
+    assert state["category"] == "doğa"
 
 
 @pytest.mark.asyncio

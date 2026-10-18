@@ -15,9 +15,9 @@ CULTURE_CATEGORY_ALIASES = {
     "kitap": "book",
     "kitaplar": "book",
     "book": "book",
-    "mÃ¼zik": "music",
+    "müzik": "music",
     "muzik": "music",
-    "ÅŸarkÄ±": "music",
+    "şarkı": "music",
     "sarki": "music",
     "music": "music",
 }
@@ -27,5 +27,5 @@ def normalize_culture_category(value: object) -> str | None:
     raw = " ".join(str(value or "").split()).casefold()
     folded = unicodedata.normalize("NFKD", raw)
     folded = "".join(char for char in folded if not unicodedata.combining(char))
-    folded = folded.replace("Ä±", "i")
+    folded = folded.replace("ı", "i")
     return CULTURE_CATEGORY_ALIASES.get(folded)

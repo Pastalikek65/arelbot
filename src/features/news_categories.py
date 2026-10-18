@@ -22,5 +22,5 @@ def normalize_news_category(value: object) -> str | None:
     raw = " ".join(str(value or "").split()).casefold()
     folded = unicodedata.normalize("NFKD", raw)
     folded = "".join(char for char in folded if not unicodedata.combining(char))
-    folded = folded.replace("Ä±", "i")
+    folded = folded.replace("ı", "i")
     return NEWS_CATEGORY_ALIASES.get(folded)

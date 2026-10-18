@@ -12,7 +12,7 @@ Günlük işlerini düzenle. Bilgiye ulaş. İçerik üret. Birlikte oyna.
 
 Arel, özel sohbetlerde ve Telegram gruplarında çalışan modüler bir Python botudur. Sohbet ve belge analizi, medya indirme, notlar, hatırlatıcılar, güncel veri araçları, sticker ve alıntılar, oyunlar ve yönetici kontrollerini tek bir arayüzde toplar.
 
-> **Sürüm durumu:** GitHub uygulama kodu ile güncel yerel/sunucu sürümü henüz eşitlenmiş değildir. GitHub tarafındaki bilinen başlangıç engelleri ve güncel kaynakta bulunan ek yetenekler [özellik rehberinde](docs/FEATURES.md) ayrı gösterilir. Bu dokümantasyon güncellemesi uygulama kodunu veya sunucu dağıtımını değiştirmez.
+> **Sürüm durumu:** Kaynaklar `2026.10.18-reliability-2` dağıtımıyla eşitlenmiştir. Donmuş imajda 1.431 test geçti, 2 test atlandı. Operasyon kabulü ile gerçek kullanıcı akışlarının uçtan uca kabulü ayrı tutulur. Düzeltmeler ve açık sınırlar [güvenilirlik kaydında](docs/RELIABILITY-2026-10-18.md) yer alır.
 
 ## Neler yapar?
 
@@ -28,15 +28,11 @@ Arel, özel sohbetlerde ve Telegram gruplarında çalışan modüler bir Python 
 
 Yeteneklerin komutları, koşulları ve kaynakları [özellik rehberinde](docs/FEATURES.md) yer alır. Kullanılabilirlik; yapılandırmaya, dış servis erişimine, Telegram izinlerine ve çalışan işleyicilere bağlıdır. Uçuş aracı arama bağlantısı üretir; canlı fiyat veya rezervasyon hizmeti sunmaz.
 
-## Kaynak sürümleri
+## Güncel sürüm
 
-| Kaynak | İncelenen sürüm | Kapsam |
-|---|---|---|
-| GitHub uygulama kodu | `242a1ec`; sunum güncellemesi `5f4bb94` | Komut handler'ında sözdizimi ve şehir dizininde import engeli; başlangıç/test kabulü **HOLD** |
-| Güncel yerel kaynak | `dbcc3bc` | Ek oyunlar, Guardian komut yüzeyi ve typed komut kayıt sistemi; yalnızca kaynak incelemesi |
-| Sunucu sürüm kaydı | RELEASE commit `dbcc3bc` | Güncel kaynakla aynı commit kimliği; bütün özellikler için canlı uçtan uca kabul **NOT_RUN** |
+`2026.10.18-reliability-2`, komut yönlendirmesi, grup içi araç kullanımı, yetki kontrolleri, medya işlem ömrü ve haber kaynağı geçişi düzeltmelerini içerir. Connect Four, XOX, Gomoku ve kapsamlı moderasyon yüzeyleri bu depoda bulunur.
 
-Güncel sürümde ayrıca **Connect Four, XOX, Gomoku**, kapsamlı grup moderasyon yüzeyi ve komut/alias kayıt katmanı bulunur. Bunların kaynakları mevcut GitHub uygulama koduna bu belgeyle eklenmiş olmaz. Ayrıntılar [güncel sürüm ekleri](docs/FEATURES.md#güncel-yerel-ve-sunucu-sürümündeki-ekler) bölümündedir.
+Film kaynağındaki boş sonuç sorunu ve henüz bağlanmamış bazı moderasyon ayarları açık sınırlardır. Özelliklerin komutları ve gereksinimleri [özellik rehberinde](docs/FEATURES.md), doğrulama kapsamı [güvenilirlik kaydında](docs/RELIABILITY-2026-10-18.md) açıklanır.
 
 ## Kullanım örnekleri
 
@@ -63,7 +59,7 @@ Bir mesaja yanıt olarak `/q` ile alıntı, desteklenen bir görsele/videoya yan
 - Kalıcı çalışma için MongoDB ve Redis. Geliştirme Compose profili ikisini de başlatır.
 - Görsel, ses, arama ve medya özellikleri için ilgili servis ayarları. Video işlemleri FFmpeg/FFprobe kullanır; Docker imajı bunları içerir.
 
-GitHub kaynak yolunda önce bilinen syntax/import engellerini giderip Python derleme kontrolü ve testleri çalıştırın. Güncel yerel kaynakta da ayrı test kabulü gerekir; commit kimliği tek başına kabul kanıtı değildir. Hata içeren HEAD'i canlı sürümün üzerine dağıtmayın.
+Dağıtımdan önce Python derleme kontrolünü, testleri, kaynak onayını ve paket/imaj özetlerini doğrulayın. Test başarısı, her komutun Telegram üzerinde uçtan uca kabul edildiği anlamına gelmez.
 
 ### Geliştirme ortamı
 

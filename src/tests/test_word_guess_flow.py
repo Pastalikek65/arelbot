@@ -44,8 +44,8 @@ async def test_wrong_word_guess_is_consumed_and_replies_to_game_panel():
     context = SimpleNamespace(
         chat_data={
             "word_guess": {
-                "word": "KEDÄ°",
-                "description": "Evlerde yaÅŸayan sevimli bir hayvan.",
+                "word": "KEDİ",
+                "description": "Evlerde yaşayan sevimli bir hayvan.",
                 "hints": ["4 harflidir."],
                 "hint_index": 0,
                 "attempts": 0,
@@ -62,7 +62,7 @@ async def test_wrong_word_guess_is_consumed_and_replies_to_game_panel():
         data_port=_DataPort(),
     )
 
-    consumed = await handler._check_game_inputs(update, context, "kÃ¶pek")
+    consumed = await handler._check_game_inputs(update, context, "köpek")
 
     assert consumed is True
     assert len(message.calls) == 1

@@ -92,7 +92,7 @@ def test_document_policy_rejects_mime_size_and_root_escape(tmp_path):
     root = tmp_path / "uploads"
     root.mkdir()
     file_path = root / "notes.txt"
-    file_path.write_text("TÃ¼rkÃ§e iÃ§erik", encoding="utf-8")
+    file_path.write_text("Türkçe içerik", encoding="utf-8")
     policy = DocumentIngestionPolicy(max_bytes=32, allowed_roots=[root])
     validated = policy.validate(file_path, "text/plain")
     assert validated.sha256
@@ -126,7 +126,7 @@ async def test_ingestion_is_user_scoped_and_deduplicated(tmp_path):
     root = tmp_path / "uploads"
     root.mkdir()
     path = root / "memo.txt"
-    path.write_text("Arelbot belge iÃ§eriÄŸi", encoding="utf-8")
+    path.write_text("Arelbot belge içeriği", encoding="utf-8")
     collection = FakeCollection()
     engine = _engine(collection, root)
     first = await engine.ingest_file(str(path), user_id=10, mime_type="text/plain")

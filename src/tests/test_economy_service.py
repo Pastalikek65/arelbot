@@ -44,6 +44,105 @@ async def test_economy_rejects_invalid_amounts():
 
 
 @pytest.mark.asyncio
+async def test_economy_requires_stable_event_ids_for_mutations():
+    service = EconomyService(db=None)
+    with pytest.raises(ValueError, match="event_id_required"):
+        await service.credit(1, -100, 1, reason="quiz_reward")
+    with pytest.raises(ValueError, match="event_id_required"):
+        await service.debit(1, -100, 1, reason="shop")
+
+
+@pytest.mark.asyncio
+async def test_regular_game_rewards_have_a_separate_payout_cap():
+    service = EconomyService(db=None)
+    with pytest.raises(ValueError, match="reward_amount_out_of_range"):
+        await service.credit(1, -100, 1001, reason="quiz_reward", event_id="quiz:large")
+    assert await service.credit(1, -100, 1001, reason="blackjack_settlement", event_id="blackjack:1") is True
+
+
+@pytest.mark.asyncio
+async def test_economy_rejects_invalid_identity_reason_and_event_values():
+    service = EconomyService(db=None)
+    with pytest.raises(ValueError, match="invalid_user_id"):
+        await service.credit(0, -100, 1, reason="quiz", event_id="quiz:1")
+    with pytest.raises(ValueError, match="invalid_chat_id"):
+        await service.credit(1, 0, 1, reason="quiz", event_id="quiz:1")
+    with pytest.raises(ValueError, match="reason_invalid"):
+        await service.credit(1, -100, 1, reason="", event_id="quiz:1")
+    with pytest.raises(ValueError, match="event_id_invalid"):
+        await service.credit(1, -100, 1, reason="quiz", event_id="\x00bad")
+
+
+@pytest.mark.asyncio
+async def test_production_like_unavailable_database_does_not_award_memory_coins():
+    class UnavailableDatabase:
+        available = False
+
+    service = EconomyService(UnavailableDatabase())
+    with pytest.raises(RuntimeError, match="economy_persistence_unavailable"):
+        await service.credit(1, -100, 1, reason="quiz_reward", event_id="quiz:1")
+
+
+@pytest.mark.asyncio
+async def test_persistent_economy_uses_event_key_before_account_mutation():
+    class Duplicate(Exception):
+        code = 11000
+
+    class Result:
+        def __init__(self, modified_count=0, upserted_id=None):
+            self.modified_count = modified_count
+            self.upserted_id = upserted_id
+
+    class Transactions:
+        def __init__(self):
+            self.rows = {}
+
+        async def insert_one(self, row):
+            if row["event_key"] in self.rows:
+                raise Duplicate("duplicate")
+            self.rows[row["event_key"]] = dict(row)
+
+        async def delete_one(self, query):
+            self.rows.pop(query["event_key"], None)
+
+    class Accounts:
+        def __init__(self):
+            self.rows = {}
+
+        async def find_one(self, query, projection=None):
+            row = self.rows.get((query["user_id"], query["chat_id"]))
+            return dict(row) if row else None
+
+        async def update_one(self, query, update, upsert=False):
+            key = (query["user_id"], query["chat_id"])
+            row = self.rows.get(key)
+            if row is None and not upsert:
+                return Result()
+            if row is None:
+                row = {"user_id": key[0], "chat_id": key[1], "balance": 0}
+                self.rows[key] = row
+                upserted = object()
+            else:
+                upserted = None
+            if "balance" in query and row["balance"] < query["balance"]["$gte"]:
+                return Result()
+            row["balance"] += update["$inc"]["balance"]
+            return Result(modified_count=1, upserted_id=upserted)
+
+    class Database:
+        available = True
+
+        def __init__(self):
+            self.economy_accounts = Accounts()
+            self.economy_transactions = Transactions()
+
+    service = EconomyService(Database())
+    assert await service.credit(4, -100, 50, reason="quiz_reward", event_id="quiz:1") is True
+    assert await service.credit(4, -100, 50, reason="quiz_reward", event_id="quiz:1") is False
+    assert await service.balance(4, -100) == 50
+
+
+@pytest.mark.asyncio
 async def test_economy_commands_render_user_scoped_balance():
     service = EconomyService(db=None)
     await service.credit(3, -100, 40, reason="quiz", event_id="quiz:1")
@@ -94,7 +193,7 @@ async def test_quiz_reward_is_idempotent_with_score_event():
         "effective_user": type("User", (), {"id": 7, "first_name": "Arel"})(),
         "effective_chat": type("Chat", (), {"id": -100})(),
     })()
-    context = type("C", (), {"chat_data": {"quiz_answer": "Ankara", "quiz_question": "BaÅŸkent?"}})()
+    context = type("C", (), {"chat_data": {"quiz_answer": "Ankara", "quiz_question": "Başkent?"}})()
 
     await handler._handle_quiz_answer(update, query, context, "quiz_ans_0_Ankara")
     assert await economy.balance(7, -100) == 5

@@ -1,7 +1,7 @@
 """
-SudoManager - Yetki ve kara liste yÃ¶netimi.
+SudoManager - Yetki ve kara liste yönetimi.
 
-JSON dosyasÄ± veya MongoDB backend ile Ã§alÄ±ÅŸabilir.
+JSON dosyası veya MongoDB backend ile çalışabilir.
 """
 import json
 import os
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class SudoManager:
-    """Yetki ve kara liste yÃ¶neticisi."""
+    """Yetki ve kara liste yöneticisi."""
 
     DATA_FILE = "sudo_data.json"
 
@@ -27,11 +27,11 @@ class SudoManager:
         self.blacklist_users = set()
         self.blacklist_groups = set()
         
-        # JSON'dan yÃ¼kle (backward compatibility)
+        # JSON'dan yükle (backward compatibility)
         self._load_from_json()
 
     def _load_from_json(self):
-        """JSON dosyasÄ±ndan veri yÃ¼kler (geriye dÃ¶nÃ¼k uyumluluk)."""
+        """JSON dosyasından veri yükler (geriye dönük uyumluluk)."""
         if os.path.exists(self.DATA_FILE):
             try:
                 with open(self.DATA_FILE, 'r', encoding='utf-8') as f:
@@ -44,7 +44,7 @@ class SudoManager:
                 logger.error("Failed to load sudo data from JSON: %s", summarize_exception(e, label="sudo_load"))
 
     def _save_to_json(self):
-        """JSON dosyasÄ±na veri yazar (geriye dÃ¶nÃ¼k uyumluluk)."""
+        """JSON dosyasına veri yazar (geriye dönük uyumluluk)."""
         try:
             with open(self.DATA_FILE, 'w', encoding='utf-8') as f:
                 json.dump({
@@ -56,15 +56,15 @@ class SudoManager:
             logger.error("Failed to save sudo data to JSON: %s", summarize_exception(e, label="sudo_save"))
 
     def is_owner(self, user_id: int) -> bool:
-        """KullanÄ±cÄ± owner mÄ±?"""
+        """Kullanıcı owner mı?"""
         return user_id == self.owner_id
 
     def is_sudo(self, user_id: int) -> bool:
-        """KullanÄ±cÄ± sudo mu?"""
+        """Kullanıcı sudo mu?"""
         return user_id in self.sudos
 
     def is_blacklisted(self, user_id: int, chat_id: int = None) -> bool:
-        """KullanÄ±cÄ± veya grup kara listede mi?"""
+        """Kullanıcı veya grup kara listede mi?"""
         if user_id in self.blacklist_users:
             return True
         if chat_id and chat_id in self.blacklist_groups:
@@ -72,23 +72,23 @@ class SudoManager:
         return False
 
     def add_sudo(self, user_id: int):
-        """Sudo kullanÄ±cÄ± ekler."""
+        """Sudo kullanıcı ekler."""
         self.sudos.add(user_id)
         self._save_to_json()
 
     def remove_sudo(self, user_id: int):
-        """Sudo kullanÄ±cÄ± siler."""
+        """Sudo kullanıcı siler."""
         if user_id != self.owner_id:
             self.sudos.discard(user_id)
             self._save_to_json()
 
     def ban_user(self, user_id: int):
-        """KullanÄ±cÄ±yÄ± kara listeye ekler."""
+        """Kullanıcıyı kara listeye ekler."""
         self.blacklist_users.add(user_id)
         self._save_to_json()
 
     def unban_user(self, user_id: int):
-        """KullanÄ±cÄ±yÄ± kara listeden Ã§Ä±karÄ±r."""
+        """Kullanıcıyı kara listeden çıkarır."""
         self.blacklist_users.discard(user_id)
         self._save_to_json()
 
@@ -98,6 +98,6 @@ class SudoManager:
         self._save_to_json()
 
     def unban_group(self, chat_id: int):
-        """Grubu kara listeden Ã§Ä±karÄ±r."""
+        """Grubu kara listeden çıkarır."""
         self.blacklist_groups.discard(chat_id)
         self._save_to_json()

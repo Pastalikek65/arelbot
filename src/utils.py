@@ -19,12 +19,12 @@ _thread_pool = ThreadPoolExecutor(
 
 async def run_async(func: Callable, *args, **kwargs) -> Any:
     """
-    Blocking bir fonksiyonu thread pool'da Ã§alÄ±ÅŸtÄ±rÄ±r.
+    Blocking bir fonksiyonu thread pool'da çalıştırır.
 
-    PIL, moviepy, matplotlib gibi async olmayan kÃ¼tÃ¼phaneler
-    iÃ§in event loop'u bloklamamak adÄ±na kullanÄ±lÄ±r.
+    PIL, moviepy, matplotlib gibi async olmayan kütüphaneler
+    için event loop'u bloklamamak adına kullanılır.
 
-    KullanÄ±m:
+    Kullanım:
         img = await run_async(Image.open, "path.jpg")
         chart = await run_async(plt.savefig, buf, format='png')
     """

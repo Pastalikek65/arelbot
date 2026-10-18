@@ -68,7 +68,7 @@ class FakeBot:
 class FakeVision:
     async def analyze_image(self, *args):
         assert Path(args[0]).exists()
-        return "<script>alert(1)</script>hazÄ±r"
+        return "<script>alert(1)</script>hazır"
 
 
 @pytest.mark.asyncio

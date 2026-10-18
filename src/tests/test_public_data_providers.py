@@ -43,7 +43,7 @@ async def test_crypto_provider_normalizes_aliases_and_currency():
     assert [row["id"] for row in result.data["coins"]] == ["bitcoin", "ethereum"]
     assert result.data["coins"][0]["change_24h"] == 1.25
     assert "CoinGecko" == result.source
-    assert "Kripto PiyasasÄ±" in result.data["content"]
+    assert "Kripto Piyasası" in result.data["content"]
 
 
 @pytest.mark.asyncio
@@ -82,7 +82,7 @@ async def test_pharmacy_provider_parses_and_escapes_fixture():
             text="""
             <div class='list-group-item'>
               <h5>Merkez <script>alert(1)</script> Eczanesi</h5>
-              <p>Ä°stiklal &amp; No: 4</p><a href='tel:+902121234567'>0212 123 45 67</a>
+              <p>İstiklal &amp; No: 4</p><a href='tel:+902121234567'>0212 123 45 67</a>
             </div>
             """,
             request=request,
@@ -90,11 +90,11 @@ async def test_pharmacy_provider_parses_and_escapes_fixture():
 
     async with _client(handler) as client:
         result = await PharmacyProvider(client=client).fetch(
-            ProviderRequest(operation="pharmacy", params={"city": "Ä°stanbul", "district": "BeÅŸiktaÅŸ"})
+            ProviderRequest(operation="pharmacy", params={"city": "İstanbul", "district": "Beşiktaş"})
         )
 
     assert result.data["pharmacies"][0]["name"] == "Merkez Eczanesi"
-    assert "Ä°stiklal &amp; No: 4" in result.data["content"]
+    assert "İstiklal &amp; No: 4" in result.data["content"]
     assert "<script>" not in result.data["content"]
     assert result.metadata["provider_kind"] == "typed"
 
@@ -102,8 +102,8 @@ async def test_pharmacy_provider_parses_and_escapes_fixture():
 @pytest.mark.asyncio
 async def test_fuel_provider_filters_city_and_normalizes_rows():
     fixture = """
-    <table><tr><th>Åehir</th><th>Benzin</th><th>Motorin</th><th>LPG</th></tr>
-      <tr><td>Ä°stanbul</td><td>42,10</td><td>44,20</td><td>25,00</td></tr>
+    <table><tr><th>Şehir</th><th>Benzin</th><th>Motorin</th><th>LPG</th></tr>
+      <tr><td>İstanbul</td><td>42,10</td><td>44,20</td><td>25,00</td></tr>
       <tr><td>Ankara</td><td>41,90</td><td>44,00</td><td>24,80</td></tr>
     </table>
     """
@@ -172,9 +172,9 @@ async def test_news_provider_deduplicates_titles():
         return httpx.Response(
             200,
             text="""
-            <a class='group'><h2>Ä°lk baÅŸlÄ±k &amp; ayrÄ±ntÄ±</h2></a>
-            <a class='group'><h2>Ä°lk baÅŸlÄ±k &amp; ayrÄ±ntÄ±</h2></a>
-            <a class='group'><h2>Ä°kinci baÅŸlÄ±k</h2></a>
+            <a class='group'><h2>İlk başlık &amp; ayrıntı</h2></a>
+            <a class='group'><h2>İlk başlık &amp; ayrıntı</h2></a>
+            <a class='group'><h2>İkinci başlık</h2></a>
             """,
             request=request,
         )
@@ -182,8 +182,8 @@ async def test_news_provider_deduplicates_titles():
     async with _client(handler) as client:
         result = await NewsProvider(client=client).fetch(ProviderRequest(operation="news"))
 
-    assert result.data["titles"] == ["Ä°lk baÅŸlÄ±k & ayrÄ±ntÄ±", "Ä°kinci baÅŸlÄ±k"]
-    assert "Ä°lk baÅŸlÄ±k &amp; ayrÄ±ntÄ±" in result.data["content"]
+    assert result.data["titles"] == ["İlk başlık & ayrıntı", "İkinci başlık"]
+    assert "İlk başlık &amp; ayrıntı" in result.data["content"]
 
 
 @pytest.mark.asyncio
@@ -209,8 +209,8 @@ async def test_prayer_provider_parses_turkish_times():
             200,
             text="""
             <div class='vakitler-list'>
-              <li><span class='vakit-label'>Ä°msak</span><span class='vakit-time'>05:12</span></li>
-              <li><span class='vakit-label'>AkÅŸam</span><span class='vakit-time'>19:44</span></li>
+              <li><span class='vakit-label'>İmsak</span><span class='vakit-time'>05:12</span></li>
+              <li><span class='vakit-label'>Akşam</span><span class='vakit-time'>19:44</span></li>
             </div>
             """,
             request=request,
@@ -218,10 +218,10 @@ async def test_prayer_provider_parses_turkish_times():
 
     async with _client(handler) as client:
         result = await PrayerTimesProvider(client=client).fetch(
-            ProviderRequest(operation="prayer_times", params={"city": "Ä°stanbul"})
+            ProviderRequest(operation="prayer_times", params={"city": "İstanbul"})
         )
 
-    assert result.data["times"] == {"Ä°msak": "05:12", "AkÅŸam": "19:44"}
+    assert result.data["times"] == {"İmsak": "05:12", "Akşam": "19:44"}
     assert "19:44" in result.data["content"]
 
 
@@ -243,7 +243,7 @@ async def test_pharmacy_provider_parses_current_nearest_card_schema():
 
     async with _client(handler) as client:
         result = await PharmacyProvider(client=client).fetch(
-            ProviderRequest(operation="pharmacy", params={"city": "Ä°stanbul"})
+            ProviderRequest(operation="pharmacy", params={"city": "İstanbul"})
         )
     assert result.data["pharmacies"][0]["name"] == "Yeni Eczane"
     assert result.data["pharmacies"][0]["address"] == "Merkez Mahallesi"
@@ -256,7 +256,7 @@ async def test_fuel_provider_parses_distributor_table_and_istanbul_route():
         return httpx.Response(
             200,
             text="""
-            <table><tr><th>DaÄŸÄ±tÄ±cÄ±</th><th>Benzin</th><th>Motorin</th><th>LPG</th></tr>
+            <table><tr><th>Dağıtıcı</th><th>Benzin</th><th>Motorin</th><th>LPG</th></tr>
               <tr><td>Petrol Ofisi</td><td>42,10</td><td>44,20</td><td>25,00</td></tr>
             </table>
             """,
@@ -265,19 +265,19 @@ async def test_fuel_provider_parses_distributor_table_and_istanbul_route():
 
     async with _client(handler) as client:
         result = await FuelProvider(client=client).fetch(
-            ProviderRequest(operation="fuel", params={"city": "Ä°stanbul"})
+            ProviderRequest(operation="fuel", params={"city": "İstanbul"})
         )
     assert result.data["prices"][0]["distributor"] == "Petrol Ofisi"
-    assert result.data["prices"][0]["city"] == "Ä°stanbul"
+    assert result.data["prices"][0]["city"] == "İstanbul"
 
 
 @pytest.mark.asyncio
 async def test_fuel_provider_normalizes_public_json_snapshot():
     payload = {
         "prices": [
-            {"il": "Ä°stanbul", "marka": "Arel Petrol", "yakÄ±t": "Benzin", "fiyat": "42,10"},
-            {"il": "Ä°stanbul", "marka": "Arel Petrol", "yakÄ±t": "Motorin", "fiyat": "44,20"},
-            {"il": "Ä°stanbul", "marka": "Arel Petrol", "yakÄ±t": "LPG", "fiyat": "25,00"},
+            {"il": "İstanbul", "marka": "Arel Petrol", "yakıt": "Benzin", "fiyat": "42,10"},
+            {"il": "İstanbul", "marka": "Arel Petrol", "yakıt": "Motorin", "fiyat": "44,20"},
+            {"il": "İstanbul", "marka": "Arel Petrol", "yakıt": "LPG", "fiyat": "25,00"},
         ]
     }
 
@@ -287,7 +287,7 @@ async def test_fuel_provider_normalizes_public_json_snapshot():
 
     async with _client(handler) as client:
         result = await FuelProvider(client=client, prefer_json=True).fetch(
-            ProviderRequest(operation="fuel", params={"city": "Ä°stanbul"})
+            ProviderRequest(operation="fuel", params={"city": "İstanbul"})
         )
 
     assert result.metadata["format"] == "json"
@@ -301,7 +301,7 @@ async def test_fuel_provider_normalizes_documented_province_snapshot():
     payload = {
         "provinces": [
             {
-                "name": "Ä°stanbul",
+                "name": "İstanbul",
                 "median": {"benzin": "52.10", "motorin": "54.20"},
                 "lpg": {"price": "29.30"},
             }
@@ -313,11 +313,11 @@ async def test_fuel_provider_normalizes_documented_province_snapshot():
 
     async with _client(handler) as client:
         result = await FuelProvider(client=client, prefer_json=True).fetch(
-            ProviderRequest(operation="fuel", params={"city": "Ä°stanbul"})
+            ProviderRequest(operation="fuel", params={"city": "İstanbul"})
         )
 
     row = result.data["prices"][0]
-    assert row["distributor"] == "Ä°l medyanÄ±"
+    assert row["distributor"] == "İl medyanı"
     assert row["gasoline"] == "52.10"
     assert row["diesel"] == "54.20"
     assert row["lpg"] == "29.30"
@@ -354,8 +354,8 @@ async def test_bim_provider_reads_official_product_card_name_unit_and_price():
               </a></div>
               <div class="descArea">
                 <h2 class="subTitle">Arel</h2><h2 class="title">Kahve Makinesi</h2>
-                <div class="gramajadet">â€¢ 1 adet</div>
-                <div class="priceArea"><div class="quantify">1.299,</div><span class="number">90</span><span class="curr">â‚º</span></div>
+                <div class="gramajadet">• 1 adet</div>
+                <div class="priceArea"><div class="quantify">1.299,</div><span class="number">90</span><span class="curr">₺</span></div>
               </div>
             </div></div>
             """,
@@ -367,8 +367,8 @@ async def test_bim_provider_reads_official_product_card_name_unit_and_price():
 
     product = result.data["deals"][0]
     assert product["title"] == "Arel Kahve Makinesi"
-    assert product["unit"] == "â€¢ 1 adet"
-    assert product["price"] == "1.299,90 â‚º"
+    assert product["unit"] == "• 1 adet"
+    assert product["price"] == "1.299,90 ₺"
     assert product["url"].startswith("https://www.bim.com.tr/")
 
 

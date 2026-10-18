@@ -36,11 +36,11 @@ class HttpFallbackProvider:
         async with httpx.AsyncClient(timeout=request.timeout_seconds, follow_redirects=False, **httpx_verify_kwargs()) as client:
             response = await client.get(f"{self.endpoint}/probe", params={"url": request.url})
             if 300 <= response.status_code < 400:
-                raise MediaDownloadError("redirect_not_allowed", "Fallback probe redirect dÃ¶ndÃ¼rdÃ¼")
+                raise MediaDownloadError("redirect_not_allowed", "Fallback probe redirect döndürdü")
             response.raise_for_status()
             payload = response.json()
             if not isinstance(payload, dict):
-                raise MediaDownloadError("fallback_invalid_response", "Fallback saÄŸlayÄ±cÄ± geÃ§ersiz yanÄ±t verdi")
+                raise MediaDownloadError("fallback_invalid_response", "Fallback sağlayıcı geçersiz yanıt verdi")
             return payload
 
     async def probe(self, request: MediaRequest) -> MediaMetadata:
@@ -57,7 +57,7 @@ class HttpFallbackProvider:
         metadata = await self._request(request)
         direct_url = metadata.get("download_url") or metadata.get("url")
         if not direct_url or not str(direct_url).startswith(("http://", "https://")):
-            raise MediaDownloadError("fallback_missing_download_url", "Fallback saÄŸlayÄ±cÄ± medya URL'si dÃ¶ndÃ¼rmedi")
+            raise MediaDownloadError("fallback_missing_download_url", "Fallback sağlayıcı medya URL'si döndürmedi")
         await ensure_public_host(str(direct_url))
         job_dir = self.download_dir / request.job_id
         job_dir.mkdir(parents=True, exist_ok=True)
@@ -66,16 +66,16 @@ class HttpFallbackProvider:
         async with httpx.AsyncClient(timeout=request.timeout_seconds, follow_redirects=False, **httpx_verify_kwargs()) as client:
             async with client.stream("GET", str(direct_url)) as response:
                 if 300 <= response.status_code < 400:
-                    raise MediaDownloadError("redirect_not_allowed", "Medya kaynaÄŸÄ± gÃ¼venli olmayan redirect dÃ¶ndÃ¼rdÃ¼")
+                    raise MediaDownloadError("redirect_not_allowed", "Medya kaynağı güvenli olmayan redirect döndürdü")
                 response.raise_for_status()
                 content_length = int(response.headers.get("content-length") or 0)
                 if content_length > self.max_bytes:
-                    raise MediaDownloadError("file_too_large", "Fallback medyasÄ± boyut sÄ±nÄ±rÄ±nÄ± aÅŸÄ±yor")
+                    raise MediaDownloadError("file_too_large", "Fallback medyası boyut sınırını aşıyor")
                 with path.open("wb") as output:
                     async for chunk in response.aiter_bytes(128 * 1024):
                         total += len(chunk)
                         if total > self.max_bytes:
-                            raise MediaDownloadError("file_too_large", "Fallback medyasÄ± boyut sÄ±nÄ±rÄ±nÄ± aÅŸÄ±yor")
+                            raise MediaDownloadError("file_too_large", "Fallback medyası boyut sınırını aşıyor")
                         output.write(chunk)
         return {
             "path": str(path),

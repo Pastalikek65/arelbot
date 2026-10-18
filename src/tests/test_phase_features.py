@@ -95,12 +95,25 @@ def test_moderation_engine_escalates_repeated_flood_to_ban_when_enabled():
     assert decision.action == "ban"
 
 
-def test_turkish_case_and_moderation_word_matching_are_unicode_safe():
-    assert tr_upper("istanbul Ä±ÅŸÄ±k") == "Ä°STANBUL IÅIK"
-    assert tr_lower("Ä°STANBUL IÅIK") == "istanbul Ä±ÅŸÄ±k"
+def test_moderation_engine_honors_flood_mode_approved_users_and_bot_link_policy():
     engine = ModerationEngine(window_seconds=10)
-    settings = {"moderation_enabled": True, "blocked_words": ["ÅŸifre"]}
-    assert engine.evaluate(1, 2, "ÅÄ°FRE burada", settings).reason == "keyword_filter"
+    settings = {"moderation_enabled": True, "flood_limit": 1, "flood_mode": "delete"}
+    assert engine.evaluate(1, 2, "one", settings).allowed
+    assert engine.evaluate(1, 2, "two", settings).action == "delete"
+    approved = {"moderation_enabled": True, "link_filter": True, "approved_users": [9]}
+    assert engine.evaluate(1, 9, "https://example.com", approved).allowed
+    bot_only = {"moderation_enabled": True, "antibotlink_enabled": True}
+    assert engine.evaluate(1, 3, "https://example.com", bot_only).allowed
+    bot_only["_sender_is_bot"] = True
+    assert engine.evaluate(1, 3, "https://example.com", bot_only).reason == "bot_link_filter"
+
+
+def test_turkish_case_and_moderation_word_matching_are_unicode_safe():
+    assert tr_upper("istanbul ışık") == "İSTANBUL IŞIK"
+    assert tr_lower("İSTANBUL IŞIK") == "istanbul ışık"
+    engine = ModerationEngine(window_seconds=10)
+    settings = {"moderation_enabled": True, "blocked_words": ["şifre"]}
+    assert engine.evaluate(1, 2, "ŞİFRE burada", settings).reason == "keyword_filter"
 
 
 @pytest.mark.asyncio
@@ -183,7 +196,7 @@ async def test_provider_backed_ai_tool_uses_typed_feature_executor():
         async def execute(self, key, params):
             self.calls.append((key, params))
             return FeatureResult.success(
-                {"content": "Ä°stanbul: 21Â°C"},
+                {"content": "İstanbul: 21°C"},
                 metadata={"fresh": True},
             )
 
@@ -191,10 +204,10 @@ async def test_provider_backed_ai_tool_uses_typed_feature_executor():
     manager.register_tool(Tool())
     executor = Executor()
     manager.bind_feature_executor(executor, Registry())
-    result = await manager.execute_tool("get_weather", {"city": "Ä°stanbul"})
+    result = await manager.execute_tool("get_weather", {"city": "İstanbul"})
 
-    assert executor.calls == [("weather", {"city": "Ä°stanbul"})]
-    assert result["content"] == "Ä°stanbul: 21Â°C"
+    assert executor.calls == [("weather", {"city": "İstanbul"})]
+    assert result["content"] == "İstanbul: 21°C"
     assert result["feature_key"] == "weather"
     assert result["metadata"] == {"fresh": True}
 
@@ -235,7 +248,7 @@ async def test_direct_tool_error_payload_is_sanitized_before_ai_receives_it():
 
     result = await manager.execute_tool("unsafe_error", {})
 
-    assert result == {"error": "AraÃ§ isteÄŸi gÃ¼venli biÃ§imde tamamlanamadÄ±.", "error_code": "TOOL_FAILED"}
+    assert result == {"error": "Araç isteği güvenli biçimde tamamlanamadı.", "error_code": "TOOL_FAILED"}
     assert "secret" not in str(result)
 
 
@@ -391,7 +404,7 @@ async def test_hydrated_word_guess_rearms_its_timeout_after_restart():
             if game_type == "word_guess":
                 return {
                     "word": "KAHVE",
-                    "description": "SÄ±cak bir iÃ§ecek",
+                    "description": "Sıcak bir içecek",
                     "hints": [],
                     "hint_index": 0,
                     "start_time": time.time() - 30,

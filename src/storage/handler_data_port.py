@@ -12,7 +12,7 @@ from typing import Any
 
 
 class HandlerDataPort:
-    """Typed-ish async repository faÃ§ade for handler-owned persistence calls."""
+    """Typed-ish async repository façade for handler-owned persistence calls."""
 
     def __init__(self, repository: Any) -> None:
         self._repository = repository
@@ -47,6 +47,10 @@ class HandlerDataPort:
 
     async def get_user(self, user_id: int) -> Any:
         return await self._invoke("get_user", user_id)
+
+    async def find_user_by_username(self, username: str) -> Any:
+        """Find a previously observed Telegram username without exposing Mongo."""
+        return await self._invoke("find_user_by_username", username)
 
     async def update_user(self, user_id: int, data: dict[str, Any]) -> Any:
         return await self._invoke("update_user", user_id, data)
@@ -175,3 +179,18 @@ class HandlerDataPort:
 
     async def get_recent_active_user_names(self, chat_id: int, limit: int = 20) -> Any:
         return await self._invoke("get_recent_active_user_names", chat_id, limit=limit)
+
+    async def get_first_message(self, chat_id: int, user_id: int | None = None) -> Any:
+        if not self.supports("get_first_message"):
+            return None
+        return await self._invoke("get_first_message", chat_id, user_id=user_id)
+
+    async def get_member_message_log(self, chat_id: int, user_id: int, limit: int = 20) -> Any:
+        if not self.supports("get_member_message_log"):
+            return []
+        return await self._invoke("get_member_message_log", chat_id, user_id, limit=limit)
+
+    async def get_inactive_users(self, chat_id: int, since: Any, limit: int = 50) -> Any:
+        if not self.supports("get_inactive_users"):
+            return []
+        return await self._invoke("get_inactive_users", chat_id, since=since, limit=limit)

@@ -53,7 +53,7 @@ class SpeechSynthesisService:
     async def submit(self, *, chat_id, user_id, status_message_id, text, language="tr", reply_to_message_id=None):
         bounded = str(text or "").strip()[:Config.TTS_MAX_CHARS]
         if not bounded:
-            raise SpeechJobError("speech_empty", "Seslendirilecek metin bulunamadÄ±.")
+            raise SpeechJobError("speech_empty", "Seslendirilecek metin bulunamadı.")
         source_key = hashlib.sha256(f"{chat_id}:{user_id}:{language}:{bounded}".encode("utf-8")).hexdigest()
         payload = {
             "job_type": "speech", "chat_id": int(chat_id), "user_id": int(user_id),
@@ -74,28 +74,28 @@ class SpeechSynthesisService:
             path = None
             try:
                 if self.bot is None or self.tts_service is None:
-                    raise SpeechJobError("tts_unavailable", "Seslendirme servisi hazÄ±r deÄŸil.")
-                await self._edit(payload, "ğŸ™ï¸ Metin seslendiriliyorâ€¦")
+                    raise SpeechJobError("tts_unavailable", "Seslendirme servisi hazır değil.")
+                await self._edit(payload, "🎙️ Metin seslendiriliyor…")
                 os.makedirs(Config.TTS_OUTPUT_DIR, exist_ok=True)
                 with tempfile.NamedTemporaryFile(dir=Config.TTS_OUTPUT_DIR, prefix="speech_", suffix=".mp3", delete=False) as handle:
                     path = handle.name
                 path = await asyncio.wait_for(self.tts_service.synthesize(payload["text"], language=payload["language"], output_path=path), timeout=Config.SPEECH_JOB_TIMEOUT_SECONDS)
                 with open(path, "rb") as voice_file:
-                    await self._deliver(payload, lambda: self.bot.send_voice(chat_id=payload["chat_id"], voice=voice_file, caption="ğŸ—£ï¸ Seslendirildi.", reply_to_message_id=payload.get("reply_to_message_id")))
+                    await self._deliver(payload, lambda: self.bot.send_voice(chat_id=payload["chat_id"], voice=voice_file, caption="🗣️ Seslendirildi.", reply_to_message_id=payload.get("reply_to_message_id")))
                 payload["output_type"] = "telegram_voice"
                 self.metrics_registry.inc("speech_jobs_completed")
             except asyncio.TimeoutError as exc:
-                await self._edit(payload, f"â±ï¸ Seslendirme zaman aÅŸÄ±mÄ±na uÄŸradÄ±. Ä°ÅŸ: <code>{payload['job_id']}</code>")
+                await self._edit(payload, f"⏱️ Seslendirme zaman aşımına uğradı. İş: <code>{payload['job_id']}</code>")
                 self.metrics_registry.inc("speech_jobs_failed")
-                raise SpeechJobError("timeout", "Seslendirme zaman aÅŸÄ±mÄ±na uÄŸradÄ±.") from exc
+                raise SpeechJobError("timeout", "Seslendirme zaman aşımına uğradı.") from exc
             except SpeechJobError as exc:
-                await self._edit(payload, f"âŒ {exc} Ä°ÅŸ: <code>{payload['job_id']}</code>")
+                await self._edit(payload, f"❌ {exc} İş: <code>{payload['job_id']}</code>")
                 self.metrics_registry.inc("speech_jobs_failed")
                 raise
             except Exception as exc:
-                await self._edit(payload, f"âŒ Seslendirme baÅŸarÄ±sÄ±z. Ä°ÅŸ: <code>{payload['job_id']}</code>")
+                await self._edit(payload, f"❌ Seslendirme başarısız. İş: <code>{payload['job_id']}</code>")
                 self.metrics_registry.inc("speech_jobs_failed")
-                raise SpeechJobError("speech_processing_error", "Seslendirme baÅŸarÄ±sÄ±z.") from exc
+                raise SpeechJobError("speech_processing_error", "Seslendirme başarısız.") from exc
             finally:
                 if path:
                     Path(path).unlink(missing_ok=True)

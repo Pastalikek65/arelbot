@@ -114,8 +114,8 @@ class CultureProvider:
 
     @staticmethod
     def _title(category: str, query: str) -> str:
-        labels = {"book": "Kitap Ã¶nerileri", "series": "Dizi Ã¶nerileri", "movie": "Film Ã¶nerileri", "music": "MÃ¼zik Ã¶nerileri"}
-        return f"{labels[category]} Â· {query}"
+        labels = {"book": "Kitap önerileri", "series": "Dizi önerileri", "movie": "Film önerileri", "music": "Müzik önerileri"}
+        return f"{labels[category]} · {query}"
 
     @staticmethod
     def _normalize_items(category: str, payload: Any) -> list[dict[str, Any]]:
@@ -163,12 +163,12 @@ class CultureProvider:
     def _render_item(index: int, item: dict[str, Any]) -> str:
         title = html.escape(str(item.get("title") or ""))
         details = []
-        for label, key in (("Yazar", "author"), ("SanatÃ§Ä±", "artist"), ("AlbÃ¼m", "album"), ("TÃ¼r", "genres"), ("YÄ±l", "year")):
+        for label, key in (("Yazar", "author"), ("Sanatçı", "artist"), ("Albüm", "album"), ("Tür", "genres"), ("Yıl", "year")):
             if item.get(key):
                 details.append(f"{label}: {html.escape(str(item[key]))}")
         if item.get("score") is not None:
-            details.append(f"Kaynak puanÄ±: {html.escape(str(item['score']))}")
-        suffix = " Â· ".join(details)
+            details.append(f"Kaynak puanı: {html.escape(str(item['score']))}")
+        suffix = " · ".join(details)
         link = item.get("url")
         linked_title = f'<a href="{html.escape(str(link), quote=True)}">{title}</a>' if str(link).startswith("https://") else title
         return f"{index}. <b>{linked_title}</b>" + (f"\n{suffix}" if suffix else "")

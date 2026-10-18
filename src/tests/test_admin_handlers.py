@@ -1,4 +1,4 @@
-"""Orchestrator yÃ¶netim komutlarÄ±nÄ±n yetki ve Ã§Ä±ktÄ± sÃ¶zleÅŸmesi testleri."""
+"""Orchestrator yönetim komutlarının yetki ve çıktı sözleşmesi testleri."""
 
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
@@ -81,7 +81,9 @@ class GroupBot:
         self.unbanned = []
 
     async def get_chat_member(self, chat_id, user_id):
-        return SimpleNamespace(status=self.actor_status)
+        if user_id == 42:
+            return SimpleNamespace(status=self.actor_status)
+        return SimpleNamespace(status="member")
 
     async def ban_chat_member(self, chat_id, user_id, **kwargs):
         self.banned.append((chat_id, user_id, kwargs))
@@ -147,10 +149,10 @@ async def test_group_ban_and_unban_use_telegram_membership_actions_for_admins():
     await handler.handle_ban_command(update, context)
     await handler.handle_unban_command(update, context)
 
-    assert bot.banned == [(-10042, 77, {})]
-    assert bot.unbanned == [(-10042, 77, {})]
-    assert "uzaklaÅŸtÄ±rÄ±ldÄ±" in message.replies[0][0]
-    assert "Ã§Ä±karÄ±ldÄ±" in message.replies[1][0]
+    assert bot.banned == [(-10042, 77, {"revoke_messages": True})]
+    assert bot.unbanned == [(-10042, 77, {"only_if_banned": True})]
+    assert "uzaklaştırıldı" in message.replies[0][0]
+    assert "çıkarıldı" in message.replies[1][0]
 
 
 @pytest.mark.asyncio
@@ -164,7 +166,7 @@ async def test_group_ban_requires_group_admin_and_reports_missing_target():
 
     await handler.handle_ban_command(update, context)
     assert message.replies
-    assert "yÃ¶netici" in message.replies[0][0]
+    assert "yönetici" in message.replies[0][0]
     assert bot.banned == []
 
 
@@ -180,11 +182,11 @@ async def test_broadcast_escapes_html_and_audits_delivery_count():
     message = FakeMessage()
     await handler.handle_broadcast_command(
         make_update(1, message),
-        SimpleNamespace(args=["<b>uyarÄ±</b>", "&", "gÃ¼venli"], bot=Bot()),
+        SimpleNamespace(args=["<b>uyarı</b>", "&", "güvenli"], bot=Bot()),
     )
 
     assert len(sent) == 2
-    assert "&lt;b&gt;uyarÄ±&lt;/b&gt; &amp; gÃ¼venli" in sent[0]["text"]
+    assert "&lt;b&gt;uyarı&lt;/b&gt; &amp; güvenli" in sent[0]["text"]
     assert all(item["parse_mode"] == "HTML" for item in sent)
     handler.chat_engine.db.add_audit_log.assert_awaited_once_with(
         1, "broadcast", delivered=2
@@ -229,14 +231,14 @@ async def test_start_escapes_user_name_and_renders_menu():
 
     message = Message()
     update = SimpleNamespace(
-        effective_user=SimpleNamespace(id=1, first_name="<kullanÄ±cÄ±>"),
+        effective_user=SimpleNamespace(id=1, first_name="<kullanıcı>"),
         effective_message=message,
     )
     await handler.handle_start_command(update, SimpleNamespace(args=[], bot=Bot()))
 
     assert message.photo is not None
-    assert "&lt;kullanÄ±cÄ±&gt;" in message.photo[1]
-    assert "<kullanÄ±cÄ±>" not in message.photo[1]
+    assert "&lt;kullanıcı&gt;" in message.photo[1]
+    assert "<kullanıcı>" not in message.photo[1]
     assert message.photo[2]["reply_markup"].inline_keyboard[0][0].callback_data == "menu_main"
 
 
@@ -260,7 +262,7 @@ async def test_start_falls_back_to_text_when_card_delivery_fails():
     await handler.handle_start_command(update, SimpleNamespace(args=[], bot=Bot()))
 
     assert message.replies
-    assert "HoÅŸ Geldiniz" in message.replies[-1][0]
+    assert "Hoş Geldiniz" in message.replies[-1][0]
 
 
 @pytest.mark.asyncio

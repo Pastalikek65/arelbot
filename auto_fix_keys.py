@@ -17,7 +17,7 @@ async def log_to_telegram(message):
         logger = UnifiedLogger()
         await logger.log(message, topic_id=Config.GROUP_LOG_THREAD_ID)
     except Exception as e:
-        print(f"Telegram Log HatasÄ±: {e}")
+        print(f"Telegram Log Hatası: {e}")
 
 def update_env_file(new_keys_list):
     """Replaces the GEMINI_KEYS line in the .env file with a updated list."""
@@ -51,7 +51,7 @@ async def update_railway_variables(new_keys_list):
     service_id = os.getenv("RAILWAY_SERVICE_ID")
     
     if not api_token or not service_id:
-        print("âš ï¸ RAILWAY_API_KEY veya RAILWAY_SERVICE_ID eksik. Railway Dashboard otomatik gÃ¼ncellenemedi.")
+        print("⚠️ RAILWAY_API_KEY veya RAILWAY_SERVICE_ID eksik. Railway Dashboard otomatik güncellenemedi.")
         return False
 
     url = "https://backboard.railway.app/graphql/v2"
@@ -79,23 +79,23 @@ async def update_railway_variables(new_keys_list):
         async with httpx.AsyncClient() as client:
             response = await client.post(url, json={"query": query, "variables": variables}, headers=headers)
             if response.status_code == 200:
-                print("âœ… Railway DeÄŸiÅŸkenleri baÅŸarÄ±yla gÃ¼ncellendi!")
+                print("✅ Railway Değişkenleri başarıyla güncellendi!")
                 return True
             else:
-                print(f"âŒ Railway API HatasÄ±: {response.status_code} - {response.text}")
+                print(f"❌ Railway API Hatası: {response.status_code} - {response.text}")
                 return False
     except Exception as e:
-        print(f"Railway Update HatasÄ±: {e}")
+        print(f"Railway Update Hatası: {e}")
         return False
 
 async def auto_fix_keys():
     """Checks all keys and replaces suspended OR exhausted keys with fresh ones."""
-    print("\nğŸ” [Auto-Fix] Anahtarlar taranÄ±yor...")
+    print("\n🔍 [Auto-Fix] Anahtarlar taranıyor...")
     
     try:
         check_gcloud()
     except SystemExit:
-        print("âš ï¸ GCloud CLI bulunamadÄ±. Sadece tarama yapÄ±lacak, yenileme yapÄ±lamaz.")
+        print("⚠️ GCloud CLI bulunamadı. Sadece tarama yapılacak, yenileme yapılamaz.")
         return
 
     keys_str = os.getenv("GEMINI_KEYS", "")
@@ -115,25 +115,25 @@ async def auto_fix_keys():
                 contents="Ping"
             )
             active_keys.append(key)
-            print(f"âœ… SaÄŸlam: {key[:5]}...")
+            print(f"✅ Sağlam: {key[:5]}...")
         except Exception as e:
             error_msg = str(e).lower()
             if "suspended" in error_msg:
-                print(f"ğŸš« SUSPENDED: {key[:5]}... - DeÄŸiÅŸtirilecek.")
+                print(f"🚫 SUSPENDED: {key[:5]}... - Değiştirilecek.")
                 need_replacement.append(key)
             elif "quota" in error_msg or "429" in error_msg:
-                print(f"â³ KOTA DOLU: {key[:5]}... - AGRESÄ°F YENÄ°LEME: DeÄŸiÅŸtirilecek.")
+                print(f"⏳ KOTA DOLU: {key[:5]}... - AGRESİF YENİLEME: Değiştirilecek.")
                 need_replacement.append(key)
             else:
                 # Other errors (network, etc.) - keep them in pool for now
-                print(f"âš ï¸ Bilinmeyen Hata (KalsÄ±n): {key[:5]}... - {e}")
+                print(f"⚠️ Bilinmeyen Hata (Kalsın): {key[:5]}... - {e}")
                 active_keys.append(key)
 
     if not need_replacement:
-        print("âœ¨ HiÃ§bir bozuk/dolu key bulunmadÄ±. Sistem temiz.")
+        print("✨ Hiçbir bozuk/dolu key bulunmadı. Sistem temiz.")
         return
 
-    print(f"\nğŸš¨ {len(need_replacement)} adet key yenileniyor...")
+    print(f"\n🚨 {len(need_replacement)} adet key yenileniyor...")
     newly_generated_keys = []
     
     for _ in need_replacement:
@@ -141,36 +141,36 @@ async def auto_fix_keys():
         if new_key:
             active_keys.append(new_key)
             newly_generated_keys.append(new_key)
-            print(f"ğŸ‰ Yeni Key Ãœretildi: {new_key[:10]}...")
+            print(f"🎉 Yeni Key Üretildi: {new_key[:10]}...")
         else:
-            print("âŒ Yeni key Ã¼retilemedi!")
+            print("❌ Yeni key üretilemedi!")
 
     # Update files and cloud
     if update_env_file(active_keys):
-        print("ğŸ’¾ .env dosyasÄ± gÃ¼ncellendi!")
+        print("💾 .env dosyası güncellendi!")
         
         await update_railway_variables(active_keys)
         
         log_msg = (
-            f"ğŸ› ï¸ **AGRESÄ°F ANAHTAR YENÄ°LEME RAPORU**\n\n"
-            f"ğŸ—‘ï¸ **DeÄŸiÅŸtirilen:** {len(need_replacement)} adet (Suspended/Quota)\n"
-            f"âœ¨ **Yeni Eklenen:** {len(newly_generated_keys)} adet\n"
-            f"ğŸ’ª **Toplam SaÄŸlam Havuzu:** {len(active_keys)}\n\n"
-            f"âš¡ **Durum:** Railway ve .env otomatik gÃ¼ncellendi. Kesintisiz devam!"
+            f"🛠️ **AGRESİF ANAHTAR YENİLEME RAPORU**\n\n"
+            f"🗑️ **Değiştirilen:** {len(need_replacement)} adet (Suspended/Quota)\n"
+            f"✨ **Yeni Eklenen:** {len(newly_generated_keys)} adet\n"
+            f"💪 **Toplam Sağlam Havuzu:** {len(active_keys)}\n\n"
+            f"⚡ **Durum:** Railway ve .env otomatik güncellendi. Kesintisiz devam!"
         )
         await log_to_telegram(log_msg)
     else:
-        print("âŒ .env gÃ¼ncellenemedi!")
+        print("❌ .env güncellenemedi!")
 
 if __name__ == "__main__":
-    print("ğŸš€ Auto-Healing Sistemi BaÅŸlatÄ±ldÄ± (Her 8 Saatte Bir Kontrol)")
+    print("🚀 Auto-Healing Sistemi Başlatıldı (Her 8 Saatte Bir Kontrol)")
     loop = asyncio.get_event_loop()
     
     while True:
         try:
             loop.run_until_complete(auto_fix_keys())
         except Exception as e:
-            print(f"Main Loop HatasÄ±: {e}")
+            print(f"Main Loop Hatası: {e}")
             
-        print("ğŸ’¤ 8 Saat uyku moduna geÃ§iliyor...")
+        print("💤 8 Saat uyku moduna geçiliyor...")
         time.sleep(8 * 3600)

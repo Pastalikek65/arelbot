@@ -117,6 +117,14 @@ class Config:
     # Shared Redis consumers fail fast in production; local polling/tests may opt into memory.
     REDIS_REQUIRED = os.getenv("REDIS_REQUIRED", "false").lower() in {"1", "true", "yes", "on"}
     MEDIA_REDIS_REQUIRED = os.getenv("MEDIA_REDIS_REQUIRED", "false").lower() in {"1", "true", "yes", "on"}
+    # Kek Guardian is a separate local service.  The default is disabled so a
+    # missing socket can never change Arel's deterministic local policy.
+    GUARDIAN_MODE = os.getenv("GUARDIAN_MODE", "disabled").strip().casefold()
+    GUARDIAN_SOCKET_PATH = os.getenv("GUARDIAN_SOCKET_PATH", "/run/kek-guardian/guardian.sock")
+    try:
+        GUARDIAN_TIMEOUT_SECONDS = max(0.05, min(2.0, float(os.getenv("GUARDIAN_TIMEOUT_SECONDS", "0.15"))))
+    except (TypeError, ValueError):
+        GUARDIAN_TIMEOUT_SECONDS = 0.15
     MEDIA_DOWNLOAD_DIR = os.getenv("MEDIA_DOWNLOAD_DIR", "downloads")
     MEDIA_MAX_FILE_BYTES = int(os.getenv("MEDIA_MAX_FILE_BYTES", str(45 * 1024 * 1024)))
     MEDIA_MAX_VIDEO_DURATION_SECONDS = int(os.getenv("MAX_VIDEO_DURATION_SECONDS", "0"))
@@ -312,7 +320,7 @@ class Config:
         
         has_ai_provider_key = bool(
             cls.FREEMODEL_KEY or cls.GROQ_KEYS or cls.GEMINI_KEYS or cls.CEREBRAS_KEYS
-            or cls.IAMHC_KEY or cls.CLEANAPIS_KEY or cls.EVREN_KEY or cls.NINEROUTER_KEY
+            or cls.IAMHC_KEY or cls.EVREN_KEY or cls.NINEROUTER_KEY
             or cls.NVIDIA_KEY
         )
         if not has_ai_provider_key and cls.APP_ROLE != "worker":
@@ -372,6 +380,22 @@ class Config:
             raise ValueError("APP_ROLE must be one of: combined, bot, worker")
         if cls.APP_ENV not in {"development", "test", "staging", "production"}:
             raise ValueError("APP_ENV must be one of: development, test, staging, production")
+        if cls.GUARDIAN_MODE not in {"disabled", "shadow", "active"}:
+            raise ValueError("GUARDIAN_MODE must be disabled, shadow or active")
+        if cls.GUARDIAN_MODE == "active":
+            require_peer = os.getenv("GUARDIAN_REQUIRE_PEER_CREDENTIALS", "true").casefold() in {"1", "true", "yes", "on"}
+            allowed_uids = [
+                item.strip()
+                for item in os.getenv("GUARDIAN_PEER_UIDS", os.getenv("GUARDIAN_ALLOWED_UIDS", "")).split(",")
+                if item.strip()
+            ]
+            allowed_gids = [
+                item.strip()
+                for item in os.getenv("GUARDIAN_PEER_GIDS", os.getenv("GUARDIAN_ALLOWED_GIDS", "")).split(",")
+                if item.strip()
+            ]
+            if require_peer and not allowed_uids and not allowed_gids:
+                raise ValueError("GUARDIAN_PEER_UIDS or GUARDIAN_PEER_GIDS is required when GUARDIAN_MODE=active")
         if cls.STAGING_PROFILE_PATH and cls.APP_ENV != "staging":
             raise ValueError("STAGING_PROFILE_PATH requires APP_ENV=staging")
         if cls.MEDIA_REDIS_REQUIRED and not cls.REDIS_URL:
@@ -405,4 +429,3 @@ class Config:
 
 # Canonical validated settings name; Config remains backwards compatible.
 Settings = Config
-

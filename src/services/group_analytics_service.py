@@ -34,20 +34,20 @@ class GroupAnalyticsService:
 
     async def render(self, chat_id: int, days: int = 7) -> str:
         data = await self.summary(chat_id, days)
-        title = "HAFTALIK GRUP ANALÄ°ZÄ°" if data["days"] == 7 else f"{data['days']} GÃœNLÃœK GRUP ANALÄ°ZÄ°"
-        lines = [f"ğŸ“Š <b>{title}</b>", "", f"ğŸ’¬ Mesaj: <b>{data['total_messages']}</b>"]
-        lines.append(f"ğŸ‘¥ Aktif kullanÄ±cÄ±: <b>{data['active_users']}</b>")
+        title = "HAFTALIK GRUP ANALİZİ" if data["days"] == 7 else f"{data['days']} GÜNLÜK GRUP ANALİZİ"
+        lines = [f"📊 <b>{title}</b>", "", f"💬 Mesaj: <b>{data['total_messages']}</b>"]
+        lines.append(f"👥 Aktif kullanıcı: <b>{data['active_users']}</b>")
         peak_hour = data.get("peak_hour")
         if peak_hour is not None:
             hour = max(0, min(23, int(peak_hour)))
-            lines.append(f"ğŸ•˜ En yoÄŸun saat: <b>{hour:02d}:00â€“{(hour + 1) % 24:02d}:00</b>")
+            lines.append(f"🕘 En yoğun saat: <b>{hour:02d}:00–{(hour + 1) % 24:02d}:00</b>")
         top_users = data.get("top_users") or []
         if top_users:
-            lines.extend(["", "ğŸ† <b>En aktif Ã¼yeler</b>"])
+            lines.extend(["", "🏆 <b>En aktif üyeler</b>"])
             for index, user in enumerate(top_users, 1):
                 name = html.escape(str(user.get("name") or "Bilinmeyen"))[:80]
                 count = max(0, int(user.get("count", 0) or 0))
-                lines.append(f"{index}. {name} Â· <b>{count}</b> mesaj")
-        lines.extend(["", "<i>Ä°statistikler yalnÄ±zca son dÃ¶nemdeki botun kaydettiÄŸi grup mesajlarÄ±ndan hesaplanÄ±r.</i>"])
+                lines.append(f"{index}. {name} · <b>{count}</b> mesaj")
+        lines.extend(["", "<i>İstatistikler yalnızca son dönemdeki botun kaydettiği grup mesajlarından hesaplanır.</i>"])
         return "\n".join(lines)
 

@@ -56,6 +56,46 @@ async def test_invalid_action_is_rejected():
 
 
 @pytest.mark.asyncio
+async def test_ledger_rejects_invalid_scope_and_oversized_payload():
+    ledger = GameActionLedger()
+    with pytest.raises(ValueError, match="invalid_game_chat_id"):
+        await ledger.claim(0, "quiz", "id")
+    with pytest.raises(ValueError, match="invalid_game_user_id"):
+        await ledger.claim(-100, "quiz", "id", user_id=0)
+    with pytest.raises(ValueError, match="game_action_payload_too_large"):
+        await ledger.claim(-100, "quiz", "id", payload={"blob": "x" * 5000})
+
+
+@pytest.mark.asyncio
+async def test_production_like_database_never_silently_falls_back_to_memory():
+    class UnavailableDatabase:
+        available = False
+
+    ledger = GameActionLedger(UnavailableDatabase())
+    with pytest.raises(RuntimeError, match="game_persistence_unavailable"):
+        await ledger.claim(-100, "quiz", "id")
+
+
+@pytest.mark.asyncio
+async def test_run_supports_sync_operations_and_releases_failed_claim():
+    ledger = GameActionLedger()
+    calls = []
+
+    first = await ledger.run(-100, "quiz", "sync", lambda: calls.append(1) or "ok")
+    assert first.executed is True and first.result == "ok"
+    second = await ledger.run(-100, "quiz", "sync", lambda: calls.append(2) or "bad")
+    assert second.replayed is True and calls == [1]
+
+    async def fail():
+        raise RuntimeError("temporary")
+
+    with pytest.raises(RuntimeError, match="temporary"):
+        await ledger.run(-100, "quiz", "retry", fail)
+    recovered = await ledger.run(-100, "quiz", "retry", lambda: "recovered")
+    assert recovered.executed is True and recovered.result == "recovered"
+
+
+@pytest.mark.asyncio
 async def test_batak_join_callback_is_idempotent_for_same_message_and_user():
     class Query:
         data = "game_batak_join"

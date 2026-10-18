@@ -30,7 +30,7 @@ async def test_preferences_validate_values_and_can_disable_quiet_hours():
         await store.update(7, quiet_start="25:00")
     with pytest.raises(ValueError, match="saat dilimi"):
         await store.update(7, timezone_name="Mars/Phobos")
-    with pytest.raises(ValueError, match="aynÄ± olamaz"):
+    with pytest.raises(ValueError, match="aynı olamaz"):
         await store.update(7, quiet_start="08:00", quiet_end="08:00")
 
     await store.update(7, quiet_hours_enabled=True)

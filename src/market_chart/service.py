@@ -70,7 +70,7 @@ class MarketChartProcessingService:
                 continue
             rows.append({key: row[key] for key in ("timestamp", "close", "open", "high", "low") if key in row})
         if len(rows) < 2:
-            raise MarketChartJobError("market_chart_rows_invalid", "Grafik iÃ§in yeterli piyasa verisi yok.")
+            raise MarketChartJobError("market_chart_rows_invalid", "Grafik için yeterli piyasa verisi yok.")
         bounded_data = {"symbol": str(data.get("symbol") or "MARKET")[:24], "rows": rows}
         bounded_caption = str(caption or "")[:3500]
         source_key = hashlib.sha256(json.dumps(bounded_data, sort_keys=True, default=str).encode()).hexdigest()
@@ -97,8 +97,8 @@ class MarketChartProcessingService:
         started = time.perf_counter()
         try:
             if self.bot is None:
-                raise MarketChartJobError("telegram_unavailable", "Telegram istemcisi hazÄ±r deÄŸil.")
-            await self._edit(payload, "ğŸ“ˆ Piyasa grafiÄŸi hazÄ±rlanÄ±yorâ€¦")
+                raise MarketChartJobError("telegram_unavailable", "Telegram istemcisi hazır değil.")
+            await self._edit(payload, "📈 Piyasa grafiği hazırlanıyor…")
             output = await asyncio.wait_for(self.renderer.render(payload["data"]), timeout=Config.MARKET_CHART_JOB_TIMEOUT_SECONDS)
             if output is None:
                 await self._edit(payload, sanitize_html(payload["caption"]))
@@ -110,15 +110,15 @@ class MarketChartProcessingService:
             self.metrics_registry.inc("market_chart_jobs_completed")
         except asyncio.TimeoutError as exc:
             self.metrics_registry.inc("market_chart_jobs_failed")
-            await self._edit(payload, f"â±ï¸ Grafik zaman aÅŸÄ±mÄ±na uÄŸradÄ±. Ä°ÅŸ: <code>{payload['job_id']}</code>")
-            raise MarketChartJobError("timeout", "Grafik oluÅŸturma zaman aÅŸÄ±mÄ±na uÄŸradÄ±.") from exc
+            await self._edit(payload, f"⏱️ Grafik zaman aşımına uğradı. İş: <code>{payload['job_id']}</code>")
+            raise MarketChartJobError("timeout", "Grafik oluşturma zaman aşımına uğradı.") from exc
         except MarketChartJobError:
             self.metrics_registry.inc("market_chart_jobs_failed")
             raise
         except Exception as exc:
             self.metrics_registry.inc("market_chart_jobs_failed")
-            await self._edit(payload, f"âŒ Grafik oluÅŸturulamadÄ±. Ä°ÅŸ: <code>{payload['job_id']}</code>")
-            raise MarketChartJobError("chart_processing_error", "Grafik oluÅŸturulamadÄ±.") from exc
+            await self._edit(payload, f"❌ Grafik oluşturulamadı. İş: <code>{payload['job_id']}</code>")
+            raise MarketChartJobError("chart_processing_error", "Grafik oluşturulamadı.") from exc
         finally:
             self.metrics_registry.observe("market_chart_job_seconds", time.perf_counter() - started)
 

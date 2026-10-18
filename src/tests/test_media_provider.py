@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -107,6 +108,66 @@ async def test_ytdlp_fixture_rejects_over_limit_before_telegram_send(tmp_path, m
 
 
 @pytest.mark.asyncio
+async def test_ytdlp_closes_extractor_stream_when_limit_hook_aborts(tmp_path, monkeypatch):
+    leaked_streams = []
+
+    class _LeakyTooLargeYoutubeDL:
+        def __init__(self, options):
+            self.options = options
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def extract_info(self, _url, download=False):
+            assert download is True
+            output = Path(self.options["outtmpl"].replace("%(ext)s", "mp4"))
+            output.parent.mkdir(parents=True, exist_ok=True)
+            leaked = open(str(output) + ".part", "wb")
+            leaked.write(b"partial")
+            leaked_streams.append(leaked)
+            for hook in self.options["progress_hooks"]:
+                hook({"downloaded_bytes": 101, "total_bytes": 101})
+            return {"title": "Too large", "duration": 1}
+
+    monkeypatch.setitem(sys.modules, "yt_dlp", SimpleNamespace(YoutubeDL=_LeakyTooLargeYoutubeDL))
+    monkeypatch.setattr("src.media.providers.ytdlp_provider.ensure_public_host", _allow_fixture_public_host)
+    provider = YtDlpProvider(str(tmp_path), max_bytes=100, max_duration=0, timeout=3, cookie_vault=object())
+
+    with pytest.raises(MediaDownloadError) as error:
+        await provider.download("https://www.youtube.com/watch?v=fixture", "job-leaky-limit")
+
+    assert error.value.code == "file_too_large"
+    assert leaked_streams[0].closed is True
+    assert not (tmp_path / "job-leaky-limit").exists()
+
+
+@pytest.mark.asyncio
+async def test_ytdlp_timeout_reaps_background_worker_before_spool_cleanup(tmp_path, monkeypatch):
+    monkeypatch.setattr("src.media.providers.ytdlp_provider.ensure_public_host", _allow_fixture_public_host)
+    provider = YtDlpProvider(str(tmp_path), max_bytes=100, max_duration=0, timeout=0.01, cookie_vault=object())
+
+    def slow_download(_url, job_dir, _cookie_file):
+        time.sleep(0.08)
+        job_dir.mkdir(parents=True, exist_ok=True)
+        (job_dir / "media.mp4").write_bytes(b"late-worker-output")
+        return {"path": str(job_dir / "media.mp4"), "size": 18, "duration": 1, "extension": ".mp4"}
+
+    monkeypatch.setattr(provider, "_download_sync", slow_download)
+    with pytest.raises(MediaDownloadError) as raised:
+        await provider.download("https://www.youtube.com/watch?v=fixture", "job-timeout")
+
+    assert raised.value.code == "timeout"
+    assert (tmp_path / "job-timeout").exists()
+    provider.cleanup(None, "job-timeout", str(tmp_path))
+    assert (tmp_path / "job-timeout").exists()
+    await provider.wait_for_background_cleanup()
+    assert not (tmp_path / "job-timeout").exists()
+
+
+@pytest.mark.asyncio
 async def test_ytdlp_probe_preserves_public_host_policy_error(tmp_path, monkeypatch):
     provider = YtDlpProvider(
         str(tmp_path),
@@ -122,7 +183,7 @@ async def test_ytdlp_probe_preserves_public_host_policy_error(tmp_path, monkeypa
 
     monkeypatch.setattr("src.media.providers.ytdlp_provider.ensure_public_host", reject)
 
-    with pytest.raises(MediaDownloadError, match="gÃ¼venli") as raised:
+    with pytest.raises(MediaDownloadError, match="güvenli") as raised:
         await provider.probe("https://www.youtube.com/watch?v=fixture")
 
     assert raised.value.code == "non_public_host"

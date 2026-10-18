@@ -40,7 +40,7 @@ FORBIDDEN_DISPLAY_FRAGMENTS = (
     "Not bulunamadi",
     "kalici",
     "Kucuk resim",
-    "KÃ¼cÃ¼k resim",
+    "Kücük resim",
     "formati desteklenmiyor",
     "Sticker'i",
     "Iptal",

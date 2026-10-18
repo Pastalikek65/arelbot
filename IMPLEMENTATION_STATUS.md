@@ -33,10 +33,10 @@ Arelbot is a production-candidate Telegram bot. Typed provider contracts, Redis/
 
 ### Notifications and productivity
 
-- User-facing `/bildirim` center and inline planning from `/hava` and `/deprem` result screens; kur, akaryakÄ±t, kripto, haber and BÄ°M takipleri de artÄ±k kiÅŸisel merkezden tek tuÅŸla kurulabiliyor.
+- User-facing `/bildirim` center and inline planning from `/hava` and `/deprem` result screens; kur, akaryakıt, kripto, haber and BİM takipleri de artık kişisel merkezden tek tuşla kurulabiliyor.
 - Group plans are administrator-only with daily/weekly time selection, multi-group support, and forum topic scope. The inline center now also schedules city-scoped air-quality alerts and deduplicated breaking-news digests.
 - Notes, tasks, recurring reminders, timezone, quiet hours, daily/weekly plans, export, and bulk deletion.
-- Main inline menu now exposes TÃ¼rkiye/public-data tools, BÄ°M catalogue pages, notification center and an opt-in timezone-aware daily digest. Photo uploads first ask whether to analyze, OCR, or render a sticker; the selected action is owner-scoped and queued.
+- Main inline menu now exposes Türkiye/public-data tools, BİM catalogue pages, notification center and an opt-in timezone-aware daily digest. Photo uploads first ask whether to analyze, OCR, or render a sticker; the selected action is owner-scoped and queued.
 - Mongo delivery ledger prevents duplicate notifications after restart.
 
 ### AI, documents, and worker jobs
@@ -87,7 +87,7 @@ Arelbot is a production-candidate Telegram bot. Typed provider contracts, Redis/
 - Staging matrix reports use stable failure codes and exception types, without copying provider response text or URLs into archived evidence.
 - Staging matrix supports an atomic `--report` artifact for deployment evidence; live execution remains explicitly gated.
 - `scripts/evidence_audit.py` validates deterministic evidence invariants and secret-free reports; `--require-live` is a separate fail-closed deployment check.
-- `docs/PHASE_STATUS.json` and `scripts/phase_audit.py` provide a machine-readable phase contract; the current audit verifies phases 0â€“8 and leaves phase 9 explicitly `deployment_pending` until the VDS readiness gate and all six deployment evidence artifacts pass invariant checks.
+- `docs/PHASE_STATUS.json` and `scripts/phase_audit.py` provide a machine-readable phase contract; the current audit verifies phases 0–8 and leaves phase 9 explicitly `deployment_pending` until the VDS readiness gate and all six deployment evidence artifacts pass invariant checks.
 - Live deployment evidence is schema-validated before promotion: read-only VDS readiness, Telegram mutation, full six-platform media/SLO, VDS backup/restore checksum, monitoring delivery, provider approval and Clean APIs staging each require stable scope, counters and invariant sets.
 - Release gate reports can be persisted atomically with `--report`; symlink targets are rejected and output tails are centrally redacted.
 - Provider feature flags are enforced before network work; `FEATURE_DISABLED` and `/features` status expose the emergency kill-switch state.
@@ -102,7 +102,7 @@ Arelbot is a production-candidate Telegram bot. Typed provider contracts, Redis/
 - Backup/restore namespace remap, migration rollback, release manifest, and production preflight.
 - `scripts/vds_backup_restore_staging.py` now turns the manual VDS backup/restore requirement into a fail-closed, disposable-target evidence workflow; it never fabricates the live artifact and requires separate destructive confirmation.
 - `scripts/vds_backup_restore_remote.py` executes the same drill through the production Compose containers, verifies Mongo namespace remap, Redis RDB loading and Chroma extraction, then removes every temporary target without stopping production services.
-- `scripts/vds_migration_rollback_remote.py` runs the registered 14â†’3â†’14 migration rollback contract against a disposable VDS database and verifies cleanup/isolation; live evidence is archived at `deploy/evidence/vds-migration-rollback.json`.
+- `scripts/vds_migration_rollback_remote.py` runs the registered 14→3→14 migration rollback contract against a disposable VDS database and verifies cleanup/isolation; live evidence is archived at `deploy/evidence/vds-migration-rollback.json`.
 - Telegram log-channel events contain only safe payload length/type summaries; user names,
   message bodies, URLs and assistant output are excluded from operational sinks.
 
@@ -147,7 +147,7 @@ Arelbot is a production-candidate Telegram bot. Typed provider contracts, Redis/
 
 1. Real Linux VDS webhook/reverse proxy and Windows polling E2E.
 2. Live Instagram/TikTok/YouTube Shorts/X media matrix; URL normalization and provider fallback replay cover all four platform families plus Reddit, while YouTube/TikTok 10-job/100-chat samples currently pass the 10-second SLO. One Docker repetition breached it under source jitter; live Instagram/X fixtures and repeated SLO confidence remain open.
-3. VDS persistence and migration rollback drills now pass: Mongo/Redis/Chroma backup, disposable restore, checksum and cleanup with archive digest `5e9dbf7ed8edfc4351fd340c48da48bdaaccff1f1bb31b6ea2197f07845d8ad2`, plus disposable 14â†’3â†’14 migration rollback.
+3. VDS persistence and migration rollback drills now pass: Mongo/Redis/Chroma backup, disposable restore, checksum and cleanup with archive digest `5e9dbf7ed8edfc4351fd340c48da48bdaaccff1f1bb31b6ea2197f07845d8ad2`, plus disposable 14→3→14 migration rollback.
 4. Provider license/terms/robots production sign-off and source kill-switch decisions.
 5. Live Telegram message, callback, forum topic, sticker, and file API E2E using deployment configuration; deterministic PTB mutation replay is now green.
 6. Monitoring container startup and real alert delivery verification in staging; pinned alert-rule replay now passes in the release gate, while live delivery evidence must satisfy the deployment contract.

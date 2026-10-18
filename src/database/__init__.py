@@ -1,9 +1,9 @@
-"""Veri katmanÄ± uyumluluk paketi.
+"""Veri katmanı uyumluluk paketi.
 
-Not: Projede eski MongoDB sÄ±nÄ±fÄ± `src/database.py` dosyasÄ±nda bulunuyor.
-Yeni `src/database/` paketi eklendiÄŸi iÃ§in Python import Ã¶nceliÄŸi deÄŸiÅŸti ve
-`from src.database import Database` Ã§aÄŸrÄ±larÄ± bu pakete dÃ¼ÅŸmeye baÅŸladÄ±.
-Bu dosya eski sÄ±nÄ±fÄ± gÃ¼venli ÅŸekilde yeniden export ederek geriye dÃ¶nÃ¼k uyumu korur.
+Not: Projede eski MongoDB sınıfı `src/database.py` dosyasında bulunuyor.
+Yeni `src/database/` paketi eklendiği için Python import önceliği değişti ve
+`from src.database import Database` çağrıları bu pakete düşmeye başladı.
+Bu dosya eski sınıfı güvenli şekilde yeniden export ederek geriye dönük uyumu korur.
 """
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path

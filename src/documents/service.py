@@ -53,11 +53,11 @@ class DocumentIngestionService:
     def validate_document(cls, filename: str, mime_type: str | None, file_size: int | None) -> str:
         suffix = Path(str(filename or "")).suffix.casefold()
         if suffix not in cls.ALLOWED_EXTENSIONS:
-            raise DocumentJobError("document_type_unsupported", "Bu belge tÃ¼rÃ¼ desteklenmiyor.")
+            raise DocumentJobError("document_type_unsupported", "Bu belge türü desteklenmiyor.")
         if mime_type and mime_type not in cls.ALLOWED_MIMES:
-            raise DocumentJobError("document_mime_unsupported", "Bu belge tÃ¼rÃ¼ desteklenmiyor.")
+            raise DocumentJobError("document_mime_unsupported", "Bu belge türü desteklenmiyor.")
         if file_size and int(file_size) > Config.RAG_MAX_FILE_BYTES:
-            raise DocumentJobError("document_too_large", "Dosya boyutu izin verilen belge sÄ±nÄ±rÄ±nÄ± aÅŸÄ±yor.")
+            raise DocumentJobError("document_too_large", "Dosya boyutu izin verilen belge sınırını aşıyor.")
         return suffix
 
     async def start(self, bot) -> None:
@@ -91,7 +91,7 @@ class DocumentIngestionService:
         requests = self._request_times[user_id]
         self._request_times[user_id] = [item for item in requests if now - item < 60]
         if len(self._request_times[user_id]) >= 10:
-            raise DocumentJobError("document_rate_limited", "Belge kuyruÄŸuna Ã§ok hÄ±zlÄ± istek gÃ¶nderildi.")
+            raise DocumentJobError("document_rate_limited", "Belge kuyruğuna çok hızlı istek gönderildi.")
         self._request_times[user_id].append(now)
         payload = {
             "chat_id": int(chat_id),
@@ -129,9 +129,9 @@ class DocumentIngestionService:
         started = time.perf_counter()
         self.metrics_registry.inc("document_jobs_total")
         try:
-            await self._edit_status(chat_id, status_id, "ğŸ“¥ Belge indiriliyorâ€¦")
+            await self._edit_status(chat_id, status_id, "📥 Belge indiriliyor…")
             if self.bot is None:
-                raise DocumentJobError("telegram_unavailable", "Telegram istemcisi hazÄ±r deÄŸil.")
+                raise DocumentJobError("telegram_unavailable", "Telegram istemcisi hazır değil.")
             telegram_file = await self.bot.get_file(payload["source_file_id"])
             os.makedirs(Config.RAG_UPLOAD_DIR, exist_ok=True)
             with tempfile.NamedTemporaryFile(
@@ -143,7 +143,7 @@ class DocumentIngestionService:
                 path = handle.name
             await telegram_file.download_to_drive(path)
             await self.queue._set_status(payload, "ingesting")
-            await self._edit_status(chat_id, status_id, "ğŸ§  Belge okunuyor ve arama hafÄ±zasÄ±na ekleniyorâ€¦")
+            await self._edit_status(chat_id, status_id, "🧠 Belge okunuyor ve arama hafızasına ekleniyor…")
             result = await asyncio.wait_for(
                 self.rag_engine.ingest_file(path, user_id=payload["user_id"], mime_type=payload.get("mime_type")),
                 timeout=Config.DOCUMENT_JOB_TIMEOUT_SECONDS,
@@ -151,7 +151,7 @@ class DocumentIngestionService:
             if "(DOCUMENT_INGESTED)" not in str(result):
                 code = self._error_code(str(result))
                 raise DocumentJobError(code, str(result))
-            match = re.search(r";\s*(\d+)\s*parÃ§a", str(result), re.IGNORECASE)
+            match = re.search(r";\s*(\d+)\s*parça", str(result), re.IGNORECASE)
             if match:
                 payload["chunk_count"] = int(match.group(1))
             self.metrics_registry.inc("document_jobs_completed")
@@ -165,18 +165,18 @@ class DocumentIngestionService:
                     )
                 except Exception:
                     logger.debug("Document ingestion audit write failed", exc_info=True)
-            await self._edit_status(chat_id, status_id, f"âœ… {result}")
+            await self._edit_status(chat_id, status_id, f"✅ {result}")
         except DocumentJobError as exc:
             self.metrics_registry.inc("document_jobs_failed")
-            await self._edit_status(chat_id, status_id, f"âŒ {exc}\nÄ°ÅŸ: <code>{job_id}</code>")
+            await self._edit_status(chat_id, status_id, f"❌ {exc}\nİş: <code>{job_id}</code>")
             raise
         except asyncio.TimeoutError as exc:
             self.metrics_registry.inc("document_jobs_failed")
-            await self._edit_status(chat_id, status_id, f"â±ï¸ Belge iÅŸleme zaman aÅŸÄ±mÄ±na uÄŸradÄ±. Ä°ÅŸ: <code>{job_id}</code>")
-            raise DocumentJobError("timeout", "Belge iÅŸleme zaman aÅŸÄ±mÄ±na uÄŸradÄ±.") from exc
+            await self._edit_status(chat_id, status_id, f"⏱️ Belge işleme zaman aşımına uğradı. İş: <code>{job_id}</code>")
+            raise DocumentJobError("timeout", "Belge işleme zaman aşımına uğradı.") from exc
         except Exception as exc:
             self.metrics_registry.inc("document_jobs_failed")
-            await self._edit_status(chat_id, status_id, f"âŒ Belge iÅŸlenemedi (DOCUMENT_PROCESSING_ERROR). Ä°ÅŸ: <code>{job_id}</code>")
+            await self._edit_status(chat_id, status_id, f"❌ Belge işlenemedi (DOCUMENT_PROCESSING_ERROR). İş: <code>{job_id}</code>")
             raise DocumentJobError("telegram_download_failed", "Belge indirilemedi.") from exc
         finally:
             if path:

@@ -29,7 +29,7 @@ def generate_massive_words():
     new_words = []
     # Filter and process
     # We ignore very common short words and functional words
-    ignored_prefixes = ("bi", "bu", "ne", "ve", "de", "da", "mi", "mÄ±", "mu", "mÃ¼")
+    ignored_prefixes = ("bi", "bu", "ne", "ve", "de", "da", "mi", "mı", "mu", "mü")
     
     for line in lines[:8000]: # Take top 8k to filter down to ~3k-4k high quality
         parts = line.split()
@@ -46,9 +46,9 @@ def generate_massive_words():
         new_words.append({
             "word": word,
             "category": "Genel",
-            "description": "Bu yaygÄ±n bir TÃ¼rkÃ§e kelimedir. Tahmin etmeye Ã§alÄ±ÅŸÄ±n!",
+            "description": "Bu yaygın bir Türkçe kelimedir. Tahmin etmeye çalışın!",
             "hints": [
-                f"{word[0]} harfi ile baÅŸlar.",
+                f"{word[0]} harfi ile başlar.",
                 f"Kelime {len(word)} harflidir.",
                 f"Son harfi {word[-1]}."
             ]

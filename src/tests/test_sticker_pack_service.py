@@ -9,7 +9,7 @@ class FakeDatabase:
     def __init__(self):
         self.pack = {
             "pack_name": "arel_fun_by_bot",
-            "pack_title": "Eski BaÅŸlÄ±k",
+            "pack_title": "Eski Başlık",
             "user_id": 42,
             "pack_type": "static",
         }
@@ -98,7 +98,7 @@ async def test_pack_service_requires_owner_and_updates_telegram_then_database():
     assert database.updates[-1][2] == {"pack_title": "Yeni Koleksiyon"}
 
     with pytest.raises(PermissionError, match="pack_owner_required"):
-        await service.rename(bot, 7, "arel_fun_by_bot", "BaÅŸkasÄ±nÄ±n paketi")
+        await service.rename(bot, 7, "arel_fun_by_bot", "Başkasının paketi")
 
 
 @pytest.mark.asyncio
@@ -107,8 +107,8 @@ async def test_pack_service_validates_emoji_and_position_before_telegram_call():
     bot = FakeBot()
     service = StickerPackService(database)
 
-    await service.set_sticker_emoji(bot, 42, "arel_fun_by_bot", "sticker-file", "ğŸ˜€ ğŸ˜‚")
-    assert bot.calls[-1] == ("emoji", "sticker-file", ("ğŸ˜€", "ğŸ˜‚"))
+    await service.set_sticker_emoji(bot, 42, "arel_fun_by_bot", "sticker-file", "😀 😂")
+    assert bot.calls[-1] == ("emoji", "sticker-file", ("😀", "😂"))
 
     await service.reorder(bot, 42, "arel_fun_by_bot", "sticker-file", 3)
     assert bot.calls[-1] == ("position", "sticker-file", 3)
@@ -142,7 +142,7 @@ async def test_pack_service_add_registers_catalog_and_is_idempotent():
         42,
         "arel_fun_by_bot",
         "sticker-file",
-        "ğŸ˜€ ğŸ˜‚",
+        "😀 😂",
         "static",
     )
     second = await service.add_sticker(
@@ -150,7 +150,7 @@ async def test_pack_service_add_registers_catalog_and_is_idempotent():
         42,
         "arel_fun_by_bot",
         "sticker-file",
-        "ğŸ˜€ ğŸ˜‚",
+        "😀 😂",
         "static",
     )
 
@@ -175,7 +175,7 @@ async def test_pack_service_fails_closed_when_a_durable_add_is_already_pending()
         42,
         "arel_fun_by_bot",
         "sticker-file",
-        "ğŸ˜€",
+        "😀",
         "static",
     )
 

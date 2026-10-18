@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "scope": "phase9-evidence-checklist",
+  "phase": "9",
+  "ok": false,
+  "deployment_status": "deployment_pending",
+  "live_evidence_not_fabricated": true,
+  "offline_replay_cannot_promote": true,
+  "required_live_files": [
+    {
+      "file": "vds-readiness.json",
+      "kind": "vds_read_only",
+      "status": "satisfied",
+      "present": true,
+      "invariants_pass": true,
+      "secret_free_pass": true,
+      "live_success_pass": true,
+      "offline_replay_sufficient": false,
+      "owner_action": null
+    },
+    {
+      "file": "telegram-mutation-live.json",
+      "kind": "telegram_disposable_mutation",
+      "status": "missing",
+      "present": false,
+      "invariants_pass": false,
+      "secret_free_pass": false,
+      "live_success_pass": false,
+      "offline_replay_sufficient": false,
+      "owner_action": "Run the bounded mutation probe in a disposable staging chat with operator-supplied file and callback identifiers."
+    },
+    {
+      "file": "media-staging-full-matrix.json",
+      "kind": "external_media_matrix",
+      "status": "satisfied",
+      "present": true,
+      "invariants_pass": true,
+      "secret_free_pass": true,
+      "live_success_pass": true,
+      "offline_replay_sufficient": false,
+      "owner_action": null
+    },
+    {
+      "file": "vds-backup-restore.json",
+      "kind": "vds_disposable_backup_restore",
+      "status": "satisfied",
+      "present": true,
+      "invariants_pass": true,
+      "secret_free_pass": true,
+      "live_success_pass": true,
+      "offline_replay_sufficient": false,
+      "owner_action": null
+    },
+    {
+      "file": "monitoring-alert-delivery.json",
+      "kind": "monitoring_live_delivery",
+      "status": "missing",
+      "present": false,
+      "invariants_pass": false,
+      "secret_free_pass": false,
+      "live_success_pass": false,
+      "offline_replay_sufficient": false,
+      "owner_action": "Send the bounded canary through the VDS Alertmanager webhook and verify receiver delivery counters."
+    },
+    {
+      "file": "provider-governance-approval.json",
+      "kind": "provider_operator_approval",
+      "status": "satisfied",
+      "present": true,
+      "invariants_pass": true,
+      "secret_free_pass": true,
+      "live_success_pass": true,
+      "offline_replay_sufficient": false,
+      "owner_action": null
+    },
+    {
+      "file": "evren-staging.json",
+      "kind": "evren_live_completion",
+      "status": "satisfied",
+      "present": true,
+      "invariants_pass": true,
+      "secret_free_pass": true,
+      "live_success_pass": true,
+      "offline_replay_sufficient": false,
+      "owner_action": null
+    }
+  ],
+  "pending_files": [
+    "telegram-mutation-live.json",
+    "monitoring-alert-delivery.json"
+  ],
+  "safe": true,
+  "environment": "non_production"
+}

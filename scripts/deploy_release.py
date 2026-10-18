@@ -239,13 +239,39 @@ compose() {
         "$@"
 }
 
+wait_for_services() {
+    deadline="$(( $(date +%s) + 900 ))"
+    while [ "$(date +%s)" -lt "${deadline}" ]; do
+        all_healthy=1
+        for service in bot worker; do
+            container_id="$(compose ps -q "${service}" 2>/dev/null | head -n 1 || true)"
+            if [ -z "${container_id}" ] || [ "$(docker inspect -f '{{.State.Status}}' "${container_id}" 2>/dev/null || true)" != "running" ]; then
+                all_healthy=0
+                continue
+            fi
+            probe="$(timeout 8s docker exec "${container_id}" python scripts/healthcheck.py 2>/dev/null || true)"
+            case "${probe}" in
+                healthy:*) ;;
+                *) all_healthy=0 ;;
+            esac
+        done
+        if [ "${all_healthy}" -eq 1 ]; then
+            return 0
+        fi
+        sleep 5
+    done
+    return 1
+}
+
 activate_release() {
     compose_started=1
-    compose up -d --build --wait --wait-timeout 240
+    # Build and start first, then run the bounded in-container readiness probe.
+    # This avoids Compose-version differences around --wait while preserving a
+    # strict application-level health gate.
+    compose up -d --build
+    wait_for_services
     state="$(compose ps --format '{{.Service}} {{.State}} {{.Health}}')"
     printf '%s\n' "${state}"
-    printf '%s\n' "${state}" | grep -Eq '^bot running healthy$'
-    printf '%s\n' "${state}" | grep -Eq '^worker running healthy$'
 }
 
 rollback_previous() {
@@ -258,13 +284,30 @@ rollback_previous() {
             --env-file "${env_file}" \
             --file "${previous_compose}" \
             --profile prod \
-            up -d --build --wait --wait-timeout 240
+            up -d --build
+        compose_file="${previous_compose}"
+        wait_for_services
         compose_started=0
     fi
 }
 
 if ! activate_release; then
     echo "New production release did not become healthy; rolling back" >&2
+    # Keep rollback automatic, but expose bounded, secret-safe diagnostics so a
+    # failed health gate can be diagnosed without leaving the failed release
+    # active.  The healthcheck only emits dependency booleans; container logs
+    # are intentionally omitted because they can contain user content.
+    echo "failed_release_state=" >&2
+    compose ps --all --format '{{.Service}} {{.State}} {{.Health}}' >&2 || true
+    for service in bot worker; do
+        container_id="$(compose ps -aq "${service}" 2>/dev/null | head -n 1 || true)"
+        if [ -n "${container_id}" ]; then
+            docker inspect -f "${service} status={{.State.Status}} exit={{.State.ExitCode}} health={{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}" "${container_id}" >&2 || true
+            docker inspect -f '{{range .State.Health.Log}}{{.Output}}{{end}}' "${container_id}" >&2 || true
+            probe="$(timeout 8s docker exec "${container_id}" python scripts/healthcheck.py 2>&1 || true)"
+            printf '%s\n' "health_probe=${service}:${probe}" >&2
+        fi
+    done
     rollback_previous || echo "previous release rollback failed; operator action required" >&2
     exit 30
 fi
@@ -357,14 +400,23 @@ def deploy(args: argparse.Namespace, archive: Path, archive_sha: str) -> str:
         stdin.write(remote_install_script())
         stdin.channel.shutdown_write()
         output = stdout.read().decode("utf-8", errors="replace")
-        stderr.read()  # Drain the channel without echoing arbitrary remote diagnostics.
+        remote_stderr = stderr.read().decode("utf-8", errors="replace")
         exit_code = stdout.channel.recv_exit_status()
         if exit_code:
             # Remote Docker/journal output can contain arbitrary provider
-            # diagnostics. Keep secrets out of terminal logs and ask operators
-            # to inspect the host through their authenticated channel.
+            # diagnostics. Keep secrets out of terminal logs while retaining
+            # the bounded health state emitted by the installer itself.
+            safe_diagnostics = [
+                line.strip()
+                for line in remote_stderr.splitlines()
+                if line.strip() == "failed_release_state="
+                or line.strip().startswith(("bot status=", "worker status="))
+                or line.strip().startswith(("healthy:", "unhealthy:"))
+                or line.strip().startswith("health_probe=")
+            ]
+            suffix = f" ({'; '.join(safe_diagnostics)})" if safe_diagnostics else ""
             raise RuntimeError(
-                f"Remote production deployment failed with exit code {exit_code}; inspect VDS logs securely."
+                f"Remote production deployment failed with exit code {exit_code}{suffix}; inspect VDS logs securely."
             )
         return output
     finally:

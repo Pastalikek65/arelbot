@@ -1,77 +1,77 @@
-# Arelbot Ãœretim Yol HaritasÄ±
+# Arelbot Üretim Yol Haritası
 
-Bu belge Arelbot'un uzun vadeli Ã¼rÃ¼n ve mÃ¼hendislik sÃ¶zleÅŸmesidir. Uygulama
-fazlarÄ± sÄ±rayla ilerler; bir fazÄ±n Ã§Ä±kÄ±ÅŸ kriteri karÅŸÄ±lanmadan ilgili Ã¶zellik
-Ã¼retimde aÃ§Ä±lmaz.
+Bu belge Arelbot'un uzun vadeli ürün ve mühendislik sözleşmesidir. Uygulama
+fazları sırayla ilerler; bir fazın çıkış kriteri karşılanmadan ilgili özellik
+üretimde açılmaz.
 
 ## Uygulama ilkeleri
 
-- Telegram komutu, callback, inline arama ve AI aynÄ± typed feature Ã§ekirdeÄŸini kullanÄ±r.
-- Handler'lar yalnÄ±zca Telegram giriÅŸ/Ã§Ä±kÄ±ÅŸÄ±nÄ± yÃ¶netir; iÅŸ kurallarÄ± domain servislerindedir.
-- Public veri ve Telegram iÃ§i not/gÃ¶rev/hatÄ±rlatÄ±cÄ± sistemi varsayÄ±landÄ±r.
-- Harici hesap, parola ve kullanÄ±cÄ± cookie'si toplanmaz.
-- DÄ±ÅŸ kaynaklarda lisans, attribution, freshness, timeout ve fallback kaydÄ± bulunur.
-- AI yalnÄ±zca izinli araÃ§larÄ± Ã§aÄŸÄ±rÄ±r ve gÃ¼ncel veriyi kaynaksÄ±z Ã¼retmez.
-- Mesaj saklama sÃ¼resi 30 gÃ¼n, Telegram `file_id` cache sÃ¼resi 24 saattir.
+- Telegram komutu, callback, inline arama ve AI aynı typed feature çekirdeğini kullanır.
+- Handler'lar yalnızca Telegram giriş/çıkışını yönetir; iş kuralları domain servislerindedir.
+- Public veri ve Telegram içi not/görev/hatırlatıcı sistemi varsayılandır.
+- Harici hesap, parola ve kullanıcı cookie'si toplanmaz.
+- Dış kaynaklarda lisans, attribution, freshness, timeout ve fallback kaydı bulunur.
+- AI yalnızca izinli araçları çağırır ve güncel veriyi kaynaksız üretmez.
+- Mesaj saklama süresi 30 gün, Telegram `file_id` cache süresi 24 saattir.
 
 ## Fazlar
 
-### Faz 0 â€” Kalite kapÄ±sÄ± ve yÃ¶netiÅŸim
+### Faz 0 — Kalite kapısı ve yönetişim
 
 `AGENTS.md`, `docs/ARCHITECTURE.md`, `docs/DATA_SOURCES.md`, `LICENSES.md` ve
-`scripts/architecture_check.py` ile kod sÄ±nÄ±rlarÄ±, secret politikasÄ±, lisans
+`scripts/architecture_check.py` ile kod sınırları, secret politikası, lisans
 envanteri ve release kontrolleri kurulacak.
 
-### Faz 1 â€” Typed feature platformu
+### Faz 1 — Typed feature platformu
 
-`src/features` altÄ±ndaki `FeatureDefinition`, `FeatureResult`, `DataProvider`
-ve `FeatureRegistry` bÃ¼tÃ¼n Ã¶zelliklerin ortak sÃ¶zleÅŸmesi olacak. Spatula araÃ§larÄ±nÄ±n
-uyumluluk yÃ¼zeyi typed provider delegasyonuna taÅŸÄ±ndÄ±; doÄŸrudan scraper yolu
-kapatÄ±ldÄ±.
+`src/features` altındaki `FeatureDefinition`, `FeatureResult`, `DataProvider`
+ve `FeatureRegistry` bütün özelliklerin ortak sözleşmesi olacak. Spatula araçlarının
+uyumluluk yüzeyi typed provider delegasyonuna taşındı; doğrudan scraper yolu
+kapatıldı.
 
-### Faz 2 â€” TÃ¼rkiye ÅŸehir kataloÄŸu
+### Faz 2 — Türkiye şehir kataloğu
 
-81 il ve 973 ilÃ§e sÃ¼rÃ¼mlÃ¼ yerel snapshot olarak gelir. `/sehir`, `/plaka`,
-`/telefon`, `/ilce` ve `/sehirler` komutlarÄ± dÄ±ÅŸ servis olmadan Ã§alÄ±ÅŸÄ±r.
+81 il ve 973 ilçe sürümlü yerel snapshot olarak gelir. `/sehir`, `/plaka`,
+`/telefon`, `/ilce` ve `/sehirler` komutları dış servis olmadan çalışır.
 
-### Faz 3 â€” Public bilgi saÄŸlayÄ±cÄ±larÄ±
+### Faz 3 — Public bilgi sağlayıcıları
 
-Eczane, akaryakÄ±t, dÃ¶viz/altÄ±n, deprem, haber, hava, ezan, uÃ§uÅŸ, aktÃ¼el Ã¼rÃ¼n
-ve kÃ¼ltÃ¼r saÄŸlayÄ±cÄ±larÄ± ortak cache, health, circuit breaker, attribution ve
-stale veri politikasÄ±yla Ã§alÄ±ÅŸÄ±r.
+Eczane, akaryakıt, döviz/altın, deprem, haber, hava, ezan, uçuş, aktüel ürün
+ve kültür sağlayıcıları ortak cache, health, circuit breaker, attribution ve
+stale veri politikasıyla çalışır.
 
-### Faz 4 â€” KiÅŸisel Ã¼retkenlik
+### Faz 4 — Kişisel üretkenlik
 
-KullanÄ±cÄ±nÄ±n Telegram iÃ§inde tuttuÄŸu notlar, gÃ¶revler, listeler, tekrar eden
-hatÄ±rlatÄ±cÄ±lar, sessiz saatler, gÃ¼nlÃ¼k Ã¶zet ve bildirim tercihleri MongoDB ve
-Redis tabanlÄ± kalÄ±cÄ± iÅŸ akÄ±ÅŸÄ±yla tamamlanÄ±r.
+Kullanıcının Telegram içinde tuttuğu notlar, görevler, listeler, tekrar eden
+hatırlatıcılar, sessiz saatler, günlük özet ve bildirim tercihleri MongoDB ve
+Redis tabanlı kalıcı iş akışıyla tamamlanır.
 
-### Faz 5 â€” AI, RAG ve kaynaklÄ± yanÄ±t
+### Faz 5 — AI, RAG ve kaynaklı yanıt
 
-Provider routing, tool allowlist, dosya ingestion, Chroma, kullanÄ±cÄ± hafÄ±zasÄ±
-opt-in, prompt injection korumasÄ±, kaynak ve maliyet metrikleri tamamlanÄ±r.
+Provider routing, tool allowlist, dosya ingestion, Chroma, kullanıcı hafızası
+opt-in, prompt injection koruması, kaynak ve maliyet metrikleri tamamlanır.
 
-### Faz 6 â€” Grup, medya, quote, sticker ve oyun
+### Faz 6 — Grup, medya, quote, sticker ve oyun
 
-KalÄ±cÄ± grup ayarlarÄ±, moderasyon, medya worker'larÄ±, quote/sticker kuyruklarÄ±,
-oyun state recovery, leaderboard ve ekonomi sistemi Ã¼retim kriterleriyle
-etkinleÅŸtirilir.
+Kalıcı grup ayarları, moderasyon, medya worker'ları, quote/sticker kuyrukları,
+oyun state recovery, leaderboard ve ekonomi sistemi üretim kriterleriyle
+etkinleştirilir.
 
-### Faz 7 â€” Operasyon ve daÄŸÄ±tÄ±m sertleÅŸtirmesi
+### Faz 7 — Operasyon ve dağıtım sertleştirmesi
 
 Windows polling, Linux webhook, Docker Compose profilleri, backup/restore,
-migration, rollback, yÃ¼k, gÃ¼venlik ve provider replay kontrolleri Ã§alÄ±ÅŸtÄ±rÄ±lÄ±r.
+migration, rollback, yük, güvenlik ve provider replay kontrolleri çalıştırılır.
 
 ## Kabul hedefleri
 
-- Ä°lk kabul mesajÄ± p95 < 1 saniye.
-- Yerel ÅŸehir sorgusu p95 < 100 ms.
+- İlk kabul mesajı p95 < 1 saniye.
+- Yerel şehir sorgusu p95 < 100 ms.
 - Cache hit public veri sorgusu p95 < 500 ms.
-- Uygun medya iÅŸinde p95 â‰¤ 10 saniye.
-- 10 eÅŸzamanlÄ± medya iÅŸi ve yaklaÅŸÄ±k 100 aktif sohbet.
-- 45 MiB Ã¼stÃ¼ dosya Telegram'a gÃ¶nderilmez.
-- Worker yeniden baÅŸlatÄ±ldÄ±ÄŸÄ±nda iÅŸ kaybÄ± yaÅŸanmaz.
-- Secret, cookie, tam URL veya kiÅŸisel veri loglanmaz.
+- Uygun medya işinde p95 ≤ 10 saniye.
+- 10 eşzamanlı medya işi ve yaklaşık 100 aktif sohbet.
+- 45 MiB üstü dosya Telegram'a gönderilmez.
+- Worker yeniden başlatıldığında iş kaybı yaşanmaz.
+- Secret, cookie, tam URL veya kişisel veri loglanmaz.
 
 ## Current execution checkpoint -- 2026-10-09
 
@@ -87,7 +87,7 @@ migration, rollback, yÃ¼k, gÃ¼venlik ve provider replay kontrolleri Ã§alÄ
 - Bootstrap transport dispatch now has explicit polling/webhook integration tests, closing the gap between validated configuration and the actual python-telegram-bot start method.
 - Latest offline+Docker gate: 857 local tests (+10 environment-dependent skips), 865 Docker tests (+2 environment-dependent skips), architecture strict 0, security replay 6/6, provider fixture load p95 5.12 ms (20 requests / 10 concurrency), latest provider load p95 15.85 ms (100 requests / 10 concurrency), deterministic media load 100/100 at 10 workers across 100 chat slots (0.90 ms p95), monitoring delivery replay 8/8, and exact five-rule Prometheus alert replay. Full Python and Markdown mojibake detection is included in the architecture gate. Clean APIs routing is now a first-class typed provider with a default `deepseek-v4-flash-0731` text-task allowlist when configured.
 - Public Spatula compatibility tools now delegate to typed providers; direct scraper imports are forbidden by regression coverage and no longer exist in the compatibility module.
-- Personal notification center now installs currency, fuel, crypto, news, and BÄ°M tracking through owner-scoped inline callbacks; threshold alerts remain explicit and auditable through `/alarm`.
+- Personal notification center now installs currency, fuel, crypto, news, and BİM tracking through owner-scoped inline callbacks; threshold alerts remain explicit and auditable through `/alarm`.
 - Media URL replay now covers Instagram/instagr.am, TikTok, YouTube/Shorts, Twitter/X, and Reddit; registry replay verifies platform aliases, provider priority, circuit breaking, and wildcard fallback.
 - Deterministic media replay matrix now covers Instagram, TikTok, YouTube Shorts, X, Facebook/Reels and Reddit; all six families pass provider selection, artifact validation and cleanup without network calls. Live availability remains deployment evidence.
 - Production feature registry now fails closed for external providers whose source, robots, terms or production sign-off metadata is incomplete; manual Compose starts cannot bypass the governance guard.
@@ -114,7 +114,7 @@ migration, rollback, yÃ¼k, gÃ¼venlik ve provider replay kontrolleri Ã§alÄ
 - Provider retries now classify typed transport status: malformed/policy/schema responses stop immediately while timeout, 429 and 5xx paths remain retryable and observable in circuit metrics.
 
 
-### Provider governance checkpoint â€” 2026-10-07
+### Provider governance checkpoint — 2026-10-07
 
 Typed providers now carry explicit source-governance metadata and an offline
 report (`scripts/provider_governance.py`). All current external sources remain

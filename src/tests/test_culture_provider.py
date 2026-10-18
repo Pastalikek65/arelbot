@@ -28,7 +28,7 @@ async def test_book_provider_keeps_only_sourced_score_and_escapes_html():
     assert result.source == "Open Library"
     assert result.metadata["scores_sourced_only"] is True
     assert "A &lt; Book" in result.data["content"]
-    assert "Kaynak puanÄ±: 4.2" in result.data["content"]
+    assert "Kaynak puanı: 4.2" in result.data["content"]
     await client.aclose()
 
 
@@ -44,7 +44,7 @@ async def test_series_provider_normalizes_rating_and_link():
     provider = CultureProvider(client)
     result = await provider.fetch(ProviderRequest("culture_recommendation", {"category": "series", "specific_query": "example"}))
     assert result.source == "TVmaze"
-    assert "Kaynak puanÄ±: 8.1" in result.data["content"]
+    assert "Kaynak puanı: 8.1" in result.data["content"]
     assert 'href="https://api.tvmaze.com/shows/1"' in result.data["content"]
     await client.aclose()
 
@@ -61,7 +61,7 @@ async def test_music_provider_does_not_invent_scores():
     }]})
     provider = CultureProvider(client)
     result = await provider.fetch(ProviderRequest("culture_recommendation", {"category": "music", "mood": "energetic"}))
-    assert "Kaynak puanÄ±" not in result.data["content"]
+    assert "Kaynak puanı" not in result.data["content"]
     assert "Artist" in result.data["content"]
     await client.aclose()
 

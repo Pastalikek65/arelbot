@@ -1,10 +1,10 @@
-# `src` modÃ¼l kurallarÄ±
+# `src` modül kuralları
 
-- `features` Telegram'dan baÄŸÄ±msÄ±z domain sÃ¶zleÅŸmelerini ve provider'larÄ± iÃ§erir.
-- `handlers` yalnÄ±zca update parsing, permission ve response formatting yapar.
-- `storage` ve `database` kalÄ±cÄ± veri eriÅŸimidir; servisler collection nesnesi Ã¼retmez.
-- `jobs` aÄŸÄ±r/tekrar denenebilir iÅŸlerin yaÅŸam dÃ¶ngÃ¼sÃ¼nÃ¼ yÃ¶netir.
-- `security` ortak SSRF, redaction, sanitizer ve rate limit politikalarÄ±nÄ±n tek kaynaÄŸÄ±dÄ±r.
-- Provider'lar ortak `ProviderRequest`, `ProviderResponse` ve `ProviderHealth` tiplerini kullanÄ±r.
-- Bir feature'Ä±n Ã§Ä±ktÄ±sÄ± `FeatureResult` zarfÄ±na Ã§evrilmeden Telegram'a gÃ¶nderilmez.
-- Async kodda bloklayan dosya/aÄŸ iÅŸlemi event loop iÃ§inde doÄŸrudan Ã§alÄ±ÅŸtÄ±rÄ±lmaz.
+- `features` Telegram'dan bağımsız domain sözleşmelerini ve provider'ları içerir.
+- `handlers` yalnızca update parsing, permission ve response formatting yapar.
+- `storage` ve `database` kalıcı veri erişimidir; servisler collection nesnesi üretmez.
+- `jobs` ağır/tekrar denenebilir işlerin yaşam döngüsünü yönetir.
+- `security` ortak SSRF, redaction, sanitizer ve rate limit politikalarının tek kaynağıdır.
+- Provider'lar ortak `ProviderRequest`, `ProviderResponse` ve `ProviderHealth` tiplerini kullanır.
+- Bir feature'ın çıktısı `FeatureResult` zarfına çevrilmeden Telegram'a gönderilmez.
+- Async kodda bloklayan dosya/ağ işlemi event loop içinde doğrudan çalıştırılmaz.

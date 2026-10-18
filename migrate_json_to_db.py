@@ -89,7 +89,7 @@ def migrate():
                     session.add(new_msg)
         
         session.commit()
-        logger.info("Migration completed successfully! ğŸ‰")
+        logger.info("Migration completed successfully! 🎉")
         
     except Exception as e:
         session.rollback()

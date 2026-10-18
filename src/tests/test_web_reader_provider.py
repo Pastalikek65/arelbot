@@ -17,7 +17,7 @@ async def test_web_reader_provider_extracts_bounded_untrusted_text():
         return httpx.Response(
             200,
             headers={"content-type": "text/html; charset=utf-8"},
-            text="<html><script>ignore()</script><body><h1>BaÅŸlÄ±k</h1><p>GÃ¼venilmeyen iÃ§erik</p></body></html>",
+            text="<html><script>ignore()</script><body><h1>Başlık</h1><p>Güvenilmeyen içerik</p></body></html>",
             request=request,
         )
 
@@ -30,7 +30,7 @@ async def test_web_reader_provider_extracts_bounded_untrusted_text():
     assert response.source == "Public web page"
     assert response.source_url == "https://example.com/page"
     assert "ignore" not in response.data["content"]
-    assert "GÃ¼venilmeyen iÃ§erik" in response.data["content"]
+    assert "Güvenilmeyen içerik" in response.data["content"]
     assert response.metadata["untrusted"] is True
 
 

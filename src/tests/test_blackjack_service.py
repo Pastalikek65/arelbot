@@ -50,9 +50,9 @@ class FakeLeaderboard:
 class DeterministicGame:
     def create_game(self, player_name, player_id):
         return {
-            "deck": [("4", "â™ ï¸"), ("10", "â™£ï¸")],
-            "player_hand": [("10", "â™¥ï¸"), ("7", "â™¦ï¸")],
-            "dealer_hand": [("5", "â™ ï¸"), ("6", "â™¥ï¸")],
+            "deck": [("4", "♠️"), ("10", "♣️")],
+            "player_hand": [("10", "♥️"), ("7", "♦️")],
+            "dealer_hand": [("5", "♠️"), ("6", "♥️")],
             "player_name": player_name,
             "player_id": player_id,
             "status": "playing",
@@ -72,7 +72,7 @@ class DeterministicGame:
 
     def get_result(self, state):
         if state["status"] == "finished":
-            return {"result": "win", "message": "KazandÄ±n", "winnings": state["bet"]}
+            return {"result": "win", "message": "Kazandın", "winnings": state["bet"]}
         return {"result": "push", "message": "Berabere", "winnings": 0}
 
     def format_game(self, state, reveal_dealer=False):

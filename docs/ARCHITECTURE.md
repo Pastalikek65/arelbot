@@ -1,4 +1,4 @@
-# Arelbot Mimari SÃ¶zleÅŸmesi
+# Arelbot Mimari Sözleşmesi
 
 ```text
 Telegram update
@@ -9,85 +9,87 @@ Telegram update
   -> Telegram formatter / AI response
 ```
 
-`src/features` ortak typed Ã§ekirdektir. `FeatureDefinition` komut, kategori,
-izin, provider, provider_kind, cache, freshness, timeout ve audit bilgilerini taÅŸÄ±r.
-`provider_kind=data` typed `DataProvider` registry'sinde doÄŸrulanÄ±r; `provider_kind=ai`
-model rotasÄ±nÄ± belirtir ve veri saÄŸlayÄ±cÄ±sÄ± sÃ¶zleÅŸmesine zorla sokulmaz.
-`DataProvider` dÄ±ÅŸ kaynaÄŸÄ± soyutlar. `FeatureResult` source, fetched_at,
-stale, cache_hit, correlation_id ve gÃ¼venli hata kodu verir.
+`src/features` ortak typed çekirdektir. `FeatureDefinition` komut, kategori,
+izin, provider, provider_kind, cache, freshness, timeout ve audit bilgilerini taşır.
+`provider_kind=data` typed `DataProvider` registry'sinde doğrulanır; `provider_kind=ai`
+model rotasını belirtir. `provider_kind=moderation`, Guardian gibi ayrı bir
+moderation service sözleşmesiyle dependency injection üzerinden bağlanan provider
+sınırını belirtir; bu provider data registry'sine zorla sokulmaz.
+`DataProvider` dış kaynağı soyutlar. `FeatureResult` source, fetched_at,
+stale, cache_hit, correlation_id ve güvenli hata kodu verir.
 
-Provider runtime cache veya fallback sonucu dÃ¶ndÃ¼rdÃ¼kten sonra
-`FeatureExecutor`, payload'Ä± provider'Ä±n `normalize()` sÃ¶zleÅŸmesinden geÃ§irir.
-Bu adÄ±m bÃ¼tÃ¼n Telegram, inline ve AI Ã§aÄŸrÄ±larÄ±nda ortak ÅŸemayÄ± garanti eder;
-normalizasyon hatasÄ± gÃ¼venli bir `PROVIDER_SCHEMA_INVALID` sonucu ve health kaydÄ±
-Ã¼retir, ham upstream exception kullanÄ±cÄ±ya taÅŸÄ±nmaz.
+Provider runtime cache veya fallback sonucu döndürdükten sonra
+`FeatureExecutor`, payload'ı provider'ın `normalize()` sözleşmesinden geçirir.
+Bu adım bütün Telegram, inline ve AI çağrılarında ortak şemayı garanti eder;
+normalizasyon hatası güvenli bir `PROVIDER_SCHEMA_INVALID` sonucu ve health kaydı
+üretir, ham upstream exception kullanıcıya taşınmaz.
 
-Telegram, AI, inline ve callback yÃ¼zleri aynÄ± domain servislerini Ã§aÄŸÄ±rÄ±r.
+Telegram, AI, inline ve callback yüzleri aynı domain servislerini çağırır.
 
 ## ChatFeaturePolicy ve kapsam izolasyonu
 
-Quote ve medya indirme anahtarlarÄ± `ChatFeaturePolicy` Ã¼zerinden Ã§Ã¶zÃ¼lÃ¼r.
-`quotes`/`quote` takma adÄ± `q_enabled`, `media`/`video` takma adÄ±
-`media_enabled` alanÄ±na normalize edilir. Bu alanlar MongoDB'de sohbetin
-`_id` alanÄ± altÄ±nda tutulur; bir gruptaki toggle baÅŸka bir grup veya Ã¶zel
-sohbetin davranÄ±ÅŸÄ±nÄ± deÄŸiÅŸtirmez. Komut, otomatik link, caption, callback ve
-inline quote yollarÄ± aynÄ± policy kapÄ±sÄ±ndan geÃ§er. KapalÄ± bir feature komutu
-sessizce yok sayÄ±lÄ±r; medya kuyruÄŸuna veya quote repository'sine iÅŸ bÄ±rakÄ±lmaz.
-YÃ¶netici toggle'larÄ± bounded audit kaydÄ±yla izlenir ve Telegram callback'i
-ikinci kez cevaplama hatasÄ± kullanÄ±cÄ±ya taÅŸÄ±nmaz.
+Quote ve medya indirme anahtarları `ChatFeaturePolicy` üzerinden çözülür.
+`quotes`/`quote` takma adı `q_enabled`, `media`/`video` takma adı
+`media_enabled` alanına normalize edilir. Bu alanlar MongoDB'de sohbetin
+`_id` alanı altında tutulur; bir gruptaki toggle başka bir grup veya özel
+sohbetin davranışını değiştirmez. Komut, otomatik link, caption, callback ve
+inline quote yolları aynı policy kapısından geçer. Kapalı bir feature komutu
+sessizce yok sayılır; medya kuyruğuna veya quote repository'sine iş bırakılmaz.
+Yönetici toggle'ları bounded audit kaydıyla izlenir ve Telegram callback'i
+ikinci kez cevaplama hatası kullanıcıya taşınmaz.
 
-`src/video_downloader.py` ve `src/tiktok_downloader.py` eski dÄ±ÅŸ entegrasyonlar
-iÃ§in yalnÄ±zca uyumluluk yÃ¼zÃ¼dÃ¼r. Bu modÃ¼ller HTTP istemcisi, hardcoded
-saÄŸlayÄ±cÄ± veya kendi limit politikasÄ±nÄ± iÃ§ermez; `YtDlpProvider` sÃ¶zleÅŸmesine
-delege eder. Yeni Telegram akÄ±ÅŸlarÄ±nda doÄŸrudan bu sÄ±nÄ±f yerine kuyruklu
-`MediaDownloadService` kullanÄ±lÄ±r. Architecture check bu sÄ±nÄ±rÄ± ve eski
-Cobalt/TikWM bypasslarÄ±nÄ± otomatik olarak reddeder.
+`src/video_downloader.py` ve `src/tiktok_downloader.py` eski dış entegrasyonlar
+için yalnızca uyumluluk yüzüdür. Bu modüller HTTP istemcisi, hardcoded
+sağlayıcı veya kendi limit politikasını içermez; `YtDlpProvider` sözleşmesine
+delege eder. Yeni Telegram akışlarında doğrudan bu sınıf yerine kuyruklu
+`MediaDownloadService` kullanılır. Architecture check bu sınırı ve eski
+Cobalt/TikWM bypasslarını otomatik olarak reddeder.
 
-Bildirim teslimatÄ± `SubscriptionStore` iÃ§indeki atomik claim lease'i ile
-yÃ¼rÃ¼tÃ¼lÃ¼r. AFAD, haber ve aktÃ¼el Ã¼rÃ¼n akÄ±ÅŸlarÄ± iÃ§in iÃ§erik fingerprint'i
-`last_fingerprint` alanÄ±nda tutulur; aynÄ± provider payload'Ä± yeniden geldiÄŸinde
-plan ileri alÄ±nÄ±r ama Telegram'a ikinci kez gÃ¶nderilmez. Hava ve namaz gibi
-zaman bazlÄ± akÄ±ÅŸlar tekrar politikasÄ±nÄ± korur; eÅŸik alarmlarÄ± yalnÄ±zca gÃ¶zlenen
-payload deÄŸiÅŸtiÄŸinde tetiklenir.
-Grup analitiÄŸi de `GroupAnalyticsService` Ã¼zerinden Ã§alÄ±ÅŸÄ±r; Mongo aggregate
-sorgularÄ± `Database.get_group_analytics` repository sÄ±nÄ±rÄ±nda tutulur. Komut
-Ã¶ncesi grup ve yÃ¶netici yetkisi tekrar doÄŸrulanÄ±r, kullanÄ±cÄ± adlarÄ± escape edilir.
-Provider baÅŸarÄ±sÄ±z olduÄŸunda cache policy stale sonucu aÃ§Ä±k uyarÄ±yla sunabilir
-veya iÅŸi queue'ya devredebilir. Handler doÄŸrudan scraper Ã§alÄ±ÅŸtÄ±rmaz.
+Bildirim teslimatı `SubscriptionStore` içindeki atomik claim lease'i ile
+yürütülür. AFAD, haber ve aktüel ürün akışları için içerik fingerprint'i
+`last_fingerprint` alanında tutulur; aynı provider payload'ı yeniden geldiğinde
+plan ileri alınır ama Telegram'a ikinci kez gönderilmez. Hava ve namaz gibi
+zaman bazlı akışlar tekrar politikasını korur; eşik alarmları yalnızca gözlenen
+payload değiştiğinde tetiklenir.
+Grup analitiği de `GroupAnalyticsService` üzerinden çalışır; Mongo aggregate
+sorguları `Database.get_group_analytics` repository sınırında tutulur. Komut
+öncesi grup ve yönetici yetkisi tekrar doğrulanır, kullanıcı adları escape edilir.
+Provider başarısız olduğunda cache policy stale sonucu açık uyarıyla sunabilir
+veya işi queue'ya devredebilir. Handler doğrudan scraper çalıştırmaz.
 
-MongoDB kalÄ±cÄ± iÅŸ, kullanÄ±cÄ±, mesaj, not, gÃ¶rev, reminder, cache ve audit
-kayÄ±tlarÄ±nÄ±n kaynaÄŸÄ±dÄ±r. Redis kÄ±sa durum, queue, rate limit ve sÄ±cak cache
-iÃ§in kullanÄ±lÄ±r. Medya dosyasÄ± yalnÄ±zca iÅŸ sÃ¼resince disk Ã¼zerinde tutulur.
+MongoDB kalıcı iş, kullanıcı, mesaj, not, görev, reminder, cache ve audit
+kayıtlarının kaynağıdır. Redis kısa durum, queue, rate limit ve sıcak cache
+için kullanılır. Medya dosyası yalnızca iş süresince disk üzerinde tutulur.
 
-Sihirbaz durumlarÄ± `PersistentStateMap` Ã¼zerinden kullanÄ±cÄ± + sohbet kapsamÄ±nda ve
-TTL'li state store'a yazÄ±lÄ±r. AynÄ± kullanÄ±cÄ±nÄ±n iki grup veya Ã¶zel sohbetteki
-oturumlarÄ± ayrÄ± Redis anahtarlarÄ±nda tutulur; callback baÄŸlamÄ± eÅŸleÅŸmiyorsa
-durum fail-closed olarak yok sayÄ±lÄ±r. Durum payload'larÄ± JSON ÅŸekillidir; iÃ§ iÃ§e sÃ¶zlÃ¼k ve liste
-mutasyonlarÄ± da izlenir, bÃ¶ylece sticker/quote/cookie adÄ±mlarÄ±nda `append`,
-`pop` veya alan gÃ¼ncellemesi restart Ã¶ncesi kaybolmaz. Redis Ã¼retimde tek
-paylaÅŸÄ±lan kÄ±sa durum kaynaÄŸÄ±dÄ±r; memory store yalnÄ±zca geliÅŸtirme/test
-Ã§alÄ±ÅŸtÄ±rmalarÄ±nda kullanÄ±labilir.
+Sihirbaz durumları `PersistentStateMap` üzerinden kullanıcı + sohbet kapsamında ve
+TTL'li state store'a yazılır. Aynı kullanıcının iki grup veya özel sohbetteki
+oturumları ayrı Redis anahtarlarında tutulur; callback bağlamı eşleşmiyorsa
+durum fail-closed olarak yok sayılır. Durum payload'ları JSON şekillidir; iç içe sözlük ve liste
+mutasyonları da izlenir, böylece sticker/quote/cookie adımlarında `append`,
+`pop` veya alan güncellemesi restart öncesi kaybolmaz. Redis üretimde tek
+paylaşılan kısa durum kaynağıdır; memory store yalnızca geliştirme/test
+çalıştırmalarında kullanılabilir.
 
 Feature provider results use a two-level cache: a process-local hot cache and,
 when the production queue has a Redis connection, a namespaced Redis cache.
 Cache payloads retain source and fetch timestamps so a shared hit remains
 traceable and stale results can be labelled at the Telegram boundary.
 
-Weather requests carry a bounded forecast horizon (`days` 1â€“7). The wttr.in
+Weather requests carry a bounded forecast horizon (`days` 1–7). The wttr.in
 adapter emits a stable daily forecast list and compact derived rain/wind
 summaries; Telegram callbacks only select a horizon and never alter the
 notification subscription. Group forecast callbacks remain view-only while
 group notification controls are re-authorized for administrators.
-## Native provider geÃ§iÅŸi
+## Native provider geçişi
 
-Native provider geÃ§iÅŸi feature anahtarÄ±nÄ± deÄŸiÅŸtirmeden yapÄ±lÄ±r. Registry Ã¶nce
-`DataProvider` uyumlu typed provider'Ä± seÃ§er; public Spatula araÃ§larÄ±nÄ±n eski
-`BaseTool` yÃ¼zeyi de artÄ±k yalnÄ±zca typed provider delegasyonu yapar ve doÄŸrudan
-HTTP/scraper iÃ§ermez. BÃ¶ylece kontrollÃ¼ migration fallback aÃ§Ä±ldÄ±ÄŸÄ±nda bile
-ikinci bir veri Ã§ekme politikasÄ± oluÅŸmaz. `ProviderRuntime` timeout, retry,
+Native provider geçişi feature anahtarını değiştirmeden yapılır. Registry önce
+`DataProvider` uyumlu typed provider'ı seçer; public Spatula araçlarının eski
+`BaseTool` yüzeyi de artık yalnızca typed provider delegasyonu yapar ve doğrudan
+HTTP/scraper içermez. Böylece kontrollü migration fallback açıldığında bile
+ikinci bir veri çekme politikası oluşmaz. `ProviderRuntime` timeout, retry,
 circuit breaker, request coalescing ve stale-while-revalidate uygular. Provider
-Ã§aÄŸrÄ± saÄŸlÄ±ÄŸÄ± repository Ã¼zerinden `provider_health` koleksiyonuna yazÄ±lÄ±r;
-handler'lar MongoDB veya HTTP istemcisine eriÅŸemez.
+çağrı sağlığı repository üzerinden `provider_health` koleksiyonuna yazılır;
+handler'lar MongoDB veya HTTP istemcisine erişemez.
 
 Transport policy/schema failures are classified as deterministic and consume
 one provider attempt only. Transient upstream statuses (timeouts, 429 and
@@ -95,18 +97,18 @@ one provider attempt only. Transient upstream statuses (timeouts, 429 and
 broken source from receiving duplicate requests while still allowing a
 short-lived outage to recover within the feature deadline.
 
-Ãœretim varsayÄ±lanÄ±nda `LEGACY_PROVIDER_FALLBACK_ENABLED=false` olduÄŸu iÃ§in
-baÅŸarÄ±sÄ±z typed Ã§aÄŸrÄ± sessiz bir scraper baÅŸlatmaz; kullanÄ±cÄ± kontrollÃ¼ hata veya
-stale cache gÃ¶rÃ¼r. Fallback yalnÄ±zca development/staging replay iÃ§in aÃ§Ä±labilir
-ve `legacy` metadata ile gÃ¶zlemlenir. Zincir, seÃ§ilen provider'Ä±n `normalize()`
-adÄ±mÄ±nÄ± ortak zarfa almadan Ã¶nce Ã§alÄ±ÅŸtÄ±rÄ±r; doÄŸrudan komut, AI aracÄ± ve migration
-yÃ¼zeyi aynÄ± typed payload sÃ¶zleÅŸmesini korur.
+Üretim varsayılanında `LEGACY_PROVIDER_FALLBACK_ENABLED=false` olduğu için
+başarısız typed çağrı sessiz bir scraper başlatmaz; kullanıcı kontrollü hata veya
+stale cache görür. Fallback yalnızca development/staging replay için açılabilir
+ve `legacy` metadata ile gözlemlenir. Zincir, seçilen provider'ın `normalize()`
+adımını ortak zarfa almadan önce çalıştırır; doğrudan komut, AI aracı ve migration
+yüzeyi aynı typed payload sözleşmesini korur.
 
-RSS haber Ã¶zeti de aynÄ± kurala uyar: `RssNewsProvider` XML ayrÄ±ÅŸtÄ±rmayÄ±,
-`ProviderRuntime` cache/retry/circuit/stale-while-revalidate politikasÄ±nÄ±,
-`FeatureExecutor` ise ortak `FeatureResult` zarfÄ±nÄ± saÄŸlar. `/digest` handler'Ä±
-network istemcisi oluÅŸturmaz; yalnÄ±zca provider sonucunu AI Ã¶zetine veya Telegram
-HTML gÃ¶rÃ¼nÃ¼mÃ¼ne biÃ§imlendirir.
+RSS haber özeti de aynı kurala uyar: `RssNewsProvider` XML ayrıştırmayı,
+`ProviderRuntime` cache/retry/circuit/stale-while-revalidate politikasını,
+`FeatureExecutor` ise ortak `FeatureResult` zarfını sağlar. `/digest` handler'ı
+network istemcisi oluşturmaz; yalnızca provider sonucunu AI özetine veya Telegram
+HTML görünümüne biçimlendirir.
 
 ## Shared structured-data transport
 
@@ -120,58 +122,55 @@ decoded JSON value. This keeps weather, air quality, crypto, culture, market,
 AFAD, RSS and Tavily adapters under the same SSRF and memory budget without
 putting network policy in Telegram handlers.
 
-## Grup duyurularÄ±
+## Grup duyuruları
 
-PlanlÄ± grup duyurularÄ± `group_announcement` feature kaydÄ±yla tanÄ±mlanÄ±r.
-Metin ve zaman `AnnouncementService` tarafÄ±ndan sÄ±nÄ±rlandÄ±rÄ±lÄ±r; yÃ¶netici
-yetkisi her komutta ve callback'te Telegram'dan yeniden doÄŸrulanÄ±r. KayÄ±tlar
-genel `SubscriptionStore` iÃ§inde `scope=group` olarak tutulur. Atomic claim,
-lease expiry ve `next_run_at` hesaplamasÄ± worker restart'Ä±nda kopya duyuruyu
-Ã¶nler. KullanÄ±cÄ± metni Telegram HTML parse moduna girmeden Ã¶nce escape edilir.
+Planlı grup duyuruları `group_announcement` feature kaydıyla tanımlanır.
+Metin ve zaman `AnnouncementService` tarafından sınırlandırılır; yönetici
+yetkisi her komutta ve callback'te Telegram'dan yeniden doğrulanır. Kayıtlar
+genel `SubscriptionStore` içinde `scope=group` olarak tutulur. Atomic claim,
+lease expiry ve `next_run_at` hesaplaması worker restart'ında kopya duyuruyu
+önler. Kullanıcı metni Telegram HTML parse moduna girmeden önce escape edilir.
 
-## Ã‡ok modlu AI
+## Çok modlu AI
 
-Sticker render da aynÄ± aÄŸÄ±r iÅŸ sÄ±nÄ±rÄ±nÄ± kullanÄ±r: `StickerRenderService`
-static gÃ¶rÃ¼ntÃ¼yÃ¼ Pillow ile, video gÃ¶rÃ¼ntÃ¼yÃ¼ FFmpeg ile bounded semaphore
-altÄ±nda iÅŸler. Handler iÃ§inde codec, boyut veya geÃ§ici dosya yÃ¶netimi yoktur;
-artifact yalnÄ±zca doÄŸrulama sonrasÄ± Telegram'a gÃ¶nderilir.
+Sticker render da aynı ağır iş sınırını kullanır: `StickerRenderService`
+static görüntüyü Pillow ile, video görüntüyü FFmpeg ile bounded semaphore
+altında işler. Handler içinde codec, boyut veya geçici dosya yönetimi yoktur;
+artifact yalnızca doğrulama sonrası Telegram'a gönderilir.
 
-TTS Ã§aÄŸrÄ±larÄ± `SpeechProvider` ve `TTSService` Ã¼zerinden ilerler. `edge-tts`
-yalnÄ±zca adapter katmanÄ±nda import edilir; handler'lar saÄŸlayÄ±cÄ± SDK'sÄ±na
-eriÅŸmez. Ãœretim dosyasÄ± sÄ±nÄ±rlÄ± spool dizinindeki gizli `.part` dosyasÄ±na
-yazÄ±lÄ±r; boyut ve saÄŸlayÄ±cÄ± yolu doÄŸrulandÄ±ktan sonra atomik olarak yayÄ±nlanÄ±r.
-`StickerPackService` paket yÃ¶netimini owner kapsamÄ±yla sÄ±nÄ±rlar; `/stpack`
-komutu yalnÄ±zca bu servisi biÃ§imlendirir ve silme iÅŸlemi kullanÄ±cÄ± kimliÄŸine
-baÄŸlÄ± inline onaydan sonra yapÄ±lÄ±r. Telegram API baÅŸarÄ±sÄ±z olursa MongoDB
-kaydÄ± korunur.
-Quote Ã¼retimi `QuoteRenderService` Ã¼zerinden bounded thread kuyruÄŸunda Ã§alÄ±ÅŸÄ±r;
-handler yalnÄ±zca doÄŸrulanmÄ±ÅŸ artifact'i Telegram'a gÃ¶nderir. `.part` dosyalarÄ±
-timeout ve gÃ¶nderim hatalarÄ±nda temizlenir, baÅŸarÄ±lÄ± Ã§Ä±ktÄ± atomik olarak yayÄ±nlanÄ±r.
-Oyun puanlarÄ± `event_id` ile idempotent kaydedilir; aynÄ± idempotency key canonical
-`game_progress_events` ledger'Ä±na tek kez eklenir. Sezon tablosu ve baÅŸarÄ±mlar
-event ledger'Ä±ndan aggregate edilir, bÃ¶ylece ayrÄ± sayaÃ§ projeksiyonlarÄ±nÄ±n
-restart sÄ±rasÄ±nda ayrÄ±ÅŸma riski azaltÄ±lÄ±r. Sezonlar UTC Ã§eyreklerine gÃ¶re
-isimlendirilir, leaderboard chat kapsamÄ±yla sorgulanÄ±r.
-Semaphore, timeout ve provider health kontrolleri aynÄ± serviste tutulur.
+TTS çağrıları `SpeechProvider` ve `TTSService` üzerinden ilerler. `edge-tts`
+yalnızca adapter katmanında import edilir; handler'lar sağlayıcı SDK'sına
+erişmez. Üretim dosyası sınırlı spool dizinindeki gizli `.part` dosyasına
+yazılır; boyut ve sağlayıcı yolu doğrulandıktan sonra atomik olarak yayınlanır.
+`StickerPackService` paket yönetimini owner kapsamıyla sınırlar; `/stpack`
+komutu yalnızca bu servisi biçimlendirir ve silme işlemi kullanıcı kimliğine
+bağlı inline onaydan sonra yapılır. Telegram API başarısız olursa MongoDB
+kaydı korunur.
+Quote üretimi `QuoteRenderService` üzerinden bounded thread kuyruğunda çalışır;
+handler yalnızca doğrulanmış artifact'i Telegram'a gönderir. `.part` dosyaları
+timeout ve gönderim hatalarında temizlenir, başarılı çıktı atomik olarak yayınlanır.
+Oyun puanları `event_id` ile idempotent kaydedilir; aynı idempotency key canonical
+`game_progress_events` ledger'ına tek kez eklenir. Sezon tablosu ve başarımlar
+event ledger'ından aggregate edilir, böylece ayrı sayaç projeksiyonlarının
+restart sırasında ayrışma riski azaltılır. Sezonlar UTC çeyreklerine göre
+isimlendirilir, leaderboard chat kapsamıyla sorgulanır.
+Semaphore, timeout ve provider health kontrolleri aynı serviste tutulur.
 
-AIProviderRouter aynÄ± circuit/fallback sÃ¶zleÅŸmesiyle vision, transcribe ve
-embedding gÃ¶revlerini de yÃ¶nlendirir. OpenAI-compatible adapter; JSON chat,
-multipart transcription ve embedding response zarflarÄ±nÄ± normalize eder.
-Clean APIs, `CLEANAPIS_*` ayarlarÄ±yla bu adapter'a baÄŸlanan ayrÄ± bir typed
-provider kimliÄŸidir. `CLEANAPIS_KEY` mevcutsa boÅŸ route yapÄ±landÄ±rmasÄ±nda
-`chat`, `fast`, `analysis`, `summary` ve `sticker_tagging` gÃ¶revleri
-`deepseek-v4-flash-0731` modeline yÃ¶nlendirilir; aÃ§Ä±k `AI_PROVIDER_ROUTES`
-allowlist'i bu varsayÄ±lanÄ± override eder. Key, model, latency, circuit ve usage
-telemetrisi diÄŸer provider'lardan ayrÄ± tutulur. Provider terms ve production
-sign-off tamamlanmadan Ã¼retim registry'si bu rotayÄ± fail-closed bÄ±rakÄ±r.
-Adapter ayrÄ±ca provider URL'sini HTTPS, credential, private-host, query ve
-fragment politikalarÄ±ndan geÃ§irir; mesaj, yanÄ±t, transkript, embedding ve
-`max_tokens` payload'larÄ± bounded sÃ¶zleÅŸmeyle doÄŸrulanÄ±r. KullanÄ±cÄ± girdisi
-olan deterministic limit hatalarÄ± key circuit'ini bozmaz; upstream protokol
-ÅŸema hatalarÄ± health ve failover telemetrisi olarak kaydedilir.
-Yerel medya dosyalarÄ± symlink, boÅŸ iÃ§erik ve boyut sÄ±nÄ±rÄ±ndan geÃ§meden dÄ±ÅŸ
-saÄŸlayÄ±cÄ±ya gÃ¶nderilmez. Vision/STT servisleri typed yol baÅŸarÄ±sÄ±z olduÄŸunda
-geriye dÃ¶nÃ¼k ChatEngine akÄ±ÅŸÄ±nÄ± kontrollÃ¼ olarak kullanÄ±r.
+AIProviderRouter aynı circuit/fallback sözleşmesiyle vision, transcribe ve
+embedding görevlerini de yönlendirir. OpenAI-compatible adapter; JSON chat,
+multipart transcription ve embedding response zarflarını normalize eder.
+Clean APIs eski kurulumlarla uyumluluk için enum/adapter seviyesinde tutulur ancak üretim routerına
+kaydedilmez ve hiçbir canlı route tarafından seçilmez. Eski AI_PROVIDER_ROUTES değerleri bellek içinde
+temizlenir; uygun durumda EVRENe, aksi durumda aktif varsayılan rotaya düşer. Clean APIs anahtarı
+yeni kurulumlarda gerekli bir AI sağlayıcısı sayılmaz ve Faz 9 kanıt kapısına dahil değildir.
+Adapter ayrıca provider URL'sini HTTPS, credential, private-host, query ve
+fragment politikalarından geçirir; mesaj, yanıt, transkript, embedding ve
+`max_tokens` payload'ları bounded sözleşmeyle doğrulanır. Kullanıcı girdisi
+olan deterministic limit hataları key circuit'ini bozmaz; upstream protokol
+şema hataları health ve failover telemetrisi olarak kaydedilir.
+Yerel medya dosyaları symlink, boş içerik ve boyut sınırından geçmeden dış
+sağlayıcıya gönderilmez. Vision/STT servisleri typed yol başarısız olduğunda
+geriye dönük ChatEngine akışını kontrollü olarak kullanır.
 
 Handler boundary rule now also rejects `._db` access statically. Quote source
 lookup and sticker-tag lookup go through repository methods, so Mongo collection
@@ -188,7 +187,7 @@ AI request so history deduplication cannot diverge from prompt assembly.
 
 ### Market chart render
 
-`/borsa` provider sonucu iÃ§indeki sÄ±nÄ±rlÄ± 7 gÃ¼nlÃ¼k noktalar `MarketChartService` Ã¼zerinden bounded worker-thread ile PNG grafiÄŸe Ã§evrilebilir. Matplotlib yoksa feature metin Ã¶zeti gÃ¶nderilir; handler doÄŸrudan grafik kÃ¼tÃ¼phanesine baÄŸlanmaz. Renderer concurrency, timeout ve Ã§Ä±ktÄ± boyutu sÄ±nÄ±rlarÄ± servis sÃ¶zleÅŸmesindedir.
+`/borsa` provider sonucu içindeki sınırlı 7 günlük noktalar `MarketChartService` üzerinden bounded worker-thread ile PNG grafiğe çevrilebilir. Matplotlib yoksa feature metin özeti gönderilir; handler doğrudan grafik kütüphanesine bağlanmaz. Renderer concurrency, timeout ve çıktı boyutu sınırları servis sözleşmesindedir.
 
 
 ## Provider observation history
@@ -196,19 +195,19 @@ AI request so history deduplication cannot diverge from prompt assembly.
 `FeatureExecutor` provider saglik yazimini non-blocking yapar. Repository son snapshot'i `provider_health` koleksiyonunda tutarken, kaynak/freshness gozlemini `provider_observations` koleksiyonunda `provider + fetched_at` unique anahtariyla saklar. Cache hit ayni fetched timestamp'i kullandigi icin duplicate tarihsel kayit olusmaz. `observed_at` alaninda 30 gunluk TTL, provider/tarih sorgu indexleri ve geri alinabilir ikinci migration vardir; observation payload'i allowlist disinda kullanici girdisi, secret veya ham provider govdesi tasimaz.
 
 
-### Sticker katalog sÄ±rasÄ±
+### Sticker katalog sırası
 
-Telegram sticker sÄ±rasÄ± deÄŸiÅŸikliÄŸi remote API baÅŸarÄ±lÄ± olduktan sonra repositoryâ€™ye yazÄ±lÄ±r. `sticker_pack_position` indeksi pack kapsamÄ±nda sÄ±ralama sorgularÄ±nÄ± hÄ±zlandÄ±rÄ±r; migration v3 aÃ§Ä±k rollback iÅŸlemi taÅŸÄ±r.
-
-
-### Quote seÃ§enek sÃ¶zleÅŸmesi
-
-`QuoteRenderService` tema, renk, Ã¶lÃ§ek, emoji ve boolean seÃ§eneklerini render kuyruÄŸuna girmeden Ã¶nce normalize eder; bilinmeyen anahtarlar atÄ±lÄ±r ve Ã¶lÃ§ek `0.5-2.0` aralÄ±ÄŸÄ±nda tutulur. `qtemplate` kayÄ±tlarÄ± aynÄ± normalizer ve 32 karakterlik isim kuralÄ±ndan geÃ§er; bÃ¶ylece Mongo, bellek ve Telegram yÃ¼zeyleri aynÄ± davranÄ±ÅŸÄ± paylaÅŸÄ±r.
+Telegram sticker sırası değişikliği remote API başarılı olduktan sonra repository’ye yazılır. `sticker_pack_position` indeksi pack kapsamında sıralama sorgularını hızlandırır; migration v3 açık rollback işlemi taşır.
 
 
-### KalÄ±cÄ± batch quote kaydÄ±
+### Quote seçenek sözleşmesi
 
-Quote kaydÄ± ilk mesajla sÄ±nÄ±rlÄ± kalmaz: en fazla 10 kaynak mesajÄ±, render seÃ§enekleri, mesaj sayÄ±sÄ± ve Ã§Ä±ktÄ± tÃ¼rÃ¼ bounded kayÄ±t olarak saklanÄ±r. Metin ve ad alanlarÄ± sÄ±rasÄ±yla 4000 ve 128 karakterle sÄ±nÄ±rlÄ±dÄ±r; bÃ¶ylece batch quote restart sonrasÄ± yeniden incelenebilirken sÄ±nÄ±rsÄ±z payload depolanmaz.
+`QuoteRenderService` tema, renk, ölçek, emoji ve boolean seçeneklerini render kuyruğuna girmeden önce normalize eder; bilinmeyen anahtarlar atılır ve ölçek `0.5-2.0` aralığında tutulur. `qtemplate` kayıtları aynı normalizer ve 32 karakterlik isim kuralından geçer; böylece Mongo, bellek ve Telegram yüzeyleri aynı davranışı paylaşır.
+
+
+### Kalıcı batch quote kaydı
+
+Quote kaydı ilk mesajla sınırlı kalmaz: en fazla 10 kaynak mesajı, render seçenekleri, mesaj sayısı ve çıktı türü bounded kayıt olarak saklanır. Metin ve ad alanları sırasıyla 4000 ve 128 karakterle sınırlıdır; böylece batch quote restart sonrası yeniden incelenebilirken sınırsız payload depolanmaz.
 
 
 ### Multimodal personality boundary
@@ -334,35 +333,35 @@ provider requests or user-facing audit payloads.
 `APP_ENV` is explicit in Compose: `development`, `test` or `production`. Bot and worker production roles reject the fallback owner id during `Config.validate`, so administrative control cannot silently run with a development default. This guard is independent of Telegram transport (`polling` or `webhook`) and is covered by configuration tests.
 
 
-## Operasyonel gÃ¶zlemlenebilirlik
+## Operasyonel gözlemlenebilirlik
 
-`ObservabilityServer` bot ve worker sÃ¼reÃ§lerinde isteÄŸe baÄŸlÄ±, loopback'e baÄŸlÄ±
-bir HTTP yÃ¼zeyi saÄŸlar. `/healthz` Ã§ekirdek baÄŸÄ±mlÄ±lÄ±klarÄ± ve feature/medya/AI
-provider gruplarÄ±nÄ± bounded sayÄ±mla dÃ¶ndÃ¼rÃ¼r; Ã§ekirdek arÄ±zasÄ± `unhealthy`,
-opsiyonel provider arÄ±zasÄ± `degraded` durumudur ve snapshot beÅŸ saniye cache'lenir.
-Readiness istemcileri iÃ§in `unhealthy` snapshot HTTP `503`, `healthy` veya
-`degraded` snapshot HTTP `200` dÃ¶ner; bÃ¶ylece opsiyonel kaynak kesintisi botu
-trafikten Ã§Ä±karmazken MongoDB/Redis arÄ±zasÄ± reverse proxy ve orkestratÃ¶re
-ulaÅŸÄ±r.
+`ObservabilityServer` bot ve worker süreçlerinde isteğe bağlı, loopback'e bağlı
+bir HTTP yüzeyi sağlar. `/healthz` çekirdek bağımlılıkları ve feature/medya/AI
+provider gruplarını bounded sayımla döndürür; çekirdek arızası `unhealthy`,
+opsiyonel provider arızası `degraded` durumudur ve snapshot beş saniye cache'lenir.
+Readiness istemcileri için `unhealthy` snapshot HTTP `503`, `healthy` veya
+`degraded` snapshot HTTP `200` döner; böylece opsiyonel kaynak kesintisi botu
+trafikten çıkarmazken MongoDB/Redis arızası reverse proxy ve orkestratöre
+ulaşır.
 `/metrics` nested queue, typed feature ve AI provider router p50/p95/p99 latency
-snapshot'larÄ±nÄ± Prometheus metriklerine dÃ¶nÃ¼ÅŸtÃ¼rÃ¼r. Ä°stek parser'Ä± bounded GET
-kabul eder, token public bind iÃ§in zorunludur ve hiÃ§bir kullanÄ±cÄ±, sohbet, tam
-URL veya provider payload'Ä±nÄ± label olarak Ã¼retmez.
-Architecture CI ayrÄ±ca exception mesajlarÄ±nÄ±n logger f-string'i veya
-`str(exc)` ile redaction filtresinden Ã¶nce birleÅŸtirilmesini reddeder.
+snapshot'larını Prometheus metriklerine dönüştürür. İstek parser'ı bounded GET
+kabul eder, token public bind için zorunludur ve hiçbir kullanıcı, sohbet, tam
+URL veya provider payload'ını label olarak üretmez.
+Architecture CI ayrıca exception mesajlarının logger f-string'i veya
+`str(exc)` ile redaction filtresinden önce birleştirilmesini reddeder.
 
-`main.py` yalnÄ±zca composition root olarak `Orchestrator` Ã¶rneÄŸini oluÅŸturur;
-modÃ¼l yÃ¼klenirken global mutable bot durumu yaratÄ±lmaz. Handler kayÄ±t fonksiyonu
-Ã¶rneÄŸi aÃ§Ä±kÃ§a alÄ±r, lifecycle callback'leri ise Telegram application scope'undan
-aynÄ± Ã¶rneÄŸi Ã§Ã¶zer.
+`main.py` yalnızca composition root olarak `Orchestrator` örneğini oluşturur;
+modül yüklenirken global mutable bot durumu yaratılmaz. Handler kayıt fonksiyonu
+örneği açıkça alır, lifecycle callback'leri ise Telegram application scope'undan
+aynı örneği çözer.
 
 ## Monitoring profile
 
-Prometheus ve Grafana ayrÄ± `monitoring` Compose profiliyle Ã§alÄ±ÅŸÄ±r. Bot ve
-worker endpoint'leri aynÄ± secret token ile scrape edilir; Prometheus/Grafana
-host portlarÄ± loopback'e bind edilir. Dashboard kuyruk, gecikme, iÅŸ sonuÃ§larÄ±
-ve AI kullanÄ±mÄ±nÄ± gÃ¶sterir; kullanÄ±cÄ±, sohbet veya provider payload'Ä± metric
-label'Ä± olarak Ã¼retilmez.
+Prometheus ve Grafana ayrı `monitoring` Compose profiliyle çalışır. Bot ve
+worker endpoint'leri aynı secret token ile scrape edilir; Prometheus/Grafana
+host portları loopback'e bind edilir. Dashboard kuyruk, gecikme, iş sonuçları
+ve AI kullanımını gösterir; kullanıcı, sohbet veya provider payload'ı metric
+label'ı olarak üretilmez.
 
 ### Media latency budget and hard timeout
 
@@ -374,30 +373,111 @@ The media completion SLO is intentionally separate from the hard provider timeou
 Media providers share MediaRequest, MediaMetadata, and MediaArtifact contracts. MediaArtifact requires the local path, title, duration, byte size, extension, and platform; used_cookie is optional and is present only when the administrator cookie fallback was actually used. The mapping shape preserves the existing transcoder and Telegram delivery boundary while making provider output explicit for new adapters.
 
 
-## Hedefli grup yanÄ±tlarÄ±
+## Hedefli grup yanıtları
 
-Grup konuÅŸmasÄ±nda Arel yalnÄ±zca bir mention veya kendi mesajÄ±na reply ile
-uyandÄ±rÄ±ldÄ±ÄŸÄ±nda sÄ±nÄ±rlÄ± bir turn snapshot'Ä± oluÅŸturur. Snapshot aynÄ± `chat_id`
-ve `thread_id` iÃ§inde son 300 saniye ve en fazla 8 mesajla sÄ±nÄ±rlÄ±dÄ±r; her
-kullanÄ±cÄ± iÃ§in en yeni uygun metin seÃ§ilir. Komut, oyun, medya ve sistem
-mesajlarÄ± aday deÄŸildir. `GroupReplyRouter` modelin yalnÄ±zca snapshot'ta
-verilen Telegram `message_id` deÄŸerlerini hedeflemesine izin verir ve planÄ± en
-fazla Ã¼Ã§ `ReplySegment` olarak doÄŸrular.
+Grup konuşmasında Arel yalnızca bir mention veya kendi mesajına reply ile
+uyandırıldığında sınırlı bir turn snapshot'ı oluşturur. Snapshot aynı `chat_id`
+ve `thread_id` içinde son 300 saniye ve en fazla 8 mesajla sınırlıdır; her
+kullanıcı için en yeni uygun metin seçilir. Komut, oyun, medya ve sistem
+mesajları aday değildir. `GroupReplyRouter` modelin yalnızca snapshot'ta
+verilen Telegram `message_id` değerlerini hedeflemesine izin verir ve planı en
+fazla üç `ReplySegment` olarak doğrular.
 
-Model planÄ± kullanÄ±cÄ± adlarÄ±yla hedef seÃ§emez ve `Aysel: ... Kemal: ...` gibi
-birleÅŸik Ã§Ä±ktÄ±lar geÃ§ersizdir. GeÃ§ersiz plan veya EVREN arÄ±zasÄ±nda yalnÄ±zca
-mevcut tetikleyici mesaja gÃ¼venli fallback planlanÄ±r. Her segment ayrÄ±
-`send_message` Ã§aÄŸrÄ±sÄ±dÄ±r; `reply_to_message_id` ve forum `message_thread_id`
-birlikte gÃ¶nderilir.
+Model planı kullanıcı adlarıyla hedef seçemez ve `Aysel: ... Kemal: ...` gibi
+birleşik çıktılar geçersizdir. Geçersiz plan veya EVREN arızasında yalnızca
+mevcut tetikleyici mesaja güvenli fallback planlanır. Her segment ayrı
+`send_message` çağrısıdır; `reply_to_message_id` ve forum `message_thread_id`
+birlikte gönderilir.
 
-Adaylar `RecentMessageIndex` Ã¼zerinden MongoDB'ye kalÄ±cÄ±, Redis'e TTL'li olarak
-yazÄ±lÄ±r. `ReplyDeliveryLedger` hedef, konu, feature ve generation anahtarÄ±nÄ±
-idempotent claim eder. Telegram gÃ¶nderimi baÅŸarÄ±lÄ± olduktan sonra assistant
-mesajÄ± gerÃ§ek hedef ve kullanÄ±cÄ± attribution alanlarÄ±yla yazÄ±lÄ±r. GÃ¶nderim
-sonucu belirsizse ledger otomatik yeniden gÃ¶nderim yapmaz; Telegram hedefinin
-silindiÄŸi kesinleÅŸirse segment atlanÄ±r ve mevcut tetikleyici iÃ§in tek fallback
-ÅŸansÄ± deÄŸerlendirilir.
+Adaylar `RecentMessageIndex` üzerinden MongoDB'ye kalıcı, Redis'e TTL'li olarak
+yazılır. `ReplyDeliveryLedger` hedef, konu, feature ve generation anahtarını
+idempotent claim eder. Telegram gönderimi başarılı olduktan sonra assistant
+mesajı gerçek hedef ve kullanıcı attribution alanlarıyla yazılır. Gönderim
+sonucu belirsizse ledger otomatik yeniden gönderim yapmaz; Telegram hedefinin
+silindiği kesinleşirse segment atlanır ve mevcut tetikleyici için tek fallback
+şansı değerlendirilir.
 
-Planlama ve gÃ¶nderim aynÄ± grup/forum konu kilidi altÄ±nda seri hale getirilir.
-Bu kilit mesaj kayÄ±tlarÄ±nÄ± engellemez; ancak eÅŸzamanlÄ± A/B/C tetiklerinde bir
-turn'Ã¼n aday snapshot'Ä± ve delivery ledger claim'leri birbirine karÄ±ÅŸmaz.
+Planlama ve gönderim aynı grup/forum konu kilidi altında seri hale getirilir.
+Bu kilit mesaj kayıtlarını engellemez; ancak eşzamanlı A/B/C tetiklerinde bir
+turn'ün aday snapshot'ı ve delivery ledger claim'leri birbirine karışmaz.
+
+## Game runtime boundary
+
+Interactive games share a typed `GameDefinition`/`GameSession` contract. A
+session carries its chat scope, player set, turn owner, bounded expiry, combo,
+scores, schema version and processed action IDs. `GameStateStore` uses compare
+and set semantics so a delayed Telegram callback cannot overwrite a newer turn.
+Callbacks claim a round-scoped action through `GameActionLedger`; production
+Mongo persistence is required and the bounded in-memory claim store is reserved
+for tests or explicitly degraded development.
+
+The word games retain their existing text protocol while their inline buttons
+carry a round ID. Connect Four adds a two-player lobby, six-by-seven board,
+turn validation, column buttons, win/draw detection, restart recovery and
+owner/admin cancellation. `connect4` is registered in the feature catalog and
+command registry; handlers only render or dispatch domain results and never
+perform external I/O.
+
+### Versioned game persistence contract
+
+Every persisted `GameSession` carries `schema_version`, a canonical
+`state_key`, and (for board games) `board_size` and `connect_length`. The
+catalog is the source of truth: XOX is schema `1`, state key `tictactoe`, a
+selectable 6x6/7x7/8x8 boards with connect length 4; legacy 3x3 snapshots
+remain readable for recovery. Connect Four is schema `1`, state key
+`connect4`, a 6x7 board with connect length 4. A snapshot whose metadata does
+not match the catalog is rejected before it can enter the store.
+
+Gomoku uses a transport-neutral immutable `GomokuState` with a configurable
+6–15 square board and five-in-a-row rule. Its replay log is canonical JSON,
+so a restart can verify every move before hydration. The Telegram adapter
+offers 6x6, 8x8, 10x10, 12x12 and 15x15 panels, binds callbacks to the round,
+prompt message and forum topic, and persists through the same state store and
+action ledger. Invalid coordinates, duplicate actions and cross-chat callbacks
+fail closed.
+
+`InMemoryGameStateStore` implements the same contract used by durable adapters:
+reads are defensive copies, creation is scoped by `chat_id + state_key`, and
+saves use compare-and-set on `version`. Recovery parses every record before
+swapping the live map, so malformed or duplicate records cannot produce a
+partial restore. `snapshot()` emits records suitable for a Mongo/Redis
+repository without embedding large media or transport objects.
+
+## Guardian moderation boundary
+
+Arel is the only Telegram action authority in Arel-managed groups. The Kek
+Guardian command vocabulary is embedded through `GuardianCommandService` and
+the transport-neutral `GuardianSurface`:
+commands are normalized to typed `ModerationAction` values and sent through the
+same idempotent executor and ledger as automatic policy actions. Old Turkish
+names remain aliases only; they do not create a second Arel moderation API.
+
+Kek Guardian's optional external evaluator remains a separate process and, once its transport bridge is installed, receives
+bounded moderation events over a local Unix socket. The adapter validates
+protocol version, expiry, replay keys and peer credentials. The result passes
+through the local ModerationService and then the idempotent
+ModerationActionExecutor. No handler calls Telegram moderation methods directly.
+Telegram-only effects (membership, permissions, purge, pin and chat profile
+changes) go through `GuardianTelegramService`; `/gecemodu`, captcha answer
+consumption and bounded administrator listing use the same boundary.
+
+The current VDS Guardian deployment is a separate Telegram polling bot and does
+not expose the socket/RPC bridge yet. Therefore the Arel adapter stays disabled
+until a real evaluator-backed bridge is installed and owner-group staging
+evidence is collected. The synthetic bridge self-test proves only the transport
+contract and is never production evidence.
+
+Deployment modes are disabled, shadow and active. Disabled and shadow never authorize a remote action. A bridge timeout or protocol failure falls back to the deterministic local policy and records a degraded metric; it is never treated as allow.
+
+XOX also follows this boundary: a two-player, selectable 6x6/7x7/8x8,
+four-in-a-row, round-scoped state machine with persistent turn timeout,
+idempotent callbacks and owner/admin cancellation. Board state never lives
+only in a Telegram handler; legacy 3x3 snapshots are read-only migration
+compatibility.
+
+Game progression is a separate pure domain boundary. Completed rounds emit
+bounded, idempotent `ProgressionEvent` records; difficulty, combo and hint
+inputs are capped, duplicate or conflicting event IDs are rejected, and
+cooldown/window/daily limits prevent score farming. Leaderboard and seasonal
+achievement projections are replayable from the event ledger and do not run
+Telegram, MongoDB or Redis calls inside the game rules.

@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 class BatakGame:
     """Batak card game with lobby system and simplified gameplay."""
     
-    SUITS = {'â™ ï¸': 'MaÃ§a', 'â™¥ï¸': 'Kupa', 'â™¦ï¸': 'Karo', 'â™£ï¸': 'Sinek'}
+    SUITS = {'♠️': 'Maça', '♥️': 'Kupa', '♦️': 'Karo', '♣️': 'Sinek'}
     RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
     RANK_VALUES = {r: i for i, r in enumerate(RANKS)}
     
@@ -21,10 +21,10 @@ class BatakGame:
         player_names = chat_data.get('batak_names', [])
 
         if user_id in players:
-            return {"status": "already_joined", "message": "Zaten masadasÄ±n! ğŸƒ"}
+            return {"status": "already_joined", "message": "Zaten masadasın! 🃏"}
             
         if len(players) >= 4:
-            return {"status": "full", "message": "âš ï¸ Masa dolu! (4/4)"}
+            return {"status": "full", "message": "⚠️ Masa dolu! (4/4)"}
             
         players.append(user_id)
         player_names.append(user_name)
@@ -34,7 +34,7 @@ class BatakGame:
         
         return {
             "status": "success",
-            "message": "Masaya katÄ±ldÄ±nÄ±z! ğŸƒ",
+            "message": "Masaya katıldınız! 🃏",
             "player_count": len(players),
             "player_names": player_names
         }
@@ -42,27 +42,27 @@ class BatakGame:
     def get_lobby_text(self, player_names: list) -> str:
         """Generates the lobby status text."""
         names_text = ""
-        emojis = ["ğŸ”´", "ğŸ”µ", "ğŸŸ¢", "ğŸŸ¡"]
+        emojis = ["🔴", "🔵", "🟢", "🟡"]
         for i, name in enumerate(player_names):
             names_text += f"{emojis[i]} {name}\n"
              
         remaining = 4 - len(player_names)
-        status_text = f"ğŸƒ <b>Batak MasasÄ±</b>\n\n"
+        status_text = f"🃏 <b>Batak Masası</b>\n\n"
         
         if remaining > 0:
-            status_text += f"â³ <b>{remaining}</b> kiÅŸi daha bekleniyor...\n\n"
+            status_text += f"⏳ <b>{remaining}</b> kişi daha bekleniyor...\n\n"
         else:
-            status_text += f"âœ… Masa doldu! Oyunu baÅŸlatabilirsiniz.\n\n"
+            status_text += f"✅ Masa doldu! Oyunu başlatabilirsiniz.\n\n"
             
-        status_text += f"ğŸ‘¥ <b>Oyuncular:</b>\n{names_text}"
-        status_text += f"\nğŸ“Š Doluluk: {'ğŸŸ©' * len(player_names)}{'â¬œ' * remaining} ({len(player_names)}/4)"
+        status_text += f"👥 <b>Oyuncular:</b>\n{names_text}"
+        status_text += f"\n📊 Doluluk: {'🟩' * len(player_names)}{'⬜' * remaining} ({len(player_names)}/4)"
         return status_text
 
     def get_lobby_keyboard(self, player_count: int) -> InlineKeyboardMarkup:
         """Generates the lobby keyboard."""
-        keyboard = [[InlineKeyboardButton("ğŸƒ Masaya KatÄ±l", callback_data="game_batak_join")]]
+        keyboard = [[InlineKeyboardButton("🃏 Masaya Katıl", callback_data="game_batak_join")]]
         if player_count >= 2:  # Allow starting with 2+ players for testing
-            keyboard.append([InlineKeyboardButton("ğŸ Oyunu BaÅŸlat", callback_data="game_batak_start")])
+            keyboard.append([InlineKeyboardButton("🏁 Oyunu Başlat", callback_data="game_batak_start")])
         return InlineKeyboardMarkup(keyboard)
 
     def start_game(self, chat_data: dict) -> dict:
@@ -71,7 +71,7 @@ class BatakGame:
         names = chat_data.get('batak_names', [])
         
         if len(players) < 2:
-            return {"status": "error", "message": "âš ï¸ En az 2 kiÅŸi gerekiyor!"}
+            return {"status": "error", "message": "⚠️ En az 2 kişi gerekiyor!"}
         
         # Determine trump suit
         suits = list(self.SUITS.values())
@@ -148,23 +148,23 @@ class BatakGame:
                 scores[name] = -bid * 10  # Penalty for failing bid
         
         # Build result message
-        msg = f"ğŸƒ <b>Batak SonuÃ§larÄ±</b> ğŸ†\n\n"
-        msg += f"ğŸ¯ Koz: {trump_emoji} <b>{trump}</b>\n\n"
+        msg = f"🃏 <b>Batak Sonuçları</b> 🏆\n\n"
+        msg += f"🎯 Koz: {trump_emoji} <b>{trump}</b>\n\n"
         
         # Sort by score descending
         sorted_players = sorted(scores.items(), key=lambda x: x[1], reverse=True)
-        medals = ["ğŸ¥‡", "ğŸ¥ˆ", "ğŸ¥‰", "4ï¸âƒ£"]
+        medals = ["🥇", "🥈", "🥉", "4️⃣"]
         
         for i, (name, score) in enumerate(sorted_players):
             bid = bids[name]
             won = tricks_won[name]
-            status = "âœ…" if won >= bid else "âŒ"
+            status = "✅" if won >= bid else "❌"
             medal = medals[i] if i < len(medals) else "  "
             msg += f"{medal} <b>{name}</b>\n"
-            msg += f"   ğŸ“£ Ä°hale: {bid} | ğŸ† KazanÄ±lan: {won} | {status} Puan: <b>{score:+d}</b>\n\n"
+            msg += f"   📣 İhale: {bid} | 🏆 Kazanılan: {won} | {status} Puan: <b>{score:+d}</b>\n\n"
         
         winner = sorted_players[0][0]
-        msg += f"ğŸ‘‘ <b>Masa Galibi: {winner}!</b> ğŸ‰"
+        msg += f"👑 <b>Masa Galibi: {winner}!</b> 🎉"
         
         return {
             "status": "success",
@@ -179,4 +179,4 @@ class BatakGame:
             'batak_players': players,
             'batak_names': [f"Oyuncu {i+1}" for i in range(len(players))]
         })
-        return result.get('message', 'Hata oluÅŸtu.')
+        return result.get('message', 'Hata oluştu.')

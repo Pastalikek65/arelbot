@@ -37,12 +37,12 @@ class MissingTargetBot(Bot):
 
 @pytest.mark.asyncio
 async def test_delivery_sends_each_segment_as_reply_to_its_own_message():
-    first = ref(101, 1, "sÄ±navÄ± geÃ§tim")
+    first = ref(101, 1, "sınavı geçtim")
     second = ref(202, 2, "arel naber")
     plan = GroupReplyPlan(
         segments=(
-            ReplySegment(first, "helal, sonuÃ§ nasÄ±l geldi?"),
-            ReplySegment(second, "iyiyim ya ğŸ˜„"),
+            ReplySegment(first, "helal, sonuç nasıl geldi?"),
+            ReplySegment(second, "iyiyim ya 😄"),
         ),
         correlation_id="turn-1",
     )
@@ -59,7 +59,7 @@ async def test_delivery_sends_each_segment_as_reply_to_its_own_message():
 
 @pytest.mark.asyncio
 async def test_delivery_is_idempotent_for_the_same_generation():
-    first = ref(101, 1, "sÄ±navÄ± geÃ§tim")
+    first = ref(101, 1, "sınavı geçtim")
     plan = GroupReplyPlan(
         segments=(ReplySegment(first, "helal"),),
         correlation_id="turn-2",
@@ -80,7 +80,7 @@ async def test_delivery_reports_the_actual_targets_when_an_earlier_segment_is_du
     first = ref(101, 1, "ilk")
     second = ref(202, 2, "ikinci")
     plan = GroupReplyPlan(
-        segments=(ReplySegment(first, "ilk yanÄ±t"), ReplySegment(second, "ikinci yanÄ±t")),
+        segments=(ReplySegment(first, "ilk yanıt"), ReplySegment(second, "ikinci yanıt")),
         correlation_id="turn-3",
     )
     bot = Bot()
@@ -98,7 +98,7 @@ async def test_delivery_reports_the_actual_targets_when_an_earlier_segment_is_du
 
 @pytest.mark.asyncio
 async def test_missing_telegram_target_is_skipped_without_uncertain_replay():
-    target = ref(202, 2, "silinmiÅŸ")
+    target = ref(202, 2, "silinmiş")
     plan = GroupReplyPlan(segments=(ReplySegment(target, "bunu atla"),), correlation_id="turn-4")
     ledger = ReplyDeliveryLedger()
     bot = MissingTargetBot()

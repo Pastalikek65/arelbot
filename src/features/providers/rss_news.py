@@ -7,6 +7,7 @@ can share the same cache, timeout and health policy.
 
 from __future__ import annotations
 
+import asyncio
 import email.utils
 import html
 import ipaddress
@@ -102,7 +103,7 @@ def _published_at(value: str) -> str | None:
 class RssNewsProvider:
     name = "rss_news_digest"
     capabilities = {"news", "breaking_news", "news_digest", "rss"}
-    source_name = "RSS haber akÄ±ÅŸlarÄ±"
+    source_name = "RSS haber akışları"
 
     def __init__(
         self,
@@ -149,16 +150,20 @@ class RssNewsProvider:
             raise ValueError("news_category_invalid")
         items: list[dict[str, str]] = []
         seen: set[str] = set()
+        last_feed_error: Exception | None = None
+        contributing_feed: str | None = None
         client = await self._get_client()
         transport = ProviderHttpTransport(
             client,
             allowed_hosts={urlsplit(feed).hostname or "" for feed in self.feeds},
         )
+        # Reserve a share of the outer runtime deadline for every backup.
+        feed_timeout = min(max(float(request.timeout_seconds), 0.1), 8.0) * 0.8 / max(1, len(self.feeds))
         for feed in self.feeds:
             try:
-                body = await transport.get_bytes(
+                body = await asyncio.wait_for(transport.get_bytes(
                     feed,
-                    timeout=min(max(float(request.timeout_seconds), 0.5), 8.0),
+                    timeout=feed_timeout,
                     expected_content_types=(
                         "application/rss+xml",
                         "application/atom+xml",
@@ -166,14 +171,20 @@ class RssNewsProvider:
                         "text/xml",
                         "text/plain",
                     ),
-                )
+                ), timeout=feed_timeout)
                 root = ET.fromstring(body.body)
+            except asyncio.TimeoutError as exc:
+                last_feed_error = exc
+                continue
             except ProviderTransportError as exc:
                 if exc.code == "provider_response_too_large":
-                    raise RuntimeError("news_rss_response_too_large") from exc
-                raise exc
+                    last_feed_error = RuntimeError("news_rss_response_too_large")
+                else:
+                    last_feed_error = exc
+                continue
             except ET.ParseError as exc:
-                raise RuntimeError("news_rss_schema_error") from exc
+                last_feed_error = RuntimeError("news_rss_schema_error")
+                continue
             nodes = [node for node in root.iter() if _local_name(node.tag) in {"item", "entry"}]
             for node in nodes:
                 title = _child_text(node, "title")
@@ -187,7 +198,16 @@ class RssNewsProvider:
                     )
                     if normalized
                 ]
-                if category and category not in categories:
+                # TRT's live RSS omits <category>. Its article paths retain
+                # the editorial category, e.g. /haber/ekonomi/.... General
+                # current news is the whole latest feed, not a missing tag.
+                link = _link(node)
+                if not categories and link:
+                    categories = list(dict.fromkeys(
+                        normalized for part in urlsplit(link).path.split("/")
+                        if (normalized := normalize_news_category(part))
+                    ))
+                if category not in {None, "guncel"} and category not in categories:
                     continue
                 key = title.casefold()
                 if key in seen:
@@ -195,7 +215,7 @@ class RssNewsProvider:
                 seen.add(key)
                 item = {
                     "title": html.unescape(title),
-                    "link": _link(node),
+                    "link": link,
                     "description": _clean_description(_child_text(node, "description", "summary", "content")),
                 }
                 if categories:
@@ -204,13 +224,17 @@ class RssNewsProvider:
                 if published:
                     item["published_at"] = published
                 items.append(item)
+                if contributing_feed is None:
+                    contributing_feed = feed
                 if len(items) >= limit:
                     break
             if len(items) >= limit:
                 break
         if not items:
+            if last_feed_error is not None:
+                raise last_feed_error
             raise RuntimeError("news_rss_empty")
-        heading = "ğŸ“° GÃ¼ncel Haber Ã–zeti" if not category else f"ğŸ“° Haberler Â· {category.title()}"
+        heading = "📰 Güncel Haber Özeti" if not category else f"📰 Haberler · {category.title()}"
         lines = [f"<b>{heading}</b>", ""]
         for index, item in enumerate(items, 1):
             title = html.escape(item["title"])
@@ -219,7 +243,7 @@ class RssNewsProvider:
         return ProviderResponse(
             data={"items": items, "category": category, "content": "\n".join(lines)},
             source=self.source_name,
-            source_url=self.feeds[0],
+            source_url=contributing_feed or self.feeds[0],
             metadata={
                 "provider_kind": "typed",
                 "records": len(items),
@@ -255,7 +279,7 @@ class BreakingNewsRssProvider(RssNewsProvider):
     """
 
     name = "get_breaking_news"
-    source_name = "TRT Haber RSS akÄ±ÅŸlarÄ±"
+    source_name = "TRT Haber RSS akışları"
 
     async def fetch(self, request: ProviderRequest) -> ProviderResponse[dict[str, Any]]:
         response = await super().fetch(request)
@@ -264,7 +288,7 @@ class BreakingNewsRssProvider(RssNewsProvider):
         titles = [str(item.get("title") or "").strip() for item in normalized_items]
         titles = [title for title in titles if title]
         category = response.data.get("category") if isinstance(response.data, dict) else None
-        heading = "ğŸ“° Son Dakika Haberleri" if not category else f"ğŸ“° Son Dakika Haberleri Â· {category.title()}"
+        heading = "📰 Son Dakika Haberleri" if not category else f"📰 Son Dakika Haberleri · {category.title()}"
         lines = [f"<b>{heading}</b>", ""]
         for index, item in enumerate(normalized_items[:10], 1):
             title = html.escape(str(item.get("title") or "").strip())

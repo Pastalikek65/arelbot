@@ -272,4 +272,3 @@ async def test_global_error_handler_does_not_echo_passive_document_failure_to_gr
 
     assert replies == []
     ErrorHandler.reset_stats()
-

@@ -65,7 +65,7 @@ class VideoDownloader:
         return {
             "type": media_type,
             "path": artifact["path"],
-            "caption": artifact.get("title") or "Sosyal medya medyasÄ±",
+            "caption": artifact.get("title") or "Sosyal medya medyası",
             "author": "Unknown",
             "duration": artifact.get("duration", 0),
             "temp_id": job_id,

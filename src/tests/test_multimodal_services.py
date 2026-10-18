@@ -12,7 +12,7 @@ from src.services.vision_service import VisionService
 @pytest.mark.asyncio
 async def test_vision_service_prefers_typed_router():
     router = SimpleNamespace(
-        vision=AsyncMock(return_value=CompletionResponse("GÃ¶rsel yanÄ±tÄ±", "demo", "vision"))
+        vision=AsyncMock(return_value=CompletionResponse("Görsel yanıtı", "demo", "vision"))
     )
     engine = SimpleNamespace(
         ai_router=router,
@@ -23,12 +23,12 @@ async def test_vision_service_prefers_typed_router():
 
     result = await service.analyze_image("image.jpg", "Ne var?", 1, 2, "Arel")
 
-    assert result == "GÃ¶rsel yanÄ±tÄ±"
+    assert result == "Görsel yanıtı"
     engine.get_response.assert_not_awaited()
     router.vision.assert_awaited_once()
     request = router.vision.await_args.args[0]
-    assert "Sistem gÃ¶rev yÃ¶nlendirmesi" in request.prompt
-    assert "gÃ¶rsel" in request.prompt.casefold()
+    assert "Sistem görev yönlendirmesi" in request.prompt
+    assert "görsel" in request.prompt.casefold()
 
 
 @pytest.mark.asyncio
@@ -36,13 +36,13 @@ async def test_stt_service_uses_chat_fallback_when_typed_provider_fails():
     router = SimpleNamespace(transcribe=AsyncMock(side_effect=RuntimeError("unsupported")))
     engine = SimpleNamespace(
         ai_router=router,
-        get_response=AsyncMock(return_value="Ses yanÄ±tÄ±"),
+        get_response=AsyncMock(return_value="Ses yanıtı"),
     )
     service = STTService(engine)
 
     result = await service.transcribe_or_respond("audio.ogg", 1, 2, "Arel")
 
-    assert result == "Ses yanÄ±tÄ±"
+    assert result == "Ses yanıtı"
     engine.get_response.assert_awaited_once()
 
 
@@ -53,13 +53,13 @@ async def test_stt_service_routes_transcript_through_chat_completion():
     )
     engine = SimpleNamespace(
         ai_router=router,
-        get_response=AsyncMock(return_value="Arel yanÄ±tÄ±"),
+        get_response=AsyncMock(return_value="Arel yanıtı"),
     )
     service = STTService(engine)
 
     result = await service.transcribe_or_respond("audio.ogg", 1, 2, "Arel")
 
-    assert result == "Arel yanÄ±tÄ±"
+    assert result == "Arel yanıtı"
     engine.get_response.assert_awaited_once()
     assert engine.get_response.await_args.kwargs["message_text"] == "Merhaba"
 
@@ -80,7 +80,7 @@ async def test_stt_service_returns_transcript_when_response_engine_unavailable()
 @pytest.mark.asyncio
 async def test_vision_service_marks_sensitive_prompt_for_serious_tone():
     router = SimpleNamespace(
-        vision=AsyncMock(return_value=CompletionResponse("GÃ¶rsel yanÄ±tÄ±", "demo", "vision"))
+        vision=AsyncMock(return_value=CompletionResponse("Görsel yanıtı", "demo", "vision"))
     )
     engine = SimpleNamespace(
         ai_router=router,
@@ -89,7 +89,7 @@ async def test_vision_service_marks_sensitive_prompt_for_serious_tone():
     )
     service = VisionService(engine)
 
-    await service.analyze_image("image.jpg", "Deprem hasarÄ±nÄ± ve acil riskleri deÄŸerlendir", 1, 2, "Arel")
+    await service.analyze_image("image.jpg", "Deprem hasarını ve acil riskleri değerlendir", 1, 2, "Arel")
 
     request = router.vision.await_args.args[0]
     assert "kinaye" in request.prompt

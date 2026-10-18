@@ -123,9 +123,9 @@ async def test_image_router_keeps_prompt_parser_outside_transport():
             return None
 
     router = ImageRouter(None, provider=Provider())
-    assert await router.generate_image("ÅŸehir --width 640 --height 480 --steps 30 --negative blur", max_output_bytes=2048) == "generated.png"
+    assert await router.generate_image("şehir --width 640 --height 480 --steps 30 --negative blur", max_output_bytes=2048) == "generated.png"
     request = captured["request"]
-    assert request.prompt == "ÅŸehir"
+    assert request.prompt == "şehir"
     assert (request.width, request.height, request.num_steps) == (640, 480, 20)
     assert request.negative_prompt == "blur"
     assert request.max_output_bytes == 2048

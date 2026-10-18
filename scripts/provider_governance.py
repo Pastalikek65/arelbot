@@ -163,6 +163,7 @@ def build_approval_evidence(governance: dict[str, object]) -> dict[str, object]:
         "approved_count": len(features),
         "pending_count": pending,
         "rejected_count": 0,
+        "secret_free": True,
     }
 
 

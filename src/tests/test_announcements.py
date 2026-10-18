@@ -10,28 +10,28 @@ from src.storage.subscription_store import SubscriptionStore
 
 
 def test_announcement_parser_supports_daily_and_turkish_weekday():
-    daily = AnnouncementService.parse(["her", "gÃ¼n", "10:00", "ToplantÄ±", "baÅŸlÄ±yor"])
+    daily = AnnouncementService.parse(["her", "gün", "10:00", "Toplantı", "başlıyor"])
     assert daily.schedule_kind == "daily"
     assert daily.weekday is None
     assert daily.local_time == "10:00"
-    assert daily.text == "ToplantÄ± baÅŸlÄ±yor"
+    assert daily.text == "Toplantı başlıyor"
 
-    weekly = AnnouncementService.parse(["her", "pazartesi", "09:05", "HaftalÄ±k", "Ã¶zet"])
+    weekly = AnnouncementService.parse(["her", "pazartesi", "09:05", "Haftalık", "özet"])
     assert weekly.schedule_kind == "weekly"
     assert weekly.weekday == 0
 
 
 def test_announcement_parser_rejects_invalid_payloads():
     with pytest.raises(ValueError, match="HH:MM"):
-        AnnouncementService.parse(["her", "gÃ¼n", "25:00", "Mesaj"])
+        AnnouncementService.parse(["her", "gün", "25:00", "Mesaj"])
     with pytest.raises(ValueError, match="en az"):
-        AnnouncementService.parse(["her", "gÃ¼n", "10:00", "x"])
+        AnnouncementService.parse(["her", "gün", "10:00", "x"])
 
 
 @pytest.mark.asyncio
 async def test_group_announcement_is_deduplicated_and_scoped():
     service = AnnouncementService(SubscriptionStore())
-    request = AnnouncementService.parse(["her", "gÃ¼n", "10:00", "NÃ¶bet"])
+    request = AnnouncementService.parse(["her", "gün", "10:00", "Nöbet"])
     first = await service.create(admin_id=10, chat_id=-100, request=request)
     second = await service.create(admin_id=11, chat_id=-100, request=request)
     assert first["subscription_id"] == second["subscription_id"]
@@ -46,7 +46,7 @@ async def test_group_announcement_is_deduplicated_and_scoped():
 async def test_subscription_tick_delivers_escaped_group_announcement():
     store = SubscriptionStore()
     service = AnnouncementService(store)
-    request = AnnouncementService.parse(["her", "gÃ¼n", "10:00", "<b>Merhaba</b>"])
+    request = AnnouncementService.parse(["her", "gün", "10:00", "<b>Merhaba</b>"])
     item = await service.create(admin_id=10, chat_id=-100, request=request)
     store._items[item["subscription_id"]]["next_run_at"] = datetime.now(timezone.utc)
 
@@ -55,7 +55,7 @@ async def test_subscription_tick_delivers_escaped_group_announcement():
     orchestrator.subscription_service = service
     orchestrator.notification_preference_store = SimpleNamespace(quiet_until=AsyncMock(return_value=None))
     orchestrator.chat_engine = SimpleNamespace(
-        feature_executor=SimpleNamespace(execute=AsyncMock(side_effect=AssertionError("provider Ã§aÄŸrÄ±lmamalÄ±")))
+        feature_executor=SimpleNamespace(execute=AsyncMock(side_effect=AssertionError("provider çağrılmamalı")))
     )
     context = SimpleNamespace(bot=SimpleNamespace(send_message=sent))
 
@@ -71,7 +71,7 @@ async def test_subscription_tick_delivers_escaped_group_announcement():
 async def test_subscription_tick_keeps_forum_topic_for_group_announcement():
     store = SubscriptionStore()
     service = AnnouncementService(store)
-    request = AnnouncementService.parse(["her", "gÃ¼n", "10:00", "Topic mesajÄ±"])
+    request = AnnouncementService.parse(["her", "gün", "10:00", "Topic mesajı"])
     item = await service.create(
         admin_id=10,
         chat_id=-100,
@@ -85,7 +85,7 @@ async def test_subscription_tick_keeps_forum_topic_for_group_announcement():
     orchestrator.subscription_service = service
     orchestrator.notification_preference_store = SimpleNamespace(quiet_until=AsyncMock(return_value=None))
     orchestrator.chat_engine = SimpleNamespace(
-        feature_executor=SimpleNamespace(execute=AsyncMock(side_effect=AssertionError("provider Ã§aÄŸrÄ±lmamalÄ±")))
+        feature_executor=SimpleNamespace(execute=AsyncMock(side_effect=AssertionError("provider çağrılmamalı")))
     )
     await orchestrator._subscription_tick(SimpleNamespace(bot=SimpleNamespace(send_message=sent)))
 

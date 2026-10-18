@@ -38,3 +38,21 @@ async def test_score_range_is_bounded_before_persistence():
     with pytest.raises(ValueError, match="score_out_of_range"):
         await service.record_score(1, -100, "quiz", 101, event_id="bad")
     assert database.stats_updates == 0
+
+
+@pytest.mark.asyncio
+async def test_score_without_event_id_gets_a_stable_scoped_event():
+    database = FakeDatabase()
+    service = LeaderboardService(database)
+    assert await service.record_score(7, -100, "XOX", 30) is True
+    assert len(database.events) == 1
+    event_id = next(iter(database.events))
+    assert event_id.startswith("xox:-100:7:")
+
+
+@pytest.mark.asyncio
+async def test_invalid_game_identity_is_rejected_before_persistence():
+    database = FakeDatabase()
+    service = LeaderboardService(database)
+    with pytest.raises(ValueError, match="invalid_game_type"):
+        await service.record_score(7, -100, "xox game", 10, event_id="bad")

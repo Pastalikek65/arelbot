@@ -24,7 +24,7 @@ def test_group_member_service_renders_safe_welcome_and_goodbye_events():
         chat_title="Deneme",
         settings={"goodbye_enabled": True},
     )
-    assert goodbye and "gÃ¼le gÃ¼le" in goodbye.casefold()
+    assert goodbye and "güle güle" in goodbye.casefold()
 
 
 def test_group_member_service_ignores_disabled_and_non_transition_events():

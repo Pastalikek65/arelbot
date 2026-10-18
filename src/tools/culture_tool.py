@@ -72,10 +72,10 @@ class CultureTool(BaseTool):
             logger.info("CultureTool search: %s", summarize_private_text(search_query, label="culture_query"))
             search_res_obj = await self.web_search.execute(search_query)
             search_results = search_res_obj.get("result", "")
-            logger.info(f"ğŸ“ CultureTool search result length: {len(str(search_results))}")
+            logger.info(f"📝 CultureTool search result length: {len(str(search_results))}")
             
             if not search_results and "error" in search_res_obj:
-                search_results = f"Arama hatasÄ±: {search_res_obj['error']}"
+                search_results = f"Arama hatası: {search_res_obj['error']}"
                 logger.error("CultureTool search provider returned an error")
 
             # 3. Construct Context for LLM

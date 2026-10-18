@@ -1,8 +1,8 @@
 # Arel — özellikler ve komut rehberi
 
-Bu rehber 18 Ekim 2026 tarihinde incelenen iki kaynak ağacının kullanıcı ve yönetici yüzeylerini açıklar. İlk 13 bölüm GitHub uygulama kaynağındaki tanımları, “Güncel yerel ve sunucu sürümündeki ekler” bölümü ise `dbcc3bc` sürümündeki ilave yüzeyleri anlatır. Komut adları `main.py` kayıtlarından, davranışlar handler/servis kodu ile registry tanımlarından alınmıştır.
+Bu rehber, 18 Ekim 2026 tarihli güncel kaynakta bulunan kullanıcı ve yönetici yüzeylerini açıklar. Daha önce ayrı sürümlerde bulunan ekler de artık bu depoda yer alır. Komut adları kayıt, handler ve servis tanımlarına dayanır.
 
-> **GitHub uygulama kaynağındaki bilinen engel:** İncelenen `242a1ec` commit'inde `src/handlers/command_handler.py` kesilmiş çıktı metni içeriyor ve Python tarafından ayrıştırılamıyor. Ayrıca şehir dizinindeki geçersiz karakter eşleme tablosu import sırasında hata verir. Bu engeller giderilmeden uygulama çalışır kabul edilemez. Aşağıdaki tablo, kaynakta bulunan tanımları ve akışları belgelendirir; her satırın tamamlanmış, erişilebilir veya canlıda başarılı olduğunu iddia etmez. Sunucudaki farklı dağıtım ayrıca incelenmelidir.
+> **Doğrulama kapsamı:** Önceki GitHub sürümündeki sözdizimi ve şehir dizini başlangıç engelleri güncel kaynak eşitlemesiyle kaldırıldı. Donmuş imajın testleri 1.431 geçti / 2 atlandı sonucunu verdi. Bu rehber kaynak kapsamını belgeler; her komutun gerçek Telegram teslimini kanıtlamaz. Açık sınırlar [güvenilirlik kaydında](RELIABILITY-2026-10-18.md) tutulur.
 
 **Durumları okuma:** Bütün satırlar **kaynakta tanımlı** anlamındadır. **AI**, yapılandırılmış uygun model bağlantısı; **dış veri**, kaynak erişimi ve üretimde gerekli kaynak onayı; **worker**, çalışan kuyruk işleyicisi; **kalıcılık**, ilgili MongoDB/Redis/Chroma bağlantıları gerektirir. Bu rehber için tek tek canlı özellik kabulü **NOT_RUN** durumundadır. Test, kaynak inceleme ve canlı kabul ayrı kanıt türleridir.
 
@@ -280,7 +280,7 @@ Yeni özellik eklerken komut kaydını, gerçek handler/servis akışını ve ya
 
 ## Güncel yerel ve sunucu sürümündeki ekler
 
-**Sürüm sınırı:** Aşağıdaki ekler salt okunur incelenen `C:\Vscode\arelbot` ağacının `dbcc3bcf31f136536eadcb9926f331821b919218` commit'ine dayanır. Sunucunun RELEASE kaydı aynı commit kimliğini bildirir; bu, bütün dosyaların ve çalışma ayarlarının eşitliği veya canlı kabul anlamına gelmez. Bu ek uygulama değişiklikleri mevcut GitHub uygulama koduna senkronize edilmemiştir. GitHub'da dokümantasyonun güncellenmesi kod senkronizasyonu değildir. Aşağıdaki özellikler için canlı uçtan uca kabul **NOT_RUN** durumundadır.
+**Sürüm kapsamı:** Bu bölümdeki oyunlar, moderasyon yüzeyi ve komut kayıt katmanı güncel depoda bulunmaktadır. `2026.10.18-reliability-2` dağıtımındaki uygulama kaynaklarıyla eşitlenmiştir. Aşağıdaki özelliklerin tamamı için gerçek Telegram uçtan uca kabulü **NOT_RUN** durumundadır.
 
 ### Ek oyunlar ve kart altyapısı
 
@@ -293,9 +293,9 @@ Yeni özellik eklerken komut kaydını, gerçek handler/servis akışını ve ya
 | Toplu oyun bitirme adları | `/oyunbitir`, `/oyundur`, `/oyunlardur` | Kayıtlı oyun sonlandırma yüzeyine eşleme; oyuncu/yönetici koşulları ilgili handler'dadır |
 | Ortak kart motoru | Dahili `card_engine.py` | Kart/deck değer nesneleri, seed'li karıştırma, snapshot serileştirme, blackjack el değeri ve action-ID tekilleştirme |
 
-Kart motoru ayrı bir kullanıcı komutu değildir ve mevcut kart oyunlarının tümünün bu motora geçirildiği iddia edilmez. İncelenen sürümde `CardAction` dataclass'ının `MappingProxyType({})` varsayılanı import/test toplama hatası oluşturur; kart altyapısı ve tüm test paketi başarılı kabul edilemez.
+Kart motoru ayrı bir kullanıcı komutu değildir; bütün kart oyunlarının aynı motora geçirildiği iddia edilmez. Önceki dataclass import hatası bağımsız varsayılan ve Python 3.11 regresyonuyla düzeltildi; tam test paketi geçmektedir.
 
-Kaynak dosyaları (`dbcc3bc` ağacı): `src/features/catalog.py`, `src/handlers/command_handler.py`, `src/services/word_game_ui.py`, `src/services/tictactoe_ui.py`, `src/services/gomoku_ui.py`, `src/games/gomoku.py`, `src/games/card_engine.py`, `src/handlers/callback_handler.py`. Bu yollar burada sürüm kaynağı olarak yazılmıştır; GitHub'da bulunmayan dosyalara yanıltıcı bağlantı verilmez.
+Kaynak dosyaları: `src/features/catalog.py`, `src/handlers/command_handler.py`, `src/services/word_game_ui.py`, `src/services/tictactoe_ui.py`, `src/services/gomoku_ui.py`, `src/games/gomoku.py`, `src/games/card_engine.py`, `src/handlers/callback_handler.py`.
 
 ### Grup moderasyonu ve Guardian yüzeyi
 
@@ -324,11 +324,11 @@ Guardian, Arel'in Telegram taşıma ve repository katmanlarına bağlanan modera
 | Komut/ayar yönetimi | `/alias`, `/aliases`, `/delalias`, `/disable`, `/enable`, `/disabled`, `/export`, `/import`, `/reload`, `/stats` | Grup alias'ları, komut kapıları ve sınırlı ayar aktarımı |
 | Bot sahibi merkezi/yayın | `/arelmerkez`, `/panel`, `/broadcastpin` | Owner merkez ekranı; duyuruyu gönderip sabitleme; teslim ve izinler ayrıca doğrulanır |
 
-**Açık kullanılamayan yüzeyler:** `GuardianSurface._UNWIRED_FEATURES` içinde `/banlimit`, `/promotelimit`, `/grupinfolimit`, `/privaterules`, `/language`, `/connect`, `/disconnect`, `/logchannel`, `/setappeallog`, `/setfedlog`, `/cleanservice`, `/cleanwelcome`, `/welcomemute` tanımları vardır. Bu yollar ilgili işlemde ayarı değiştirmeden `guardian_feature_unavailable` döndürür. `/grupdili`, `/dil`, `/kayitkanali` ve `/logkanal` gibi karşılıkları da bu sınırlamalarla okunmalıdır; bir menü açıklaması bu özelliği etkin yapmaz.
+**Açık kullanılamayan yüzeyler:** `GuardianSurface._UNWIRED_FEATURES` içinde `/banlimit`, `/promotelimit`, `/grupinfolimit`, `/privaterules`, `/language`, `/connect`, `/disconnect`, `/logchannel`, `/setappeallog`, `/setfedlog`, `/cleanservice`, `/cleanwelcome`, `/welcomemute` tanımları vardır. Bu yollar ilgili işlemde ayarı değiştirmeden `guardian_feature_unavailable` döndürür. `/grupdili`, `/dil`, `/kayitkanali` ve `/logkanal` gibi karşılıkları da bu sınırlamalarla okunmalıdır; bir menü açıklaması bu özelliği etkin yapmaz. `/fedapprove` ve `/fedunapprove` da federasyon güven yönetimi bağlanmadığı için ayar yazmadan açık açıklama döndürür.
 
-**Yönlendirme sınırı:** `/del` ve `/mesajisil` komutları kayıt/alias yüzeyinde bulunmasına rağmen `del` hedefi `GuardianSurface.COMMANDS` içinde yoktur. Handler'ın başlangıç kabul kontrolü bu yolu sessizce durdurabilir. Bu kayıtlar işlevsel mesaj silme kanıtı değildir; canlı test **NOT_RUN**.
+**Silme yönlendirmesi:** `/del` ve `/mesajisil` artık yetki denetimine ulaşır; sessiz yönlendirme hatası regresyon testiyle kapatıldı. Gerçek grupta mesaj silme teslimi ayrıca doğrulanmalıdır.
 
-Kaynak dosyaları (`dbcc3bc` ağacı): `src/moderation/guardian_surface.py`, `src/moderation/guardian_commands.py`, `src/moderation/guardian_enforcement.py`, `src/moderation/telegram_guardian_service.py`, `src/handlers/command_handler.py`, `src/handlers/message_handler.py`, `src/orchestrator.py`.
+Kaynak dosyaları: `src/moderation/guardian_surface.py`, `src/moderation/guardian_commands.py`, `src/moderation/guardian_enforcement.py`, `src/moderation/telegram_guardian_service.py`, `src/handlers/command_handler.py`, `src/handlers/message_handler.py`, `src/orchestrator.py`.
 
 ### Komut kayıt sistemi ve dinamik komutlar
 
@@ -336,7 +336,7 @@ Kaynak dosyaları (`dbcc3bc` ağacı): `src/moderation/guardian_surface.py`, `sr
 
 Menü kapsamı yetkilendirme yerine geçmez. Guardian komutları tasarım gereği slash picker yerine düğmeli yardım üzerinden sunulur. Telegram komut menüsü ayrıca filtre ve sayı sınırı uygular; kayıtlı bir adın menüde görünmesi veya gerçekten çalışması garanti edilmez. `/alias` ile oluşturulan gruba özel adlar `filters.COMMAND` catch-all yolu ve repository'deki alias çözümlemesiyle ele alınır. `#not_adı` grup notu kısayolu da ayrı mesaj yüzeyidir. Kullanıcı tarafından tanımlanabilecek adlar sonlu bir sabit listeyle sayılmaz.
 
-Aşağıdaki indeks yalnızca bu commit'in **kayıtlı ad ve alias sözlüğüdür**. Açıklamalar kaynak kaydının niyetini aktarır; etkinlik/izin/teslim sonucu değildir. Yukarıdaki kullanılamayan ve yönlendirme kusurlu yollar indeks içinde de yer alır.
+Aşağıdaki indeks yalnızca bu commit'in **kayıtlı ad ve alias sözlüğüdür**. Açıklamalar kaynak kaydının niyetini aktarır; etkinlik/izin/teslim sonucu değildir. Yukarıdaki kullanılamayan ayar yüzeyleri indeks içinde de yer alır; bunlar etkin özellik olarak sunulmaz.
 
 ### Güncel kaynak komut indeksi
 
@@ -517,4 +517,4 @@ Aşağıdaki indeks yalnızca bu commit'in **kayıtlı ad ve alias sözlüğüd�
 
 **Diğer sözlük adları:** `/gecicisustur`. Bunlar statik kayıt, ham Guardian sözlüğü veya parser alias'ında yer alır; tek başına etkin handler garantisi değildir. `/gecicisustur`, parser'da `tmute` karşılığıdır.
 
-**Kapsam kontrolü:** Bu sürümde statik `main.py` kayıtları 144, canonical registry kayıtları 172, registry adları alias dahil 246, benzersiz ham Guardian adları 168 adettir. Parser alias'larıyla birlikte birleşim **387 benzersiz komut adı** içerir; bu rehber bunların tamamını anar. Sayılar toplanmaz: kümeler birbiriyle örtüşür. Bunlar 387 ayrı ürün özelliği veya başarılı akış anlamına gelmez. Gruba özel alias adları bu sabit sayıdan ayrıdır.
+**Kapsam kontrolü:** Bu sürümde statik `main.py` kayıtları 144, canonical registry kayıtları 172, registry adları alias dahil 246, benzersiz ham Guardian adları 171 adettir. Parser alias'larıyla birlikte birleşim **387 benzersiz komut adı** içerir; bu rehber bunların tamamını anar. Sayılar toplanmaz: kümeler birbiriyle örtüşür. Bunlar 387 ayrı ürün özelliği veya başarılı akış anlamına gelmez. Gruba özel alias adları bu sabit sayıdan ayrıdır.

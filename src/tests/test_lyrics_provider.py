@@ -42,14 +42,14 @@ async def test_lyrics_provider_uses_allowed_source_and_bounded_excerpt():
         {"title": "Untrusted result", "url": "https://evil.example/redirect"},
         {"title": "Song page", "url": "https://genius.com/artist/song"},
     ])
-    reader = FakeReaderProvider("SatÄ±r 1\n" + ("Ã§ok uzun " * 1000))
+    reader = FakeReaderProvider("Satır 1\n" + ("çok uzun " * 1000))
     provider = LyricsProvider(search, reader)
 
     response = await provider.fetch(
-        ProviderRequest(operation="lyrics", params={"song": "ÅarkÄ±", "artist": "SanatÃ§Ä±"})
+        ProviderRequest(operation="lyrics", params={"song": "Şarkı", "artist": "Sanatçı"})
     )
 
-    assert search.requests[0].params["query"].startswith("lyrics ÅarkÄ± SanatÃ§Ä±")
+    assert search.requests[0].params["query"].startswith("lyrics Şarkı Sanatçı")
     assert reader.requests[0].params["url"] == "https://genius.com/artist/song"
     assert len(response.data["excerpt"]) <= 2500
     assert response.source_url == "https://genius.com/artist/song"

@@ -35,13 +35,13 @@ class _FixtureProvider:
 @pytest.mark.asyncio
 async def test_legacy_public_data_tools_forward_to_typed_provider_without_scraping():
     cases = [
-        (PharmacyTool, {"city": "Ä°stanbul", "district": "KadÄ±kÃ¶y"}),
+        (PharmacyTool, {"city": "İstanbul", "district": "Kadıköy"}),
         (FuelTool, {"city": "Ankara"}),
         (CurrencyTool, {}),
         (EarthquakeTool, {}),
         (BimDealsTool, {}),
         (NewsTool, {}),
-        (WeatherTool, {"city": "Ä°zmir", "days": 3}),
+        (WeatherTool, {"city": "İzmir", "days": 3}),
         (PrayerTimesTool, {"city": "Bursa"}),
     ]
     for tool_type, params in cases:

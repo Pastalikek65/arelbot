@@ -50,6 +50,7 @@ def _feature(**overrides):
         terms_review=overrides.get("terms_review", "approved"),
         production_signoff=overrides.get("production_signoff", "approved"),
         audit_policy=overrides.get("audit_policy", "provider_call"),
+        feature_flag=overrides.get("feature_flag", "fixture_feature"),
     )
 
 
@@ -107,3 +108,27 @@ def test_provider_audit_keeps_ai_routes_out_of_data_provider_registry():
 
     assert rows[0].status == "ok"
     assert rows[0].provider_kind == "ai"
+
+
+def test_provider_audit_accepts_injected_moderation_provider_boundary():
+    registry = FeatureRegistry()
+    registry.register_feature(
+        _feature(
+            key="guardian_moderation_enforcement",
+            provider_key="kek_guardian",
+            provider_kind="moderation",
+            cost_class="local_socket",
+            source_name="Kek Guardian local moderation bridge",
+            source_license="Deployment-owned service; no source copied",
+            source_terms_url=None,
+            source_url=None,
+            feature_flag="guardian_moderation",
+            audit_policy="moderation_action",
+        ),
+        SimpleNamespace(),
+    )
+
+    rows = audit_registry(registry)
+
+    assert rows[0].status == "ok"
+    assert rows[0].provider_kind == "moderation"

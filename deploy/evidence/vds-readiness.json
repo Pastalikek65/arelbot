@@ -13,8 +13,8 @@
     "app_root_writable": true,
     "shared_env_present": true
   },
-  "release_count": 3,
-  "free_space_kb": 51124660,
+  "release_count": 74,
+  "free_space_kb": 44870748,
   "target_container_count": 4,
   "nginx_active": false,
   "listening_ports": [
@@ -24,5 +24,27 @@
   ],
   "existing_container_count": 12,
   "blockers": [],
-  "secret_free": true
+  "secret_free": true,
+  "service_health": {
+    "bot": true,
+    "mongo": true,
+    "redis": true,
+    "worker": true
+  },
+  "runtime_checks": {
+    "compose_services_healthy": true,
+    "bot_healthy": true,
+    "worker_healthy": true,
+    "mongo_healthy": true,
+    "redis_healthy": true
+  },
+  "compose": {
+    "file_present": true,
+    "config_valid": true
+  },
+  "guardian": {
+    "mode": "disabled",
+    "socket_present": false,
+    "socket_readable": false
+  }
 }

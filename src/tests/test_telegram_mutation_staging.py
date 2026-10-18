@@ -3,7 +3,13 @@ from __future__ import annotations
 import pytest
 
 import scripts.telegram_mutation_staging as mutation_staging
-from scripts.telegram_mutation_staging import MutationProbeError, parse_integer, validate_live_gate
+from scripts.telegram_mutation_staging import (
+    MutationProbeError,
+    _write_report,
+    parse_integer,
+    validate_live_gate,
+    validate_mutation_inputs,
+)
 
 
 def test_mutation_probe_requires_independent_live_signals():
@@ -24,6 +30,51 @@ def test_mutation_probe_integer_inputs_are_bounded():
         except MutationProbeError:
             continue
         raise AssertionError(f"invalid chat id accepted: {value}")
+
+
+def test_mutation_probe_preflights_all_identifiers_before_any_send():
+    kwargs = {
+        "chat_id": -100123,
+        "thread_id": None,
+        "video_file_id": "video-file",
+        "sticker_file_id": "sticker-file",
+        "file_id": "document-file",
+        "callback_query_id": "callback-id",
+    }
+    validate_mutation_inputs(**kwargs)
+    for field in ("video_file_id", "sticker_file_id", "file_id", "callback_query_id"):
+        broken = dict(kwargs)
+        broken[field] = ""
+        with pytest.raises(MutationProbeError, match=f"{field}_required"):
+            validate_mutation_inputs(**broken)
+
+
+def test_mutation_report_rejects_secret_material(tmp_path):
+    with pytest.raises(MutationProbeError, match="report_secret_material"):
+        _write_report(tmp_path / "mutation.json", {"scope": "x", "token": "123456:abcdefghijklmnopqrstuvwxyz"})
+
+
+@pytest.mark.asyncio
+async def test_mutation_probe_rejects_partial_contract_without_building_bot(monkeypatch):
+    called = False
+
+    def build(_token):
+        nonlocal called
+        called = True
+        raise AssertionError("Telegram client must not be built for an incomplete canary")
+
+    monkeypatch.setattr(mutation_staging, "build_bot", build)
+    with pytest.raises(MutationProbeError, match="file_id_required"):
+        await mutation_staging.run_live(
+            "123456:abcdefghijklmnopqrstuvwxyz",
+            chat_id=-100123,
+            thread_id=None,
+            video_file_id="video-file",
+            sticker_file_id="sticker-file",
+            file_id="",
+            callback_query_id="callback-id",
+        )
+    assert called is False
 
 
 @pytest.mark.asyncio
@@ -151,4 +202,3 @@ async def test_mutation_probe_omits_forum_operation_for_normal_supergroup(monkey
         "answer_callback_query",
         "shutdown",
     ]
-

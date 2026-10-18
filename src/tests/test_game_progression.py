@@ -32,7 +32,7 @@ class FakeDatabase:
         return True
 
     async def get_game_achievements(self, user_id, chat_id, limit=50):
-        return [{"key": "first_game", "label": "Ä°lk oyun"}]
+        return [{"key": "first_game", "label": "İlk oyun"}]
 
     async def get_season_leaderboard(self, chat_id, season_id, limit=10):
         return [{"user_id": 7, "points": 25, "games_played": 2, "user_name": "Arel"}]
@@ -58,7 +58,7 @@ async def test_progression_views_are_scoped_and_rendered():
     db = FakeDatabase()
     service = LeaderboardService(db)
     text = await service.render_achievements(7, -100)
-    assert "Ä°lk oyun" in text
+    assert "İlk oyun" in text
     season = await service.render_season_leaderboard(-100, now=datetime(2026, 10, 5, tzinfo=timezone.utc))
     assert "Arel" in season
     assert "2026-Q4" in season

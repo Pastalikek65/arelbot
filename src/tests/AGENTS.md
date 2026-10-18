@@ -1,8 +1,8 @@
-# Test kurallarÄ±
+# Test kuralları
 
-- DÄ±ÅŸ HTTP Ã§aÄŸrÄ±larÄ± fixture veya replay ile taklit edilir.
-- GerÃ§ek MongoDB/Redis testleri ayrÄ± integration profiline konur.
-- PlatformlarÄ±n canlÄ± HTML'ine baÄŸlÄ± test kabul kriteri olamaz.
-- Her provider iÃ§in baÅŸarÄ±, timeout, 429/5xx, bozuk schema ve stale cache senaryosu bulunur.
-- Test verisi secret, kiÅŸisel mesaj veya canlÄ± cookie iÃ§ermez.
-- Async testlerde aÃ§Ä±k timeout kullanÄ±lÄ±r; flaky sleep tercih edilmez.
+- Dış HTTP çağrıları fixture veya replay ile taklit edilir.
+- Gerçek MongoDB/Redis testleri ayrı integration profiline konur.
+- Platformların canlı HTML'ine bağlı test kabul kriteri olamaz.
+- Her provider için başarı, timeout, 429/5xx, bozuk schema ve stale cache senaryosu bulunur.
+- Test verisi secret, kişisel mesaj veya canlı cookie içermez.
+- Async testlerde açık timeout kullanılır; flaky sleep tercih edilmez.
