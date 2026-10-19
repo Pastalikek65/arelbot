@@ -798,7 +798,7 @@ class ChatEngine:
         # exists, it is an explicit fallback in the same health-scored chain;
         # callers keep the stable provider key and source attribution.
         typed_providers = [
-            WeatherProvider(),
+            WeatherProvider(city_directory=self.city_directory),
             EarthquakeProvider(),
             PharmacyProvider(),
             FuelProvider(),

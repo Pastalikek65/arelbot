@@ -41,7 +41,7 @@ SOURCE_METADATA: dict[str, tuple[str, str | None, str, str | None]] = {
     "earthquakes": ("AFAD", "https://servisnet.afad.gov.tr/apigateway/deprem/apiv2/event/filter", "Official public service", "https://deprem.afad.gov.tr/event-service"),
     "bim_deals": ("B\u0130M", "https://www.bim.com.tr/Categories/100/aktuel-urunler.aspx", "Official public page", "https://www.bim.com.tr/"),
     "breaking_news": ("TRT Haber RSS", "https://www.trthaber.com/sondakika_articles.rss", "Official public RSS feed; source attribution required", "https://www.trthaber.com/sitene_ekle.html"),
-    "weather": ("wttr.in", "https://wttr.in/", "Open source service", "https://wttr.in/"),
+    "weather": ("Open-Meteo / wttr.in", "https://open-meteo.com/en/docs", "Open-Meteo CC BY 4.0 non-commercial free API; wttr.in fallback for unlisted cities and forecast errors", "https://open-meteo.com/en/terms"),
     "air_quality": ("Open-Meteo Air Quality", "https://open-meteo.com/en/docs/air-quality-api", "Open-Meteo API terms; attribution required", "https://open-meteo.com/en/terms"),
     "prayer_times": ("Habert\u00fcrk", "https://www.haberturk.com/namaz-vakitleri", "Public web data", "https://www.haberturk.com/"),
     "flights": ("Arelbot flight search links", None, "Generated search links", None),

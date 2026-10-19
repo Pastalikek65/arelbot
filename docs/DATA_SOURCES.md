@@ -187,6 +187,20 @@ HTML sayfası yalnızca kontrollü uyumluluk fallback'i olarak denenir.
 
 `/borsa` is served by `MarketProvider`; the handler does not import a market client. The provider calls Yahoo's fixed-host Chart API with a bounded async HTTP request, normalizes a seven-day hourly response into a typed quote, and exposes Yahoo Finance attribution. Symbol aliases such as `thy` are normalized to safe Yahoo symbols; arbitrary URLs, whitespace and shell-like characters are rejected. Runtime cache is 120 seconds with a 600-second freshness target. Chart rendering remains a queued follow-up concern; the current command returns a fast, source-linked market summary.
 
+## Open-Meteo weather forecast
+
+`/hava` uses the signed local city snapshot to request a bounded 1/3/7-day
+forecast from Open-Meteo for Turkish cities. Current temperature, humidity and
+WMO condition codes, plus daily min/max temperature, precipitation probability,
+wind speed and UV are normalized and attributed in the Telegram result. Cities
+outside the snapshot retain the existing wttr.in path. The feature runtime
+applies a five-minute cache, 30-minute freshness target and a 30-per-minute
+request budget. The Open-Meteo free endpoint is limited to non-commercial use
+under CC BY 4.0 with attribution and published request limits; commercial use
+requires an Open-Meteo paid plan. The bot owner confirmed non-commercial use on
+2026-10-19; a future change to paid membership, advertising or other commercial
+use requires a paid Open-Meteo plan before this route remains active.
+
 ## Open-Meteo air quality
 
 `/hava_kalite <şehir>` and the weather result action use the Open-Meteo Air
@@ -210,7 +224,7 @@ hukuki onay verilmiş anlamına gelmez.
 |---|---|---|---|
 | Telegram Bot API | bot gönderimi/webhook/file_id | aktif ve mock/staging testli | gerekli |
 | AFAD Event Service | deprem | typed JSON + HTML fallback, cache/health | onaylı teknik kaynak |
-| wttr.in | hava | typed + cache/SWR, redirect/SSRF korumalı | onaylı teknik kaynak; kaynak atfı ve 5 dakikalık cache |
+| Open-Meteo / wttr.in | hava | Türkiye şehirleri için Open-Meteo typed forecast, hata halinde ve diğer şehirlerde wttr.in; cache/SWR, redirect/SSRF korumalı | Bot sahibinin doğruladığı ticari olmayan kullanım; Open-Meteo CC BY 4.0 atfı ve 5 dakikalık cache |
 | Nöbetçi Eczaneler | eczane | typed HTML schema | gerekli |
 | EPDK türetilmiş JSON snapshot | akaryakıt | typed JSON + HTML fallback | onaylı teknik kaynak; atıf zorunlu |
 | TRT Haber | son dakika/RSS özet | typed RSS schema | onaylı teknik kaynak |

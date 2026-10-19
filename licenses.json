@@ -276,12 +276,12 @@
     {
       "name": "Open-Meteo weather API",
       "kind": "public-api",
-      "license": "Open-Meteo terms and attribution requirements",
+      "license": "CC BY 4.0; free API limited to non-commercial use with attribution and request limits",
       "url": "https://open-meteo.com/en/terms",
-      "production_signoff": "required",
-      "source_governance": "pending",
-      "robots_policy": "review_required",
-      "terms_review": "review_required"
+      "production_signoff": "approved",
+      "source_governance": "approved",
+      "robots_policy": "allowed",
+      "terms_review": "approved"
     },
     {
       "name": "Prometheus Docker image",

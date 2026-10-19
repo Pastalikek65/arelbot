@@ -10,7 +10,7 @@
 | `market` | `/borsa` | Finans | Yahoo Finance typed provider | Active - fixed-host symbol validation, cache/health and source attribution |
 | `earthquakes` | `/deprem` | Türkiye | AFAD typed provider | Active - schema validation, source metadata, cache/health and admin-controlled notifications |
 | `breaking_news` | `/haber [güncel\|dünya\|ekonomi\|spor\|kültür\|teknoloji\|sağlık]` | Haber | RSS/provider | Aktif — typed category filter, schema/cache/health |
-| `weather` | `/hava` + 1/3/7 gün inline tahmin | Hava | wttr.in typed provider | Aktif - bounded forecast, source/fetched-at, cache ve admin kontrollü grup bildirimleri |
+| `weather` | `/hava` + 1/3/7 gün inline tahmin | Hava | Open-Meteo (Türkiye şehirleri), wttr.in (diğer şehirler) | Aktif - sıcaklık, nem, koşul, yağış olasılığı, rüzgâr ve UV içeren bounded forecast; source/fetched-at, cache ve admin kontrollü grup bildirimleri |
 | `air_quality` | `/hava_kalite`, `/hava kalite`, hava sonucu inline | Hava | Open-Meteo Air Quality typed provider | Active - AQI, PM2.5/PM10, ozone, NO2, pollen, source/fetched-at and cache |
 | `prayer_times` | `/ezan` | Türkiye | Provider | Aktif — schema/cache/health |
 | `flights` | `/ucak` | Ulaşım | Local typed provider | Aktif — doğrulanmış arama bağlantıları; canlı fiyat yok |
