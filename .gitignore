@@ -68,3 +68,4 @@ test.json
 
 .docker/*.crt
 .docker/*.cer
+assets/guess_age/.import-cache/

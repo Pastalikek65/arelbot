@@ -1,5 +1,7 @@
 # Production dependency lock points. Update deliberately and run the full test suite.
 python-telegram-bot==22.6
+chess==1.11.2
+akipy==1.7.0
 APScheduler==3.11.0
 httpx==0.28.1
 motor==3.7.1
@@ -10,9 +12,9 @@ cryptography==44.0.2
 # production version current enough to include the latest public/cookie
 # extraction fixes while retaining reproducible builds.
 yt-dlp==2026.08.19
-pytest==8.3.4
-pytest-asyncio==0.25.3
-pytest-mock==3.14.0
+pytest==8.4.2
+pytest-asyncio==1.2.0
+pytest-mock==3.15.1
 # Direct application dependencies not already listed above.
 groq==1.7.0
 google-generativeai==0.8.6

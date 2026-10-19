@@ -24,6 +24,28 @@ services:
       timeout: 3s
       retries: 12
 
+  # Akinator's public endpoint may present a Cloudflare challenge.  The
+  # solver stays on the private Compose network; it is never published to the
+  # host or the Internet.  akipy uses it only after a direct request is
+  # challenged.
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    profiles: ["dev", "prod"]
+    restart: unless-stopped
+    environment:
+      LOG_LEVEL: ${AKINATOR_SOLVER_LOG_LEVEL:-warn}
+      LOG_HTML: "false"
+      DISABLE_MEDIA: ${AKINATOR_SOLVER_DISABLE_MEDIA:-true}
+      TZ: Europe/Istanbul
+    shm_size: "512m"
+    tmpfs:
+      - /tmp:size=256M,mode=1777
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8191/health >/dev/null || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 6
+
   bot:
     build:
       context: .
@@ -42,6 +64,7 @@ services:
       REDIS_URL: redis://redis:6379/0
       MEDIA_REDIS_REQUIRED: "true"
       MONGODB_REQUIRED: "true"
+      AKINATOR_SOLVER_URL: ${AKINATOR_SOLVER_URL:-http://flaresolverr:8191}
       ARELBOT_EXTRA_CA_CERT: /run/secrets/arelbot_ca
       OBSERVABILITY_ENABLED: ${OBSERVABILITY_ENABLED:-false}
       OBSERVABILITY_LISTEN: ${OBSERVABILITY_LISTEN:-127.0.0.1}
@@ -91,6 +114,7 @@ services:
       REDIS_URL: redis://redis:6379/0
       MONGODB_REQUIRED: "true"
       MEDIA_REDIS_REQUIRED: "false"
+      AKINATOR_SOLVER_URL: ${AKINATOR_SOLVER_URL:-http://flaresolverr:8191}
       ARELBOT_EXTRA_CA_CERT: /run/secrets/arelbot_ca
       OBSERVABILITY_ENABLED: ${OBSERVABILITY_ENABLED:-false}
       OBSERVABILITY_LISTEN: ${OBSERVABILITY_LISTEN:-127.0.0.1}
@@ -133,6 +157,7 @@ services:
       REDIS_URL: redis://redis:6379/0
       MEDIA_REDIS_REQUIRED: "true"
       MONGODB_REQUIRED: "true"
+      AKINATOR_SOLVER_URL: ${AKINATOR_SOLVER_URL:-http://flaresolverr:8191}
       ARELBOT_EXTRA_CA_CERT: /run/secrets/arelbot_ca
       OBSERVABILITY_ENABLED: ${OBSERVABILITY_ENABLED:-false}
       OBSERVABILITY_LISTEN: ${OBSERVABILITY_LISTEN:-127.0.0.1}

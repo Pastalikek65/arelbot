@@ -383,6 +383,14 @@ async def register_bot_commands(application):
         ("connect4", "Connect Four"),
         ("xox", "XOX oyunu"),
         ("gomoku", "Gomoku / beşli oyunu"),
+        ("satranc", "Satranç oyunu"),
+        ("chess", "Satranç oyunu"),
+        ("akinator", "Arel Tahmin oyunu"),
+        ("aki", "Arel Tahmin oyunu"),
+        ("tahmin", "Arel Tahmin oyunu"),
+        ("yas", "Grupta yaş tahmini oyunu"),
+        ("uno", "Türkçe UNO kart oyunu"),
+        ("yastahmin", "Yaş tahminini gönder"),
         ("rusruleti", "Rus ruleti"),
         ("duello", "Düello başlat"),
         ("zar", "Zar at"),
@@ -601,6 +609,11 @@ def register_handlers(application, orchestrator):
     add_handler(CommandHandler("connect4", orchestrator.handle_connect4_command))
     add_handler(CommandHandler(["xox", "tictactoe"], orchestrator.handle_tictactoe_command))
     add_handler(CommandHandler(["gomoku", "besli"], orchestrator.handle_gomoku_command))
+    add_handler(CommandHandler(["satranc", "chess"], orchestrator.handle_chess_command))
+    add_handler(CommandHandler(["akinator", "aki", "tahmin"], orchestrator.handle_akinator_command))
+    add_handler(CommandHandler("yas", orchestrator.handle_guess_age_command))
+    add_handler(CommandHandler(["yastahmin", "agegame"], orchestrator.handle_guess_age_guess_command))
+    add_handler(CommandHandler(["uno", "kartuno"], orchestrator.handle_uno_command))
     add_handler(CommandHandler("batak", orchestrator.handle_batak_command))
     add_handler(CommandHandler("blackjack", orchestrator.handle_blackjack_command))
     add_handler(CommandHandler("anlat", orchestrator.handle_anlat_command))

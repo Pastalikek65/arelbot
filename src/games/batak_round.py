@@ -17,14 +17,19 @@ class BatakRound:
     RANKS = ("2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A")
     VALUES = {rank: index for index, rank in enumerate(RANKS, start=2)}
     MAX_PLAYERS = 4
+    TURN_TIMEOUT_SECONDS = 300
 
     @classmethod
     def lobby(cls, owner_id: int, owner_name: str) -> dict[str, Any]:
+        if int(owner_id) <= 0:
+            raise ValueError("invalid_owner")
         return {
             "version": 2,
             "phase": "lobby",
             "owner_id": int(owner_id),
             "players": [{"id": int(owner_id), "name": str(owner_name)[:80]}],
+            "turn_timeout_seconds": cls.TURN_TIMEOUT_SECONDS,
+            "turn_expires_at": None,
         }
 
     @classmethod
@@ -51,6 +56,7 @@ class BatakRound:
         randomizer.shuffle(deck)
         player_ids = [int(player["id"]) for player in players]
         cards_per_player = len(deck) // len(player_ids)
+        remainder = deck[cards_per_player * len(player_ids):]
         hands = {
             str(player_id): [list(card) for card in deck[index * cards_per_player:(index + 1) * cards_per_player]]
             for index, player_id in enumerate(player_ids)
@@ -62,11 +68,15 @@ class BatakRound:
             "phase": "playing",
             "trump": randomizer.choice(cls.SUITS),
             "hands": hands,
+            "talon": [list(card) for card in remainder],
             "current_turn": player_ids[0],
             "trick": [],
             "tricks_won": {str(player_id): 0 for player_id in player_ids},
             "completed_tricks": 0,
+            "turn_expires_at": None,
         })
+        # ``time`` is kept out of the pure trick transitions so replay tests
+        # remain deterministic.  The service owns and refreshes this deadline.
 
     @classmethod
     def play(cls, state: dict[str, Any], user_id: int, card_index: int) -> dict[str, Any]:
@@ -76,10 +86,20 @@ class BatakRound:
         if int(state.get("current_turn", 0)) != user_id:
             raise ValueError("not_your_turn")
         hand = state.get("hands", {}).get(str(user_id), [])
+        if not isinstance(hand, list):
+            raise ValueError("invalid_hand")
         try:
-            card = list(hand[int(card_index)])
+            card_index = int(card_index)
+        except (TypeError, ValueError):
+            raise ValueError("invalid_card") from None
+        if card_index < 0:
+            raise ValueError("invalid_card")
+        try:
+            card = list(hand[card_index])
         except (IndexError, TypeError, ValueError):
             raise ValueError("invalid_card") from None
+        if len(card) != 2 or card[0] not in cls.RANKS or card[1] not in cls.SUITS:
+            raise ValueError("invalid_card")
         trick = state.setdefault("trick", [])
         lead_suit = trick[0]["card"][1] if trick else None
         if lead_suit and card[1] != lead_suit and any(item[1] == lead_suit for item in hand):
@@ -138,6 +158,11 @@ class BatakRound:
                 player_id = str(player["id"])
                 lines.append(f"• {player.get('name', 'Oyuncu')}: <b>{int(scores.get(player_id, 0))}</b> puan")
             return "\n".join(lines)
+        if phase == "expired":
+            return (
+                "🃏 <b>Batak turu sona erdi</b>\n\n"
+                "Sıra süresi dolduğu için masa kapatıldı; yeni bir masa açılabilir."
+            )
         current = int(state.get("current_turn", 0))
         current_name = next((p.get("name", "Oyuncu") for p in players if int(p["id"]) == current), "Oyuncu")
         trick = state.get("trick", [])

@@ -7,6 +7,17 @@
 | AFAD Event Service | Son depremler | Resmi kamu servisi; kaynak bağlantısı gösterilir | 60 sn / 5 dk | JSON API, HTML uyumluluk fallback'i |
 | Telegram Bot API | Bot gönderimi ve file_id | Telegram şartları | 24 saat | Secret redaction zorunlu |
 | KekikSpatula/TRSehirler | Davranış referansı | GPLv3+ | Kod kopyalanmaz | Ayrı lisans incelemesi gerekir |
+| `Piterden/chessbot` | PvP satranç etkileşim referansı; Arel kodu native yeniden uygulanır | MIT | Hamle kuralları ve state Arel domain motorunda; upstream attribution korunur | `https://github.com/Piterden/chessbot` |
+| `advnpzn/Akinator-Bot` | Arel Tahmin etkileşim referansı; kaynak/assets kopyalanmaz | Lisans metadata yayınlanmamış | `akipy` ile bağımsız typed adapter; üretim sign-off gerekir | `https://github.com/advnpzn/Akinator-Bot` |
+| `advnpzn/akipy` | Türkçe Akinator session client | MIT (PyPI metadata), 1.7.0 | 45 s timeout, 4 concurrent session, response cache yok | `https://github.com/advnpzn/akipy` |
+| `FlareSolverr` | Akinator Cloudflare challenge için yalnızca iç ağ solver'ı | GPL-3.0; ayrı runtime hizmeti | Challenge başına; HTML debug kapalı | Host portu yayınlanmaz, erişilemezse güvenli hata | `https://github.com/FlareSolverr/FlareSolverr` |
+
+Akinator'ın [resmî kullanım şartları](https://hi.akinator.com/content/4/seva-ki-sartem)
+oyunu eğlence amacıyla kullanmayı tanımlar; veri tabanından kapsamlı çıkarımı ve
+içeriğin izinsiz yeniden yayımlanmasını sınırlar. `akipy` paketinin MIT lisansı,
+Elokence içeriğinin veya servis erişiminin ayrı izni yerine geçmez. Arel'in
+üçüncü taraf Akinator oturumları için kaynak incelemesi `pending` kalır;
+üretim onayı bu kayıttan otomatik çıkarılamaz.
 
 Her yeni kaynak için URL, erişim tarihi, lisans, attribution, robots/terms,
 rate limit, freshness hedefi, timeout ve fallback alanları doldurulur.
@@ -278,3 +289,26 @@ içinde tutulur.
   polling servisi aktifti, ancak hedef socket veya RPC endpoint'i bulunmadı.
   Gerçek bridge kurulana kadar provider `disabled` kalır.
 - Attribution: kullanıcıya gösterilmez; yalnızca yönetici provider durumu.
+
+
+## Yaş tahmini
+
+- **Davranış referansı:** https://github.com/mikhailsdv/guess-the-age-bot
+- **Beyan edilen lisans:** upstream `package.json` MIT; fotoğraf veri kümesinin ayrı lisansı kayıtlı değil.
+- **Arel kullanımı:** Oyun bağımsızdır; indirilen veritabanı 300 Wikimedia Commons portresi içerir. Doğum günü Wikidata P569'dan; fotoğraf Commons P18 bağlantısından alınır.
+- **Tarih doğrulaması:** Gün hassasiyetinde doğum tarihi, Commons çekim günü ve kamera EXIF `DateTimeOriginal` günü uyuşmalıdır. Dosya adında farklı bir yıl bulunması, belirsiz tarihler ve uygun lisans bulunmaması kaydı eler. Kırpılmış kopyanın oluşturulma tarihi çekim tarihi sayılmaz.
+- **Güncellik:** `python scripts/import_age_catalog.py --target 300` veritabanını indirir/genişletir; `--revalidate` mevcut kayıtların kaynak metadatasını yeniden denetler. Bot güncellemeler sırasında dış siteye bağlanmaz; yerel dosyalar ve SHA-256 manifestiyle çalışır.
+- **Attribution:** Her fotoğrafın kaynak sayfası, fotoğrafçısı, tam lisans bağlantısı, doğum ve çekim tarihi [`assets/guess_age/catalog.json`](../assets/guess_age/catalog.json) içinde saklanır. Fotoğraf kredisi ve kaynak bağlantısı oyun paneli/sonuçlarında gösterilir. Lisans dosya bazındadır; genel kaynak açıklaması lisans onayı yerine geçmez.
+
+## UNO
+
+- **Davranış referansı:** [nmime/uno](https://github.com/nmime/uno)
+- **Beyan edilen lisans:** Upstream `package.json` MIT.
+- **Arel kullanımı:** Kaynak kodu, frontend, Colyseus odası, wallet akışı veya
+  upstream asset'i kopyalanmaz. UNO kuralları bağımsız `src/games/uno.py`
+  motorunda yeniden uygulanır.
+- **Veri tazeliği:** Oyun state'i MongoDB game state deposunda tutulur; dış
+  provider kullanılmaz.
+- **Mini App:** `src/services/miniapp_game_registry.py` protokol v1 kaydıdır.
+  HTTPS endpoint ve Telegram `initData` doğrulaması kurulmadan feature flag
+  kapalı kalır; Telegram inline butonları oyunun güvenli fallback yüzeyidir.

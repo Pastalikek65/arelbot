@@ -53,8 +53,9 @@ except Exception:  # noqa: BLE001 - fail closed through the static path below
 
 
 def _static_registry():
-    """Build the minimal external-source registry without optional services."""
+    """Build checked-in source metadata without optional runtime services."""
 
+    from src.features.catalog import register_runtime_local_features
     from src.features.contracts import FeatureDefinition
     from src.features.registry import FeatureRegistry
 
@@ -64,12 +65,19 @@ def _static_registry():
     if not isinstance(rows, list):
         raise GovernanceProbeError("provider_review_template_invalid")
     registry = FeatureRegistry()
+    # The worksheet predates several game features.  A host with incomplete
+    # optional Python dependencies still has to review every catalog source;
+    # otherwise production preflight can silently pass an unreviewed game.
+    register_runtime_local_features(registry)
+    catalog_keys = {definition.key for definition in registry.definitions()}
     for row in rows:
         if not isinstance(row, dict):
             raise GovernanceProbeError("provider_review_row_invalid")
         key = str(row.get("feature_key") or "").strip()
         if not key:
             raise GovernanceProbeError("provider_review_feature_invalid")
+        if key in catalog_keys:
+            continue
         registry.register_feature(
             FeatureDefinition(
                 key=key,

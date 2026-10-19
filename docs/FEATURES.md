@@ -291,6 +291,9 @@ Yeni özellik eklerken komut kaydını, gerçek handler/servis akışını ve ya
 | Connect Four | `/connect4` | İki oyunculu lobi, 6×7 tahta, dört taşı birleştirme, sıra ve callback kontrolleri, kalıcı durum |
 | XOX | `/xox`, `/tictactoe` | İki oyunculu lobi; mevcut komut başlangıcında 6×6 tahta ve dört taşlık kazanım; durum ve eski panel kimliği kontrolleri |
 | Gomoku | `/gomoku`, `/besli` | İki oyunculu lobi; varsayılan 10×10 tahta, beş taşlık kazanım; 6/7/8/10/12/15 boyut seçimi ve forum konusu kapsamı |
+| Akinatör | `/akinator` | Türkçe karakter soruları, geri alma, tahmin onayı ve soru sürümü kontrolü; dış Akinator servisi erişimi gerekir |
+| Yaş tahmini | `/yas`, `/yastahmin 27` | Commons fotoğraflarıyla beş turlu grup oyunu; fotoğraf tarihindeki doğrulanmış yaş, tam sayı seçimi, tur sonunda puan ve kaynak gösterimi |
+| UNO | `/uno`, `/kartuno` | 2–8 oyuncu, 108 kart, renk/sayı/aksiyon kartları, +2/+4 cezası, renk seçimi, UNO çağrısı; kart yüzleri grup panelinde gizli, oyuncuya özel el uyarısı ve kalıcı state |
 | Ek oyun adları | `/trivia`, `/dogruluk`, `/cesaret` | Mevcut quiz ve doğruluk/cesaret handler'larına açık eşleme |
 | Toplu oyun bitirme adları | `/oyunbitir`, `/oyundur`, `/oyunlardur` | Kayıtlı oyun sonlandırma yüzeyine eşleme; oyuncu/yönetici koşulları ilgili handler'dadır |
 | Ortak kart motoru | Dahili `card_engine.py` | Kart/deck değer nesneleri, seed'li karıştırma, snapshot serileştirme, blackjack el değeri ve action-ID tekilleştirme |

@@ -444,6 +444,10 @@ GAME_DEFINITIONS: dict[str, GameDefinition] = {
     # definition supplies the durable GameSession envelope used by recovery.
     # The engine supports 6..15 boards; the lobby default is 10x10.
     "gomoku": GameDefinition("gomoku", "Gomoku / Beşli", category="board", min_players=2, max_players=2, turn_timeout_seconds=300, schema_version=1, state_key="gomoku", board_size=(10, 10), connect_length=5),
+    "chess": GameDefinition("chess", "Satranç", category="board", min_players=2, max_players=2, turn_timeout_seconds=1800, schema_version=1, state_key="chess", board_size=(8, 8)),
+    "akinator": GameDefinition("akinator", "Arel Tahmin", category="quiz", min_players=1, max_players=1, turn_timeout_seconds=900, schema_version=1, state_key="akinator"),
+    "guess_age": GameDefinition("guess_age", "Yaş Tahmini", category="quiz", min_players=1, max_players=100, turn_timeout_seconds=600, schema_version=1, state_key="guess_age"),
+    "uno": GameDefinition("uno", "UNO", category="card", min_players=2, max_players=8, turn_timeout_seconds=60, schema_version=1, state_key="uno"),
     # New rounds use a selectable 6x6, 7x7 or 8x8 board and four-in-a-row.
     # The UI domain still reads legacy 3x3 snapshots for restart compatibility.
     "tictactoe": GameDefinition("tictactoe", "XOX", category="board", min_players=2, max_players=2, turn_timeout_seconds=180, schema_version=1, state_key="tictactoe", board_size=(6, 6), connect_length=4),

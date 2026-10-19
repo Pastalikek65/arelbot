@@ -8,13 +8,33 @@ callback retry or a process restart cannot silently create a second game.
 from __future__ import annotations
 
 import copy
+import asyncio
+import functools
 import html
+import time
 import uuid
 from datetime import datetime, timezone
 from typing import Any
 
 from src.games.action_ledger import GameActionLedger
 from src.games.roulette import RouletteGame
+from src.games.state_store import memory_fallback_allowed
+
+
+def _serialized(method):
+    """Serialize lobby and turn mutations for one chat."""
+
+    @functools.wraps(method)
+    async def wrapper(self, *args, **kwargs):
+        chat_id = kwargs.get("chat_id")
+        if chat_id is None and args:
+            chat_id = args[0]
+        if chat_id is None:
+            raise ValueError("invalid_game_chat_id")
+        async with self._lock_for(int(chat_id)):
+            return await method(self, *args, **kwargs)
+
+    return wrapper
 
 
 class RouletteService:
@@ -34,38 +54,73 @@ class RouletteService:
         self.leaderboard = leaderboard_service
         self.economy = economy_service
         self._memory: dict[int, dict[str, Any]] = {}
+        self._locks: dict[int, asyncio.Lock] = {}
+        self._allow_memory_fallback = memory_fallback_allowed(database)
+
+    def _lock_for(self, chat_id: int) -> asyncio.Lock:
+        return self._locks.setdefault(int(chat_id), asyncio.Lock())
 
     async def _load(self, chat_id: int) -> dict[str, Any] | None:
         getter = getattr(self.database, "get_game_state", None)
-        if getter is not None and getattr(self.database, "available", True) is not False:
+        if getter is None:
+            if not self._allow_memory_fallback:
+                raise RuntimeError("game_persistence_unavailable")
+        elif getattr(self.database, "available", True) is False:
+            if not self._allow_memory_fallback:
+                raise RuntimeError("game_persistence_unavailable")
+        else:
             try:
                 state = await getter(int(chat_id), self.GAME_TYPE)
                 if isinstance(state, dict):
                     return copy.deepcopy(state)
             except Exception:
-                # Degraded local mode retains a bounded process-local state.
-                pass
+                if not self._allow_memory_fallback:
+                    raise RuntimeError("game_persistence_unavailable") from None
         state = self._memory.get(int(chat_id))
         return copy.deepcopy(state) if state else None
 
     async def _save(self, chat_id: int, state: dict[str, Any]) -> None:
         snapshot = copy.deepcopy(state)
-        self._memory[int(chat_id)] = snapshot
         saver = getattr(self.database, "save_game_state", None)
-        if saver is not None and getattr(self.database, "available", True) is not False:
-            try:
-                await saver(int(chat_id), self.GAME_TYPE, snapshot)
-            except Exception:
-                pass
+        if saver is None:
+            if not self._allow_memory_fallback:
+                raise RuntimeError("game_persistence_unavailable")
+            self._memory[int(chat_id)] = snapshot
+            return
+        if getattr(self.database, "available", True) is False:
+            if not self._allow_memory_fallback:
+                raise RuntimeError("game_persistence_unavailable")
+            self._memory[int(chat_id)] = snapshot
+            return
+        try:
+            await saver(int(chat_id), self.GAME_TYPE, snapshot)
+        except Exception:
+            if not self._allow_memory_fallback:
+                raise RuntimeError("game_persistence_unavailable") from None
+            self._memory[int(chat_id)] = snapshot
+        else:
+            self._memory[int(chat_id)] = snapshot
 
     async def _delete(self, chat_id: int) -> None:
-        self._memory.pop(int(chat_id), None)
         deleter = getattr(self.database, "delete_game_state", None)
-        if deleter is not None and getattr(self.database, "available", True) is not False:
-            try:
-                await deleter(int(chat_id), self.GAME_TYPE)
-            except Exception:
-                pass
+        if deleter is None:
+            if not self._allow_memory_fallback:
+                raise RuntimeError("game_persistence_unavailable")
+            self._memory.pop(int(chat_id), None)
+            return
+        if getattr(self.database, "available", True) is False:
+            if not self._allow_memory_fallback:
+                raise RuntimeError("game_persistence_unavailable")
+            self._memory.pop(int(chat_id), None)
+            return
+        try:
+            await deleter(int(chat_id), self.GAME_TYPE)
+        except Exception:
+            if not self._allow_memory_fallback:
+                raise RuntimeError("game_persistence_unavailable") from None
+            self._memory.pop(int(chat_id), None)
+        else:
+            self._memory.pop(int(chat_id), None)
 
     @staticmethod
     def _action_id(action_id: str) -> str:
@@ -104,6 +159,8 @@ class RouletteService:
         header = "🔫 <b>Kalıcı Rus Ruleti</b>"
         if state.get("phase") == "lobby":
             body = "Lobi açık. Oyuncular katılsın, sonra sahibi başlatsın."
+        elif state.get("phase") == "expired":
+            body = "Sıra süresi dolduğu için masa kapandı. Yeni bir tur açılabilir."
         else:
             body = "Sıra işaretli oyuncuda. Her callback tek kez uygulanır."
         text = f"{header}\n\n{body}\n\n<b>Oyuncular</b>\n" + ("\n".join(names) or "• Henüz oyuncu yok")
@@ -111,6 +168,7 @@ class RouletteService:
             text += f"\n\n{result}"
         return text
 
+    @_serialized
     async def create_lobby(self, *, chat_id: int, owner_id: int, owner_name: str) -> dict[str, Any]:
         existing = await self._load(chat_id)
         if existing and existing.get("phase") in {"lobby", "playing"}:
@@ -126,6 +184,8 @@ class RouletteService:
                 "alive": [int(owner_id)],
                 "current_player_idx": 0,
                 "current_player_id": None,
+                "turn_timeout_seconds": 180,
+                "turn_expires_at": None,
                 "game_id": uuid.uuid4().hex,
                 "created_at": datetime.now(timezone.utc),
             }
@@ -133,6 +193,7 @@ class RouletteService:
         await self._save(chat_id, state)
         return {"status": "created", "state": state, "text": self._render(state)}
 
+    @_serialized
     async def join(self, *, chat_id: int, user_id: int, user_name: str, action_id: str) -> dict[str, Any]:
         if not await self._claim(chat_id, user_id, action_id, "join"):
             return {"status": "duplicate_action"}
@@ -153,6 +214,7 @@ class RouletteService:
             await self._release(chat_id, action_id)
             raise
 
+    @_serialized
     async def start(self, *, chat_id: int, user_id: int, action_id: str) -> dict[str, Any]:
         if not await self._claim(chat_id, user_id, action_id, "start"):
             return {"status": "duplicate_action"}
@@ -167,12 +229,14 @@ class RouletteService:
             state["phase"] = "playing"
             state["current_player_idx"] = 0
             state["current_player_id"] = int(state["alive"][0])
+            state["turn_expires_at"] = time.time() + int(state.get("turn_timeout_seconds", 180))
             await self._save(chat_id, state)
             return {"status": "started", "state": state, "text": self._render(state)}
         except Exception:
             await self._release(chat_id, action_id)
             raise
 
+    @_serialized
     async def pull(self, *, chat_id: int, user_id: int, action_id: str) -> dict[str, Any]:
         if not await self._claim(chat_id, user_id, action_id, "pull"):
             return {"status": "duplicate_action"}
@@ -180,6 +244,19 @@ class RouletteService:
             state = await self._load(chat_id)
             if not state or state.get("phase") != "playing":
                 raise ValueError("game_not_playing")
+            try:
+                if state.get("turn_expires_at") is not None and time.time() >= float(state["turn_expires_at"]):
+                    state["phase"] = "expired"
+                    state["turn_expires_at"] = None
+                    await self._save(chat_id, state)
+                    return {
+                        "status": "expired",
+                        "terminal": True,
+                        "state": state,
+                        "text": self._render(state, result="Sıra süresi doldu; masa kapandı."),
+                    }
+            except (TypeError, ValueError, OverflowError):
+                raise ValueError("invalid_state") from None
             if int(state.get("current_player_id", 0)) != int(user_id):
                 raise ValueError("not_turn")
             player_name = self._player_name(state, user_id)
@@ -231,6 +308,7 @@ class RouletteService:
                     state["current_player_idx"] = (current_index + 1) % len(alive)
             if alive:
                 state["current_player_id"] = alive[state["current_player_idx"]]
+                state["turn_expires_at"] = time.time() + int(state.get("turn_timeout_seconds", 180))
             await self._save(chat_id, state)
             return {
                 "status": "playing",
@@ -242,6 +320,7 @@ class RouletteService:
             await self._release(chat_id, action_id)
             raise
 
+    @_serialized
     async def cancel(self, *, chat_id: int, user_id: int, moderator: bool = False) -> dict[str, Any]:
         state = await self._load(chat_id)
         if not state:

@@ -46,6 +46,7 @@ Bot ile özel sohbet açıp `/start` veya `/menu` yazın. `/help` yardım ekran�
 /hava İstanbul
 /ara Python belgeleri
 /oyun
+/yas
 ```
 
 Bir mesaja yanıt olarak `/q` ile alıntı, desteklenen bir görsele/videoya yanıt olarak `/sticker` ile sticker oluşturma akışı vardır. `/bildirim` takip merkezini açar; grup ortak bildirimlerini grup yöneticileri düzenler.
@@ -54,7 +55,7 @@ Bir mesaja yanıt olarak `/q` ile alıntı, desteklenen bir görsele/videoya yan
 
 ### Gereksinimler
 
-- Python 3.11 tabanlı Docker imajı ve Docker Compose desteği; yerel Python yolu için Python 3.11/3.12.
+- Python 3.12 tabanlı Docker imajı ve Docker Compose desteği; yerel Python 3.12 önerilir (`akipy` Akinator istemcisi Python 3.12+ ister).
 - Telegram bot tokenı, bot sahibinin sayısal Telegram kullanıcı kimliği ve en az bir geçerli yapay zekâ bağlantısı. Başlangıç doğrulaması bot ve birleşik çalışma rollerinde bir AI anahtarı arar.
 - Kalıcı çalışma için MongoDB ve Redis. Geliştirme Compose profili ikisini de başlatır.
 - Görsel, ses, arama ve medya özellikleri için ilgili servis ayarları. Video işlemleri FFmpeg/FFprobe kullanır; Docker imajı bunları içerir.

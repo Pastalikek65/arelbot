@@ -48,17 +48,34 @@ class BlackjackService:
 
     async def _load(self, chat_id: int, user_id: int) -> dict[str, Any] | None:
         getter = getattr(self.database, "get_game_state", None)
-        return await getter(int(chat_id), self.state_key(user_id)) if getter else None
+        if getter is None or getattr(self.database, "available", True) is False:
+            raise RuntimeError("game_persistence_unavailable")
+        try:
+            return await getter(int(chat_id), self.state_key(user_id))
+        except RuntimeError:
+            raise
+        except Exception:
+            raise RuntimeError("game_persistence_unavailable") from None
 
     async def _save(self, chat_id: int, user_id: int, state: dict[str, Any]) -> None:
         saver = getattr(self.database, "save_game_state", None)
-        if saver:
+        if saver is None or getattr(self.database, "available", True) is False:
+            raise RuntimeError("game_persistence_unavailable")
+        try:
             await saver(int(chat_id), self.state_key(user_id), state)
+        except Exception:
+            raise RuntimeError("game_persistence_unavailable") from None
 
     async def _delete(self, chat_id: int, user_id: int) -> None:
         deleter = getattr(self.database, "delete_game_state", None)
-        if deleter:
+        if deleter is None or getattr(self.database, "available", True) is False:
+            raise RuntimeError("game_persistence_unavailable")
+        try:
             await deleter(int(chat_id), self.state_key(user_id))
+        except RuntimeError:
+            raise
+        except Exception:
+            raise RuntimeError("game_persistence_unavailable") from None
 
     @asynccontextmanager
     async def _hand_guard(self, chat_id: int, user_id: int):
@@ -82,8 +99,58 @@ class BlackjackService:
 
     async def _start(self, *, chat_id: int, user_id: int, user_name: str, bet: int, event_id: str) -> dict[str, Any]:
         bet = self.validate_bet(bet)
-        if await self._load(chat_id, user_id):
+        existing = await self._load(chat_id, user_id)
+        if existing:
+            if existing.get("status") == "pending_bet":
+                return await self._resume_pending_start(chat_id, user_id, existing)
             raise ValueError("active_game")
+
+        game = self.game_factory()
+        state = game.create_game(str(user_name)[:120], int(user_id))
+        original_status = str(state.get("status") or "playing")
+        state["bet"] = bet
+        state["base_bet"] = bet
+        state["charged_bet"] = bet
+        state["event_id"] = str(event_id)[:160]
+        state["round_token"] = hashlib.sha256(str(event_id).encode("utf-8")).hexdigest()[:12]
+        # Persist a pending reservation before touching the economy.  If the
+        # process dies after debit but before the final write, the next start
+        # resumes this exact event id instead of charging twice or losing the
+        # wager.
+        state["pending_game_status"] = original_status
+        state["bet_status"] = "pending"
+        state["status"] = "pending_bet"
+        await self._save(chat_id, user_id, state)
+        try:
+            if self.economy:
+                accepted = await self.economy.debit(
+                    int(user_id), int(chat_id), bet,
+                    reason="blackjack_bet", event_id=f"bet:{state['event_id']}",
+                )
+                if not accepted:
+                    try:
+                        await self._delete(chat_id, user_id)
+                    except RuntimeError:
+                        logger.warning("Could not remove rejected Blackjack reservation", exc_info=True)
+                    raise ValueError("insufficient_balance")
+            state["status"] = original_status
+            state["bet_status"] = "charged"
+            await self._save(chat_id, user_id, state)
+        except ValueError:
+            raise
+
+        return await self._finish_started_hand(chat_id, user_id, state, game)
+
+    async def _resume_pending_start(
+        self, chat_id: int, user_id: int, state: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Complete a bet reservation left by a crash or transient write error."""
+
+        game = self.game_factory()
+        event_id = str(state.get("event_id") or "").strip()
+        if not event_id:
+            raise RuntimeError("game_persistence_unavailable")
+        bet = self.validate_bet(state.get("base_bet", state.get("bet", 0)))
         if self.economy:
             accepted = await self.economy.debit(
                 int(user_id), int(chat_id), bet,
@@ -91,16 +158,16 @@ class BlackjackService:
             )
             if not accepted:
                 raise ValueError("insufficient_balance")
-        game = self.game_factory()
-        state = game.create_game(str(user_name)[:120], int(user_id))
-        state["bet"] = bet
-        state["base_bet"] = bet
-        state["charged_bet"] = bet
-        state["event_id"] = str(event_id)[:160]
-        state["round_token"] = hashlib.sha256(str(event_id).encode("utf-8")).hexdigest()[:12]
+        state["status"] = str(state.get("pending_game_status") or "playing")
+        state["bet_status"] = "charged"
+        await self._save(chat_id, user_id, state)
+        return await self._finish_started_hand(chat_id, user_id, state, game)
+
+    async def _finish_started_hand(
+        self, chat_id: int, user_id: int, state: dict[str, Any], game: BlackjackGame
+    ) -> dict[str, Any]:
         if state.get("status") in {"blackjack", "finished"}:
             return await self._settle(chat_id, user_id, state, game)
-        await self._save(chat_id, user_id, state)
         return self._view(state, game, terminal=False)
 
     async def action(self, *, chat_id: int, user_id: int, action: str, action_id: str, round_token: str | None = None) -> dict[str, Any]:

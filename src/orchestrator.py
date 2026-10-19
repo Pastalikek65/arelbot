@@ -69,6 +69,9 @@ from src.services.arel_card_renderer import ArelCardRenderer
 from src.services.group_reply_delivery import GroupReplyDeliveryService
 from src.group_replies import GroupReplyRouter
 from src.observability import MetricsRegistry
+from src.services.akinator_service import AkinatorService
+from src.services.guess_age_service import GuessAgeService
+from src.services.uno_service import UnoService
 
 logger = logging.getLogger(__name__)
 
@@ -142,6 +145,22 @@ class Orchestrator:
         self.telegram_moderation_service = TelegramModerationService()
         self.guardian_telegram_service = GuardianTelegramService()
         self.game_action_ledger = GameActionLedger(self.chat_engine.db)
+        self.akinator_service = AkinatorService(
+            max_concurrency=getattr(Config, "AKINATOR_MAX_CONCURRENCY", 4),
+            timeout_seconds=getattr(Config, "AKINATOR_TIMEOUT_SECONDS", 45),
+            solver_url=getattr(Config, "AKINATOR_SOLVER_URL", None),
+            solver_timeout_ms=getattr(Config, "AKINATOR_SOLVER_TIMEOUT_MS", 120000),
+        )
+        self.guess_age_service = GuessAgeService(
+            self.data_port,
+            asset_dir="assets/guess_age",
+            rounds=getattr(Config, "GUESS_AGE_ROUNDS", 5),
+            round_seconds=getattr(Config, "GUESS_AGE_ROUND_SECONDS", 60),
+        )
+        self.uno_service = UnoService(
+            self.data_port,
+            turn_seconds=getattr(Config, "UNO_TURN_SECONDS", 60),
+        )
         self.inline_query_service = InlineQueryService(
             self.chat_engine.city_directory,
             self.chat_engine.db,
@@ -191,6 +210,8 @@ class Orchestrator:
 
         self.menu_service = MenuService()
         self.leaderboard_service = LeaderboardService(self.chat_engine.db, card_renderer=self.card_renderer)
+        self.guess_age_service.leaderboard_service = self.leaderboard_service
+        self.uno_service.leaderboard = self.leaderboard_service
         self.economy_service = EconomyService(self.chat_engine.db)
         self.reminder_service = ReminderService()
         self.productivity_service = ProductivityService(self.chat_engine.db)
@@ -286,6 +307,9 @@ class Orchestrator:
             market_chart_job_service=self.market_chart_job_service,
             card_renderer=self.card_renderer,
             data_port=self.data_port,
+            akinator_service=self.akinator_service,
+            guess_age_service=self.guess_age_service,
+            uno_service=self.uno_service,
         )
         # Guardian actions use the same durable ledger and Telegram role
         # boundary as automatic moderation.  There is no second bot or
@@ -308,6 +332,9 @@ class Orchestrator:
             batak_service=self.batak_service,
             roulette_service=self.roulette_service,
             data_port=self.data_port,
+            akinator_service=self.akinator_service,
+            guess_age_service=self.guess_age_service,
+            uno_service=self.uno_service,
         )
         self.message_handler = MessageHandler(
             chat_engine=self.chat_engine,
@@ -328,6 +355,7 @@ class Orchestrator:
             ),
             group_reply_metrics=self.group_reply_metrics,
             authorization=getattr(self, "telegram_authorization", None),
+            guess_age_service=self.guess_age_service,
         )
         self.media_handler = MediaHandler(
             chat_engine=self.chat_engine,
@@ -438,6 +466,9 @@ class Orchestrator:
             if mongo_ready:
                 await self._get_data_port().ensure_indexes()
                 if job_queue is not None:
+                    if Config.APP_ROLE in {"combined", "bot"}:
+                        job_queue.run_repeating(self.command_handler.game_runtime.tick, interval=5, first=1,
+                                                name="arel-game-runtime", job_kwargs={"max_instances": 1, "coalesce": True})
                     await self._recover_persisted_reminders(job_queue)
                     job_queue.run_repeating(
                         self._subscription_tick,
@@ -1774,6 +1805,21 @@ class Orchestrator:
 
     async def handle_gomoku_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         await self.command_handler.handle_gomoku_command(update, context)
+
+    async def handle_chess_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        await self.command_handler.handle_chess_command(update, context)
+
+    async def handle_akinator_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        await self.command_handler.handle_akinator_command(update, context)
+
+    async def handle_guess_age_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        await self.command_handler.handle_guess_age_command(update, context)
+
+    async def handle_guess_age_guess_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        await self.command_handler.handle_guess_age_guess_command(update, context)
+
+    async def handle_uno_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        await self.command_handler.handle_uno_command(update, context)
 
     async def handle_batak_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         await self.command_handler.handle_batak_command(update, context)

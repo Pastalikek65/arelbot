@@ -58,13 +58,17 @@ def _connect4_players(state: dict) -> list[dict]:
     return [dict(player) for player in raw if isinstance(player, dict)] if isinstance(raw, list) else []
 
 
-def new_connect4_state(*, owner_id: int, owner_name: str, chat_id: int, prompt_message_id: int | None = None) -> dict:
+def new_connect4_state(
+    *, owner_id: int, owner_name: str, chat_id: int,
+    prompt_message_id: int | None = None, thread_id: int | None = None,
+) -> dict:
     """Return a restart-safe two-player Connect Four lobby state."""
     owner = {"id": int(owner_id), "name": str(owner_name or "Oyuncu")[:64], "token": "🔴"}
     return {
         "schema_version": 1,
         "round_id": uuid4().hex[:12],
         "chat_id": int(chat_id),
+        "thread_id": int(thread_id) if thread_id is not None else None,
         "owner_id": int(owner_id),
         "prompt_message_id": int(prompt_message_id or 0),
         "status": "lobby",

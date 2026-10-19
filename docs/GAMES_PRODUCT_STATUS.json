@@ -1,0 +1,49 @@
+{
+  "updated": "2026-10-19",
+  "scope": [
+    "guess_age",
+    "uno",
+    "shared_game_runtime",
+    "game_menu",
+    "game_regression_suite",
+    "chess",
+    "akinator"
+  ],
+  "akinator": "lost upstream sessions start a new round; provider wait is shown in the panel",
+  "catalog": {
+    "source": "Wikidata P569/P18 and Wikimedia Commons",
+    "photos": 300,
+    "age_range": [
+      18,
+      88
+    ],
+    "verification": "Matching camera EXIF and Commons capture day, exact birthday, per-file license and SHA-256",
+    "runtime_network_required": false,
+    "refresh_command": "python scripts/import_age_catalog.py --target 300"
+  },
+  "implemented": [
+    "Persistent periodic age and UNO timer recovery",
+    "Stage-based retry of age round result and next-photo delivery",
+    "Round identity validation inside age submission lock",
+    "Age sampling by decade and recent-photo exclusion across matches",
+    "UNO revision-scoped mutation controls and canonical panel identity",
+    "UNO serialized panel delivery and superseded-panel repair",
+    "UNO last-card draw penalties and normalized leaderboard points",
+    "UNO cumulative match score, next round and rotating starting player",
+    "UNO spectator challenge rejection and timeout/idle handling",
+    "Forum topic boundaries and bounded result presentation",
+    "Chess active player remains at bottom with explicit piece ownership and visible capture targets",
+    "Akinator lost-session recovery and provider-wait feedback"
+  ],
+  "verification": {
+    "targeted_tests": "passed",
+    "independent_review": "important findings corrected and reaccepted",
+    "full_suite": "1997 passed, 18 skipped",
+    "server_deployment": "pending",
+    "live_telegram_delivery": "not_run",
+    "real_player_end_to_end": "not_run",
+    "offline_release_gate": "13/13 passed",
+    "feature_catalog": "60/60 matched"
+  },
+  "source_governance": "Existing explicit deployment exception retained; no source approvals fabricated"
+}

@@ -1,6 +1,39 @@
 {
   "sources": [
     {
+      "name": "guess-the-age-bot",
+      "kind": "behavior-reference",
+      "license": "MIT (upstream package.json declaration); upstream photo dataset license not declared",
+      "url": "https://github.com/mikhailsdv/guess-the-age-bot",
+      "source_governance": "review_required",
+      "robots_policy": "not_applicable",
+      "terms_review": "review_required",
+      "production_signoff": "required",
+      "arel_use": "Independent implementation; upstream photos are not copied"
+    },
+    {
+      "name": "Wikimedia Commons / Wikidata age-game database",
+      "kind": "bundled-photographs",
+      "license": "Per-file CC BY and CC BY-SA; Wikidata CC0. See assets/guess_age/catalog.json and ATTRIBUTION.md",
+      "url": "https://commons.wikimedia.org/",
+      "source_governance": "pending",
+      "robots_policy": "review_required",
+      "terms_review": "review_required",
+      "production_signoff": "required",
+      "arel_use": "300 locally bundled portraits with camera-date and birthday checks, per-file attribution and SHA-256; six legacy fallback assets remain separately attributed"
+    },
+    {
+      "name": "nmime/uno",
+      "kind": "behavior-reference",
+      "license": "MIT (upstream package.json declaration)",
+      "url": "https://github.com/nmime/uno",
+      "source_governance": "review_required",
+      "robots_policy": "not_applicable",
+      "terms_review": "review_required",
+      "production_signoff": "required",
+      "arel_use": "Independent Turkish rules engine and Mini App protocol; upstream source and assets are not copied"
+    },
+    {
       "name": "turkiye-data",
       "kind": "data",
       "license": "MIT",
@@ -13,6 +46,48 @@
       "url": "https://www.btk.gov.tr/en/national-numbering-plan",
       "source_governance": "pending",
       "robots_policy": "review_required",
+      "terms_review": "review_required",
+      "production_signoff": "required"
+    },
+    {
+      "name": "python-chess",
+      "kind": "runtime-library",
+      "license": "GPL-3.0-or-later",
+      "url": "https://github.com/niklasf/python-chess",
+      "version": "1.11.2",
+      "source_governance": "approved",
+      "robots_policy": "not_applicable",
+      "terms_review": "approved",
+      "production_signoff": "required"
+    },
+    {
+      "name": "akipy",
+      "kind": "runtime-library",
+      "license": "MIT (PyPI metadata)",
+      "url": "https://github.com/advnpzn/akipy",
+      "version": "1.7.0",
+      "source_governance": "review_required",
+      "robots_policy": "review_required",
+      "terms_review": "review_required",
+      "production_signoff": "required"
+    },
+    {
+      "name": "Akinator-Bot",
+      "kind": "behavior-reference",
+      "license": "Repository license not declared in checked-out metadata",
+      "url": "https://github.com/advnpzn/Akinator-Bot",
+      "source_governance": "review_required",
+      "robots_policy": "not_applicable",
+      "terms_review": "review_required",
+      "production_signoff": "required"
+    },
+    {
+      "name": "FlareSolverr",
+      "kind": "private-runtime-service",
+      "license": "GPL-3.0",
+      "url": "https://github.com/FlareSolverr/FlareSolverr",
+      "source_governance": "review_required",
+      "robots_policy": "not_applicable",
       "terms_review": "review_required",
       "production_signoff": "required"
     },
@@ -299,6 +374,12 @@
       "url": "https://github.com/python-telegram-bot/python-telegram-bot"
     },
     {
+      "name": "chess",
+      "license": "GPL-3.0-or-later",
+      "url": "https://github.com/niklasf/python-chess",
+      "version": "1.11.2"
+    },
+    {
       "name": "APScheduler",
       "license": "MIT",
       "url": "https://github.com/agronholm/apscheduler"
@@ -417,6 +498,12 @@
       "name": "uvloop",
       "license": "MIT",
       "url": "https://github.com/MagicStack/uvloop"
+    },
+    {
+      "name": "akipy",
+      "license": "MIT (PyPI metadata)",
+      "url": "https://github.com/advnpzn/akipy",
+      "version": "1.7.0"
     }
   ]
 }

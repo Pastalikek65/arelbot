@@ -21,6 +21,7 @@ from src.features.provider_governance import (
 from src.features.catalog import SOURCE_METADATA
 from src.features.registry import FeatureRegistry
 from scripts.provider_governance import build_approval_evidence, main as governance_main
+from scripts.provider_governance import _static_registry
 
 
 def _feature(**overrides):
@@ -108,6 +109,15 @@ def test_require_approved_report_fails_pending_feature_with_stable_code():
 
     assert report["ok"] is False
     assert report["errors"] == ["fixture:source_governance_not_approved"]
+
+
+def test_static_host_registry_includes_game_sources_in_production_gate():
+    registry = _static_registry()
+    report = governance_report(registry, require_approved=True)
+    keys = {row["feature_key"] for row in report["features"]}
+
+    assert {"akinator", "guess_age", "uno", "chess"} <= keys
+    assert "guess_age:source_governance_not_approved" in report["errors"]
 
 
 def test_require_approved_allows_explicitly_disabled_pending_feature():

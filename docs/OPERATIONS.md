@@ -685,3 +685,63 @@ hesaplarla bağlanmalı, bağlantı dizeleri loglara veya `/health` çıktısın
 girmemelidir. Bu değişiklik için mevcut verinin korunacağı bir migration,
 backup/restore denemesi ve rollback kanıtı gerekir; kanıt oluşana kadar bu
 madde faz 9 operasyon önkoşulu olarak açık kalır.
+
+
+## Satranç oyun operasyonu
+
+`/satranc` (ve gizli uyumluluk alias'ı `/chess`) Arel'in yerel satranç
+oyununu açar. Oyun MongoDB `game_states` içinde `chess` anahtarıyla tutulur;
+Redis veya ayrı bir Node botu gerekmez. Her düğme `round_id`, sohbet ve forum
+konusu ile doğrulanır ve `GameActionLedger` üzerinden tek kez işlenir. Worker
+restart'ında state store oyunu yeniden hydrate eder; bozuk UCI hamle geçmişi
+fail-closed olur ve kullanıcıya yeni tur açma önerilir.
+
+Legal rules engine `chess==1.11.2` olarak constraints dosyasına sabitlenmiştir.
+Yeni imaj oluşturulurken `pip install -c constraints.txt -r requirements.txt`
+çalıştırılmalı, ardından `python -m pytest src/tests/test_chess.py
+src/tests/test_chess_surface.py` ile kural ve Telegram callback replay testi
+koşturulmalıdır. Canlı doğrulamada geçici owner grubunda `/satranc`, ikinci
+oyuncu katılımı, e2-e4 hamlesi, eski round düğmesi ve `/iptal` akışı denenir;
+kalıcı oyun verisi veya kullanıcı mesajı evidence raporuna yazılmaz.
+
+
+## Arel Tahmin / akipy
+
+`/akinator` ve `/aki` Türkçe Arel Tahmin turunu başlatır. Sorular yalnızca
+başlatan kullanıcının round-scoped butonlarından ilerler; `akipy` erişimi
+başarısızsa kullanıcıya güvenli servis hatası gösterilir. Akinator istemcisi
+süreç içi olduğundan worker yeniden başlarsa aktif tur expire edilir; Mongo
+state yeniden yüklenebilir ama upstream oturumu tekrar oynatılamaz.
+`AKINATOR_MAX_CONCURRENCY`, `AKINATOR_TIMEOUT_SECONDS`,
+`AKINATOR_SOLVER_URL` ve `AKINATOR_SOLVER_TIMEOUT_MS` deployment ayarlarıdır.
+Dev/prod Compose profilleri, solver'ı `flaresolverr` adıyla yalnızca iç ağa
+ekler ve host portu yayınlamaz. `AKINATOR_SOLVER_URL` boş bırakılırsa Compose
+varsayılanı `http://flaresolverr:8191` olur; bağımsız host kurulumlarında bu
+değer açıkça verilmeden Arel doğrudan bağlantıda kalır ve Cloudflare 403'ünü
+güvenli servis hatasına çevirir. Solver loglarında HTML veya challenge içeriği
+debug seviyesinde açılmamalıdır.
+### Yaş Tahmini varlıkları
+
+Üretim imajında `assets/guess_age/*.jpg` fotoğraflarının bulunması gerekir.
+Fotoğraflar Wikimedia Commons kaynaklıdır; her görselin çekim tarihi, fotoğrafçı,
+lisans ve kaynak bağlantısı `assets/guess_age/README.md` içinde kayıtlıdır.
+Oyun sırasında harici fotoğraf indirme veya görsel analiz servisi kullanılmaz.
+Eski `*.png` kartları yalnızca önceki sürümde açılmış turların okunabilmesi için
+korunur. `GUESS_AGE_ROUNDS` ve
+`GUESS_AGE_ROUND_SECONDS` ile tur sayısı ve tur süresi ayarlanır. State MongoDB
+oyun kaydında tutulur; worker/bot yeniden başlasa bile yeni bir `/yas` çağrısı
+aktif turu okuyabilir.
+
+### UNO ve Mini App oyunları
+
+`/uno` yalnızca grup/süpergrup sohbetlerinde çalışır. `UNO_TURN_SECONDS`
+15–300 saniye arasında tutulur. Oyun MongoDB `game_states` içinde `uno`
+anahtarıyla saklanır; bot yeniden başlasa bile lobi ve el durumu yeniden
+okunabilir. `GameActionLedger` callback kimliklerinin tekrar uygulanmasını
+engeller. `/iptal` masayı yalnızca kuran kişi veya grup yöneticisi için kapatır.
+
+Mini App için `MINIAPP_GAMES_ENABLED=false` varsayılanı korunur. Açmadan önce
+HTTPS endpoint, Telegram `initData` doğrulaması, chat/user scope kontrolü,
+nonce-expiry denetimi ve staging replay kanıtı tamamlanmalıdır. `MINIAPP_URL`
+yalnızca doğrulanmış endpoint'e işaret ettiğinde ayarlanır; boş bırakılırsa
+UNO Telegram butonlarıyla tam çalışır ve Mini App düğmesi gösterilmez.

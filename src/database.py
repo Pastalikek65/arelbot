@@ -840,6 +840,8 @@ class Database:
         await Database._db["states"].create_index("expires_at", expireAfterSeconds=0)
         await Database._db["game_states"].create_index([("chat_id", 1), ("game_type", 1)], unique=True)
         await Database._db["game_states"].create_index("expires_at", expireAfterSeconds=0)
+        await Database._db["game_states"].create_index([("game_type", 1), ("state.turn_expires_at", 1)])
+        await Database._db["game_states"].create_index([("game_type", 1), ("state.round_deadline", 1)])
 
     async def delete_chat_history(self, chat_id: int, user_id: Optional[int] = None) -> int:
         """Delete conversation records while preserving account and audit data."""
@@ -1400,6 +1402,28 @@ class Database:
     async def delete_game_state(self, chat_id: int, game_type: str) -> None:
         if Database._db is not None:
             await self.game_states.delete_one({"chat_id": chat_id, "game_type": game_type})
+
+    async def list_due_game_states(self, *, now: float, limit: int = 100) -> list[dict]:
+        """Find durable timers and undelivered panels after any process restart."""
+        if Database._db is None:
+            raise RuntimeError("game_persistence_unavailable")
+        query = {"$or": [
+            {"game_type": "uno", "$or": [
+                {"state.status": "playing", "state.turn_expires_at": {"$lte": now, "$ne": None}},
+                {"state.status": {"$in": ["lobby", "playing"]}, "state.last_activity_at": {"$lte": now - 900}},
+                {"state.panel_dirty": True}, {"state.score_pending": True},
+            ]},
+            {"game_type": "guess_age", "$or": [
+                {"state.delivery_pending": True}, {"state.pending_scores.0": {"$exists": True}},
+                {"state.status": {"$in": ["playing", "expired"]}, "$or": [
+                    {"state.round_deadline": {"$lte": now, "$ne": None}},
+                    {"state.round_deadline": {"$exists": False}},
+                    {"state.prompt_message_id": {"$in": [0, None]}},
+                ]},
+            ]},
+        ]}
+        query = {"$and": [query, {"$or": [{"state.delivery_retry_at": {"$exists": False}}, {"state.delivery_retry_at": {"$lte": now}}]}]}
+        return await self.game_states.find(query, {"_id": 0, "chat_id": 1, "game_type": 1, "state": 1}).sort("updated_at", 1).limit(max(1, min(500, limit))).to_list(length=max(1, min(500, limit)))
 
     async def get_memory_consent(self, user_id: int) -> bool:
         if Database._db is None:

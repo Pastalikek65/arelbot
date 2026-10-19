@@ -1,5 +1,9 @@
 # Arelbot Linux VDS Deployment
 
+Üretim Docker imajı Python 3.12 kullanır. Arel Tahmin özelliğinin bağımlılığı
+`akipy` Python 3.12+ gerektirdiği için VDS üzerinde Python kurulumu host
+tarafında gerekmez; Compose imajı doğru çalışma zamanını sağlar.
+
 Production runs as separate Docker Compose services: `bot` receives Telegram
 updates and `worker` consumes media, AI, quote, sticker and chart queues. MongoDB
 and Redis are persistent dependencies. A single systemd bot process is not a

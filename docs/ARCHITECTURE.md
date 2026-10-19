@@ -418,6 +418,16 @@ owner/admin cancellation. `connect4` is registered in the feature catalog and
 command registry; handlers only render or dispatch domain results and never
 perform external I/O.
 
+Chess adds an 8x8 two-player PvP session in `src/games/chess.py` and
+`src/services/chess_ui.py`. The legal-move engine owns FEN reconstruction from
+the durable UCI log, SAN history, castling, en-passant, promotion, checkmate,
+stalemate, draw claims, resignation and color/turn authorization. The Telegram
+adapter uses round-scoped `chess:<round>:...` callbacks, rotates the board so
+the active color is at the bottom, and persists every accepted transition
+through the existing game action ledger. The interaction model is attributed
+to the MIT-licensed Piterden/chessbot project; its Node/Telegraf runtime and
+storage are not copied into Arel.
+
 ### Versioned game persistence contract
 
 Every persisted `GameSession` carries `schema_version`, a canonical
@@ -481,3 +491,48 @@ inputs are capped, duplicate or conflicting event IDs are rejected, and
 cooldown/window/daily limits prevent score farming. Leaderboard and seasonal
 achievement projections are replayable from the event ledger and do not run
 Telegram, MongoDB or Redis calls inside the game rules.
+
+
+### Arel Tahmin / Akinator
+
+Arel Tahmin, `akipy==1.7.0` istemcisini `AkinatorService` üzerinden kullanır.
+Telegram handler yalnızca state ve panel teslimini yönetir; upstream çağrısı
+typed servis, semaphore ve timeout ile sınırlandırılır. Callback payload'ı
+`akinator:<round_id>:...` biçiminde round ve owner kapsamına bağlıdır.
+Türkçe akış karakter temasını kullanır; Akinator-Bot deposu kaynak kodu veya
+görselleri kopyalanmaz. Mongo state restart sonrasında kaydı korur, fakat
+upstream istemci süreç içi olduğundan yarım tur güvenli şekilde expire edilir.
+### Yaş Tahmini oyun akışı
+
+`GuessAgeService` grup kapsamındaki `guess_age` kaydını data port üzerinden
+kalıcılaştırır. Telegram handler yalnızca komutu, fotoğraf gönderimini ve job
+queue zamanlayıcısını yönetir; puan, tekrar koruması, tur geçişi ve asset path
+güvenliği `src/games/guess_age.py` ile servis katmanında kalır. Callback payload
+yalnızca opak round kimliği ve yaş aralığı taşır; hedef yaş gönderilmez.
+
+### UNO ve Mini App oyun protokolü
+
+`UnoService` Telegram callback'leri ile gelecekteki Mini App arasında ortak
+oyun sözleşmesidir. Deste oluşturma, oynanabilir kart, renk seçimi, +2/+4,
+pas, UNO çağrısı, sıra ve puan geçişleri `src/games/uno.py` içinde saf
+kurallar olarak çalışır; handler yalnızca yetkili kullanıcıyı doğrular,
+state'i kaydeder ve paneli günceller. State `game_states` içinde `uno` anahtarı
+ile saklanır ve action ID listesi aynı callback'in iki kez uygulanmasını önler.
+
+`src/services/miniapp_game_registry.py` Mini App'in oyun keşif manifestidir.
+Yeni bir oyun eklemek için önce aynı `state_key`, `action_namespace` ve
+`protocol_version` sözleşmesine sahip bir `MiniAppGameDefinition` kaydı
+eklenir. Mini App endpoint'i HTTPS ve Telegram `initData` doğrulaması olmadan
+feature flag ile kapalı kalır; bu yüzden UNO Telegram'da tam işlevli fallback
+olarak çalışır. Her kullanıcıya yalnızca kendi eli açık görünüm olarak
+üretilir, rakip kartları Mini App ve Telegram sunumunda gizlenir.
+
+
+### Interactive game recovery boundary
+
+Game commands use targeted `hydrate_game` reads from the data port before
+starting a round. Stateful callbacks validate chat, round, prompt message and
+forum topic identifiers before mutation; a copied button cannot move a round
+in another topic. New chess and Connect Four rounds publish their prompt
+panel before storing the prompt message id, so a restart or a silent command
+never leaves a lobby without controls.

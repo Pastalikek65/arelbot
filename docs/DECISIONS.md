@@ -508,3 +508,104 @@ bulunur, ardından aynı grup için `get_chat_member` ile doğrulanır. Kayıtl�
 aktif üyeliği doğrulanamayan hedeflerde işlem fail-closed olur ve kullanıcıdan
 hedef mesaja yanıt vermesi istenir; böylece başka gruptaki aynı görünen isim
 üzerinden moderasyon yapılamaz.
+
+
+## ADR-055 - Native chess integration
+
+Arel integrates the PvP interaction model of `Piterden/chessbot` as a native
+Python game instead of running a second Telegram bot. Arel owns the lobby,
+chat/thread scope, callback validation, action ledger, Mongo state and Telegram
+rendering. The legal rules engine is pinned as `chess==1.11.2` and its GPL-3.0+
+license is recorded in `licenses.json`; the upstream MIT project is retained as
+an interaction reference with attribution. A round stores an authoritative UCI
+move log and rebuilds the board for every transition, so restart recovery and
+repetition/draw checks do not trust a client-supplied FEN.
+
+
+## ADR-056 - Native Arel Tahmin integration
+
+Arel imports the published `akipy` client and independently reimplements the
+Akinator-Bot interaction contract in Turkish. The reference repository has no
+declared license in its checked-out metadata, so source/assets are not copied.
+The game uses owner-bound callbacks, bounded upstream calls, and a safe
+process-restart expiry path instead of pretending the remote session is
+persistable.
+
+## ADR-057 - Arel Tahmin çalışma zamanı
+
+`akipy==1.7.0` Python 3.12 veya üzerini gerektirdiği için üretim Docker imajı
+Python 3.12 tabanına yükseltildi. Cloudflare korumalı Akinator uç noktası için
+Compose profilleri solver'ı Arel'in iç Docker ağına alır; host kurulumu dışında
+hiçbir port yayınlanmaz. Bağımsız kurulumlarda solver adresi açıkça
+`AKINATOR_SOLVER_URL` ile verilmeden Arel doğrudan bağlantıda kalır. Solver
+erişilemezse oyun güvenli hata durumuna geçer; istemci otomatik olarak tekrar
+oynatılmaz.
+
+
+## ADR-058 - Yaş tahmini için bağımsız yerel asset kataloğu
+
+- **Durum:** Kabul edildi
+- **Karar:** `guess-the-age-bot` yalnızca davranış ve UX referansı olarak kullanılacak. Upstream fotoğrafları ve veri kümesi provenanceı ayrı lisansla doğrulanmadığı için Arel dağıtımına alınmayacak; yaş tahmini oyunu kendi typed state/service katmanı ve Arelbot üretimi portre kartlarıyla çalışacak.
+- **Sonuç:** Harici görsel lisansı/erişilebilirlik riski azalır, oyun deterministik ve offline test edilebilir olur. Daha gerçekçi fotoğraf kataloğu eklenirse her varlık için ayrı lisans/provenance kanıtı gerekir.
+
+## ADR-059 - UNO motoru ve Mini App hazırlığı
+
+- **Durum:** Kabul edildi
+- **Karar:** `nmime/uno` yalnızca davranış ve Mini App mimari referansı olarak
+  kullanılacak. Arelbot, Telegram ve gelecekteki Mini App için bağımsız,
+  typed `src/games/uno.py` kurallarını ve `UnoService` kalıcı state katmanını
+  kullanacak; upstream Colyseus/React frontend'i veya asset'leri kopyalanmayacak.
+- **Sonuç:** 2–8 kişilik UNO, 108 kart, aksiyon kartları, renk seçimi, UNO
+  çağrısı, restart recovery ve idempotent callback'ler bugün Telegram'da
+  çalışır. `MiniAppGameDefinition` protokolü yeni oyunların aynı state/action
+  sözleşmesine katılmasını sağlar. HTTPS ve `initData` doğrulaması kurulmadan
+  Mini App feature flag'i kapalı kalır.
+
+
+## ADR-060 - Durable game command recovery and forum scope
+
+Game start commands hydrate their own durable state before creating a new
+round. This prevents a process restart from allowing `/xox`, `/gomoku`,
+`/connect4`, `/satranc`, word games, Akinator, Batak or bottle lobby commands
+to overwrite an active session. Forum-bound rounds persist `thread_id` and
+reject callbacks from another topic. Chess always sends a visible,
+round-scoped keyboard panel after creation.
+
+## ADR-061 - Game mechanics hardening and bounded turns
+
+- **Status:** Accepted
+- **Decision:** Game services use a per-chat async lock so concurrent callbacks cannot overwrite one another. Batak and Roulette persist a turn deadline and transition to `expired` before accepting a late move. Three-player Batak keeps the remaining card as `talon`; negative card indexes are rejected.
+- **UNO:** Invalid opening cards are returned to the 108-card draw pile. A player must play the exact card drawn during the current turn, cannot draw twice, and cannot move after the deadline. Legacy states without a deadline remain playable and receive a deadline on their first valid transition.
+- **Guess age:** The service enforces the round deadline, persists expired rounds, and returns a dedicated error code for the user-facing layer.
+
+## ADR-062 - Fail closed on production game persistence loss
+
+- **Status:** Accepted
+- **Decision:** Roulette and handler-based game persistence no longer hide
+  MongoDB read, write, or delete failures behind a process-local state. The
+  production database path raises `game_persistence_unavailable` so the
+  handler can report a safe retryable error instead of acknowledging a turn
+  that will disappear on restart.
+- **Fallback:** In-memory state remains available only for explicit test
+  doubles and local adapters without a production availability marker.
+
+## ADR-063 - Chess turn deadlines are authoritative
+
+- **Status:** Accepted
+- **Decision:** Chess starts every active turn with a bounded wall-clock
+  deadline and refreshes it after a legal move. Move, promotion, draw, and
+  resignation actions first transition an overdue round to `expired`; the
+  opponent is recorded as the timeout winner and the deadline is cleared.
+- **Compatibility:** Legacy chess snapshots without a deadline receive the
+  configured default on their first valid interaction.
+
+## ADR-064 - Card game storage is required before money or turns move
+
+- **Status:** Accepted
+- **Decision:** Batak, Blackjack, UNO and Yaş Tahmini require an available
+  game-state store for every read, write, and delete. Blackjack writes a
+  `pending_bet` reservation before debiting a stake and resumes that exact
+  event id after a crash or transient final-write failure, preventing a
+  storage outage from accepting an unrecoverable wager or charging twice.
+- **Error:** Storage failures use the stable
+  `game_persistence_unavailable` code and do not expose driver details.

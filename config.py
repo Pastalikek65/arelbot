@@ -279,6 +279,21 @@ class Config:
     IMAGE_RATE_LIMIT_PER_MINUTE = max(1, min(30, int(os.getenv("IMAGE_RATE_LIMIT_PER_MINUTE", "5"))))
     IMAGE_REDIS_REQUIRED = os.getenv("IMAGE_REDIS_REQUIRED", "false").lower() in {"1", "true", "yes", "on"}
 
+    # Akinator is a bounded external game provider.  Its session state stays
+    # in the normal game store; these knobs only control upstream calls.
+    AKINATOR_MAX_CONCURRENCY = max(1, min(16, int(os.getenv("AKINATOR_MAX_CONCURRENCY", "4"))))
+    AKINATOR_TIMEOUT_SECONDS = max(5, min(180, int(os.getenv("AKINATOR_TIMEOUT_SECONDS", "45"))))
+    AKINATOR_SOLVER_URL = os.getenv("AKINATOR_SOLVER_URL") or None
+    try:
+        AKINATOR_SOLVER_TIMEOUT_MS = max(1000, min(300000, int(os.getenv("AKINATOR_SOLVER_TIMEOUT_MS", "120000"))))
+    except (TypeError, ValueError):
+        AKINATOR_SOLVER_TIMEOUT_MS = 120000
+    GUESS_AGE_ROUNDS = max(1, min(10, int(os.getenv("GUESS_AGE_ROUNDS", "5"))))
+    GUESS_AGE_ROUND_SECONDS = max(15, min(300, int(os.getenv("GUESS_AGE_ROUND_SECONDS", "60"))))
+    UNO_TURN_SECONDS = max(15, min(300, int(os.getenv("UNO_TURN_SECONDS", "60"))))
+    MINIAPP_GAMES_ENABLED = os.getenv("MINIAPP_GAMES_ENABLED", "false").strip().lower() in {"1", "true", "yes", "on"}
+    MINIAPP_URL = os.getenv("MINIAPP_URL", "").strip()
+
     # Legacy fallback provider settings
     NINEROUTER_URL = os.getenv("NINEROUTER_URL", "https://rdi4qg6.9router.com/v1")
     NINEROUTER_KEY = os.getenv("NINEROUTER_KEY")

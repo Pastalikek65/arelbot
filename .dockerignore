@@ -8,3 +8,4 @@ data/cookies
 .git
 .docker/*
 !.docker/empty-ca.pem
+assets/guess_age/.import-cache

@@ -26,7 +26,7 @@ from src.security.error_codes import normalize_error_code, public_error_message,
 from src.ai.prompt_policy import untrusted_context
 from src.ai.personality import PersonalityPolicy
 from src.ai.conversation_style import NORMAL_MODE, is_normal_mode, style_mode_label
-from src.games.state_store import persist_game, delete_game
+from src.games.state_store import hydrate_game, persist_game, delete_game
 from src.games.engine import parse_word_game_request
 from src.games.blackjack import BlackjackGame
 from src.features.city_directory import normalize_text
@@ -61,6 +61,16 @@ from src.services.gomoku_ui import (
     new_gomoku_state,
     render_gomoku_text,
 )
+from src.services.chess_ui import chess_keyboard, render_chess_text
+from src.games.chess import new_chess_state
+from src.games.akinator import new_akinator_state
+from src.games.guess_age import round_expired
+from src.services.akinator_ui import akinator_keyboard, render_akinator_text
+from src.services.akinator_service import AkinatorServiceError
+from src.services.guess_age_service import GuessAgeServiceError
+from src.services.guess_age_ui import guess_age_keyboard, render_guess_age_text, render_guess_age_round_result
+from src.services.uno_service import UnoError
+from src.services.uno_ui import render_uno_text, uno_keyboard
 from src.services.menu_service import tictactoe_surface_keyboard
 from src.features.culture_categories import normalize_culture_category
 from src.features.news_categories import normalize_news_category
@@ -108,6 +118,9 @@ class CommandHandler:
         card_renderer=None,
         data_port=None,
         authorization=None,
+        akinator_service=None,
+        guess_age_service=None,
+        uno_service=None,
     ):
         self.chat_engine = chat_engine
         self.data_port = data_port or HandlerDataPort.from_engine(chat_engine)
@@ -136,6 +149,11 @@ class CommandHandler:
         self.market_chart_job_service = market_chart_job_service
         self.image_generation_service = image_generation_service
         self.card_renderer = card_renderer
+        self.akinator_service = akinator_service
+        self.guess_age_service = guess_age_service
+        self.uno_service = uno_service
+        from src.handlers.game_runtime import GameRuntime
+        self.game_runtime = GameRuntime(self.data_port, guess_age=guess_age_service, uno=uno_service)
         # Injected by Orchestrator after the Telegram Application is built.
         # Handler methods never perform role lookups directly.
         self.authorization = authorization
@@ -1941,6 +1959,15 @@ class CommandHandler:
         )
 
     async def handle_hangman_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        await hydrate_game(self.data_port, update.effective_chat.id, context.chat_data, "hangman")
+        existing = context.chat_data.get("hangman")
+        if existing and str(existing.get("status") or "").casefold() not in {"won", "lost", "finished", "expired", "cancelled"}:
+            await update.effective_message.reply_text(
+                render_hangman_text(existing),
+                reply_markup=hangman_keyboard(existing),
+                parse_mode="HTML",
+            )
+            return
         _category, difficulty = parse_word_game_request(context.args)
         game_state = await self.tool_manager.get_tool("games_tool").execute(
             game_type="hangman", difficulty=difficulty.key, user_id=update.effective_user.id
@@ -1964,6 +1991,15 @@ class CommandHandler:
         await persist_game(self.data_port, update.effective_chat.id, "hangman", game_state)
 
     async def handle_wordgame_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        await hydrate_game(self.data_port, update.effective_chat.id, context.chat_data, "word_game")
+        existing = context.chat_data.get("word_game")
+        if existing and str(existing.get("status") or "").casefold() not in {"won", "finished", "expired", "cancelled"}:
+            await update.effective_message.reply_text(
+                render_word_game_text(existing),
+                reply_markup=word_game_keyboard(existing),
+                parse_mode="HTML",
+            )
+            return
         requested_category, difficulty = parse_word_game_request(context.args)
         game_state = await self.tool_manager.get_tool("games_tool").execute(
             game_type="word_game", category=requested_category, difficulty=difficulty.key,
@@ -1988,7 +2024,9 @@ class CommandHandler:
         await persist_game(self.data_port, update.effective_chat.id, "word_game", game_state)
 
     async def handle_anlat_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        if 'word_guess' in context.chat_data:
+        await hydrate_game(self.data_port, update.effective_chat.id, context.chat_data, "word_guess")
+        existing = context.chat_data.get("word_guess")
+        if existing and str(existing.get("status") or "").casefold() not in {"won", "finished", "expired", "cancelled"}:
             await update.message.reply_text("⚠️ Zaten devam eden bir oyun var! Kelimeyi bilmeye çalışın.")
             return
         chat_id = update.effective_chat.id
@@ -2077,25 +2115,33 @@ class CommandHandler:
         message = update.effective_message or update.message
         if message is None or update.effective_chat is None or update.effective_user is None:
             return
+        await hydrate_game(self.data_port, update.effective_chat.id, context.chat_data, "connect4")
         existing = context.chat_data.get("connect4")
         if existing and str(existing.get("status")) in {"lobby", "playing"}:
+            reply_kwargs = {"reply_markup": connect4_keyboard(existing), "parse_mode": "HTML"}
+            thread_id = getattr(message, "message_thread_id", None)
+            if thread_id is not None:
+                reply_kwargs["message_thread_id"] = int(thread_id)
             await message.reply_text(
                 render_connect4_text(existing),
-                reply_markup=connect4_keyboard(existing),
-                parse_mode="HTML",
+                **reply_kwargs,
             )
             return
         state = new_connect4_state(
             owner_id=int(update.effective_user.id),
             owner_name=str(update.effective_user.first_name or "Oyuncu"),
             chat_id=int(update.effective_chat.id),
+            thread_id=getattr(message, "message_thread_id", None),
         )
         context.chat_data["connect4"] = state
         await persist_game(self.data_port, update.effective_chat.id, "connect4", state)
+        reply_kwargs = {"reply_markup": connect4_keyboard(state), "parse_mode": "HTML"}
+        thread_id = getattr(message, "message_thread_id", None)
+        if thread_id is not None:
+            reply_kwargs["message_thread_id"] = int(thread_id)
         prompt = await message.reply_text(
             render_connect4_text(state),
-            reply_markup=connect4_keyboard(state),
-            parse_mode="HTML",
+            **reply_kwargs,
         )
         state["prompt_message_id"] = int(getattr(prompt, "message_id", 0) or 0)
         await persist_game(self.data_port, update.effective_chat.id, "connect4", state)
@@ -2105,6 +2151,7 @@ class CommandHandler:
         message = update.effective_message or update.message
         if message is None or update.effective_chat is None or update.effective_user is None:
             return
+        await hydrate_game(self.data_port, update.effective_chat.id, context.chat_data, "tictactoe")
         existing = context.chat_data.get("tictactoe")
         if existing and str(existing.get("status")) in {"lobby", "playing"}:
             reply_kwargs = {
@@ -2148,6 +2195,7 @@ class CommandHandler:
         message = update.effective_message or update.message
         if message is None or update.effective_chat is None or update.effective_user is None:
             return
+        await hydrate_game(self.data_port, update.effective_chat.id, context.chat_data, "gomoku")
         existing = context.chat_data.get("gomoku")
         if existing and str(existing.get("status")) in {"lobby", "playing"}:
             reply_kwargs = {
@@ -2178,6 +2226,229 @@ class CommandHandler:
         state["prompt_message_id"] = int(getattr(prompt, "message_id", 0) or 0)
         await persist_game(self.data_port, update.effective_chat.id, "gomoku", state)
 
+    async def handle_chess_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Open a restart-safe two-player chess lobby."""
+        message = update.effective_message or update.message
+        if message is None or update.effective_chat is None or update.effective_user is None:
+            return
+        await hydrate_game(self.data_port, update.effective_chat.id, context.chat_data, "chess")
+        existing = context.chat_data.get("chess")
+        if existing and str(existing.get("status")) in {"lobby", "playing", "finished"}:
+            reply_kwargs = {"reply_markup": chess_keyboard(existing), "parse_mode": "HTML"}
+            thread_id = getattr(message, "message_thread_id", None)
+            if thread_id is not None:
+                reply_kwargs["message_thread_id"] = int(thread_id)
+            await message.reply_text(render_chess_text(existing), **reply_kwargs)
+            return
+        thread_id = getattr(message, "message_thread_id", None)
+        state = new_chess_state(
+            owner_id=int(update.effective_user.id),
+            owner_name=str(update.effective_user.first_name or "Oyuncu"),
+            chat_id=int(update.effective_chat.id),
+            thread_id=int(thread_id) if thread_id is not None else None,
+        )
+        context.chat_data["chess"] = state
+        await persist_game(self.data_port, update.effective_chat.id, "chess", state)
+        reply_kwargs = {"reply_markup": chess_keyboard(state), "parse_mode": "HTML"}
+        if thread_id is not None:
+            reply_kwargs["message_thread_id"] = int(thread_id)
+        prompt = await message.reply_text(render_chess_text(state), **reply_kwargs)
+        state["prompt_message_id"] = int(getattr(prompt, "message_id", 0) or 0)
+        await persist_game(self.data_port, update.effective_chat.id, "chess", state)
+
+    async def handle_akinator_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        if self.akinator_service is None or update.effective_chat is None:
+            await self._open_akinator_command(update, context)
+            return
+        async with self.akinator_service.presentation_lock(int(update.effective_chat.id)):
+            await self._open_akinator_command(update, context)
+
+    async def _open_akinator_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Start or resume the Turkish, button-driven Arel Tahmin round."""
+        message = update.effective_message or update.message
+        chat = update.effective_chat
+        user = update.effective_user
+        if message is None or chat is None or user is None:
+            return
+        await hydrate_game(self.data_port, chat.id, context.chat_data, "akinator")
+        existing = context.chat_data.get("akinator")
+        if (existing and str(existing.get("status")) in {"pending", "playing", "proposition"}
+                and self.akinator_service is not None and self.akinator_service.has_session(existing)):
+            await message.reply_text(render_akinator_text(existing), reply_markup=akinator_keyboard(existing), parse_mode="HTML")
+            return
+        state = new_akinator_state(
+            owner_id=int(user.id),
+            owner_name=str(user.first_name or "Oyuncu"),
+            chat_id=int(chat.id),
+            thread_id=getattr(message, "message_thread_id", None),
+        )
+        context.chat_data["akinator"] = state
+        await persist_game(self.data_port, chat.id, "akinator", state)
+        prompt = await message.reply_text(
+            render_akinator_text(state), reply_markup=akinator_keyboard(state), parse_mode="HTML"
+        )
+        state["prompt_message_id"] = int(getattr(prompt, "message_id", 0) or 0)
+        await persist_game(self.data_port, chat.id, "akinator", state)
+        if self.akinator_service is None:
+            state["status"] = "failed"
+            state["error_code"] = "AKINATOR_UNAVAILABLE"
+        else:
+            try:
+                await self.akinator_service.start(state)
+            except AkinatorServiceError as exc:
+                logger.warning("Akinator start failed: %s", exc.code)
+                state["status"] = "failed"
+                state["error_code"] = exc.code
+        await persist_game(self.data_port, chat.id, "akinator", state)
+        try:
+            await prompt.edit_text(render_akinator_text(state), reply_markup=akinator_keyboard(state), parse_mode="HTML")
+        except Exception:
+            # The initial message is still a valid, restart-safe game record.
+            logger.debug("Akinator panel refresh failed", exc_info=True)
+
+    async def handle_uno_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        if self.uno_service is None or update.effective_chat is None:
+            return
+        async with self.uno_service.presentation_lock(int(update.effective_chat.id)):
+            await self._open_uno_command(update, context)
+
+    async def _open_uno_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Start or resume the durable Turkish UNO lobby."""
+        message = update.effective_message or update.message
+        chat = update.effective_chat
+        user = update.effective_user
+        if message is None or chat is None or user is None or self.uno_service is None:
+            return
+        if getattr(chat, "type", None) not in {"group", "supergroup"}:
+            await message.reply_text("UNO grup oyunu; arkadaşlarını gruba çağırıp orada başlatabilirsin.")
+            return
+        try:
+            state = await self.uno_service.current(int(chat.id))
+            if state and state.get("status") in {"lobby", "playing", "finished"} and state.get("thread_id") != getattr(message, "message_thread_id", None):
+                await message.reply_text("UNO masası başka bir konuda açık. Oyunun kurulduğu konuda /uno yazarak masaya dönebilirsin.")
+                return
+            if state and (state.get("status") in {"lobby", "playing"} or state.get("status") == "finished" and not state.get("match_complete")):
+                prompt = await message.reply_text(
+                    render_uno_text(state, user_id=int(user.id)),
+                    reply_markup=uno_keyboard(state, user_id=int(user.id), miniapp_url=getattr(Config, "MINIAPP_URL", None) if getattr(Config, "MINIAPP_GAMES_ENABLED", False) else None),
+                    parse_mode="HTML",
+                )
+                await self.uno_service.set_prompt_message(chat_id=int(chat.id), message_id=int(prompt.message_id), expected_revision=int(state.get("revision", 0)))
+                return
+            state = await self.uno_service.start(
+                chat_id=int(chat.id), owner_id=int(user.id),
+                owner_name=str(user.first_name or "oyuncu"),
+                thread_id=getattr(message, "message_thread_id", None),
+            )
+            reply_kwargs = {
+                "reply_markup": uno_keyboard(state, user_id=int(user.id), miniapp_url=getattr(Config, "MINIAPP_URL", None) if getattr(Config, "MINIAPP_GAMES_ENABLED", False) else None),
+                "parse_mode": "HTML",
+            }
+            thread_id = getattr(message, "message_thread_id", None)
+            if thread_id is not None:
+                reply_kwargs["message_thread_id"] = int(thread_id)
+            prompt = await message.reply_text(render_uno_text(state, user_id=int(user.id)), **reply_kwargs)
+            await self.uno_service.set_prompt_message(
+                chat_id=int(chat.id), message_id=int(getattr(prompt, "message_id", 0) or 0), expected_revision=int(state.get("revision", 0))
+            )
+        except UnoError as exc:
+            messages = {
+                "UNO_ACTIVE": "bu grupta zaten açık bir UNO masası var",
+                "UNO_STORAGE_UNAVAILABLE": "UNO masası kaydedilemedi; veri deposu hazır değil",
+            }
+            await message.reply_text(messages.get(exc.code, "UNO masası açılamadı; biraz sonra tekrar dene."))
+
+    async def handle_guess_age_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Start the multi-round group photo age game."""
+        message = update.effective_message or update.message
+        chat = update.effective_chat
+        user = update.effective_user
+        if message is None or chat is None or user is None:
+            return
+        if getattr(chat, "type", None) not in {"group", "supergroup"}:
+            await message.reply_text("yaş tahmini grup oyunu; özel sohbette başlatmam")
+            return
+        if self.guess_age_service is None:
+            await message.reply_text("yaş tahmini şu an hazır değil")
+            return
+        try:
+            await self.game_runtime.open_age(context.bot, chat_id=int(chat.id), owner_id=int(user.id),
+                owner_name=str(user.first_name or "Oyuncu"), thread_id=getattr(message, "message_thread_id", None))
+        except GuessAgeServiceError as exc:
+            messages = {
+                "GUESS_AGE_OTHER_TOPIC": "Yaş tahmini başka bir konuda açık. Oyunun kurulduğu konuda /yas yazarak devam edebilirsin.",
+                "GUESS_AGE_ACTIVE": "bu grupta zaten bir yaş tahmini turu dönüyor",
+                "GUESS_AGE_ASSET_MISSING": "oyun görseli bulunamadı; kurulum eksik görünüyor",
+                "GUESS_AGE_STORAGE_UNAVAILABLE": "oyun durumu kaydedilemedi; biraz sonra tekrar dene",
+            }
+            await message.reply_text(messages.get(exc.code, "yaş tahmini başlatılamadı"))
+
+    async def handle_guess_age_guess_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        message = update.effective_message or update.message
+        chat = update.effective_chat
+        user = update.effective_user
+        if message is None or chat is None or user is None or self.guess_age_service is None:
+            return
+        args = getattr(context, "args", None) or []
+        if not args:
+            await message.reply_text("tahmini yaz: /yastahmin 27")
+            return
+        try:
+            state, outcome = await self.guess_age_service.submit(
+                chat_id=int(chat.id),
+                user_id=int(user.id),
+                display_name=str(user.first_name or "oyuncu"),
+                guess=args[0],
+            )
+            await message.reply_text("Tahminin kaydedildi. Puan tur sonunda açıklanacak.", reply_to_message_id=getattr(message, "message_id", None))
+        except GuessAgeServiceError as exc:
+            messages = {
+                "GUESS_AGE_NOT_FOUND": "aktif yaş tahmini yok; /yas ile başlat",
+                "GUESS_AGE_ROUND_EXPIRED": "bu turun süresi doldu; sonuç panelini yenile",
+                "guess_age_already_answered": "bu tur için tahminini zaten bıraktın",
+                "guess_age_invalid_number": "yaşı sayı olarak yaz",
+                "guess_age_out_of_range": "1 ile 120 arasında bir yaş yaz",
+            }
+            await message.reply_text(messages.get(exc.code, "tahmin kaydedilemedi"))
+
+    def _schedule_guess_age_round(self, context: ContextTypes.DEFAULT_TYPE, state: dict[str, Any]) -> None:
+        queue = getattr(context, "job_queue", None)
+        if queue is None:
+            return
+        chat_id = int(state["chat_id"])
+        name = f"guess_age:{chat_id}:{state['round_id']}:{int(state['round'])}"
+        for job in queue.get_jobs_by_name(name):
+            job.schedule_removal()
+        try:
+            started_at = datetime.fromisoformat(str(state.get("round_started_at")))
+            if started_at.tzinfo is None:
+                started_at = started_at.replace(tzinfo=timezone.utc)
+            remaining = max(1, int(state.get("round_seconds", 60)) - int((datetime.now(timezone.utc) - started_at).total_seconds()))
+        except (TypeError, ValueError, OverflowError):
+            remaining = 1
+        queue.run_once(
+            self._guess_age_round_timeout,
+            when=remaining,
+            data={"chat_id": chat_id, "round_id": str(state["round_id"]), "round": int(state["round"]), "thread_id": state.get("thread_id")},
+            name=name,
+        )
+
+    async def _guess_age_round_timeout(self, context: ContextTypes.DEFAULT_TYPE):
+        job = getattr(context, "job", None)
+        data = getattr(job, "data", None) or {}
+        if self.guess_age_service is None:
+            return
+        chat_id = int(data.get("chat_id", 0) or 0)
+        await self._advance_guess_age_round(
+            context, chat_id, str(data.get("round_id") or ""), int(data.get("round", 0) or 0)
+        )
+
+    async def _advance_guess_age_round(self, context, chat_id: int, round_id: str, round_no: int) -> None:
+        try:
+            await self.game_runtime.advance_age(context.bot, chat_id, round_id, round_no)
+        except GuessAgeServiceError:
+            logger.debug("Guess age timer ignored", exc_info=True)
+
     async def _word_guess_timeout_callback(self, context: ContextTypes.DEFAULT_TYPE):
         job = context.job
         chat_id = job.chat_id
@@ -2207,8 +2478,11 @@ class CommandHandler:
                     owner_id=update.effective_user.id,
                     owner_name=update.effective_user.first_name or "Oyuncu",
                 )
-            except ValueError as exc:
-                message = {"active_game": "Bu grupta zaten aktif bir Batak masası var."}.get(
+            except (RuntimeError, ValueError) as exc:
+                message = {
+                    "active_game": "Bu grupta zaten aktif bir Batak masası var.",
+                    "game_persistence_unavailable": "Oyun kaydı şu an kullanılamıyor. Biraz sonra tekrar dene.",
+                }.get(
                     str(exc), "Batak masası oluşturulamadı."
                 )
                 await update.effective_message.reply_text(message)
@@ -2224,6 +2498,15 @@ class CommandHandler:
 
         from src.games.batak import BatakGame
         batak_game = BatakGame(self.chat_engine)
+
+        await hydrate_game(self.data_port, update.effective_chat.id, context.chat_data, "batak_players")
+        existing_players = list(context.chat_data.get("batak_players") or [])
+        if existing_players:
+            existing_names = list(context.chat_data.get("batak_names") or [])
+            status_text = batak_game.get_lobby_text(existing_names or ["Oyuncu"] * len(existing_players))
+            keyboard = batak_game.get_lobby_keyboard(len(existing_players))
+            await update.effective_message.reply_text(status_text, reply_markup=keyboard, parse_mode="HTML")
+            return
 
         context.chat_data['batak_players'] = [update.effective_user.id]
         context.chat_data['batak_names'] = [update.effective_user.first_name]
@@ -2279,12 +2562,13 @@ class CommandHandler:
                 bet=bet,
                 event_id=event_id,
             )
-        except ValueError as exc:
+        except (RuntimeError, ValueError) as exc:
             errors = {
                 "invalid_bet": "Bahis sayısal olmalı. Örnek: <code>/blackjack 100</code>",
                 "bet_out_of_range": f"Bahis {service.MIN_BET}–{service.MAX_BET} jeton arasında olmalı.",
                 "active_game": "Zaten devam eden bir Blackjack elin var. Önce mevcut eli bitir.",
                 "insufficient_balance": "Bu bahis için yeterli jetonun yok.",
+                "game_persistence_unavailable": "Oyun kaydı şu an kullanılamıyor; bahis alınmadı. Biraz sonra tekrar dene.",
             }
             code = normalize_error_code(exc, "GAME_ERROR").lower()
             await message.reply_text(errors.get(code, "Blackjack eli başlatılamadı."), parse_mode="HTML")
@@ -2322,6 +2606,7 @@ class CommandHandler:
                 InlineKeyboardButton("⚔️ Düello", callback_data="game_start_duello")
             ],
             [InlineKeyboardButton("🔴 Connect Four", callback_data="game_start_connect4")],
+            [InlineKeyboardButton("♟️ Satranç", callback_data="game_start_chess")],
             [
                 InlineKeyboardButton("🛑 Oyunu Bitir / İptal", callback_data="game_stop_all")
             ]
@@ -2383,7 +2668,7 @@ class CommandHandler:
                 if str(exc) not in {"game_expired", "not_owner"}:
                     logger.warning("Roulette cancellation rejected: %s", summarize_exception(exc, label="roulette_cancel"))
 
-        game_keys = ['word_guess', 'hangman', 'word_game', 'connect4', 'tictactoe', 'gomoku', 'batak_players', 'sise_lobby', 'quiz_answer', 'quiz_question', 'quiz_round_id']
+        game_keys = ['word_guess', 'hangman', 'word_game', 'connect4', 'tictactoe', 'gomoku', 'chess', 'akinator', 'guess_age', 'uno', 'batak_players', 'sise_lobby', 'quiz_answer', 'quiz_question', 'quiz_round_id']
         cleared = False
         for key in game_keys:
             if key in context.chat_data:
@@ -2393,7 +2678,30 @@ class CommandHandler:
         # Text games also survive a process restart in the durable game-state
         # collection.  Clearing only Telegram's in-memory chat_data would
         # make a cancelled quiz or word game reappear after the next update.
-        for game_type in ("word_guess", "hangman", "word_game", "connect4", "tictactoe", "gomoku", "batak", "bottle", "quiz"):
+        if self.akinator_service is not None:
+            try:
+                state = context.chat_data.get("akinator")
+                if state:
+                    await self.akinator_service.close(state)
+            except Exception:
+                logger.debug("Akinator cancellation cleanup failed", exc_info=True)
+        if self.guess_age_service is not None:
+            try:
+                if await self.guess_age_service.cancel(chat_id):
+                    cleared = True
+            except Exception:
+                logger.debug("Guess age cancellation cleanup failed", exc_info=True)
+        if self.uno_service is not None:
+            try:
+                moderator = update.effective_chat.type in {"group", "supergroup"} and await is_admin(
+                    update, context, self.sudo_manager, authorization=self.authorization
+                )
+                if await self.uno_service.cancel(chat_id=chat_id, user_id=user_id, moderator=bool(moderator)):
+                    cancelled.append("UNO")
+                    cleared = True
+            except Exception:
+                logger.debug("UNO cancellation cleanup failed", exc_info=True)
+        for game_type in ("word_guess", "hangman", "word_game", "connect4", "tictactoe", "gomoku", "chess", "akinator", "guess_age", "uno", "batak", "bottle", "quiz"):
             await delete_game(self.data_port, chat_id, game_type)
 
         job_name = f"word_guess_timeout_{update.effective_chat.id}"
@@ -2401,6 +2709,12 @@ class CommandHandler:
         for job in current_jobs:
             job.schedule_removal()
             cleared = True
+        jobs_method = getattr(context.job_queue, "jobs", None)
+        if callable(jobs_method):
+            for job in jobs_method():
+                if str(getattr(job, "name", "")).startswith(f"guess_age:{update.effective_chat.id}:"):
+                    job.schedule_removal()
+                    cleared = True
 
         if cancelled:
             labels = ", ".join(cancelled)
@@ -2414,6 +2728,20 @@ class CommandHandler:
             await update.message.reply_text("🤔 Şu an aktif bir oyun görünmüyor.", parse_mode='HTML')
 
     async def handle_sisecevir_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        await hydrate_game(self.data_port, update.effective_chat.id, context.chat_data, "bottle_players")
+        existing_players = list(context.chat_data.get("bottle_players") or [])
+        if existing_players:
+            await update.effective_message.reply_text(
+                "🍾 <b>Şişe Çevirmece Lobisi zaten açık</b>\n\n"
+                f"👥 <b>Oyuncu sayısı:</b> {len(existing_players)}\n"
+                "Masaya katılmak veya oyunu başlatmak için aşağıdaki düğmeleri kullan.",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("🍾 Masaya Katıl", callback_data="game_bottle_join")],
+                    [InlineKeyboardButton("🏁 Oyunu Başlat", callback_data="game_bottle_spin")],
+                ]),
+                parse_mode="HTML",
+            )
+            return
         context.chat_data['bottle_players'] = [update.effective_user.id]
         user_name = update.effective_user.first_name
 

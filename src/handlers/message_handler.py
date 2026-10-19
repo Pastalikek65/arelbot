@@ -45,6 +45,7 @@ from src.ai.conversation_style import NORMAL_MODE, is_normal_mode
 from src.group_replies import GroupMessageRef, GroupReplyPlan, GroupReplyRouter, GroupTurnContext, ReplySegment
 from src.storage.group_reply_store import RecentMessageIndex, ReplyDeliveryLedger
 from src.services.group_reply_delivery import GroupReplyDeliveryService
+from src.services.guess_age_service import GuessAgeServiceError
 from src.moderation.contracts import ModerationAction
 from src.moderation.action_executor import TelegramModerationActionExecutor
 from src.moderation.action_ledger import ModerationActionLedger
@@ -79,6 +80,7 @@ class MessageHandler:
         group_reply_delivery=None,
         group_reply_metrics=None,
         authorization=None,
+        guess_age_service=None,
     ):
         self.chat_engine = chat_engine
         self.data_port = data_port or HandlerDataPort.from_engine(chat_engine)
@@ -97,6 +99,7 @@ class MessageHandler:
         )
         self.group_reply_metrics = group_reply_metrics
         self.authorization = authorization
+        self.guess_age_service = guess_age_service
         self.guardian_telegram_service = GuardianTelegramService()
         self.guardian_surface = GuardianSurface(self.data_port)
         # The executor is created lazily with the current Telegram bot.  The
@@ -715,6 +718,34 @@ class MessageHandler:
 
     async def _check_game_inputs(self, update: Update, context: ContextTypes.DEFAULT_TYPE, text: str) -> bool:
         await hydrate_games(self.data_port, update.effective_chat.id, context.chat_data)
+        age_state = context.chat_data.get("guess_age")
+        if (
+            getattr(self, "guess_age_service", None) is not None
+            and isinstance(age_state, dict)
+            and age_state.get("status") == "playing"
+            and str(text or "").strip().isdecimal()
+            and getattr(update.effective_chat, "type", None) in {"group", "supergroup"}
+        ):
+            try:
+                _, outcome = await self.guess_age_service.submit(
+                    chat_id=int(update.effective_chat.id),
+                    user_id=int(update.effective_user.id),
+                    display_name=str(update.effective_user.first_name or "oyuncu"),
+                    guess=str(text).strip(),
+                )
+                await update.effective_message.reply_text(
+                    f"tahmin kaydedildi · +{int(outcome.score)} puan",
+                    reply_to_message_id=getattr(update.effective_message, "message_id", None),
+                )
+            except GuessAgeServiceError as exc:
+                messages = {
+                    "GUESS_AGE_ROUND_EXPIRED": "bu turun süresi doldu; sonuç panelini yenile",
+                    "guess_age_already_answered": "bu tur için tahminini zaten bıraktın",
+                }
+                notice = messages.get(exc.code)
+                if notice:
+                    await update.effective_message.reply_text(notice)
+            return True
         word_guess = context.chat_data.get("word_guess")
         job_queue = getattr(context, "job_queue", None)
         if word_guess and job_queue is not None:

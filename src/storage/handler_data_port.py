@@ -102,6 +102,9 @@ class HandlerDataPort:
     async def delete_game_state(self, chat_id: int, game_type: str) -> Any:
         return await self._invoke("delete_game_state", chat_id, game_type)
 
+    async def list_due_game_states(self, *, now: float, limit: int = 100) -> Any:
+        return await self._invoke("list_due_game_states", now=now, limit=limit)
+
     async def claim_game_action(self, **kwargs: Any) -> Any:
         return await self._invoke("claim_game_action", **kwargs)
 

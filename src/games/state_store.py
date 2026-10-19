@@ -15,11 +15,45 @@ GAME_KEYS = {
     "connect4": "connect4",
     "tictactoe": "tictactoe",
     "gomoku": "gomoku",
+    "chess": "chess",
+    "akinator": "akinator",
+    "guess_age": "guess_age",
+    "uno": "uno",
     "wordle_tr": "wordle_tr",
     "batak_players": "batak",
     "bottle_players": "bottle",
     "quiz_answer": "quiz",
 }
+
+
+def memory_fallback_allowed(database: Any | None) -> bool:
+    """Return whether an in-memory game fallback is safe for this port.
+
+    Production Mongo access must fail closed.  A process-local game state is
+    useful for unit tests and explicit local/degraded adapters, but silently
+    using it behind the real database would make a restart lose the round.
+    ``HandlerDataPort`` is treated as a test adapter only when its wrapped
+    object has no production availability marker.
+    """
+
+    if database is None or not hasattr(database, "available"):
+        return True
+    wrapped = getattr(database, "_repository", None)
+    test_port_fallback = (
+        type(database).__name__ == "HandlerDataPort"
+        and not hasattr(wrapped, "available")
+    )
+    production_database = (
+        type(database).__module__ == "src.database"
+        or type(wrapped).__module__ == "src.database"
+    )
+    return bool(
+        test_port_fallback
+        or (
+            getattr(database, "available", True) is True
+            and not production_database
+        )
+    )
 
 
 class GameStateStore(Protocol):
@@ -156,16 +190,68 @@ async def hydrate_games(database, chat_id: int, chat_data) -> None:
                 chat_data[key] = state
 
 
+async def hydrate_game(database, chat_id: int, chat_data, key: str) -> Any:
+    """Load one durable game state into ``chat_data`` when it is missing.
+
+    Command handlers use this targeted form after a process restart so opening
+    a game command cannot overwrite a still-active persisted round.  The
+    legacy ``hydrate_games`` helper remains available for message routing,
+    while this function avoids an unnecessary read of every game collection.
+    """
+
+    normalized = str(key or "").strip().casefold()
+    if not normalized:
+        return None
+    if normalized in chat_data:
+        return chat_data.get(normalized)
+    game_type = GAME_KEYS.get(normalized, normalized)
+    getter = getattr(database, "get_game_state", None)
+    if getter is None:
+        return None
+    try:
+        state = await getter(int(chat_id), game_type)
+    except Exception:
+        return None
+    if state is None:
+        return None
+    if game_type == "quiz":
+        chat_data.setdefault("quiz_answer", state.get("answer", ""))
+        chat_data.setdefault("quiz_question", state.get("question", ""))
+        chat_data.setdefault("quiz_round_id", state.get("round_id"))
+    elif game_type == "batak":
+        chat_data["batak_players"] = list(state.get("players", []))
+        chat_data["batak_names"] = list(state.get("names", []))
+    elif game_type == "bottle":
+        chat_data["bottle_players"] = list(state.get("players", []))
+    else:
+        chat_data[normalized] = state
+    return state
+
+
 async def persist_game(database, chat_id: int, game_type: str, state) -> None:
+    saver = getattr(database, "save_game_state", None)
+    if saver is None:
+        if not memory_fallback_allowed(database):
+            raise RuntimeError("game_persistence_unavailable")
+        return
     try:
         payload: Any = state.to_dict() if isinstance(state, GameSession) else state
-        await database.save_game_state(chat_id, game_type, payload)
+        await saver(chat_id, game_type, payload)
     except Exception:
+        if not memory_fallback_allowed(database):
+            raise RuntimeError("game_persistence_unavailable") from None
         return
 
 
 async def delete_game(database, chat_id: int, game_type: str) -> None:
+    deleter = getattr(database, "delete_game_state", None)
+    if deleter is None:
+        if not memory_fallback_allowed(database):
+            raise RuntimeError("game_persistence_unavailable")
+        return
     try:
-        await database.delete_game_state(chat_id, game_type)
+        await deleter(chat_id, game_type)
     except Exception:
+        if not memory_fallback_allowed(database):
+            raise RuntimeError("game_persistence_unavailable") from None
         return

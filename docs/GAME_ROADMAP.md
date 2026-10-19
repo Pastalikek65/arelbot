@@ -521,6 +521,22 @@ ve game_latency_seconds.
 **Çıkış:** full pytest, compileall, architecture check, feature catalog audit,
 phase audit ve staging replay.
 
+### 3.12 UNO — uno
+
+**Döngü:** 2–8 oyuncu lobiye katılır; yedi kart dağıtılır; üst kartın rengi,
+sayı/türü veya joker kuralına uyan kart oynanır. +2, +4, pas, yön değiştir,
+renk seçimi, kart çekme/pas geçme ve UNO çağrısı aynı typed state geçişinden
+geçer. Elini bitiren oyuncu turu kazanır ve rakip el puanları skoruna eklenir.
+
+**UX:** Telegram panelinde lobi, oynanabilir kartlar, renk seçimleri, kart çek,
+pas, UNO de ve oyunu bitir butonları vardır. Rakip elleri yalnızca kart sayısı
+olarak görünür. `MiniAppGameDefinition` manifesti aynı state/action namespace'i
+ile ileride React Mini App'e bağlanır.
+
+**Kabul:** Eski callback reddi, yanlış sıra, başkasının kartı, geçersiz +4,
+renk seçmeden devam, duplicate action, restart recovery ve owner/admin stop
+fixture testleriyle doğrulanır.
+
 ## 5. Release checklist
 
 - [ ] GameDefinition ve feature registry metadata'sı var.

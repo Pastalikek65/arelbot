@@ -100,14 +100,23 @@ class MenuService:
 
     def games_menu(self, language: str = "tr") -> tuple[str, InlineKeyboardMarkup]:
         text = f"{translator.t('games.title', language)}\n\n{translator.t('games.subtitle', language)}"
+        if language == "tr":
+            text = ("🎮 <b>Oyun salonu</b>\n\n"
+                    "<b>Kart masaları</b> · UNO 2–8, Batak 2–4 oyuncu; Blackjack kişisel el.\n"
+                    "<b>Tahmin ve kelime</b> · Fotoğraf, bilgi ve Türkçe kelime turları.\n"
+                    "<b>Tahta oyunları</b> · Bir arkadaşını çağır ve karşılaşmayı başlat.\n\n"
+                    "Bir oyun seç. Açık UNO masasına <code>/uno</code>, yaş tahminine <code>/yas</code> ile dönebilirsin.")
         keyboard = [
             [InlineKeyboardButton("🎭 Anlatmaca", callback_data="game_start_anlat"), InlineKeyboardButton("🪑 Adam asmaca", callback_data="game_hangman_difficulty")],
             [InlineKeyboardButton("🔠 Kelime türetme", callback_data="game_word_categories"), InlineKeyboardButton("🎯 Quiz", callback_data="game_start_quiz")],
             [InlineKeyboardButton("🍾 Şişe", callback_data="game_start_sise"), InlineKeyboardButton("🃏 Batak", callback_data="game_start_batak")],
-            [InlineKeyboardButton("🃏 Blackjack", callback_data="game_start_blackjack")],
+            [InlineKeyboardButton("🃏 UNO · 2–8 kişi", callback_data="game_start_uno"), InlineKeyboardButton("🃏 Blackjack", callback_data="game_start_blackjack")],
             [InlineKeyboardButton("🔴 Connect Four", callback_data="game_start_connect4")],
             [InlineKeyboardButton("❌⭕ XOX", callback_data="game_start_tictactoe")],
             [InlineKeyboardButton("⚫⚪ Gomoku · Beşli", callback_data="game_start_gomoku")],
+            [InlineKeyboardButton("♟️ Satranç", callback_data="game_start_chess")],
+            [InlineKeyboardButton("🧞 Arel Tahmin", callback_data="game_start_akinator")],
+            [InlineKeyboardButton("🎂 Yaş Tahmini", callback_data="game_start_guess_age")],
             [InlineKeyboardButton("🔫 Rulet", callback_data="game_start_rusruleti"), InlineKeyboardButton("⚔️ Düello", callback_data="game_start_duello")],
             [InlineKeyboardButton("🏆 Liderlik", callback_data="menu_leaderboard"), InlineKeyboardButton("🛑 Oyunu bitir", callback_data="game_stop_all")],
             [InlineKeyboardButton("🏠 Ana menü", callback_data="menu_main")],

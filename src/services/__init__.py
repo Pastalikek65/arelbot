@@ -16,6 +16,8 @@ from .inline_query_service import InlineQueryService
 from .blackjack_service import BlackjackService
 from .batak_service import BatakService
 from .roulette_service import RouletteService
+from .guess_age_service import GuessAgeService, GuessAgeServiceError
+from .uno_service import UnoService, UnoError
 
 __all__ = [
     "AIService",
@@ -34,6 +36,10 @@ __all__ = [
     "BlackjackService",
     "BatakService",
     "RouletteService",
+    "GuessAgeService",
+    "GuessAgeServiceError",
+    "UnoService",
+    "UnoError",
     "EconomyService",
     "AnnouncementService",
     "AnnouncementRequest",

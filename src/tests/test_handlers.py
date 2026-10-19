@@ -474,7 +474,7 @@ class TestCommandHandler:
         await handler.handle_oyunbitir_command(update, context)
 
         assert {game_type for _, game_type in deleted} == {
-            "word_guess", "hangman", "word_game", "connect4", "tictactoe", "gomoku", "batak", "bottle", "quiz"
+            "word_guess", "hangman", "word_game", "connect4", "tictactoe", "gomoku", "chess", "akinator", "guess_age", "uno", "batak", "bottle", "quiz"
         }
 
     @pytest.mark.asyncio
