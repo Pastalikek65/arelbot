@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "approvals": [
+    {
+      "feature_key": "akinator",
+      "approval_id": "owner-arel-akinator-20261021",
+      "source_fingerprint": "ebd4d59c6cd15cc0aa73ccb6d50a387960bdc5b76075285595a38e50339e3324",
+      "reviewer": "owner-explicit-chat-approval-20261021",
+      "issued_at": "2026-10-21T12:27:03.543433+00:00",
+      "expires_at": "2026-11-20T12:27:03.543433+00:00",
+      "source_governance": "approved",
+      "robots_policy": "allowed",
+      "terms_review": "approved",
+      "production_signoff": "approved",
+      "approval_basis": "Owner explicitly approved continued noncommercial operation of these four existing games after disclosure of Akinator service-permission uncertainty.",
+      "legal_permission_asserted": false,
+      "unresolved_external_service_permission": true
+    },
+    {
+      "feature_key": "chess",
+      "approval_id": "owner-arel-chess-20261021",
+      "source_fingerprint": "d248783416ea388a02969392d635ea1ca4ff3e62843f536683d32ea169d9c9ad",
+      "reviewer": "owner-explicit-chat-approval-20261021",
+      "issued_at": "2026-10-21T12:27:03.543433+00:00",
+      "expires_at": "2026-11-20T12:27:03.543433+00:00",
+      "source_governance": "approved",
+      "robots_policy": "allowed",
+      "terms_review": "approved",
+      "production_signoff": "approved",
+      "approval_basis": "Owner explicitly approved continued noncommercial operation of these four existing games after disclosure of Akinator service-permission uncertainty.",
+      "legal_permission_asserted": false,
+      "unresolved_external_service_permission": false
+    },
+    {
+      "feature_key": "guess_age",
+      "approval_id": "owner-arel-guess_age-20261021",
+      "source_fingerprint": "a193f2dde85446f7a2fe8d5e468648e909033cbd771803195419bb46aac0342b",
+      "reviewer": "owner-explicit-chat-approval-20261021",
+      "issued_at": "2026-10-21T12:27:03.543433+00:00",
+      "expires_at": "2026-11-20T12:27:03.543433+00:00",
+      "source_governance": "approved",
+      "robots_policy": "allowed",
+      "terms_review": "approved",
+      "production_signoff": "approved",
+      "approval_basis": "Owner explicitly approved continued noncommercial operation of these four existing games after disclosure of Akinator service-permission uncertainty.",
+      "legal_permission_asserted": false,
+      "unresolved_external_service_permission": false
+    },
+    {
+      "feature_key": "uno",
+      "approval_id": "owner-arel-uno-20261021",
+      "source_fingerprint": "817716b3247d2b253bd698f944de8207109a3bebddfa54e6549bf9419e844a73",
+      "reviewer": "owner-explicit-chat-approval-20261021",
+      "issued_at": "2026-10-21T12:27:03.543433+00:00",
+      "expires_at": "2026-11-20T12:27:03.543433+00:00",
+      "source_governance": "approved",
+      "robots_policy": "allowed",
+      "terms_review": "approved",
+      "production_signoff": "approved",
+      "approval_basis": "Owner explicitly approved continued noncommercial operation of these four existing games after disclosure of Akinator service-permission uncertainty.",
+      "legal_permission_asserted": false,
+      "unresolved_external_service_permission": false
+    }
+  ],
+  "note": "Operator deployment decisions; does not assert a grant of rights by third-party providers. Default source documentation remains unchanged."
+}

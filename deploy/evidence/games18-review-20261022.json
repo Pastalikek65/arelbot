@@ -1,0 +1,44 @@
+{
+  "source_commit": "76439c120ad8b15f183097195b105b054d7be681",
+  "release_gate_passed": 25,
+  "local_tests": {
+    "passed": 2981,
+    "skipped": 19
+  },
+  "server_docker_tests": {
+    "passed": 2994,
+    "skipped": 6
+  },
+  "local_docker": "NOT_RUN - stale IPC socket; cleanup denied by automatic policy",
+  "remote_docker": {
+    "isolated_project": "arelbot-gate-chess18-76439c1",
+    "production_containers_modified": false,
+    "cleanup_ok": true,
+    "checks_passed": 11
+  },
+  "native_emoji_catalog": {
+    "set_name": "chessno",
+    "ids": 26,
+    "artwork_redistributed": false,
+    "all_tiles_visually_inspected": true
+  },
+  "visual_validation": {
+    "kind": "local browser approximation from actual markup",
+    "width": 340,
+    "states": [
+      "white",
+      "black",
+      "selection_and_capture",
+      "unicode_fallback"
+    ],
+    "horizontal_overflow": false,
+    "real_telegram_client": "NOT_RUN - deferred by operator"
+  },
+  "independent_review": {
+    "model": "gpt-6-sol",
+    "effort": "medium",
+    "blockers": 0,
+    "targeted_tests_passed": 21
+  },
+  "github_updated": false
+}

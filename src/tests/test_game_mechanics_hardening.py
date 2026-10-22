@@ -349,6 +349,7 @@ def test_guess_age_round_deadline_is_enforced_without_answer_leak():
         asset=AgeAsset("age", "age.png", 42),
     )
     state["round_started_at"] = (datetime.now(timezone.utc) - timedelta(seconds=30)).isoformat()
+    state["initial_delivery_pending"] = False
     assert round_expired(state)
     before = dict(state["answers"])
     outcome = submit_guess(state, user_id=2, display_name="oyuncu", guess=42)

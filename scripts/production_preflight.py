@@ -45,12 +45,20 @@ _TOKEN_RE = re.compile(r"^\d{6,}:[A-Za-z0-9_-]{20,}$")
 _OWNER_RE = re.compile(r"^[1-9]\d{0,19}$")
 _SECRET_RE = re.compile(r"^[A-Za-z0-9_-]{16,256}$")
 _FEATURE_NAME_RE = re.compile(r"^[A-Za-z0-9_.-]{1,128}$")
+# The Compose file interpolates the database passwords into the connection
+# strings without escaping them, so only the characters that need no escaping
+# are allowed.  The documented character set is a rule, not a note.
+_PASSWORD_CHARSET_RE = re.compile(r"^[A-Za-z0-9._~-]+$")
 _PLACEHOLDERS = frozenset(
     {
         "",
         "your_telegram_bot_token_here",
         "your_telegram_user_id_here",
         "replace-with-a-random-secret-at-least-32-characters",
+        "replace-with-a-random-mongo-password",
+        "replace-with-a-random-mongo-app-password",
+        "replace-with-a-random-mongo-test-password",
+        "replace-with-a-random-redis-password",
         "changeme",
         "change-me",
     }
@@ -87,8 +95,14 @@ def read_dotenv(path: Path) -> dict[str, str]:
 
 
 def _non_placeholder(values: dict[str, str], key: str) -> bool:
-    value = values.get(key, "").strip()
-    return bool(value) and value.casefold() not in _PLACEHOLDERS
+    return _secret_value(values.get(key, ""))
+
+
+def _secret_value(value: str) -> bool:
+    """Return whether a credential is present and not a documented placeholder."""
+
+    text = str(value or "").strip()
+    return bool(text) and text.casefold() not in _PLACEHOLDERS
 
 
 def _enabled(values: dict[str, str], key: str) -> bool:
@@ -361,16 +375,72 @@ def validate_production_env(values: dict[str, str], *, env_file: Path | None = N
         mongo_uri = urlsplit(values.get("MONGODB_URI", "").strip())
         mongo_uri_ok = mongo_uri.scheme in {"mongodb", "mongodb+srv"} and bool(mongo_uri.hostname)
     except ValueError:
+        mongo_uri = None
         mongo_uri_ok = False
     checks.append(CheckResult("mongodb_uri", mongo_uri_ok, None if mongo_uri_ok else "mongodb_uri_invalid"))
+    # The Compose MongoDB service refuses anonymous access, so a production
+    # deployment must carry a credential in the connection string.  The check
+    # only reports whether a credential is present; it never echoes it.
+    mongo_credentials_ok = bool(
+        mongo_uri_ok
+        and _secret_value(mongo_uri.username or "")
+        and _secret_value(mongo_uri.password or "")
+    )
+    checks.append(
+        CheckResult(
+            "mongodb_credentials",
+            mongo_credentials_ok,
+            None if mongo_credentials_ok else "mongodb_credentials_missing",
+        )
+    )
+    # The password of the Compose connection string is not escaped, so a
+    # reserved character would silently produce an unusable URI.  The check
+    # only reports the character set, never the value.
+    mongo_password_charset_ok = all(
+        _PASSWORD_CHARSET_RE.fullmatch(values.get(key, "").strip())
+        for key in ("MONGO_ROOT_PASSWORD", "MONGO_APP_PASSWORD", "MONGO_TEST_PASSWORD")
+        if values.get(key, "").strip()
+    )
+    checks.append(
+        CheckResult(
+            "mongodb_password_charset",
+            bool(mongo_password_charset_ok),
+            None if mongo_password_charset_ok else "mongodb_password_charset_invalid",
+        )
+    )
     redis_required = _enabled(values, "REDIS_REQUIRED") or _enabled(values, "MEDIA_REDIS_REQUIRED")
     checks.append(CheckResult("redis_required", redis_required, None if redis_required else "redis_required_disabled"))
     try:
         redis_uri = urlsplit(values.get("REDIS_URL", "").strip())
         redis_uri_ok = redis_uri.scheme in {"redis", "rediss"} and bool(redis_uri.hostname)
     except ValueError:
+        redis_uri = None
         redis_uri_ok = False
     checks.append(CheckResult("redis_uri", redis_uri_ok, None if redis_uri_ok else "redis_uri_invalid"))
+    # The Compose Redis service requires a password, so the connection string
+    # has to carry one.  Only its presence is reported, never its value.
+    redis_credentials_ok = bool(redis_uri_ok and _secret_value(redis_uri.password or ""))
+    checks.append(
+        CheckResult(
+            "redis_credentials",
+            redis_credentials_ok,
+            None if redis_credentials_ok else "redis_credentials_missing",
+        )
+    )
+    # The Redis password is interpolated into the connection string by Compose
+    # as well, so the same character set applies to it.
+    redis_password_charset_ok = all(
+        _PASSWORD_CHARSET_RE.fullmatch(values.get(key, "").strip())
+        for key in ("REDIS_PASSWORD",)
+        if values.get(key, "").strip()
+    )
+    checks.append(
+        CheckResult(
+            "redis_password_charset",
+            bool(redis_password_charset_ok),
+            None if redis_password_charset_ok else "redis_password_charset_invalid",
+        )
+    )
 
     feature_flags_ok = _valid_feature_flags(values.get("FEATURE_FLAGS", ""))
     checks.append(CheckResult("feature_flags", feature_flags_ok, None if feature_flags_ok else "feature_flags_invalid"))

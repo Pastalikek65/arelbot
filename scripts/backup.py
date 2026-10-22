@@ -5,6 +5,11 @@ The script intentionally delegates database format handling to the official
 MongoDB and Redis CLIs.  It never prints connection URIs (which may contain
 credentials) and writes a SHA-256 manifest only after every artifact is
 complete.
+
+The credentials never reach the command line.  The MongoDB tools read the
+connection string from a private configuration file and ``redis-cli`` reads
+the password from the ``REDISCLI_AUTH`` environment variable, because every
+process on the host can read the argument vector of another process.
 """
 
 from __future__ import annotations
@@ -20,10 +25,20 @@ import tarfile
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Mapping
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from src.security.tool_credentials import (
+    mongo_tool_config,
+    mongo_tool_environment,
+    redis_tool_environment,
+)
 
 
-CommandRunner = Callable[[list[str]], None]
+CommandRunner = Callable[[list[str], dict[str, str]], None]
 
 
 class BackupError(RuntimeError):
@@ -38,9 +53,15 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def run_quiet(command: list[str]) -> None:
+def run_quiet(command: list[str], environment: Mapping[str, str]) -> None:
     try:
-        result = subprocess.run(command, check=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        result = subprocess.run(
+            command,
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=dict(environment),
+        )
     except FileNotFoundError as exc:
         raise BackupError(f"required command is missing: {command[0]}") from exc
     if result.returncode:
@@ -82,8 +103,16 @@ def create_backup(output_dir: Path, *, mongo_uri: str, redis_url: str,
     try:
         mongo_archive = temp_root / "mongo.archive.gz"
         redis_snapshot = temp_root / "redis.rdb"
-        run_command(["mongodump", f"--uri={mongo_uri}", f"--archive={mongo_archive}", "--gzip"])
-        run_command(["redis-cli", "-u", redis_url, "--rdb", str(redis_snapshot)])
+        redis_target, redis_environment = redis_tool_environment(redis_url)
+        with mongo_tool_config(mongo_uri) as mongo_config:
+            run_command(
+                ["mongodump", f"--config={mongo_config}", f"--archive={mongo_archive}", "--gzip"],
+                mongo_tool_environment(mongo_uri),
+            )
+        run_command(
+            ["redis-cli", "-u", redis_target, "--rdb", str(redis_snapshot)],
+            redis_environment,
+        )
         artifacts = [mongo_archive, redis_snapshot]
         chroma_archive = temp_root / "chroma_db.tar.gz"
         if archive_directory(chroma_dir, chroma_archive):

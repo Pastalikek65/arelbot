@@ -16,7 +16,6 @@ from src.features.providers import (
     FlightSearchLinkProvider,
     FuelProvider,
     MarketProvider,
-    NewsProvider,
     PharmacyProvider,
     PrayerTimesProvider,
     RssNewsProvider,
@@ -24,6 +23,7 @@ from src.features.providers import (
     WeatherProvider,
 )
 from src.features.providers.crypto import CryptoProvider
+from src.features.providers.rss_news import BreakingNewsRssProvider
 
 
 @pytest.mark.asyncio
@@ -34,7 +34,6 @@ async def test_all_first_party_typed_providers_expose_lazy_health_contract():
         PharmacyProvider(),
         FuelProvider(),
         CurrencyProvider(),
-        NewsProvider(),
         BimDealsProvider(),
         PrayerTimesProvider(),
         WeatherProvider(),
@@ -47,6 +46,7 @@ async def test_all_first_party_typed_providers_expose_lazy_health_contract():
         StoryProvider(),
         DocumentSearchProvider(SimpleNamespace(collection=None)),
         RssNewsProvider(feeds=("https://fixture.invalid/news.xml",)),
+        BreakingNewsRssProvider(feeds=("https://fixture.invalid/news.xml",)),
     ]
 
     for provider in providers:

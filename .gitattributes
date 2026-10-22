@@ -1,1 +1,21 @@
+# Repository text files are LF-only.  A CRLF or mixed-terminator file makes
+# every tool that splits on "\n" see only part of the physical lines, and Git
+# refuses to normalize a blob that already contains CRLF, so a checkout keeps
+# reintroducing mixed terminators.  "text=auto" leaves binary assets
+# untouched; Git detects them by a NUL byte in the first 8000 bytes.
+* text=auto eol=lf
+
+# Python sources are LF-only.  This rule is more specific than the wildcard
+# above and therefore wins for every ".py" path.
+*.py text eol=lf
+
+# Keep the attribute file itself LF so the rules above stay byte-stable.
+.gitattributes text eol=lf
+
+# Shell entrypoints are executed directly on Linux and must never carry CR.
 entrypoint.sh text eol=lf
+
+# Preserve upstream license/attribution bytes used by asset provenance hashes.
+assets/playing_cards/LICENSE.txt -text
+assets/uno_maildian/LICENSE -text
+assets/uno_maildian/source.txt -text

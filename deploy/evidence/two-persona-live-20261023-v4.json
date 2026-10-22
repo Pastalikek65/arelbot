@@ -1,0 +1,67 @@
+{
+  "release": "2026.10.23-persona-4",
+  "hashes": {
+    "src/ai/personality.py": "94394b36789027416df3ef18af6341e9393af666238416af03975b7e57967d4b",
+    "src/ai/conversation_style.py": "56b84ed4b674833d2ccb45382b2c56fbd288fe8b30deb67858c1527c4424080e",
+    "src/chat_engine.py": "0dba27beb34869aa7a2cda1b8d20e82e3e956622cab8f6a193a225e4f9554b56",
+    "src/handlers/command_handler.py": "4204452eecef6c9839298a6644a0f92a866d31b2e1f61c191d026d7625911daa",
+    "src/handlers/callback_handler.py": "535173de3d08bbbf4b4c362d275ad01c4a3201f100bdcac6d4e8d3da3c6e5957",
+    "src/services/menu_service.py": "3253f10637edb95485b77f8d5abb2e4259ef83958b76b97da2adb04b47c3d0c2"
+  },
+  "callbacks": [
+    "persona_user:normal",
+    "persona_user:roast"
+  ],
+  "route": [
+    "openai",
+    "hrmn",
+    "cloudflare",
+    "evren",
+    "nvidia"
+  ],
+  "openai_mode": "cli",
+  "source_offer_parts": 3,
+  "normal_live_probes": [
+    {
+      "input": "selam naber",
+      "reply": "selam, iyiyim kanka sen nasılsın?",
+      "provider": "cloudflare",
+      "model": "@cf/openai/gpt-oss-120b",
+      "seconds": 4.13
+    },
+    {
+      "input": "çayı demledim sonra aklımdan çıkmış buz gibi olmuş",
+      "reply": "buz gibi çay, bir tutam limon ya da bal ekleyip ısıtmak da iyi gelir, yoksa buz gibi içmek de serin bir keyif! 😄",
+      "provider": "cloudflare",
+      "model": "@cf/openai/gpt-oss-120b",
+      "seconds": 4.47
+    },
+    {
+      "input": "bir bölüm izleyecektim sabah olmuş",
+      "reply": "Peki, hangi diziyi izledin? Kafanın tazelemesi için kahve de alıcaksan, mahnıyı da unutma!",
+      "provider": "nvidia",
+      "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "seconds": 7.39
+    }
+  ],
+  "probe_scope": "production get_response; isolated synthetic history; persistence disabled",
+  "configuration_verification": "provider_settings_env_compose_and_manifest_verified",
+  "codex_cli": "codex-cli 0.147.0",
+  "containers": [
+    {
+      "role": "bot",
+      "health": "healthy",
+      "restarts": 0
+    },
+    {
+      "role": "worker",
+      "health": "healthy",
+      "restarts": 0
+    }
+  ],
+  "server_full_tests": "3220 passed, 6 skipped, 15 warnings in 134.02s (0:02:14)",
+  "github_updated": false,
+  "telegram_human_ui": "NOT_RUN",
+  "protected_policy_unchanged": true,
+  "runtime_matches_local_source": true
+}

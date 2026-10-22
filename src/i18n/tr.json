@@ -2,10 +2,10 @@
   "menu.title": "<b>Arel</b> · Ana menü",
   "menu.subtitle": "Sohbet, günlük işler ve topluluk araçları.",
   "games.title": "🎮 <b>Oyun salonu</b>",
-  "games.subtitle": "Bir oyun seç. Kurallar ve başlangıç seçenekleri açılan ekranda görünecek.",
-  "leaderboard.empty": "🏆 Bu sohbet için henüz liderlik kaydı yok.",
-  "leaderboard.title": "🏆 <b>LİDERLİK TABLOSU</b>",
-  "reminder.usage": "🔔 Kullanım: <code>/remind 10dk Su iç</code>",
-  "reminder.ok": "✅ Tamam! {when} sonra hatırlatacağım: {text}",
-  "language.changed": "✅ Dil tercihi Türkçe olarak güncellendi."
+  "games.subtitle": "Bir oyun seç. Kuralları ve başlangıç seçeneklerini sonraki ekranda görebilirsin.",
+  "leaderboard.empty": "🏆 Bu sohbetin liderlik tablosunda henüz sonuç yok. Bir oyun bitince sonuçlar burada görünür.",
+  "leaderboard.title": "🏆 <b>Liderlik tablosu</b>",
+  "reminder.usage": "🔔 Hatırlatıcı eklemek için örnek: <code>/remind 10dk Su iç</code>",
+  "reminder.ok": "✅ Hatırlatıcı kuruldu. {when} sonra: {text}",
+  "language.changed": "Dil Türkçe olarak ayarlandı."
 }

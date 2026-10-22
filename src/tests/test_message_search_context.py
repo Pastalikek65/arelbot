@@ -9,7 +9,7 @@ from src.storage.handler_data_port import HandlerDataPort
 
 class _Repo:
     async def get_chat_settings(self, chat_id):
-        return {"persona_mode": "needle"}
+        return {"persona_mode": "roast"}
 
     async def get_user(self, user_id):
         return {"persona_mode": "serious"}
@@ -42,8 +42,8 @@ async def test_persona_mode_resolution_is_scoped_to_group_or_private_store():
         effective_user=SimpleNamespace(id=11),
     )
 
-    assert await handler._resolve_persona_mode(group_update, -100) == "needle"
-    assert await handler._resolve_persona_mode(private_update, 11) == "serious"
+    assert await handler._resolve_persona_mode(group_update, -100) == "roast"
+    assert await handler._resolve_persona_mode(private_update, 11) == "normal"
 
 
 @pytest.mark.asyncio
@@ -114,4 +114,4 @@ async def test_manual_search_keeps_external_results_untrusted_and_preserves_pers
     args, kwargs = calls[0]
     assert args[1] == "hava durumu"
     assert kwargs["context"] == external
-    assert kwargs["persona_mode"] == "needle"
+    assert kwargs["persona_mode"] == "roast"

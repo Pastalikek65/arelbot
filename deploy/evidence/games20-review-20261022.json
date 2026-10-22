@@ -1,0 +1,40 @@
+{
+  "implementation_commit": "a03c3080e3dc063643217c1a4137d3acda14a112",
+  "scope": [
+    "source-derived UNO inline",
+    "Pişti private sticker selection",
+    "Papaz indexed hidden-card selection",
+    "Batak signed gallery and panel serialization",
+    "Blackjack visual table"
+  ],
+  "independent_review": {
+    "model": "gpt-6-sol medium",
+    "code_verdict": "accepted after fixes",
+    "fixed": [
+      "optional-cookie-key startup dependency",
+      "duplicate UNO no-op result IDs",
+      "exhausted-deck Pass UI",
+      "UNO challenge access",
+      "Batak concurrent panel regression"
+    ],
+    "native_sticker_sets": {
+      "uno": 114,
+      "playing_cards": 105
+    },
+    "botfather_feedback": "Enabled; user confirmed and current-value message independently read in BotFather"
+  },
+  "tests": {
+    "offline_checks": 14,
+    "local_pytest_passed": 3107,
+    "local_pytest_skipped": 19,
+    "isolated_docker_checks": 11,
+    "isolated_pytest_passed": 3120,
+    "isolated_pytest_skipped": 6,
+    "cleanup_ok": true
+  },
+  "source_offer": "exact Git source in 20MiB parts; signed manifest, licenses, private delivery handler",
+  "human_multiplayer_live_acceptance": "NOT_RUN - operator deferred; no invented players",
+  "github_updated": false,
+  "runtime_acceptance": "INVALIDATED: actual Orchestrator startup raised NameError in _init_handlers; unit suites did not construct it",
+  "superseded_by_fix": "b306c55"
+}

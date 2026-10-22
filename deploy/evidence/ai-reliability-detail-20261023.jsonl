@@ -1,0 +1,5 @@
+{"kind": "cli_configuration", "home_config_model": null, "binary_ready": true}
+{"kind": "approved_cli", "requested_model": "gpt-5.6-luna", "status": "ok", "reply": "selam, iyiyim ya takılıyorum 😄 sende naber?", "seconds": 11.238}
+{"kind": "approved_cli", "requested_model": "gpt-6-luna", "status": "cli_process_failed", "seconds": 4.784}
+{"kind": "image_http", "model": "gpt-image-2.5-prism", "status": 500, "error": {"code": "server_error", "type": "server_error"}, "flags": [], "json_keys": ["error"]}
+{"kind": "image_http", "model": "gpt-image-2.5-flare", "status": 500, "error": {"code": "server_error", "type": "server_error"}, "flags": [], "json_keys": ["error"]}

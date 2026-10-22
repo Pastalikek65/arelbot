@@ -1,0 +1,43 @@
+{
+  "source": "ahmetaa/zemberek-nlp",
+  "commit": "037202c7e18b977c95181a76db05cb1e95846554",
+  "accessed_at": "2026-10-21",
+  "license": "Apache-2.0",
+  "source_files": [
+    {
+      "path": "LICENSE",
+      "sha256": "c55ac4a942b0e8dc83833680e4afefc5b0ef8a5bc0d17e1addb3c98e235ea07a"
+    },
+    {
+      "path": "morphology/src/main/resources/tr/master-dictionary.dict",
+      "sha256": "c539e12904d1ccac4792073f05deeae2babe692249dc4a359da254f1bd338f6f"
+    },
+    {
+      "path": "morphology/src/main/resources/tr/proper.dict",
+      "sha256": "5704f4017854c474442cce246443b9fec5967799a968ab9d7eb0cce930e32178"
+    },
+    {
+      "path": "morphology/src/main/resources/tr/person-names.dict",
+      "sha256": "0f4bc4d607158266e0098a2b6c57eed661756056391a358f27bc4e2345b2fb14"
+    },
+    {
+      "path": "morphology/src/main/resources/tr/proper-from-corpus.dict",
+      "sha256": "694b5f92b0c794e885d32686a0f2b9dff519de9f78289f2c3fff7274ff812874"
+    },
+    {
+      "path": "morphology/src/main/resources/tr/locations-tr.dict",
+      "sha256": "3fb84de8b0dd3ca1d5df51fedd4c17cf18cf24d02f72b78a793dc398888acfae"
+    },
+    {
+      "path": "morphology/src/main/resources/tr/abbreviations.dict",
+      "sha256": "bafb5117ac6fbae0f7360a1cf8df91e46c131d170084fad18cd2a8882ef9f5ef"
+    }
+  ],
+  "derived_file": "lexicon.txt",
+  "derived_sha256": "0a0b77771bbf12dff143a2772d6c15c48cc86187069b7ef0d3b1eb3dccfcd73f",
+  "derived_count": 26311,
+  "accepted_primary_pos": ["Noun", "Adj", "Adv", "Verb", "Pron", "Conj", "Interj", "Num", "Det", "Postp"],
+  "abbreviation_homograph_exceptions": ["fide", "ilk", "iyi", "ray", "tıp"],
+  "excluded_untagged_proper": ["abdülleziz"],
+  "filter": "NFC lowercase one-token Turkish alphabetic lemmas, 3-24 letters. Zemberek untagged -mek/-mak forms are Verb, other untagged forms Noun; retain explicit Noun/Adj/Adv/Verb/Pron/Conj/Interj/Num/Det/Postp. Exclude punctuation, duplication, abbreviation-only entries, capitalized/Prop-only entries and one identified untagged personal name. Dedicated proper/person/location/corpus dictionaries are excluded as sources, not subtracted from common master lemmas: homographs such as deniz, ada, bilge, özgür remain. Arel original words are unioned at runtime."
+}

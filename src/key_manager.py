@@ -53,6 +53,8 @@ class ServiceCircuitOpenError(KeyManagerError):
 
 
 class ServiceType(Enum):
+    OPENAI = "openai"
+    HRMN = "hrmn"
     GROQ = "groq"
     CLOUDFLARE = "cloudflare"
     GOOGLE_SEARCH = "google_search"
@@ -67,6 +69,7 @@ class ServiceType(Enum):
     # OpenAI-compatible endpoint.  It is optional and only enters routing
     # when NVIDIA_API_KEY is configured (or explicitly selected in a route).
     NVIDIA = "nvidia"
+    D2API = "d2api"
     # Kept as a compatibility enum for old fixtures and explicitly pinned
     # legacy deployments. Production routing never selects it by default.
     CLEANAPIS = "cleanapis"
@@ -80,11 +83,16 @@ class KeyManager:
     def __init__(self, encryptor=None):
         self.encryptor = encryptor
         self.keys = {
+            # ChatGPT plan OAuth credentials live in a dedicated protected
+            # file and are never represented as API keys.
+            ServiceType.OPENAI: [],
+            ServiceType.HRMN: self._maybe_decrypt([Config.HRMN_API_KEY]) if Config.HRMN_API_KEY else [],
             ServiceType.FREEMODEL: self._maybe_decrypt([Config.FREEMODEL_KEY]) if Config.FREEMODEL_KEY else [],
             ServiceType.GROQ: self._maybe_decrypt(Config.GROQ_KEYS),
             ServiceType.IAMHC: self._maybe_decrypt([Config.IAMHC_KEY]) if Config.IAMHC_KEY else [],
             ServiceType.EVREN: self._maybe_decrypt([Config.EVREN_KEY]) if Config.EVREN_KEY else [],
             ServiceType.NVIDIA: self._maybe_decrypt([Config.NVIDIA_KEY]) if Config.NVIDIA_KEY else [],
+            ServiceType.D2API: self._maybe_decrypt([Config.D2API_KEY]) if Config.D2API_ENABLED and Config.D2API_KEY else [],
             # Clean APIs is retired. Keep an empty compatibility slot so old
             # enum-based fixtures remain importable, but never load its
             # deployment secret into the runtime key inventory.
@@ -104,11 +112,14 @@ class KeyManager:
         
         # Track current index
         self.current_indices = {
+            ServiceType.OPENAI: 0,
+            ServiceType.HRMN: 0,
             ServiceType.FREEMODEL: 0,
             ServiceType.GROQ: 0,
             ServiceType.IAMHC: 0,
             ServiceType.EVREN: 0,
             ServiceType.NVIDIA: 0,
+            ServiceType.D2API: 0,
             ServiceType.CLEANAPIS: 0,
             ServiceType.NINEROUTER: 0,
             ServiceType.CEREBRAS: 0,
@@ -118,11 +129,14 @@ class KeyManager:
         }
         
         self.key_statuses: Dict[ServiceType, Dict[str, KeyStatus]] = {
+            ServiceType.OPENAI: {},
+            ServiceType.HRMN: {k: KeyStatus.ACTIVE for k in self.keys[ServiceType.HRMN]},
             ServiceType.FREEMODEL: {k: KeyStatus.ACTIVE for k in self.keys[ServiceType.FREEMODEL] if k},
             ServiceType.GROQ: {k: KeyStatus.ACTIVE for k in self.keys[ServiceType.GROQ] if k},
             ServiceType.IAMHC: {k: KeyStatus.ACTIVE for k in self.keys[ServiceType.IAMHC] if k},
             ServiceType.EVREN: {k: KeyStatus.ACTIVE for k in self.keys[ServiceType.EVREN] if k},
             ServiceType.NVIDIA: {k: KeyStatus.ACTIVE for k in self.keys[ServiceType.NVIDIA] if k},
+            ServiceType.D2API: {k: KeyStatus.ACTIVE for k in self.keys[ServiceType.D2API] if k},
             ServiceType.CLEANAPIS: {k: KeyStatus.ACTIVE for k in self.keys[ServiceType.CLEANAPIS] if k},
             ServiceType.NINEROUTER: {k: KeyStatus.ACTIVE for k in self.keys[ServiceType.NINEROUTER] if k},
             ServiceType.CEREBRAS: {k: KeyStatus.ACTIVE for k in self.keys[ServiceType.CEREBRAS] if k},
@@ -132,6 +146,8 @@ class KeyManager:
         }
         
         self.exhaustion_times: Dict[ServiceType, Dict[str, float]] = {
+            ServiceType.HRMN: {},
+            ServiceType.OPENAI: {},
             ServiceType.GROQ: {},
             ServiceType.CLOUDFLARE: {},
             ServiceType.GOOGLE_SEARCH: {},
@@ -143,6 +159,7 @@ class KeyManager:
             ServiceType.IAMHC: {},
             ServiceType.EVREN: {},
             ServiceType.NVIDIA: {},
+            ServiceType.D2API: {},
             ServiceType.CLEANAPIS: {},
         }
     def _maybe_decrypt(self, keys_list: List[str]) -> List[str]:

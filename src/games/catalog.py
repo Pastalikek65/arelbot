@@ -445,9 +445,13 @@ GAME_DEFINITIONS: dict[str, GameDefinition] = {
     # The engine supports 6..15 boards; the lobby default is 10x10.
     "gomoku": GameDefinition("gomoku", "Gomoku / Beşli", category="board", min_players=2, max_players=2, turn_timeout_seconds=300, schema_version=1, state_key="gomoku", board_size=(10, 10), connect_length=5),
     "chess": GameDefinition("chess", "Satranç", category="board", min_players=2, max_players=2, turn_timeout_seconds=1800, schema_version=1, state_key="chess", board_size=(8, 8)),
-    "akinator": GameDefinition("akinator", "Arel Tahmin", category="quiz", min_players=1, max_players=1, turn_timeout_seconds=900, schema_version=1, state_key="akinator"),
+    "akinator": GameDefinition("akinator", "Akinatör", category="quiz", min_players=1, max_players=1, turn_timeout_seconds=900, schema_version=1, state_key="akinator"),
     "guess_age": GameDefinition("guess_age", "Yaş Tahmini", category="quiz", min_players=1, max_players=100, turn_timeout_seconds=600, schema_version=1, state_key="guess_age"),
     "uno": GameDefinition("uno", "UNO", category="card", min_players=2, max_players=8, turn_timeout_seconds=60, schema_version=1, state_key="uno"),
+    "kelime_zinciri": GameDefinition("kelime_zinciri", "Kelime Zinciri", category="word", min_players=2, max_players=20, turn_timeout_seconds=30, schema_version=2, state_key="kelime_zinciri"),
+    "tabu": GameDefinition("tabu", "Takım Tabu", category="party", min_players=4, max_players=20, turn_timeout_seconds=60, supports_difficulty=False, supports_hints=False, state_key="tabu"),
+    "casus": GameDefinition("casus", "Casus", category="party", min_players=4, max_players=16, turn_timeout_seconds=90, supports_difficulty=False, supports_hints=False, state_key="casus"),
+    "vampir_koylu": GameDefinition("vampir_koylu", "Vampir Köylü", category="party", min_players=7, max_players=20, turn_timeout_seconds=60, supports_difficulty=False, supports_hints=False, state_key="vampir_koylu"),
     # New rounds use a selectable 6x6, 7x7 or 8x8 board and four-in-a-row.
     # The UI domain still reads legacy 3x3 snapshots for restart compatibility.
     "tictactoe": GameDefinition("tictactoe", "XOX", category="board", min_players=2, max_players=2, turn_timeout_seconds=180, schema_version=1, state_key="tictactoe", board_size=(6, 6), connect_length=4),
@@ -457,9 +461,20 @@ GAME_DEFINITIONS: dict[str, GameDefinition] = {
     # restart preserves the board without persisting the plaintext answer.
     "wordle_tr": GameDefinition("wordle_tr", "Türkçe Wordle", category="word", min_players=1, max_players=1, turn_timeout_seconds=900, schema_version=1, state_key="wordle_tr"),
     "batak": GameDefinition("batak", "Batak", category="card", min_players=2, max_players=4, turn_timeout_seconds=45),
-    "blackjack": GameDefinition("blackjack", "Blackjack", category="card", max_players=8, turn_timeout_seconds=90),
+    "blackjack": GameDefinition("blackjack", "Blackjack", category="card", max_players=1, turn_timeout_seconds=90),
     "bottle": GameDefinition("bottle", "Şişe Çevirme", category="social", max_players=100, turn_timeout_seconds=120),
 }
+
+
+from src.games.puzzle_catalog import PUZZLES
+
+for _puzzle in PUZZLES:
+    GAME_DEFINITIONS[_puzzle.key] = GameDefinition(
+        _puzzle.key, _puzzle.title, category={"words": "word", "boards": "board", "guess": "quiz", "social": "party", "cards": "card"}[_puzzle.category],
+        min_players=_puzzle.min_players, max_players=_puzzle.max_players,
+        state_key=_puzzle.key, supports_difficulty=_puzzle.key == "sudoku",
+        supports_hints=_puzzle.key in {"wordle_tr", "anagram", "sudoku"},
+    )
 
 
 def get_game_definition(game_key: object) -> GameDefinition:

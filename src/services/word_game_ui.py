@@ -37,14 +37,14 @@ def render_word_game_text(state: dict, *, note: str | None = None) -> str:
     found_text = ", ".join(escape(value) for value in found[-12:]) or "henüz yok"
     note_text = f"\n\n{escape(str(note))}" if note else ""
     return (
-        "🔠 <b>KELİME TÜRETME</b>\n\n"
+        "🔠 <b>Kelime Türetme</b>\n\n"
         f"Kategori: <b>{escape(str(state.get('category', 'genel')).title())}</b> · "
         f"Zorluk: <b>{escape(str(state.get('difficulty_label', 'Normal')))}</b>\n"
         f"Harfler: <code>{escape(str(state.get('letters', '')))}</code>\n"
         f"Hedef: <b>{int(state.get('target_count', 0) or 0)}</b> kelime · "
         f"Bulunan: <b>{len(found)}</b> · İpucu: <b>{int(state.get('hints_used', 0) or 0)}</b>\n"
         f"Bulunan kelimeler: <code>{found_text}</code>\n\n"
-        "Bir kelime gönder; butonlardan harfleri karıştırabilir veya sıradaki ipucunu açabilirsin."
+        "Bu harflerle bir kelime oluşturup mesaj olarak yaz. Harfleri karıştırabilir veya ipucu alabilirsin."
         f"{note_text}"
     )
 
@@ -91,8 +91,8 @@ def connect4_keyboard(state: dict) -> InlineKeyboardMarkup:
     if status == "lobby":
         rows = [[InlineKeyboardButton("➕ Katıl", callback_data=f"connect4:{rid}:join")]]
         if len(_connect4_players(state)) >= 2:
-            rows[0].append(InlineKeyboardButton("▶️ Başlat", callback_data=f"connect4:{rid}:start"))
-        rows.append([InlineKeyboardButton("🛑 Lobiyi kapat", callback_data=f"connect4:{rid}:stop")])
+            rows[0].append(InlineKeyboardButton("Maçı başlat", callback_data=f"connect4:{rid}:start"))
+        rows.append([InlineKeyboardButton("Oyunu bitir", callback_data=f"connect4:{rid}:stop")])
         return InlineKeyboardMarkup(rows)
     if status != "playing":
         return InlineKeyboardMarkup([[InlineKeyboardButton("🎮 Yeni oyun", callback_data="game_start_connect4")]])
@@ -142,13 +142,15 @@ def render_connect4_text(state: dict, *, note: str | None = None) -> str:
     elif state.get("winner_id"):
         winner = next((p for p in players if str(p.get("id", "")) == str(state.get("winner_id"))), None)
         turn = f"🏆 Kazanan: <b>{escape(str((winner or {}).get('name', 'oyuncu')))}</b>"
+    elif status == "cancelled":
+        turn = "Oyun iptal edildi."
     elif status == "expired":
         turn = "⌛ Süre doldu; bu tur kapandı"
     else:
         turn = "🤝 Berabere"
     note_text = f"\n\n{escape(str(note))}" if note else ""
     return (
-        "🔴 <b>CONNECT FOUR</b>\n\n"
+        "🔴 <b>Connect Four</b>\n\n"
         f"Oyuncular: {names}\n{turn}\n\n"
         "<code>" + "\n".join(lines) + "</code>\n\n"
         "Dört taşı yatay, dikey veya çapraz hizala. Sütun numarasına bas."

@@ -2,6 +2,7 @@
 
 | Kaynak | Kullanım | Lisans/şart | Cache | Not |
 |---|---|---|---|---|
+| [Zemberek-NLP master dictionary](https://github.com/ahmetaa/zemberek-nlp/blob/037202c7e18b977c95181a76db05cb1e95846554/morphology/src/main/resources/tr/master-dictionary.dict) | Kelime Zinciri için yerel Türkçe lemma sözlüğü | Apache-2.0; [lisans](https://github.com/ahmetaa/zemberek-nlp/blob/037202c7e18b977c95181a76db05cb1e95846554/LICENSE) ve `assets/word_chain/LICENSE` | İmaj içine gömülü sabit snapshot; oyun sırasında HTTP yok | Commit, ham dosya hashleri, filtre ve türetilmiş dosya hash'i `assets/word_chain/source.json` içinde |
 | `turkiye-data` | 81 il, 973 ilçe, koordinat | MIT | Yerel snapshot | Güncelleme script'i ile yenilenir |
 | BTK Ulusal Numaralandırma Planı | Telefon alan kodları | Resmi kamu kaynağı | Yerel snapshot | Kaynak bağlantısı cevapta tutulur |
 | AFAD Event Service | Son depremler | Resmi kamu servisi; kaynak bağlantısı gösterilir | 60 sn / 5 dk | JSON API, HTML uyumluluk fallback'i |
@@ -22,6 +23,17 @@ Elokence içeriğinin veya servis erişiminin ayrı izni yerine geçmez. Arel'in
 Her yeni kaynak için URL, erişim tarihi, lisans, attribution, robots/terms,
 rate limit, freshness hedefi, timeout ve fallback alanları doldurulur.
 
+Kelime Zinciri sözlüğü Zemberek'in master sözlüğündeki tek sözcüklü lemmalardan
+türetilmiştir. Etiketsiz `-mek/-mak` girdileri fiil, diğer etiketsiz girdiler
+isimdir; açık sözcük türü etiketleri de değerlendirilir. Özel ad, kişi, yer ve
+korpus sözlükleri yeni sözcük eklemek için kullanılmaz. Bu listelerde ayrıca
+geçen `deniz`, `ada`, `bilge`, `özgür` gibi ortak sözcükler master sözlükteki
+lemma kanıtı nedeniyle korunur. Özgün 792 Arel sözcüğü ayrıca korunur.
+Kaynak ve lisans 2026-10-21 tarihinde sabit commit üzerinden kontrol edildi.
+Teknik kaynak yenilemesi sabit commit ve hash doğrulamasına tabidir; üretim
+oyunu ağ erişimine veya dış servise başvurmaz. Apache-2.0 attribution ve
+lisans kopyası `assets/word_chain/` altında tutulur.
+
 ## Native typed provider kayıtları
 
 | Kaynak | Özellikler | Timeout | Cache / freshness | Fallback |
@@ -34,11 +46,13 @@ rate limit, freshness hedefi, timeout ve fallback alanları doldurulur.
 | Tavily Search API | `/ara`, `/search` | 15 s | 1 dk / 5 dk | API anahtarı rotasyonu, kaynak bağlantısı ve stale cache |
 | Habertürk | `/ezan` | 8 s | 1 saat / 24 saat | stale cache + kontrollü hata |
 
-Bu kaynaklar `src/features/providers/public_data.py` içindeki typed provider
-sözleşmesini uygular. HTML metni Telegram'a gönderilmeden önce escape edilir;
-şema boş veya değişmişse provider hatası üretilir ve legacy scraper sessizce
-devreye girmez. Provider runtime bunun üzerine retry, circuit breaker, stale
-cache ve health metriği uygular.
+Bu kaynaklar `src/features/providers/` altındaki typed provider sözleşmesini
+uygular: HTML tabanlı kaynaklar `public_data.py`, TRT Haber RSS `rss_news.py`,
+Tavily `web_search.py`, Open-Meteo `weather.py` ve `air_quality.py`, AFAD
+`earthquakes.py` içinde yaşar. HTML metni Telegram'a gönderilmeden önce escape
+edilir; şema boş veya değişmişse provider hatası üretilir ve legacy scraper
+sessizce devreye girmez. Provider runtime bunun üzerine retry, circuit breaker,
+stale cache ve health metriği uygular.
 
 Nöbetçi eczane ve döviz/altın kaynakları üretimde etkinleştirilmiştir. İstekler
 sabit HTTPS host allowlist'i, içerik boyutu sınırı, redirect reddi ve kaynak
@@ -55,6 +69,61 @@ Bu özellik ağ sağlayıcısı çağırmadığı için local typed provider ola
 timeout ile çalışır; sonuçlarda fiyatların arama sitesinde doğrulanması açıkça
 belirtilir.
 
+Bu yüzey hiçbir sayfayı getirmez; yalnızca kullanıcıya açık bir arama
+bağlantısı üretir. Bu nedenle kayıt, veri lisansından çok bir kaynak
+görünürlüğü kaydıdır: `licenses.json` içinde `google.com` ve `bing.com`
+host'larıyla `Google Flights and Google search links` ve `Bing search links`
+kayıtları `pending` durumdadır. Rezervasyon, ödeme ve uçuş fiyatı bilgisi Arel
+tarafında hiç üretilmez.
+
+## Medya platformları (yt-dlp)
+
+Medya indirme yüzeyi tek bir first-party adaptör kullanır:
+`src/media/providers/ytdlp_provider.py` (`yt-dlp`). Instagram, TikTok, YouTube,
+X, Facebook ve Reddit adresleri için `Referer` başlığı platform kök alan
+adından gelir; istekler cookie kasası kapalıyken kimlik bilgisi taşımaz ve
+ortak public-host ve redirect politikasından geçer. Operatör cookie kasasını
+açtığında yalnızca kasadaki platform oturumu kullanılır, geçici dosya iş
+sonunda job dizininden silinir. `aria2c` yoksa `yt-dlp` indiricisine düşer.
+Boyut ve süre sınırları provider tarafından uygulanır, sonuç kaynak
+bağlantısıyla birlikte saklanır.
+
+Her platform için `licenses.json` içinde ayrı bir kayıt tutulur:
+`youtube.com`, `tiktok.com`, `instagram.com`, `x.com`, `facebook.com` ve
+`reddit.com`. Kayıtların tamamı `pending` durumdadır; platform koşulları ve
+hak sahibi lisansı gerektiği için `terms_review` tamamlanmadan bu yüzey
+üretimde etkinleştirilmez.
+
+## Web arama fallback'i (DuckDuckGo)
+
+`web_search` birincil olarak Tavily Search API'yi kullanır. Anahtar devresi
+açıkken ya da çağrı başarısız olduğunda aynı provider `api.duckduckgo.com`
+Instant Answer uç noktasına düşer; cevap `Abstract` ve `RelatedTopics`
+alanlarına sınırlanır ve aynı escape, timeout, boyut sınırı ile
+untrusted-context politikası uygulanır.
+
+Bu fallback de bir kaynak kaydı gerektirir: `licenses.json` içinde
+`duckduckgo.com` host'uyla `DuckDuckGo Instant Answers` kaydı `pending`
+durumdadır. Tavily ve DuckDuckGo aynı özellik içinde birbirinin yerine geçtiği
+için kaynak adı cevapta ayrıca gösterilir.
+
+## Lisans kaydı host alanı
+
+`licenses.json` içindeki her `sources[]` kaydı, kaydın yönettiği host'u `host`
+alanıyla taşır ve bu alan zorunludur. `scripts/architecture_check.py` hem eksik
+`host` alanını reddeder hem de provider modüllerinde **literal URL** veya
+**host allowlist'i** olarak görünen host'ların kayıt altında olduğunu
+doğrular. Bir kayıt kendi alt alan adlarını kapsar: `coingecko.com` kaydı
+`api.coingecko.com` adresini de kapsar.
+
+Kaydın varlığı bir onay değildir. `source_governance: pending` olan kayıt
+envanterde görünür ama hukuki ve robots incelemesi tamamlanmadan production
+sign-off sayılmaz; onay ayrı bir adımdır.
+
+Kod, kütüphane ve konteyner imajı kayıtlarında `host` alanı gerçekten
+kullanılan host'u gösterir: `github.com` bir upstream depo için, `docker.io`
+Docker Hub imajı için, `ghcr.io` GitHub Container Registry imajı için
+kullanılır.
 
 ## Typed public web reader and search
 
@@ -63,6 +132,8 @@ belirtilir.
 `web_search` uses the Tavily Search API through `TavilySearchProvider`. API keys remain in `KeyManager`, are never returned in a result or log, and quota/temporary failures rotate through the configured key circuit. Query length, result count, timeout and output size are bounded. Search titles, snippets and links are treated as untrusted data and escaped before the Telegram display surface. Runtime cache, rate limit, provider health, circuit breaker and source attribution are applied by `FeatureExecutor`. The source is an approved API provider; the deployment still requires an operator supplied `TAVILY_KEYS` value and must comply with Tavily's current terms and attribution requirements.
 
 `lyrics` uses the same typed search provider and the bounded public-web reader, but only follows HTTPS results from the explicitly permitted lyrics-domain set. It rejects arbitrary domains, credentials and unsafe redirects through the shared URL policy. The response is a short, escaped excerpt with a source link; it never instructs the model to reproduce a complete copyrighted song. The feature is source-governed and remains pending until the relevant terms and attribution review is recorded.
+
+The permitted set is `genius.com`, `musixmatch.com`, `lyrics.com`, `azlyrics.com` and `songlyrics.com`. Each site carries its own license record in `licenses.json`, because each one publishes its own terms; every record is `pending` and needs its own terms and attribution review before production enablement.
 
 ## EVREN / DeepSeek V4.1 Flash
 
@@ -123,6 +194,10 @@ authorization must be signed off before production enablement.
 - iTunes results are link-only metadata; no preview audio, artwork or promotional media is downloaded or cached.
 
 ## News RSS categories
+
+`/haber` komutu yalnızca TRT Haber RSS akışlarını okur; feature manifesti
+`breaking_news` kaynağını da TRT Haber RSS olarak bildirir ve başka bir haber
+sayfası kazınmaz.
 
 News commands accept a bounded Turkish category (`güncel`, `dünya`, `ekonomi`,
 `spor`, `kültür`, `teknoloji`, or `sağlık`). The RSS provider filters only on
@@ -232,6 +307,9 @@ hukuki onay verilmiş anlamına gelmez.
 | Habertürk | namaz vakitleri | typed HTML schema | gerekli |
 | Open-Meteo | hava kalitesi | typed JSON API | gerekli |
 | Open Library / TVmaze / iTunes | kültür ve `/sarkioneri` | typed public APIs | onaylı teknik kaynak; rate limit uygulanır |
+| DuckDuckGo Instant Answers | `/ara` fallback | typed public API fallback, bounded answer/topic payload | gerekli |
+| Google Flights / Bing | `/ucak` | bağlantı üretici; ağ çağrısı ve rezervasyon yok | gerekli |
+| Medya platformları (yt-dlp) | medya indirme | cookie kasası kapalıyken kimlik bilgisisiz istek politikası, boyut/süre sınırı | gerekli |
 
 Kaynak sözleşmesi netleşmeyen adapter kill-switch/feature flag arkasında
 tutulmalı; provider kesintisi stale veri uyarısı ile gösterilmeli ve yeni bir
@@ -312,17 +390,60 @@ içinde tutulur.
 - **Arel kullanımı:** Oyun bağımsızdır; indirilen veritabanı 300 Wikimedia Commons portresi içerir. Doğum günü Wikidata P569'dan; fotoğraf Commons P18 bağlantısından alınır.
 - **Tarih doğrulaması:** Gün hassasiyetinde doğum tarihi, Commons çekim günü ve kamera EXIF `DateTimeOriginal` günü uyuşmalıdır. Dosya adında farklı bir yıl bulunması, belirsiz tarihler ve uygun lisans bulunmaması kaydı eler. Kırpılmış kopyanın oluşturulma tarihi çekim tarihi sayılmaz.
 - **Güncellik:** `python scripts/import_age_catalog.py --target 300` veritabanını indirir/genişletir; `--revalidate` mevcut kayıtların kaynak metadatasını yeniden denetler. Bot güncellemeler sırasında dış siteye bağlanmaz; yerel dosyalar ve SHA-256 manifestiyle çalışır.
-- **Attribution:** Her fotoğrafın kaynak sayfası, fotoğrafçısı, tam lisans bağlantısı, doğum ve çekim tarihi [`assets/guess_age/catalog.json`](../assets/guess_age/catalog.json) içinde saklanır. Fotoğraf kredisi ve kaynak bağlantısı oyun paneli/sonuçlarında gösterilir. Lisans dosya bazındadır; genel kaynak açıklaması lisans onayı yerine geçmez.
+- **Attribution:** Her fotoğrafın kaynak sayfası, fotoğrafçısı, tam lisans bağlantısı, doğum ve çekim tarihi [`assets/guess_age/catalog.json`](../assets/guess_age/catalog.json) içinde saklanır. Fotoğrafçı ve lisans adı grup oyun panelinde düz metin gösterilir. Tam kredi, kaynak ve lisans bağlantıları yalnız botun özel sohbetindeki `/yas kaynaklar` bölümünde sayfalı ve bağlantı önizlemesi kapalı sunulur; grup tur sonuçları bağlantı içermez. Lisans dosya bazındadır; genel kaynak açıklaması lisans onayı yerine geçmez.
 
 ## UNO
 
-- **Davranış referansı:** [nmime/uno](https://github.com/nmime/uno)
-- **Beyan edilen lisans:** Upstream `package.json` MIT.
-- **Arel kullanımı:** Kaynak kodu, frontend, Colyseus odası, wallet akışı veya
-  upstream asset'i kopyalanmaz. UNO kuralları bağımsız `src/games/uno.py`
-  motorunda yeniden uygulanır.
-- **Veri tazeliği:** Oyun state'i MongoDB game state deposunda tutulur; dış
-  provider kullanılmaz.
-- **Mini App:** `src/services/miniapp_game_registry.py` protokol v1 kaydıdır.
-  HTTPS endpoint ve Telegram `initData` doğrulaması kurulmadan feature flag
-  kapalı kalır; Telegram inline butonları oyunun güvenli fallback yüzeyidir.
+- Kaynak: [maildian/uno-telegram-bot](https://github.com/maildian/uno-telegram-bot), sabit commit `01640d1`.
+- Kod AGPL-3.0-or-later başlıkları ve lisansıyla alındı. Gerçek Game, Player, Deck sınıfları güncel Python/Telegram ortamına taşındı; sonuç galerisi de kaynak results.py'den uyarlandı. Tam dosya hashleri src/vendor/uno_maildian/SOURCE.json içinde.
+- 60 renkli ve 54 soluk PNG aynen kopyalandı. Upstream atfı, lisansı ve SHA256 kayıtları assets/uno_maildian içindedir. Özgün SVG kaynağı Wikimedia Commons UNO_cards_deck.svg (Dmitry Fomin, CC0 1.0).
+- Telegram'da 114 sticker Arel'in kendi kimlikleriyle kaydedildi. Eski botun file_id değerleri kullanılmaz. Galeri yalnız isteyen oyuncunun elini gösterir; seçilen hamle grup/tur/oyuncu/sürüm imzasıyla doğrulanır.
+- Yeni masalar kaynak motorunda; açık eski masalar bağımsız eski motorda tamamlanır. Kart ve skor durumu MongoDB'de JSON olarak kalır; eski global GameManager ve Pony ORM alınmadı. +2 biriktirme, +4 blöf ve son kart joker kısıtı kaynak kurallarını izler; Arel 500 puanlık maç/ödül kaydını korur.
+- Dağıtım Git kaynak arşivini SOURCE_OFFER.json ile parçalı olarak içerir. Kaynak kodu düğmesi ve özel sohbette /uno kaynak bu sürümün kaynaklarını sunar. Hesap, dotenv, çalışma veritabanı ve takip edilmeyen işletmeci dosyaları Git arşivinde yoktur.
+- BotFather inline mod açık, chosen-inline geri bildirimi Enabled olmalıdır. Telegram seçilen sonucun gönderildiği sohbet kimliğini iletmez: imzalı galeri hangi maç için üretildiyse oyuncunun geçerli hamlesi o maçta işlenir; başka sohbete kopyalama bu kapsamı değiştirmez.
+
+## Özgün grup oyunları: Tabu, Casus ve Vampir Köylü
+
+Tabu166Türkçe kart, Casus36mekân×4rol ve Vampir Köylü temel rol/kurallarının kodu ile metinleri bu depoda özgün yazıldı; proje MIT lisansı uygulanır. Harici GitHub oyun kodu veya kart verisi alınmadı. Daha önce incelenen oyun rehberleri yalnız davranış karşılaştırmasıdır. Oyun sırasında içerik üretimi veya kural kararı için dış AI çağrısı yapılmaz.
+
+## Sekiz bulmaca oyunu (21 Ekim 2026)
+
+Wordle, Karşı Kelime, Anagram, Hafıza Eşleştirme, Mayın Tarlası, Sudoku, Sayı Tahmini ve Refleks motorları bu projede uygulandı; üçüncü taraf oyun kodu veya görseli alınmadı. Türkçe sözlük mevcut kaynak ve lisans bildirimini korur. Zıt anlam kartları elle seçilmiş yaygın sözcük çiftleridir. Sudoku sayısal başlangıçları tek çözüm denetiminden geçer; rakam/satır/sütun simetrileriyle çeşitlendirilir. Diğer tahta ve sayılar yerel güvenli rastgelelikle hazırlanır. Yeni harici servis veya kullanıcı hesabı bağımlılığı yoktur. Proje kodu MIT lisansındadır.
+
+## On dört grup ve mantık oyunu (22 Ekim 2026)
+
+Harf Maratonu, Sözcük Avı, Yasak Harf, Ortak Hikâye, Bomba, Kör Sıralama, Kronoloji, Doğru–Yanlış, Dedektif, Amiral Battı, İki Doğru Bir Yalan, Kimim Ben, Takım Bilgi Ligi ve Zehirli Kadeh bu depoda uygulanan yerel motorlardır. Harici oyun kodu, kart paketi veya görsel alınmadı; proje kodu ve özgün metinleri MIT lisansındadır. Türkçe kelimeler mevcut sözlüğün bildirimini korur. Matematik önermeleri hesapla, mantık dosyaları bağımsız çözüm taramasıyla denetlenir. Kronoloji ve Dedektif olayları kurgudur. İki Doğru Bir Yalan iddialarında doğruluk işaretini anlatıcı belirler; bot doğruluğu araştırdığını iddia etmez. Zehirli Kadeh sanal bir oyundur ve gerçek içecek gerektirmez. Bu oyunlar sırasında dış API veya AI hakem çağrısı yapılmaz.
+
+## Telegram buton simgeleri (22 Ekim 2026)
+
+`assets/telegram/button_icons.json`, Telegram Bot API `getForumTopicIconStickers` yanıtından seçilmiş 38 özel emoji kimliğini ve alternatif Unicode simgesini içerir. Kaynak Telegram'ın `Topics` setidir. Sticker/görsel dosyaları indirilmez veya yeniden dağıtılmaz; buton Telegram istemcisinin kendi özel emoji görüntülemesini kullanır. Platformun mevcut Bot API koşulları ve kullanım kısıtları geçerlidir; `licenses.json` içindeki Telegram kaydının onay durumu değiştirilmez. Kimliklerin alınması salt-okunur API işlemidir; oyun sırasında harici emoji araması yapılmaz. Özel simge kullanım uygunluğu ve güvenli Unicode dönüşü [arayüz kaydında](TELEGRAM_BUTTONS_UPDATE_2026-10-22.md) açıklanır.
+
+## Satranç panelinin yerel Telegram emojileri
+
+- Kaynak: https://t.me/addemoji/chessno; Bot API `getStickerSet` ve 26 statik
+  `custom_emoji_id` 22 Ekim 2026 tarihinde doğrulandı, tüm kare varyantları gözle incelendi.
+- Katalog: `assets/telegram/chess_icons.json`. Her taşın açık/koyu kare varyantı
+  ve iki boş kare; a1 koyu karedir. Katalog yalnız native Telegram kimlikleri
+  içerir; artwork dosyaları bu depoda dağıtılmaz. Ayrı açık kaynak artwork
+  lisansı doğrulanmadığından görseller MIT olarak yeniden lisanslanmaz.
+- Sunum: Telegram platformunun kendi custom emoji mekanizması kullanılır.
+  Premium düğmeler kapalıysa veya API açıkça reddederse Unicode tahta kullanılır.
+  Ağ/429/belirsiz teslim hatasında tekrar mesaj gönderilmez.
+- Görsel kaynak bağlantısı grup oyun panelinde paylaşılmaz.
+
+## d2api / DeepSeek Web (22 Ekim 2026)
+
+İşletmecinin sağladığı yerel d2api kaynak anlık görüntüsü `vendor/d2api/SOURCE.json` ile hash bazında kayıtlıdır. Paket MIT beyan eder; ayrı LICENSE dosyası yoktur. DeepSeek Web servisi ve PoW WASM için izin/lisans durumu UNKNOWN olarak korunur. Kullanıcı kendi hesabıyla işletimi ve riskleri açıkça onayladı; bu kayıt servis sağlayıcının hukuki izni değildir. Hesap dosyası ve WASM depoya alınmaz; yalnız özel sunucu servisinde tutulur. Model adı proxy takma adıdır. Ayrıntılı sınırlar ve geri dönüş adımları `docs/D2API_OPERATIONS.md` içindedir.
+
+
+## Cloudflare Workers AI text rotation (2026-10-22)
+
+Official account API: https://developers.cloudflare.com/workers-ai/configuration/open-ai-compatibility/ . Text model updated after Turkish samples: `@cf/openai/gpt-oss-120b` (previous: `@cf/qwen/qwen3-30b-a3b-fp8`); model license Apache-2.0, hosted-service Cloudflare terms still apply. The operator explicitly supplied their own account authorization for text rotation with EVREN and NVIDIA. This authorization does not assert legal permission beyond applicable terms and does not approve unrelated image generation. Credentials remain outside Git and corresponding-source archives. Model, timeout, JSON/tool checks and deployment evidence: `docs/AI_ROTATION_2026-10-22.md`.
+
+
+## HRMN Harmon API
+
+Operator-requested chat and image gateway at https://api.hrmn.tr/v1.
+DeepSeek chat and Prism/Flare images use `/chat/completions`; `/models` was
+verified. Provider/model terms remain independently unreviewed. Secrets and
+generated URLs are not logged. See `HRMN_PROVIDER_2026-10-22.md`.

@@ -1,6 +1,7 @@
 """Blackjack surrender: scoped UI, half-stake settlement and contention."""
 
 import asyncio
+from datetime import timedelta
 from copy import deepcopy
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
@@ -16,6 +17,7 @@ class SharedDatabase(_Database):
     def __init__(self):
         super().__init__()
         self.claims = set()
+        self.leases = {}
         self.fail_delete = False
 
     async def claim_game_action(self, **kwargs):
@@ -27,6 +29,24 @@ class SharedDatabase(_Database):
 
     async def release_game_action(self, action_key):
         self.claims.discard(action_key)
+
+    async def claim_game_lease(self, key, token, ttl, now):
+        prior = self.leases.get(key)
+        if prior and prior[1] > now:
+            return False
+        self.leases[key] = (token, now + timedelta(seconds=ttl))
+        return True
+
+    async def renew_game_lease(self, key, token, ttl, now):
+        prior = self.leases.get(key)
+        if not prior or prior[0] != token or prior[1] <= now:
+            return False
+        self.leases[key] = (token, now + timedelta(seconds=ttl))
+        return True
+
+    async def release_game_lease(self, key, token):
+        if self.leases.get(key, (None,))[0] == token:
+            self.leases.pop(key, None)
 
     async def delete_game_state(self, chat_id, game_type):
         if self.fail_delete:
@@ -72,6 +92,9 @@ def test_surrender_refunds_half_with_integer_rounding_and_no_dealer_draw(bet, re
         assert result['state']['deck'] == started['state']['deck']
         assert economy.balance == 1000 - bet + refund
         assert economy.credits == ([refund] if refund else [])
+        assert database.states[-10, 'blackjack:7']['terminal_panel_pending']
+        assert await service.acknowledge_terminal_panel(chat_id=-10, user_id=7,
+            event_id='surrender', message_id=91)
         assert database.states == {}
         with pytest.raises(ValueError, match='duplicate_action'):
             await service.action(chat_id=-10, user_id=7, action='surrender', action_id='give-up', round_token=token)
@@ -126,6 +149,8 @@ def test_surrender_serializes_different_callbacks_and_cancel_across_service_inst
         assert result['result']['result'] == 'surrender'
         assert economy.balance == 950
         assert economy.credits == [50]
+        assert await first.acknowledge_terminal_panel(chat_id=-10, user_id=7,
+            event_id='race', message_id=91)
         assert database.states == {}
     asyncio.run(scenario())
 
@@ -137,12 +162,15 @@ def test_surrender_settlement_survives_delete_failure_and_service_restart():
         started = await service.start(chat_id=-10, user_id=7, user_name='Oyuncu', bet=100, event_id='retry')
         token = started['state']['round_token']
         database.fail_delete = True
+        result = await service.action(chat_id=-10, user_id=7, action='surrender', action_id='retry-callback', round_token=token)
         with pytest.raises(RuntimeError, match='delete_interrupted'):
-            await service.action(chat_id=-10, user_id=7, action='surrender', action_id='retry-callback', round_token=token)
+            await service.acknowledge_terminal_panel(chat_id=-10, user_id=7,
+                event_id='retry', message_id=91)
         assert database.states[-10, 'blackjack:7']['status'] == 'surrendered'
         assert economy.balance == 950
         restarted = _service(database, economy)
-        result = await restarted.action(chat_id=-10, user_id=7, action='surrender', action_id='retry-callback', round_token=token)
+        assert await restarted.acknowledge_terminal_panel(chat_id=-10, user_id=7,
+            event_id='retry', message_id=91)
         assert result['terminal'] is True
         assert economy.balance == 950
         assert economy.credits == [50]
@@ -190,12 +218,15 @@ def test_scoped_surrender_callback_uses_service_and_removes_terminal_buttons():
     from src.handlers.callback_handler import CallbackHandler
     async def scenario():
         handler = CallbackHandler.__new__(CallbackHandler)
-        handler.blackjack_service = SimpleNamespace(action=AsyncMock(return_value={'terminal': True, 'text': 'Pes ettin.'}))
+        handler.blackjack_service = SimpleNamespace(action=AsyncMock(return_value={
+            'terminal': True, 'text': 'Pes ettin.', 'state': {'event_id': 'hand'}}),
+            acknowledge_terminal_panel=AsyncMock(return_value=True))
         handler._game_action_id = lambda *_: 'callback'
-        query = SimpleNamespace(answer=AsyncMock(), edit_message_text=AsyncMock())
+        query = SimpleNamespace(answer=AsyncMock(), edit_message_text=AsyncMock(),
+                                message=SimpleNamespace(message_id=91))
         update = SimpleNamespace(effective_user=SimpleNamespace(id=7), effective_chat=SimpleNamespace(id=-10))
         await handler._handle_blackjack_callback(update, query, SimpleNamespace(), 'bj:7:abc123:surrender')
-        handler.blackjack_service.action.assert_awaited_once_with(chat_id=-10, user_id=7, action='surrender', action_id='callback', round_token='abc123')
+        handler.blackjack_service.action.assert_awaited_once_with(chat_id=-10, user_id=7, action='surrender', action_id='callback', round_token='abc123', panel_message_id=91)
         assert query.edit_message_text.await_args.kwargs['reply_markup'] is None
     asyncio.run(scenario())
 
@@ -208,14 +239,16 @@ def test_real_economy_retries_pending_surrender_without_full_cancel_refund():
         service = _service(database, economy)
         started = await service.start(chat_id=-10, user_id=7, user_name='Oyuncu', bet=101, event_id='real-economy')
         database.fail_delete = True
+        await service.action(chat_id=-10, user_id=7, action='surrender', action_id='real', round_token=started['state']['round_token'])
         with pytest.raises(RuntimeError, match='delete_interrupted'):
-            await service.action(chat_id=-10, user_id=7, action='surrender', action_id='real', round_token=started['state']['round_token'])
+            await service.acknowledge_terminal_panel(chat_id=-10, user_id=7,
+                event_id='real-economy', message_id=91)
         assert await economy.balance(7, -10) == 949
         restarted = _service(database, economy)
-        result = await restarted.cancel(chat_id=-10, user_id=7)
-        assert result['result']['result'] == 'surrender'
+        assert await restarted.acknowledge_terminal_panel(chat_id=-10, user_id=7,
+            event_id='real-economy', message_id=91)
         assert await economy.balance(7, -10) == 949
-        assert len(economy._transactions) == 3  # seed, initial stake, half refund
+        assert len(await economy.history(7, -10, limit=10)) == 3  # seed, initial stake, half refund
         assert database.states == {}
     asyncio.run(scenario())
 

@@ -1,0 +1,56 @@
+{
+  "implementation_commit": "a55f31549797d2b45e2a3efe93f719de617dab44",
+  "scope": "12 existing games UX, Batak confidentiality/stale input, UNO pagination and private d2api primary",
+  "independent_review": {
+    "agents": "gpt-6-sol medium",
+    "initial_batak_privacy_and_stale_lobby_findings": "fixed and independently rechecked",
+    "uno_transport_failure": "fixed after review; focused regression passed",
+    "visual_preview": "local 360px panel approximation viewed, NOT Telegram client acceptance",
+    "local_preview_sha256": "2b488ae609692bae7f600c596480a7d593bf1416750c9779ad57f237755f049f"
+  },
+  "upstream_project_modified": false,
+  "github_updated": false,
+  "live_telegram_players": "NOT_RUN - operator deferred",
+  "d2api_authorization": "operator explicitly requested own account and accepted risks; not service legal permission",
+  "d2api_source_audit": {
+    "files": 14,
+    "credential_files_in_snapshot": false,
+    "wasm_redistributed": false
+  },
+  "local_proxy_smoke": {
+    "health_status": 200,
+    "configured_accounts": 1,
+    "status": 200,
+    "completion_received": true,
+    "expected_marker": true,
+    "finish_reason": "stop",
+    "error_type": null,
+    "latency_seconds": 2.44
+  },
+  "server_proxy_smoke": {
+    "health_status": 200,
+    "unauthenticated_status_page": 401,
+    "wrong_key_status": 401,
+    "completion_status": 200,
+    "completion_received": true,
+    "latency_seconds": 3.198,
+    "published_ports": {},
+    "user": "node",
+    "read_only_rootfs": true,
+    "ok": true
+  },
+  "verification": {
+    "gate": 25,
+    "local_pytest": {
+      "passed": 3031,
+      "skipped": 19
+    },
+    "isolated_docker_pytest": {
+      "passed": 3044,
+      "skipped": 6
+    },
+    "source_commit": "a55f31549797d2b45e2a3efe93f719de617dab44",
+    "isolated_cleanup_ok": true,
+    "abandoned_earlier_candidate": "fdb67b2 interrupted and cleaned after source revision; not used for acceptance"
+  }
+}

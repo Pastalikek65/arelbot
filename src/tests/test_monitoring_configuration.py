@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -82,17 +83,32 @@ def test_monitoring_profile_is_a_valid_compose_graph():
 
     This is skipped on developer machines without Docker, while CI and the
     release gate validate the actual Compose parser rather than duplicating
-    its profile dependency rules in Python.
+    its profile dependency rules in Python.  The MongoDB and Redis services
+    require a credential, so the parse runs with synthetic values that are
+    never written to a file.
     """
 
     docker = shutil.which("docker")
     if docker is None:
         pytest.skip("docker is not installed")
+    environment = dict(os.environ)
+    environment.update(
+        {
+            "MONGO_ROOT_USERNAME": "areladmin",
+            "MONGO_ROOT_PASSWORD": "compose-graph-mongo-pass",
+            "MONGO_APP_USERNAME": "arel_app",
+            "MONGO_APP_PASSWORD": "compose-graph-mongo-app-pass",
+            "MONGO_TEST_USERNAME": "arel_test",
+            "MONGO_TEST_PASSWORD": "compose-graph-mongo-test-pass",
+            "REDIS_PASSWORD": "compose-graph-redis-pass",
+        }
+    )
     result = subprocess.run(
         [docker, "compose", "--profile", "monitoring", "config", "--quiet"],
         cwd=ROOT,
         text=True,
         capture_output=True,
         check=False,
+        env=environment,
     )
     assert result.returncode == 0, result.stderr[-1000:]

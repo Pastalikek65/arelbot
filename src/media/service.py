@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any, Dict
 
 from config import Config
+from src.jobs.delivery_ledger import JobDeliveryLedger
 from src.media.cookie_vault import CookieVault
 from src.media.job_queue import MediaJobQueue
 from src.media.providers.ytdlp_provider import MediaDownloadError, YtDlpProvider
@@ -28,14 +29,21 @@ from src.security.log_redaction import summarize_exception, summarize_private_te
 
 logger = logging.getLogger(__name__)
 
+# A timed-out download hands its job directory to a background reaper.  The
+# reaper is not awaited by the job itself, so the service drains it on a
+# schedule and at shutdown.
+MAINTENANCE_INTERVAL_SECONDS = 3600
+BACKGROUND_CLEANUP_TIMEOUT_SECONDS = 30
+# The shutdown drain stays inside the container stop grace period, so a
+# provider thread that never returns cannot hold the process open.
+SHUTDOWN_CLEANUP_TIMEOUT_SECONDS = 5
+
 
 class MediaDownloadService:
-    def __init__(self):
+    def __init__(self, delivery_ledger: JobDeliveryLedger | None = None):
         self.database = Database()
-        self.job_store = MediaJobStore(
-            self.database,
-            required=Config.MONGODB_REQUIRED or Config.APP_ROLE in {"bot", "worker"},
-        )
+        required = Config.MONGODB_REQUIRED or Config.APP_ROLE in {"bot", "worker"}
+        self.job_store = MediaJobStore(self.database, required=required)
         self.queue = MediaJobQueue(store=self.job_store)
         self.cookie_vault = CookieVault(Config.MEDIA_COOKIE_STORAGE_DIR, Config.ENCRYPTION_KEY)
         self.provider = YtDlpProvider(
@@ -66,6 +74,14 @@ class MediaDownloadService:
         self._chat_limits = defaultdict(lambda: asyncio.Semaphore(2))
         self._request_times = defaultdict(deque)
         self.metrics_registry = MetricsRegistry()
+        # The shared send-boundary ledger keeps a media job from being
+        # delivered twice when a worker dies between the upload and the
+        # status write.
+        self._injected_delivery_ledger = delivery_ledger
+        self.delivery_ledger = delivery_ledger or JobDeliveryLedger(
+            self.database, required=required
+        )
+        self._maintenance_task: asyncio.Task | None = None
 
     async def start(self, bot):
         self.bot = bot
@@ -75,12 +91,65 @@ class MediaDownloadService:
             self.job_store._disabled = True
             if Config.MONGODB_REQUIRED or Config.APP_ROLE in {"bot", "worker"}:
                 raise RuntimeError("MongoDB is required for the selected production role")
+            # Degraded development has no durable delivery state either, so
+            # the service falls back to a process-local ledger. A ledger that
+            # the caller supplied belongs to the caller and is used as it is.
+            if self._injected_delivery_ledger is None:
+                self.delivery_ledger = JobDeliveryLedger(None)
+                logger.warning(
+                    "MongoDB unavailable; the media delivery ledger runs in process-local mode"
+                )
+        await self.delivery_ledger.ensure_indexes()
         self.queue.processor = self._process_job
         worker_count = 0 if Config.APP_ROLE == "bot" else Config.MEDIA_QUEUE_WORKERS
         await self.queue.start(Config.REDIS_URL, worker_count, self.redis_required)
+        self._maintenance_task = asyncio.create_task(
+            self._maintenance_loop(), name="arel-media-maintenance"
+        )
 
     async def close(self):
+        await self._stop_maintenance_task()
         await self.queue.close()
+
+    async def _maintenance_loop(self, interval: float = MAINTENANCE_INTERVAL_SECONDS) -> None:
+        """Drain the provider's deferred cleanup workers on a schedule."""
+        while True:
+            try:
+                await self.wait_for_background_cleanup(timeout=BACKGROUND_CLEANUP_TIMEOUT_SECONDS)
+            except Exception as exc:
+                logger.warning(
+                    "Media maintenance failed: %s",
+                    summarize_exception(exc, label="media_maintenance"),
+                )
+            await asyncio.sleep(interval)
+
+    async def _stop_maintenance_task(self) -> None:
+        """Cancel the periodic maintenance task of this service."""
+        task = self._maintenance_task
+        self._maintenance_task = None
+        if task is None:
+            return
+        task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
+
+    async def wait_for_background_cleanup(
+        self, timeout: float = BACKGROUND_CLEANUP_TIMEOUT_SECONDS
+    ) -> bool:
+        """Drain the provider's deferred cleanup workers within a bound.
+
+        The wait never cancels a pending reaper: the reaper owns the job
+        directory and has to survive until its worker thread stopped.  The
+        caller that owns the process lifecycle decides the bound, so a stuck
+        provider thread cannot hold the shutdown open.
+        """
+        try:
+            return await self.provider.wait_for_background_cleanup(timeout=timeout)
+        except Exception as exc:
+            logger.warning(
+                "Media background cleanup failed: %s",
+                summarize_exception(exc, label="media_background_cleanup"),
+            )
+            return False
 
     async def save_cookie_file(self, platform: str, file_id: str, actor_id: int) -> None:
         """Download and encrypt an administrator cookie inside the service boundary."""
@@ -188,26 +257,47 @@ class MediaDownloadService:
         chat_id = payload["chat_id"]
         status_id = payload["status_message_id"]
         job_id = payload["job_id"]
+        delivery_key = f"media:{job_id}"
         result = None
         used_cookie = False
         started = time.perf_counter()
         progress_task = None
+        delivery_claimed = False
         self.metrics_registry.inc("media_jobs_total")
         try:
+            # A job whose send boundary is already closed must not run the
+            # whole pipeline again: the upload would be refused later and the
+            # progress text would replace the honest message of the failed
+            # attempt. The claim in front of the upload stays the authority.
+            boundary_status = await self._delivery_status(delivery_key)
+            if boundary_status in {"sent", "uncertain", "sending"}:
+                await self._close_suppressed_job(payload, delivery_key, boundary_status)
+                return
             cache_key = "arel:media:cache:" + payload["url_hash"]
             cached_file_id = await self._cache_get(cache_key)
             if cached_file_id:
+                if not await self._claim_delivery(delivery_key, job_id=job_id, chat_id=chat_id):
+                    await self._close_suppressed_job(payload, delivery_key)
+                    return
+                delivery_claimed = True
                 try:
-                    await self.bot.send_video(
+                    sent = await self.bot.send_video(
                         chat_id=chat_id, video=cached_file_id, reply_to_message_id=status_id,
                         caption="Medya hazir."
                     )
                 except Exception as exc:
                     if not self._is_invalid_cached_file_id(exc):
                         raise
+                    # Telegram definitively refused the stale reference, so no
+                    # upload was delivered. The send boundary goes back to the
+                    # claimable state and the download path starts clean; a
+                    # provider failure there still allows a later delivery.
+                    await self._release_started_delivery(delivery_key)
+                    delivery_claimed = False
                     await self._cache_delete(cache_key)
                     self.metrics_registry.inc("media_cache_invalidations")
                 else:
+                    await self._mark_delivery_sent(delivery_key, sent)
                     await self._edit_status(chat_id, status_id, "Video gonderildi.")
                     await self.job_store.update(job_id, telegram_file_id=cached_file_id, finished_at=time.time())
                     return
@@ -249,6 +339,10 @@ class MediaDownloadService:
             result = await self.transcoder.prepare(result)
             used_cookie = bool(result.get("used_cookie"))
             caption = f"📹 {(result.get('title') or 'Sosyal medya videosu')[:850]}"
+            if not delivery_claimed:
+                if not await self._claim_delivery(delivery_key, job_id=job_id, chat_id=chat_id):
+                    await self._close_suppressed_job(payload, delivery_key)
+                    return
             await self.queue._set_status(payload, "sending")
             with open(result["path"], "rb") as media_file:
                 if result["extension"] == ".mp4":
@@ -261,21 +355,32 @@ class MediaDownloadService:
                     if file_id and not used_cookie:
                         await self._cache_set(cache_key, file_id, payload.get("source", "unknown"))
                 else:
-                    await self.bot.send_document(
+                    sent = await self.bot.send_document(
                         chat_id=chat_id, document=media_file, caption=caption,
                         reply_to_message_id=status_id,
                         read_timeout=45, write_timeout=45, connect_timeout=15,
                     )
+            await self._mark_delivery_sent(delivery_key, sent)
             await self._edit_status(chat_id, status_id, "✅ Medya gönderildi.")
             await self.job_store.update(job_id, telegram_file_id=file_id if result.get("extension") == ".mp4" else None,
                                         finished_at=time.time())
+        except asyncio.CancelledError as exc:
+            # A cancelled worker leaves the send outcome unknown; the ledger
+            # must not keep the boundary in flight for the next worker. The
+            # write is shielded, because a second cancellation must not
+            # interrupt it and strand the row until the expiry reaper.
+            await asyncio.shield(self._mark_delivery_uncertain(delivery_key, exc))
+            raise
         except MediaTranscodeError as exc:
+            await self._mark_delivery_uncertain(delivery_key, exc)
             await self._report_failure(payload, exc.code, exc)
             raise MediaDownloadError(exc.code, str(exc)) from exc
         except MediaDownloadError as exc:
+            await self._mark_delivery_uncertain(delivery_key, exc)
             await self._report_failure(payload, exc.code, exc)
             raise
         except Exception as exc:
+            await self._mark_delivery_uncertain(delivery_key, exc)
             logger.error(
                 "Media job %s failed (%s; %s)",
                 job_id,
@@ -288,12 +393,139 @@ class MediaDownloadService:
             if progress_task is not None:
                 progress_task.cancel()
                 await asyncio.gather(progress_task, return_exceptions=True)
-            self.provider.cleanup(result, job_id, Config.MEDIA_DOWNLOAD_DIR)
+            # The provider removes the job tree.  The removal is blocking
+            # work, so it runs outside the event loop.
+            await asyncio.to_thread(
+                self.provider.cleanup, result, job_id, Config.MEDIA_DOWNLOAD_DIR
+            )
             elapsed = time.perf_counter() - started
             self.metrics_registry.observe("media_job_seconds", elapsed)
             self.metrics_registry.observe("media_completion_seconds", elapsed)
             if elapsed > Config.MEDIA_COMPLETION_SLO_SECONDS:
                 self.metrics_registry.inc("media_completion_slo_breaches")
+
+    async def _claim_delivery(self, delivery_key: str, *, job_id: str, chat_id: int) -> bool:
+        """Claim the send boundary so that one job is delivered at most once.
+
+        The claim happens immediately before the Telegram upload. Claiming
+        earlier would block a legitimate retry after a provider failure.
+        """
+
+        if not await self.delivery_ledger.claim(delivery_key, job_id=job_id, chat_id=chat_id):
+            return False
+        try:
+            started = await self.delivery_ledger.begin_send(delivery_key)
+        except Exception:
+            # The send never started, so the claim is given back. Otherwise
+            # the row would refuse every retry for the next five minutes.
+            await self._release_delivery(delivery_key, "send_not_started")
+            raise
+        if not started:
+            # The send never started, so the claim can be given back.
+            await self._release_delivery(delivery_key, "send_not_started")
+            return False
+        return True
+
+    async def _release_delivery(self, delivery_key: str, error: str) -> None:
+        """Give a claim back without hiding the original failure."""
+
+        try:
+            await self.delivery_ledger.release(delivery_key, error=error)
+        except Exception as exc:
+            logger.warning(
+                "Media delivery ledger release failed: %s",
+                summarize_exception(exc, label="media_delivery_ledger"),
+            )
+
+    async def _release_started_delivery(self, delivery_key: str) -> None:
+        """Return a refused send boundary to the claimable state.
+
+        Only a delivery that definitively did not happen may be released
+        here. An unknown outcome stays ``uncertain`` and is never replayed.
+        """
+
+        try:
+            await self.delivery_ledger.release_started(delivery_key, error="delivery_refused")
+        except Exception as exc:
+            logger.warning(
+                "Media delivery ledger release failed: %s",
+                summarize_exception(exc, label="media_delivery_ledger"),
+            )
+
+    async def _mark_delivery_sent(self, delivery_key: str, sent: Any) -> None:
+        """Record the finished delivery and report a lost boundary record."""
+
+        if not await self.delivery_ledger.mark_sent(delivery_key, getattr(sent, "message_id", None)):
+            logger.warning(
+                "Media delivery ledger did not record the sent delivery: %s",
+                delivery_key,
+            )
+
+    async def _close_suppressed_job(self, payload: Dict[str, Any], delivery_key: str, status: str | None = None) -> None:
+        """Close a job whose delivery was already claimed by another worker.
+
+        The row must not stay in an in-flight status and the user must not
+        keep waiting for a delivery that is no longer in progress. The user
+        message must never claim a delivery that did not happen, and the
+        honest error text of a failed attempt must survive the suppression.
+        """
+
+        await self.job_store.update(
+            payload["job_id"],
+            status="completed",
+            finished_at=time.time(),
+        )
+        if status is None:
+            status = await self._delivery_status(delivery_key)
+        message = self._suppressed_delivery_message(status)
+        if message is not None:
+            await self._edit_status(
+                payload["chat_id"], payload["status_message_id"], message
+            )
+
+    @staticmethod
+    def _suppressed_delivery_message(status: str | None) -> str | None:
+        """Describe a suppressed delivery without claiming a delivery.
+
+        ``None`` means the existing message must stay as it is. An uncertain
+        boundary already carries the honest error text of the failed attempt,
+        and replacing it would hide the operational signal.
+        """
+
+        if status == "sent":
+            return "✅ Medya gönderildi."
+        if status == "sending":
+            return "⏳ Medya gönderimi sürüyor; tekrar gönderim yapılmadı."
+        if status == "uncertain":
+            return None
+        return "ℹ️ Medya teslimatı zaten başlatılmıştı; tekrar gönderim yapılmadı."
+
+    async def _delivery_status(self, delivery_key: str) -> str | None:
+        """Read the recorded state of a delivery boundary.
+
+        A failed read is not fatal: the claim in front of the upload stays
+        the authority and decides whether the delivery may go out.
+        """
+
+        try:
+            return await self.delivery_ledger.delivery_status(delivery_key)
+        except Exception as exc:
+            logger.warning(
+                "Media delivery ledger read failed: %s",
+                summarize_exception(exc, label="media_delivery_ledger"),
+            )
+            return None
+
+    async def _mark_delivery_uncertain(self, delivery_key: str, error: BaseException) -> None:
+        """Record that the Telegram send outcome for this job is unknown."""
+
+        try:
+            await self.delivery_ledger.mark_uncertain(delivery_key, type(error).__name__)
+        except Exception as exc:
+            logger.warning(
+                "Media delivery ledger update failed: %s",
+                summarize_exception(exc, label="media_delivery_ledger"),
+            )
 
     async def _media_progress_loop(self, chat_id: int, status_id: int, job_id: str) -> None:
         """Keep a slow external provider visible without cancelling the job."""
@@ -339,7 +571,13 @@ class MediaDownloadService:
 
     @staticmethod
     def _is_invalid_cached_file_id(error: Exception) -> bool:
-        """Identify Telegram's stale/invalid file reference errors only."""
+        """Identify Telegram's stale/invalid file reference errors only.
+
+        Only a definite "this reference cannot be used" answer may release
+        the send boundary and trigger a re-download. A broad BadRequest match
+        would release the boundary for unrelated errors and turn them into a
+        full re-download and re-send instead of failing the job.
+        """
         text = str(error).lower()
         markers = (
             "wrong file identifier",
@@ -347,6 +585,7 @@ class MediaDownloadService:
             "file_id_invalid",
             "invalid file_id",
             "file id is invalid",
+            "file_id is invalid",
         )
         if any(marker in text for marker in markers):
             return True
@@ -354,8 +593,16 @@ class MediaDownloadService:
             from telegram.error import BadRequest
         except ImportError:
             return False
-        return isinstance(error, BadRequest) and any(
-            marker in text for marker in ("file", "identifier", "reference")
+        if not isinstance(error, BadRequest):
+            return False
+        # Telegram names the unusable reference explicitly. An unrelated
+        # BadRequest keeps failing the job instead of releasing the send
+        # boundary.
+        invalid_words = ("invalid", "expired", "wrong", "not found", "unknown")
+        reference_words = ("file identifier", "file_id", "file id", "file reference")
+        return (
+            any(word in text for word in invalid_words)
+            and any(word in text for word in reference_words)
         )
 
     async def _edit_status(self, chat_id: int, message_id: int, text: str):
@@ -368,11 +615,25 @@ class MediaDownloadService:
     def _is_group_payload(payload: Dict[str, Any]) -> bool:
         return str(payload.get("chat_type") or "").casefold() in {"group", "supergroup"}
 
+    @staticmethod
+    def _read_attempt(payload: Dict[str, Any]) -> int:
+        """Read the attempt counter; a malformed value must not kill the job."""
+        raw = payload.get("attempt", 0)
+        try:
+            attempt = int(raw)
+        except (TypeError, ValueError):
+            logger.warning(
+                "Media job %s has an unusable attempt counter; the retry check starts from the first attempt",
+                payload.get("job_id"),
+            )
+            return 0
+        return max(0, attempt)
+
     def _job_will_retry(self, payload: Dict[str, Any], error_code: str) -> bool:
         policy = getattr(getattr(self, "queue", None), "retry_policy", None)
         should_retry = getattr(policy, "should_retry", None)
         if callable(should_retry):
-            return bool(should_retry(error_code, int(payload.get("attempt", 0) or 0)))
+            return bool(should_retry(error_code, self._read_attempt(payload)))
         return False
 
     async def _clear_status(self, chat_id: int, message_id: int) -> None:

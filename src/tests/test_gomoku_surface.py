@@ -1,3 +1,4 @@
+from copy import deepcopy
 from types import SimpleNamespace
 
 import pytest
@@ -21,16 +22,36 @@ class DataPort:
     reachable = True
 
     def __init__(self, state=None):
-        self.state = state
+        self.state = deepcopy(state)
         self.saved = []
 
     async def get_game_state(self, chat_id, game_type):
-        return self.state if game_type == "gomoku" else None
+        return deepcopy(self.state) if game_type == "gomoku" else None
 
     async def save_game_state(self, chat_id, game_type, state):
         if game_type == "gomoku":
-            self.state = state
-            self.saved.append((chat_id, game_type, state.copy()))
+            self.state = deepcopy(state)
+            self.saved.append((chat_id, game_type, deepcopy(state)))
+
+    async def initialize_game_state_version_if_missing(self, chat_id, game_type):
+        if self.state is not None and "version" not in self.state:
+            self.state["version"] = 0
+            return True
+        return False
+
+    async def create_game_state_if_absent(self, chat_id, game_type, state):
+        if self.state is not None:
+            return False
+        self.state = deepcopy(state)
+        self.saved.append((chat_id, game_type, deepcopy(state)))
+        return True
+
+    async def compare_and_save_game_state(self, chat_id, game_type, state, *, expected_version):
+        if self.state is None or self.state.get("version") != expected_version:
+            return False
+        self.state = deepcopy(state)
+        self.saved.append((chat_id, game_type, deepcopy(state)))
+        return True
 
     async def delete_game_state(self, chat_id, game_type):
         if game_type == "gomoku":
@@ -96,7 +117,7 @@ async def test_gomoku_command_is_forum_scoped_and_shows_board_sizes():
 
     await handler.handle_gomoku_command(update, context)
 
-    state = context.chat_data["gomoku"]
+    state = data_port.state
     assert state["thread_id"] == 42
     assert state["board_size"] == 10
     callbacks = {
@@ -118,17 +139,17 @@ async def test_gomoku_callbacks_join_start_and_move_are_round_scoped():
     rid = state["round_id"]
 
     await handler._handle_gomoku_callback(callback_update(2), Query(), context, f"gomoku:{rid}:join")
-    assert len(state["players"]) == 2
+    assert len(data_port.state["players"]) == 2
     await handler._handle_gomoku_callback(callback_update(1), Query(), context, f"gomoku:{rid}:start")
-    assert state["status"] == "playing"
+    assert data_port.state["status"] == "playing"
     query = Query()
     await handler._handle_gomoku_callback(callback_update(1), query, context, f"gomoku:{rid}:cell:0")
-    assert state["moves"] == 1
+    assert data_port.state["moves"] == 1
     assert query.edits
 
-    before = state["moves"]
+    before = data_port.state["moves"]
     await handler._handle_gomoku_callback(callback_update(2), Query(thread_id=99), context, f"gomoku:{rid}:cell:1")
-    assert state["moves"] == before
+    assert data_port.state["moves"] == before
 
 
 @pytest.mark.asyncio
@@ -140,17 +161,17 @@ async def test_gomoku_size_is_owner_only_and_stale_round_is_rejected():
     rid = state["round_id"]
 
     await handler._handle_gomoku_callback(callback_update(2), Query(), context, f"gomoku:{rid}:size:15")
-    assert state["board_size"] == 10
+    assert data_port.state["board_size"] == 10
     query = Query()
     await handler._handle_gomoku_callback(callback_update(1), query, context, f"gomoku:{rid}:size:15")
-    assert state["board_size"] == 15
+    assert data_port.state["board_size"] == 15
     assert query.edits
     await handler._handle_gomoku_callback(callback_update(1), Query(), context, "gomoku:old:size:6")
-    assert state["board_size"] == 15
+    assert data_port.state["board_size"] == 15
 
 
 @pytest.mark.asyncio
-async def test_gomoku_owner_can_stop_and_persistence_is_deleted():
+async def test_gomoku_owner_can_stop_and_persistence_is_cancelled():
     state = new_gomoku_state(owner_id=1, owner_name="u1", chat_id=-100, prompt_message_id=700, thread_id=42)
     data_port = DataPort(state)
     handler = _handler(data_port)
@@ -158,8 +179,9 @@ async def test_gomoku_owner_can_stop_and_persistence_is_deleted():
     rid = state["round_id"]
     query = Query()
     await handler._handle_gomoku_callback(callback_update(1), query, context, f"gomoku:{rid}:stop")
-    assert "gomoku" not in context.chat_data
-    assert data_port.state is None
+    assert data_port.state["status"] == "cancelled"
+    assert data_port.state["board_panel_dirty"] is False
+    assert data_port.state["prompt_message_id"] == 700
     assert query.edits
 
 

@@ -18,6 +18,9 @@ logger = logging.getLogger(__name__)
 def _safe_error_code(error: BaseException) -> str:
     """Return a bounded diagnostic code without echoing provider details."""
 
+    safe_code = getattr(error, "safe_code", None)
+    if isinstance(safe_code, str) and safe_code:
+        return re.sub(r"[^a-zA-Z0-9_.-]", "_", safe_code)[:96]
     raw = str(error or "")
     match = re.search(r"provider_http_(\d{3})", raw, re.IGNORECASE)
     if match:
@@ -37,7 +40,11 @@ class AIProviderUnavailable(RuntimeError):
 
 class AIProviderRouter:
     def __init__(self, providers: Iterable[AIProvider] = (), routes: dict[str, list[str]] | None = None,
-                 failure_threshold: int = 3, cooldown_seconds: float = 60.0):
+                 failure_threshold: int = 3, cooldown_seconds: float = 60.0,
+                 rotation_tasks: Iterable[str] = (), request_timeout_seconds: float | None = None,
+                 fast_timeout_seconds: float | None = None,
+                 provider_timeout_seconds: float | None = None,
+                 rotation_primary_count: int | None = None):
         self.providers = {provider.name: provider for provider in providers}
         self._locked_routes = set((routes or {}).keys())
         self.routes = routes or {
@@ -48,6 +55,12 @@ class AIProviderRouter:
         }
         self.failure_threshold = failure_threshold
         self.cooldown_seconds = cooldown_seconds
+        self.rotation_tasks = frozenset(rotation_tasks)
+        self.rotation_primary_count = max(1, rotation_primary_count) if rotation_primary_count is not None else None
+        self._rotation_cursor: dict[str, int] = defaultdict(int)
+        self.request_timeout_seconds = request_timeout_seconds
+        self.fast_timeout_seconds = fast_timeout_seconds
+        self.provider_timeout_seconds = provider_timeout_seconds
         self._failures: dict[str, int] = defaultdict(int)
         self._opened_until: dict[str, float] = {}
         self._samples: dict[str, deque[bool]] = defaultdict(lambda: deque(maxlen=50))
@@ -68,7 +81,18 @@ class AIProviderRouter:
                 self.routes[task].append(provider.name)
 
     def _ordered_names(self, task: str) -> list[str]:
-        names = self.routes.get(task) or self.routes.get("chat", []) or list(self.providers)
+        # An explicit empty route means unsupported/unavailable, not permission
+        # to reuse a text provider for media or embeddings.
+        names = self.routes[task] if task in self.routes else self.routes.get("chat", list(self.providers))
+        names = list(dict.fromkeys(names))
+        if task in self.rotation_tasks and names:
+            # Only quality-approved primary candidates rotate; the tail stays
+            # available for outages without becoming a routine first choice.
+            count = min(len(names), self.rotation_primary_count or len(names))
+            primary, fallback = names[:count], names[count:]
+            cursor = self._rotation_cursor[task] % count
+            self._rotation_cursor[task] = (cursor + 1) % count
+            names = primary[cursor:] + primary[:cursor] + fallback
         now = time.monotonic()
         return [name for name in names if name in self.providers and self._opened_until.get(name, 0) <= now]
 
@@ -99,7 +123,12 @@ class AIProviderRouter:
         last_error: Exception | None = None
         names = provider_names if provider_names is not None else self._ordered_names(task)
         now = time.monotonic()
-        for name in names:
+        budget = self.fast_timeout_seconds if task == "fast" else self.request_timeout_seconds
+        deadline = now + budget if budget is not None else None
+        for index, name in enumerate(names):
+            now = time.monotonic()
+            if deadline is not None and now >= deadline:
+                break
             if name not in self.providers or self._opened_until.get(name, 0) > now:
                 continue
             provider = self.providers[name]
@@ -107,7 +136,24 @@ class AIProviderRouter:
             self.metrics.inc("ai_provider_requests_total")
             self.metrics.inc(f"ai_provider_requests_total_{name}")
             try:
-                result = await getattr(provider, method)(request)
+                call = getattr(provider, method)(request)
+                if deadline is None:
+                    result = await call
+                else:
+                    per_provider = getattr(provider, "fast_timeout_seconds" if task == "fast" else "timeout_seconds", deadline-now)
+                    if method == "complete" and self.provider_timeout_seconds is not None:
+                        cap = self.provider_timeout_seconds
+                        if task != "fast" and getattr(provider, "needs_startup_budget", False):
+                            # A local CLI has process/login startup overhead.
+                            # Preserve a full HTTP-provider slot for fallback
+                            # instead of killing a healthy CLI at the generic
+                            # HTTP cap, or consuming the entire route budget.
+                            reserve = min(cap, (deadline-now) / 2) if index + 1 < len(names) else 0
+                            cap = max(cap, deadline-now-reserve)
+                        per_provider = min(per_provider, cap)
+                    if task == "fast":
+                        per_provider = min(per_provider, (deadline-now)/max(1,len(names)-index))
+                    result = await asyncio.wait_for(call, timeout=min(float(per_provider), deadline-now))
                 elapsed = time.perf_counter() - started
                 self.metrics.inc("ai_provider_success_total")
                 self.metrics.inc(f"ai_provider_success_total_{name}")
@@ -140,10 +186,21 @@ class AIProviderRouter:
                     _safe_error_code(exc),
                     round(elapsed * 1000),
                 )
-                await self._record(name, False, elapsed)
+                await self._record(
+                    name,
+                    False,
+                    elapsed,
+                    cooldown_seconds=getattr(exc, "circuit_cooldown_seconds", None),
+                )
         raise AIProviderUnavailable(f"No AI provider available for task: {task}") from last_error
 
-    async def _record(self, name: str, success: bool, elapsed: float) -> None:
+    async def _record(
+        self,
+        name: str,
+        success: bool,
+        elapsed: float,
+        cooldown_seconds: float | None = None,
+    ) -> None:
         async with self._lock:
             self._samples[name].append(success)
             self._latencies[name].append(elapsed)
@@ -152,7 +209,10 @@ class AIProviderRouter:
                 self._opened_until.pop(name, None)
             else:
                 self._failures[name] += 1
-                if self._failures[name] >= self.failure_threshold:
+                if cooldown_seconds is not None:
+                    bounded_cooldown = max(1.0, min(86_400.0, float(cooldown_seconds)))
+                    self._opened_until[name] = time.monotonic() + bounded_cooldown
+                elif self._failures[name] >= self.failure_threshold:
                     self._opened_until[name] = time.monotonic() + self.cooldown_seconds
 
     async def health(self) -> list[dict[str, Any]]:
@@ -191,6 +251,7 @@ class AIProviderRouter:
             self._opened_until.clear()
             self._samples.clear()
             self._latencies.clear()
+            self._rotation_cursor.clear()
 
     def metrics_snapshot(self) -> dict[str, Any]:
         """Return bounded provider call counters and p50/p95/p99 latency."""

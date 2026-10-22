@@ -49,6 +49,7 @@ MENU_ALIAS_COMMANDS = frozenset(
         "hatirlat", "bildirimayar", "bakiye", "bildirimler", "takipler",
         "filmoneri", "dizioneri", "kitaponeri", "sarkioneri", "soz", "sarki",
         "lyrics", "search", "gunlukplan", "haftalikplan", "daily_brief",
+        "spy", "vampirkoylu",
     }
 )
 
@@ -146,7 +147,7 @@ def _guardian_menu_rows(rows, *, guardian_first: bool = False):
     guardian_names = {str(item).casefold() for item in GuardianSurface.COMMANDS}
     # ``/start`` is the Telegram bootstrap command; all other Guardian
     # commands are discoverable from the button center instead.
-    guardian_names.difference_update({"start"})
+    guardian_names.difference_update({"start", "help"})
     guardian_names.update({"linkkoruma", "reklamkoruma", "grupdili"})
     guardian_names.update(str(item).casefold() for item in GUARDIAN_MENU_NAMES)
     guardian_names.update(str(item).casefold() for item in GUARDIAN_MENU_NAMES.values())
@@ -210,10 +211,10 @@ def build_bot_command_menu(commands, *, excluded_commands=frozenset()):
 
     registry = _build_runtime_command_registry(commands)
     excluded = {str(item).strip().casefold() for item in excluded_commands}
-    return [
-        row for row in _guardian_menu_rows(registry.menu_rows(CommandScope.PUBLIC, limit=TELEGRAM_COMMAND_LIMIT))
-        if row[0] not in excluded
-    ]
+    from src.telegram.command_menu import curated_rows
+    rows = _guardian_menu_rows(registry.menu_rows(CommandScope.PUBLIC, limit=None))
+    return [row for row in curated_rows(registry, rows) if row[0] not in excluded]
+
 
 
 def _build_runtime_command_registry(commands):
@@ -362,6 +363,8 @@ async def register_bot_commands(application):
         ("haftalikplan", "Haftal\u0131k plan\u0131n\u0131 y\u00f6netir"),
         ("alarm", "Döviz ve yakıt eşik alarmı kur"),
         ("ekonomi", "Grup coin bakiyesi ve işlemler"),
+        ("magaza", "Coin ile unvan ve rozet koleksiyonu"),
+        ("envanter", "Unvan ve rozetlerini kullan"),
         ("bakiye", "Grup coin bakiyeni g\u00f6sterir"),
         ("gunluk", "Günlük coin ödülünü al"),
         ("duyuru", "Grup yöneticileri için planlı duyuru"),
@@ -385,11 +388,45 @@ async def register_bot_commands(application):
         ("gomoku", "Gomoku / beşli oyunu"),
         ("satranc", "Satranç oyunu"),
         ("chess", "Satranç oyunu"),
-        ("akinator", "Arel Tahmin oyunu"),
-        ("aki", "Arel Tahmin oyunu"),
-        ("tahmin", "Arel Tahmin oyunu"),
+        ("akinator", "Akinatör oyna"),
+        ("aki", "Akinatör oyna"),
+        ("tahmin", "Akinatör oyna"),
         ("yas", "Grupta yaş tahmini oyunu"),
         ("uno", "Türkçe UNO kart oyunu"),
+        ("zincir", "Kelime zinciri kur"),
+        ("tabu", "Takımlı Tabu masası kur"),
+        ("harfmaraton", "Harf Maratonu oyunu"),
+        ("sozcukavi", "Sözcük Avı oyunu"),
+        ("yasakharf", "Yasak Harf oyunu"),
+        ("ortakhikaye", "Ortak Hikâye oyunu"),
+        ("bomba", "Bomba oyunu"),
+        ("korsiralama", "Kör Sıralama oyunu"),
+        ("kronoloji", "Kronoloji oyunu"),
+        ("dogruyanlis", "Doğru–Yanlış oyunu"),
+        ("dedektif", "Dedektif oyunu"),
+        ("amiral", "Amiral Battı oyunu"),
+        ("ikidogru", "İki Doğru Bir Yalan oyunu"),
+        ("kimimben", "Kimim Ben oyunu"),
+        ("takimligi", "Takım Bilgi Ligi oyunu"),
+        ("kadeh", "Zehirli Kadeh oyunu"),
+        ("pisti", "Pişti · 2 veya 4 kişilik kart masası"),
+        ("papazkimde", "Papaz Kimde · gizli kart çekme oyunu"),
+        ("2048", "2048 · taşları kaydır ve birleştir"),
+        ("besipucu", "Beş İpucu · erken bil, fazla puan al"),
+        ("emojibilmece", "Emoji Bilmece · resfebe çöz"),
+        ("wordle", "Türkçe Wordle · 6 deneme"),
+        ("karsikelime", "Zıt anlamı bul · Karşı Kelime"),
+        ("anagram", "Karışık harflerden kelime bul"),
+        ("eslestirme", "Hafıza kartlarını eşleştir"),
+        ("mayin", "Mayın Tarlası çöz"),
+        ("sudoku", "Sudoku çöz · 4×4 veya 9×9"),
+        ("sayitahmin", "Sıralı sayı tahmin maçı"),
+        ("refleks", "Hedef düğmesini yakala"),
+        ("casus", "Gizli mekân ve casus oyunu"),
+        ("spy", "Casus oyunu"),
+        ("vampir", "Vampir Köylü lobisi kur"),
+        ("vampirkoylu", "Vampir Köylü lobisi kur"),
+        ("kelimezinciri", "Kelime zinciri kur"),
         ("yastahmin", "Yaş tahminini gönder"),
         ("rusruleti", "Rus ruleti"),
         ("duello", "Düello başlat"),
@@ -410,25 +447,21 @@ async def register_bot_commands(application):
         BotCommandScopeChat,
     )
     command_registry = _build_runtime_command_registry(commands)
-    public_commands = [
-        BotCommand(cmd, desc)
-        for cmd, desc in _guardian_menu_rows(
-            command_registry.menu_rows(CommandScope.PUBLIC, limit=None)
-        )[:TELEGRAM_COMMAND_LIMIT]
-    ]
-    group_admin_commands = [
-        BotCommand(cmd, desc)
-        for cmd, desc in _guardian_menu_rows(
-            command_registry.menu_rows(CommandScope.GROUP_ADMIN, limit=None),
-            guardian_first=True,
-        )[:TELEGRAM_COMMAND_LIMIT]
-    ]
+    public_commands = [BotCommand(cmd, desc) for cmd, desc in build_bot_command_menu(commands)]
+    from src.telegram.command_menu import curated_rows
+    group_admin_commands = [BotCommand(cmd, desc) for cmd, desc in curated_rows(
+        command_registry, _guardian_menu_rows(
+            command_registry.menu_rows(CommandScope.GROUP_ADMIN, limit=None), guardian_first=True),
+        administrators=True)]
     owner_rows = command_registry.menu_rows(CommandScope.OWNER, limit=None)
     owner_required = set(OWNER_ONLY_COMMANDS) | {"arelmerkez"}
-    owner_rows = [row for row in owner_rows if row[0] in owner_required] + [
-        row for row in owner_rows if row[0] not in owner_required
-    ]
-    owner_commands = [BotCommand(cmd, desc) for cmd, desc in owner_rows[:TELEGRAM_COMMAND_LIMIT]]
+    owner_priority = [row for row in owner_rows if row[0] in owner_required]
+    # An owner's private scope overrides the public picker. Preserve every
+    # player entry there too; the owner center exposes additional operations.
+    owner_choices = owner_priority + [(item.command, item.description) for item in public_commands]
+    owner_choices += [(item.command, item.description) for item in group_admin_commands]
+    owner_unique = dict(owner_choices)
+    owner_commands = [BotCommand(cmd, desc) for cmd, desc in list(owner_unique.items())[:TELEGRAM_COMMAND_LIMIT]]
     # Keep the default and private scopes clean for regular users. Telegram
     # applies the owner-specific scope only to the configured owner chat.
     await application.bot.set_my_commands(public_commands)
@@ -534,7 +567,7 @@ def register_handlers(application, orchestrator):
     add_handler(CommandHandler(["profile", "profil"], orchestrator.handle_profile_command))
     add_handler(CommandHandler(["basarimlar", "achievements"], orchestrator.handle_achievements_command))
     add_handler(CommandHandler(["sezon", "season"], orchestrator.handle_season_command))
-    add_handler(CommandHandler(["ekonomi", "bakiye"], orchestrator.handle_economy_command))
+    add_handler(CommandHandler(["ekonomi", "bakiye", "magaza", "envanter"], orchestrator.handle_economy_command))
     add_handler(CommandHandler(["gunluk", "daily"], orchestrator.handle_daily_reward_command))
     add_handler(CommandHandler("lang", orchestrator.handle_lang_command))
     add_handler(CommandHandler("digest", orchestrator.handle_digest_command))
@@ -575,8 +608,9 @@ def register_handlers(application, orchestrator):
     add_handler(CommandHandler("stpack", orchestrator.handle_stpack_command))
 
     # Inline Query Handler for Global Sticker Search
-    from telegram.ext import InlineQueryHandler
+    from telegram.ext import InlineQueryHandler, ChosenInlineResultHandler
     application.add_handler(InlineQueryHandler(orchestrator.handle_inline_query))
+    application.add_handler(ChosenInlineResultHandler(orchestrator.handle_chosen_inline_result))
 
     # General Message Handlers
     add_handler(CommandHandler(["remind", "hatirlat"], orchestrator.handle_remind_command))
@@ -614,6 +648,11 @@ def register_handlers(application, orchestrator):
     add_handler(CommandHandler("yas", orchestrator.handle_guess_age_command))
     add_handler(CommandHandler(["yastahmin", "agegame"], orchestrator.handle_guess_age_guess_command))
     add_handler(CommandHandler(["uno", "kartuno"], orchestrator.handle_uno_command))
+    add_handler(CommandHandler(["zincir", "kelimezinciri"], orchestrator.handle_word_chain_command))
+    add_handler(CommandHandler("tabu", orchestrator.handle_tabu_command))
+    add_handler(CommandHandler(["pisti", "papazkimde", "2048", "besipucu", "emojibilmece", "harfmaraton", "sozcukavi", "yasakharf", "ortakhikaye", "bomba", "korsiralama", "kronoloji", "dogruyanlis", "dedektif", "amiral", "ikidogru", "kimimben", "takimligi", "kadeh", "wordle", "karsikelime", "anagram", "eslestirme", "mayin", "sudoku", "sayitahmin", "refleks"], orchestrator.handle_puzzle_command))
+    add_handler(CommandHandler(["casus", "spy"], orchestrator.handle_spy_command))
+    add_handler(CommandHandler(["vampir", "vampirkoylu"], orchestrator.handle_vampire_command))
     add_handler(CommandHandler("batak", orchestrator.handle_batak_command))
     add_handler(CommandHandler("blackjack", orchestrator.handle_blackjack_command))
     add_handler(CommandHandler("anlat", orchestrator.handle_anlat_command))

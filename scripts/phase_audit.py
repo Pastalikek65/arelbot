@@ -5,6 +5,20 @@ The report is deliberately conservative: deterministic checks can verify
 repository behavior, but they cannot promote a VDS, Telegram mutation, live
 media, monitoring, or legal provider approval to production evidence.  The
 first unmet phase is printed as the next engineering/deployment action.
+
+Two kinds of unmet phase are reported separately:
+
+``needs_attention``
+    A deterministic check or a required artifact is missing.  This is a real
+    contract violation and blocks the gate.
+
+``deployment_pending``
+    The phase only waits for live deployment evidence, which is produced by a
+    real deployment and can never be satisfied inside CI.  This is a
+    documented, legitimate state and does not block the gate.
+
+``ok`` keeps its original meaning -- every phase is ``verified`` -- so the
+report stays honest.  The exit code follows the blocking phases only.
 """
 
 from __future__ import annotations
@@ -103,12 +117,16 @@ def evaluate(manifest: dict[str, Any], gate: dict[str, Any], evidence: dict[str,
         )
 
     next_phase = next((row["id"] for row in phase_rows if row["status"] != "verified"), None)
+    blocking_phases = [row["id"] for row in phase_rows if row["status"] == "needs_attention"]
+    awaiting_live_evidence = [row["id"] for row in phase_rows if row["status"] == "deployment_pending"]
     return {
         "ok": next_phase is None,
         "commit": _git_commit(),
         "phase_count": len(phase_rows),
         "verified_count": sum(row["status"] == "verified" for row in phase_rows),
         "next_phase": next_phase,
+        "blocking_phases": blocking_phases,
+        "awaiting_live_evidence": awaiting_live_evidence,
         "phases": phase_rows,
     }
 
@@ -147,7 +165,10 @@ def main() -> int:
     if args.report:
         _write_report(args.report, report)
     print(json.dumps(report, ensure_ascii=True, indent=2))
-    return 0 if report["ok"] else 1
+    # Only a real contract violation blocks.  A phase that merely waits for
+    # live deployment evidence is a documented state and stays green, so the
+    # audit can run inside CI without turning permanently red.
+    return 0 if not report["blocking_phases"] else 1
 
 
 if __name__ == "__main__":

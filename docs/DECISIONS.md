@@ -609,3 +609,13 @@ round-scoped keyboard panel after creation.
   storage outage from accepting an unrecoverable wager or charging twice.
 - **Error:** Storage failures use the stable
   `game_persistence_unavailable` code and do not expose driver details.
+## ADR: Normal Codex CLI birincil sohbet rotası
+
+**Durum:** kabul edildi
+
+OpenAI hesabı Arel'e ayrı bir SIWC uygulama izniyle değil, sunucuda oturum açmış
+normal Codex CLI ile bağlanır. Arel `codex exec` sürecini kabuksuz ve salt-okunur
+çalıştırır; CLI hesabı yanıt veremezse typed router EVREN ve diğer izinli
+sağlayıcılara geçer. Bu karar araç, görsel, embedding ve transcription
+kabiliyetlerini CLI'ye vermeyi gerektirmez; bu görevler kendi provider'larında
+kalır. Secret ve prompt süreç loglarına yazılmaz.

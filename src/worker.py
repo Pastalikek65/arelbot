@@ -6,7 +6,7 @@ import asyncio
 import logging
 
 from config import Config
-from src.media import MediaDownloadService
+from src.media import SHUTDOWN_CLEANUP_TIMEOUT_SECONDS, MediaDownloadService
 from src.documents import DocumentIngestionService
 from src.attachments import AttachmentProcessingService
 from src.quotes.service import QuoteProcessingService
@@ -26,9 +26,53 @@ from src.image_generation import ImageGenerationService
 from src.image_router import ImageRouter
 from src.telegram_request import build_bot
 from src.observability import ObservabilityServer
+from src.security.log_redaction import summarize_exception
+from src.utils import (
+    CLEANUP_INTERVAL_SECONDS,
+    CLEANUP_MAX_AGE_SECONDS,
+    cleanup_directories,
+    cleanup_old_files,
+)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 logger = logging.getLogger("arel.worker")
+
+
+async def _background_cleanup_task(registry=None) -> None:
+    """Reclaim stale media and temp artifacts inside the worker process.
+
+    The bot and the worker run as separate containers and share the media
+    volume, so the worker sweeps its own spool as well: the bot side sweep
+    cannot be the only safety net for a directory the worker produced.  The
+    blocking file work runs outside the event loop.
+    """
+    while True:
+        for target in cleanup_directories():
+            try:
+                removed = await asyncio.to_thread(
+                    cleanup_old_files, target, max_age_seconds=CLEANUP_MAX_AGE_SECONDS
+                )
+                if registry is not None and removed:
+                    registry.inc("media_cleanup_entries_removed", removed)
+            except Exception as exc:
+                logger.error(
+                    "Background cleanup error: %s",
+                    summarize_exception(exc, label="background_cleanup"),
+                )
+        await asyncio.sleep(CLEANUP_INTERVAL_SECONDS)
+
+
+def _start_background_cleanup(registry=None) -> asyncio.Task:
+    """Start the periodic cleanup task of the worker process."""
+    return asyncio.create_task(
+        _background_cleanup_task(registry), name="arel-file-cleanup"
+    )
+
+
+async def _stop_background_cleanup(task: asyncio.Task) -> None:
+    """Cancel the periodic cleanup task and wait for its cancellation."""
+    task.cancel()
+    await asyncio.gather(task, return_exceptions=True)
 
 
 async def run() -> None:
@@ -108,9 +152,11 @@ async def run() -> None:
         logger.info(
             "Arel media/document/attachment/quote/speech/sticker-tag/market-chart/image worker started"
         )
+        cleanup_task = _start_background_cleanup(service.metrics_registry)
         try:
             await asyncio.Event().wait()
         finally:
+            await _stop_background_cleanup(cleanup_task)
             if observability is not None:
                 await observability.close()
             await attachment_service.close()
@@ -120,6 +166,10 @@ async def run() -> None:
             await market_chart_job_service.close()
             await image_generation_service.close()
             await document_service.close()
+            # The media spool belongs to this process.  Drain the deferred
+            # cleanup workers before the service stops so a timed-out
+            # download does not survive the worker.
+            await service.wait_for_background_cleanup(timeout=SHUTDOWN_CLEANUP_TIMEOUT_SECONDS)
             await service.close()
             await tts_service.close()
             await chat_engine.close()

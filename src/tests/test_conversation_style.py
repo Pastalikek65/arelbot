@@ -25,7 +25,7 @@ def test_normal_chat_style_is_compact_and_conversational():
 def test_normal_mode_is_selectable_without_touching_other_modes():
     assert is_normal_mode("normal")
     assert is_normal_mode("su\u00e7 orta\u011f\u0131")
-    assert style_mode_label("normal") == "Normal / su\u00e7 orta\u011f\u0131"
+    assert style_mode_label("normal") == "Normal"
     assert not is_normal_mode("roast")
 
 

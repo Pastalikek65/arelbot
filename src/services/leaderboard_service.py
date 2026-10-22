@@ -99,14 +99,29 @@ class LeaderboardService:
             user_id=int(user_id), chat_id=int(chat_id), game_type=game_key,
             score=score, user_name=user_name, event_id=progression_event_id,
         )
+        retryable_stats = getattr(self.db, "score_stats_retryable", None)
         if accepted is False:
+            if retryable_stats is not None and await retryable_stats(
+                event_id=progression_event_id, user_id=int(user_id), chat_id=int(chat_id),
+                game_type=game_key, score=score,
+            ):
+                await self.db.update_player_stats(
+                    user_id=user_id, score_delta=score, user_name=user_name,
+                    event_id=progression_event_id,
+                )
             recorder = getattr(self.db, "record_game_progress", None)
             if recorder is not None:
                 await self._record_progress(
                     user_id, chat_id, game_key, score, user_name, progression_event_id
                 )
             return False
-        await self.db.update_player_stats(user_id=user_id, score_delta=score, user_name=user_name)
+        if retryable_stats is not None:
+            await self.db.update_player_stats(
+                user_id=user_id, score_delta=score, user_name=user_name,
+                event_id=progression_event_id,
+            )
+        else:
+            await self.db.update_player_stats(user_id=user_id, score_delta=score, user_name=user_name)
         await self._record_progress(user_id, chat_id, game_key, score, user_name, progression_event_id)
         return True
 

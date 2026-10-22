@@ -4,7 +4,7 @@ import logging
 import re
 from typing import List
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 from dotenv import load_dotenv
 from src.security.log_redaction import RedactionFilter
 
@@ -19,6 +19,81 @@ logging.basicConfig(
 for _handler in logging.getLogger().handlers:
     _handler.addFilter(RedactionFilter())
 logger = logging.getLogger(__name__)
+
+
+def build_mongodb_uri(
+    username: str,
+    password: str,
+    host: str,
+    database: str,
+    *,
+    auth_source: str | None = None,
+) -> str:
+    """Build a MongoDB connection string whose password is URL-encoded.
+
+    ``urllib.parse.quote`` escapes the characters that would otherwise end
+    the password section of the URI, so a password that contains ``@`` or
+    ``:`` still produces a connection string the driver can parse.
+
+    The escaping is a safety net for a caller that builds a connection string
+    itself, not a way around the deployment rule.  Compose interpolates the
+    raw password into the connection string, so
+    ``validate_database_password`` restricts a configured password to the
+    characters that need no escaping at all.
+
+    ``auth_source`` names the database that holds the credentials.  The
+    driver otherwise authenticates against the database in the path, so a
+    user that lives in ``admin`` needs ``auth_source="admin"`` to be able to
+    authenticate at all.
+    """
+
+    encoded_user = quote(str(username), safe="")
+    encoded_password = quote(str(password), safe="")
+    authority = f"{encoded_user}:{encoded_password}@{host}"
+    uri = f"mongodb://{authority}/{database}"
+    if auth_source:
+        uri = f"{uri}?authSource={quote(str(auth_source), safe='')}"
+    return uri
+
+
+def mongodb_uri_has_credentials(uri: str) -> bool:
+    """Return whether a MongoDB connection string carries a credential.
+
+    A production deployment must never reach MongoDB anonymously, so the
+    check only looks at the presence of a user and a password and never
+    returns or logs either of them.
+    """
+
+    try:
+        parsed = urlparse(str(uri))
+    except ValueError:
+        return False
+    return bool(parsed.username) and bool(parsed.password)
+
+
+# The database password is interpolated into the connection string by Compose
+# and by the operational scripts, and neither of them escapes it.  A reserved
+# character would therefore produce an unusable connection string, so the
+# documented character set is a rule that is enforced instead of a note.
+PASSWORD_ALLOWED_CHARACTERS = frozenset(
+    "abcdefghijklmnopqrstuvwxyz" "ABCDEFGHIJKLMNOPQRSTUVWXYZ" "0123456789" "-_.~"
+)
+
+
+def validate_database_password(password: str, *, label: str) -> None:
+    """Reject a database password that a connection string cannot carry.
+
+    The value is never part of the error message.  The check exists so that a
+    password with a reserved character fails with an actionable message
+    instead of producing a connection string that is silently wrong.
+    """
+
+    value = str(password or "")
+    if not value or not set(value) <= PASSWORD_ALLOWED_CHARACTERS:
+        raise ValueError(
+            f"{label} must not be empty and may only contain the characters A-Z a-z 0-9 - _ . ~"
+        )
+
 
 class Config:
     TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
@@ -77,6 +152,35 @@ class Config:
     
     # Cloudflare accounts format: account_id:token, account_id:token
     CLOUDFLARE_ACCOUNTS: List[str] = [k.strip() for k in os.getenv("CLOUDFLARE_ACCOUNTS", "").split(",") if k.strip()]
+    CLOUDFLARE_CHAT_MODEL = os.getenv("CLOUDFLARE_CHAT_MODEL", "@cf/openai/gpt-oss-120b").strip()
+    HRMN_API_KEY = os.getenv("HRMN_API_KEY", "").strip()
+    HRMN_URL = os.getenv("HRMN_URL", "https://api.hrmn.tr/v1").rstrip("/")
+    HRMN_CHAT_MODEL = "deepseek-v4.1-flash-1017"
+    HRMN_IMAGE_MODELS = ("gpt-image-2.5-prism", "gpt-image-2.5-flare")
+    HRMN_CHAT_TIMEOUT_SECONDS = 10.0
+    HRMN_IMAGE_TIMEOUT_SECONDS = 35.0
+    # ChatGPT plan OAuth is deliberately separate from API-key storage.
+    OPENAI_CHATGPT_ENABLED = os.getenv("OPENAI_CHATGPT_ENABLED", "false").lower() in {"1", "true", "yes", "on"}
+    OPENAI_CHATGPT_MODEL = os.getenv("OPENAI_CHATGPT_MODEL", "gpt-5.6-luna").strip()
+    OPENAI_CHATGPT_FALLBACK_MODEL = os.getenv("OPENAI_CHATGPT_FALLBACK_MODEL", "gpt-6-luna").strip()
+    OPENAI_CHATGPT_REASONING_EFFORT = "none"
+    # Arel requires its own granted plan-usage scope. A normal coding login
+    # must never be substituted for a denied third-party application grant.
+    OPENAI_CHATGPT_MODE = os.getenv("OPENAI_CHATGPT_MODE", "siwc").strip().lower()
+    # In ``cli`` mode the normal headless `codex exec` binary owns account
+    # authentication. No OAuth credential file is read by the application.
+    OPENAI_CHATGPT_CLI_BIN = os.getenv("OPENAI_CHATGPT_CLI_BIN", "codex").strip()
+    OPENAI_CHATGPT_CLI_MODEL = os.getenv("OPENAI_CHATGPT_CLI_MODEL", "").strip()
+    OPENAI_CHATGPT_CLI_WORKDIR = os.getenv("OPENAI_CHATGPT_CLI_WORKDIR", "/tmp").strip()
+    OPENAI_CHATGPT_CODEX_HOME = os.getenv("CODEX_HOME", "/run/arel-openai/codex").strip()
+    OPENAI_CHATGPT_CREDENTIALS_FILE = os.getenv(
+        "OPENAI_CHATGPT_CREDENTIALS_FILE", "/run/arel-openai/credentials.json"
+    ).strip()
+    OPENAI_CHATGPT_TIMEOUT_SECONDS = max(5.0, min(90.0, float(os.getenv("OPENAI_CHATGPT_TIMEOUT_SECONDS", "40"))))
+    AI_ROTATION_ENABLED = os.getenv("AI_ROTATION_ENABLED", "false").lower() in {"1", "true", "yes", "on"}
+    AI_ROTATION_PRIMARY_COUNT = max(1, min(16, int(os.getenv("AI_ROTATION_PRIMARY_COUNT", "2"))))
+    AI_ROUTER_TIMEOUT_SECONDS = max(1.0, min(90.0, float(os.getenv("AI_ROUTER_TIMEOUT_SECONDS", "40"))))
+    AI_TEXT_PROVIDER_TIMEOUT_SECONDS = max(1.0, min(30.0, float(os.getenv("AI_TEXT_PROVIDER_TIMEOUT_SECONDS", "12"))))
     
     # For backward compatibility and single entry fallback
     _cf_token = os.getenv("CLOUDFLARE_API_TOKEN")
@@ -112,6 +216,35 @@ class Config:
     OWNER_ID = int(os.getenv("OWNER_ID", str(OWNER_ID_DEFAULT)))
 
     MONGODB_URI = os.getenv("MONGODB_URI")
+    # The application connects with the least-privilege application account.
+    # The administrative account stays reserved for the operations that need
+    # it (initialisation, backup/restore, password rotation) and must never
+    # build the application connection string.  An explicit MONGODB_URI
+    # always wins, because the Compose service environment provides it.
+    MONGO_APP_USERNAME = os.getenv("MONGO_APP_USERNAME", "").strip()
+    MONGO_APP_PASSWORD = os.getenv("MONGO_APP_PASSWORD", "")
+    MONGO_ROOT_USERNAME = os.getenv("MONGO_ROOT_USERNAME", "").strip()
+    MONGO_ROOT_PASSWORD = os.getenv("MONGO_ROOT_PASSWORD", "")
+    MONGODB_DATABASE = os.getenv("MONGODB_DATABASE", "arel_bot")
+    if not MONGODB_URI and MONGO_APP_USERNAME and MONGO_APP_PASSWORD:
+        # The connection string is built here, so the password is escaped.
+        # The deployment rule for a password that Compose interpolates
+        # without escaping is enforced by ``Config.validate()``; importing
+        # this module must never fail because of the environment.
+        MONGODB_URI = build_mongodb_uri(
+            MONGO_APP_USERNAME,
+            MONGO_APP_PASSWORD,
+            os.getenv("MONGODB_HOST", "mongo:27017"),
+            MONGODB_DATABASE,
+            # The application account lives in the application database.
+            auth_source=MONGODB_DATABASE,
+        )
+    # A deployment that configures only the administrative credentials would
+    # otherwise run the application as `root`.  The flag lets the validation
+    # report that misconfiguration instead of silently building that URI.
+    MONGO_ADMIN_ONLY_CREDENTIALS = bool(
+        not MONGODB_URI and MONGO_ROOT_USERNAME and MONGO_ROOT_PASSWORD
+    )
     MONGODB_REQUIRED = os.getenv("MONGODB_REQUIRED", "false").lower() in {"1", "true", "yes", "on"}
     REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
     # Shared Redis consumers fail fast in production; local polling/tests may opt into memory.
@@ -235,16 +368,14 @@ class Config:
     except (TypeError, ValueError):
         AI_COST_RATES = {}
     try:
-        # NVIDIA NIM is preferred when its key is configured, with EVREN as a
-        # compatible failover. ChatEngine filters this allowlist against
-        # providers that actually have a key, so existing EVREN-only
-        # deployments keep working without a route change.
+        # Text routes are ordered, not round-robin: OpenAI plan usage is tried
+        # first when enabled, followed by EVREN, NVIDIA and Cloudflare.
         _default_ai_routes = json.dumps(
             {
-                "chat": ["nvidia", "evren"],
-                "fast": ["nvidia", "evren"],
-                "analysis": ["nvidia", "evren"],
-                "summary": ["nvidia", "evren"],
+                "chat": ["openai"],
+                "fast": ["openai"],
+                "analysis": ["openai"],
+                "summary": ["openai"],
                 "sticker_tagging": ["nvidia", "evren"],
             }
         )
@@ -289,7 +420,7 @@ class Config:
     except (TypeError, ValueError):
         AKINATOR_SOLVER_TIMEOUT_MS = 120000
     GUESS_AGE_ROUNDS = max(1, min(10, int(os.getenv("GUESS_AGE_ROUNDS", "5"))))
-    GUESS_AGE_ROUND_SECONDS = max(15, min(300, int(os.getenv("GUESS_AGE_ROUND_SECONDS", "60"))))
+    GUESS_AGE_ROUND_SECONDS = max(15, min(300, int(os.getenv("GUESS_AGE_ROUND_SECONDS", "30"))))
     UNO_TURN_SECONDS = max(15, min(300, int(os.getenv("UNO_TURN_SECONDS", "60"))))
     MINIAPP_GAMES_ENABLED = os.getenv("MINIAPP_GAMES_ENABLED", "false").strip().lower() in {"1", "true", "yes", "on"}
     MINIAPP_URL = os.getenv("MINIAPP_URL", "").strip()
@@ -316,7 +447,15 @@ class Config:
     NVIDIA_URL = os.getenv("NVIDIA_URL", "https://integrate.api.nvidia.com/v1").rstrip("/")
     NVIDIA_KEY = os.getenv("NVIDIA_API_KEY") or os.getenv("NVIDIA_KEY")
     NVIDIA_MODEL = os.getenv("NVIDIA_MODEL", "deepseek-ai/deepseek-v4.1-flash")
+    NVIDIA_CHAT_MODEL = os.getenv("NVIDIA_CHAT_MODEL") or NVIDIA_MODEL
     NVIDIA_VISION_MODEL = os.getenv("NVIDIA_VISION_MODEL") or None
+    # Local DeepSeek web proxy. Both switches are required: never infer opt-in
+    # from a sidecar hostname or reuse an unrelated provider credential.
+    D2API_ENABLED = os.getenv("D2API_ENABLED", "false").strip().lower() in {"1", "true", "yes", "on"}
+    D2API_URL = os.getenv("D2API_URL", "http://d2api:9655/v1")
+    D2API_KEY = os.getenv("D2API_KEY", "").strip() or None
+    # This is the proxy's public model identifier, not an attested upstream ID.
+    D2API_MODEL = os.getenv("D2API_MODEL", "deepseek-v4.1-flash")
     # Legacy compatibility values are intentionally not populated from EVREN.
     # This prevents an EVREN key from being mislabeled as Clean APIs in logs,
     # metrics, health output, or provider routing.
@@ -336,7 +475,7 @@ class Config:
         has_ai_provider_key = bool(
             cls.FREEMODEL_KEY or cls.GROQ_KEYS or cls.GEMINI_KEYS or cls.CEREBRAS_KEYS
             or cls.IAMHC_KEY or cls.EVREN_KEY or cls.NINEROUTER_KEY
-            or cls.NVIDIA_KEY
+            or cls.NVIDIA_KEY or cls.CLOUDFLARE_ACCOUNTS
         )
         if not has_ai_provider_key and cls.APP_ROLE != "worker":
             missing.append("at least one AI provider key")
@@ -417,8 +556,45 @@ class Config:
             raise ValueError("REDIS_URL is required when MEDIA_REDIS_REQUIRED=true")
         if cls.REDIS_REQUIRED and not cls.REDIS_URL:
             raise ValueError("REDIS_URL is required when REDIS_REQUIRED=true")
+        if getattr(cls, "MONGO_ADMIN_ONLY_CREDENTIALS", False):
+            # The application account is the only account the bot and the
+            # worker may use.  A deployment that configures just the
+            # administrative credentials is a misconfiguration, not a
+            # fallback, so production refuses to start.  The check comes
+            # before the generic "MONGODB_URI is required" rule so that the
+            # operator reads the actual cause.
+            message = (
+                "MONGO_APP_USERNAME and MONGO_APP_PASSWORD are required; the administrative "
+                "account must not be used by the application"
+            )
+            if cls.APP_ENV == "production":
+                raise ValueError(message)
+            logger.warning(message)
         if (cls.MONGODB_REQUIRED or cls.APP_ROLE in {"bot", "worker"}) and not cls.MONGODB_URI:
             raise ValueError("MONGODB_URI is required for production bot/worker roles")
+        if cls.APP_ENV == "production" and cls.MONGODB_URI and not mongodb_uri_has_credentials(cls.MONGODB_URI):
+            raise ValueError("MONGODB_URI must include credentials when APP_ENV=production")
+        for label, value in (
+            ("MONGO_APP_PASSWORD", cls.MONGO_APP_PASSWORD),
+            ("MONGO_ROOT_PASSWORD", cls.MONGO_ROOT_PASSWORD),
+        ):
+            if not value:
+                continue
+            try:
+                validate_database_password(value, label=label)
+            except ValueError:
+                # The password ends up in a connection string that Compose
+                # does not escape, so a reserved character breaks it.  The
+                # rule is enforced here and not while the module is imported,
+                # because a module that raises on import takes down every
+                # tool that imports it.
+                if cls.APP_ENV == "production":
+                    raise
+                logger.warning(
+                    "%s contains a character that a connection string cannot carry; "
+                    "the deployment may fail to connect",
+                    label,
+                )
 
         owner_configured = bool(getattr(cls, "OWNER_ID_CONFIGURED", False)) or cls.OWNER_ID != cls.OWNER_ID_DEFAULT
         if cls.APP_ENV == "production" and not owner_configured:

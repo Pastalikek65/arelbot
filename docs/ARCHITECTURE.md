@@ -51,6 +51,66 @@ yürütülür. AFAD, haber ve aktüel ürün akışları için içerik fingerpri
 plan ileri alınır ama Telegram'a ikinci kez gönderilmez. Hava ve namaz gibi
 zaman bazlı akışlar tekrar politikasını korur; eşik alarmları yalnızca gözlenen
 payload değiştiğinde tetiklenir.
+
+Ekonomi hesabı `EconomyStore` üzerinde tek belge olarak tutulur. Bakiye ve
+uygulanan her ledger event'inin damgası aynı hesap dokümanında yaşar; MongoDB
+tek `update_one` çağrısını atomik uyguladığı için ödül ile bakiye artışı iki
+ayrı yazmaya bölünemez ve bir çökme ödülü kalıcı olarak yakamaz. Aynı
+`event_id` ile gelen tekrar deneme hesap dokümanındaki damga sayesinde
+reddedilir, böylece ödül ikinci kez ödenmez. `applied_events` alt dokümanı
+hesap başına 500 kayıtla sınırlıdır; budama yalnızca belge boyutunu etkiler,
+uygulama doğruluğunu değil. Bu sınır aynı zamanda **idempotency ufku**dur:
+budanmış bir event yeniden oynatıldığında bir daha uygulanır, dolayısıyla 500
+kayıttan eski event'ler için tekrar garantisi yoktur.
+
+Migration v20 hesap kimliğini benzersiz index ile garanti eder, eski
+`balance`/`applied_events` alanlarını normalize eder ve `economy_transactions`
+koleksiyonundaki geçmiş satırları `applied_events` içine seed eder. Seed
+olmadan migration öncesi kullanılmış bir `event_id` (örneğin deploy gününün
+deterministik `daily:` claim'i) yeni görünür ve aynı gün içinde ikinci kez
+ödeme yapılabilirdi. Seed aynı değerleri yeniden yazdığı için tekrarlanabilir
+ve yarım kalmış bir migration güvenle yeniden çalıştırılabilir. Deploy notu:
+seed, deploy gününün çift claim penceresini kapatır; seed satırları okunmadan
+`/gunluk` claim penceresini geçen bir deploy yapılmamalıdır. Seed bir veri
+migration'ıdır: gruplar diske taşınabilir (allowDiskUse) gruplama ile
+akış halinde işlenir, hesap başına en fazla 500 satır seed edilir ve ilerleme
+gruptan her 500 grupta bir loglanır. Büyük bir veritabanında ilk v20 çalışması
+dakikalar sürebilir; işlem bot açılışında çalıştığı için bu migration'ı
+botu başlatmadan `python scripts/migrate.py` ile uygulamak operatör için daha
+güvenli yoldur. Seed bir hata ile durursa v20 uygulanmış sayılmaz ve bir
+sonraki çalıştırma kaldığı yerden devam eder (bot bu durumda açılmaz).
+
+v20'nin rollback'i eski ledger şeklini geri getirir: `applied_events` alanı
+silinmeden önce içindeki history `economy_transactions` koleksiyonuna geri
+yazılır, böylece yalnızca hesap dokümanında duran event'ler kaybolmaz. Bu
+rollback hesap kimliği index'ini de düşürür; index base şema tarafından
+yeniden kurulana kadar veritabanı v1'in tanımladığı index'ten yoksundur. Eski
+kod yolunun idempotency'i bu index'e değil, `economy_transactions` üzerindeki
+unique `event_key` index'ine dayandığı için geri alınan kod yolu doğru
+çalışmaya devam eder.
+
+Üretim veritabanı tespiti `src/storage/production.py` içindeki tek yardımcıda
+toplanır: nesnenin kendi `is_production_database` işareti önce, ardından
+`Database` sınıfının kimliği, en son modül adı kontrol edilir. Sınıf
+kimliği kontrolü şarttır; `src/database/__init__.py` eski modülü
+`_arel_legacy_database` adıyla yükleyip sınıfı yeniden export ettiği için
+`type(db).__module__ == "src.database"` karşılaştırması gerçek üretim
+sınıfı için **hiçbir zaman** doğru olmuyordu. Bu tespit yanlış olduğunda
+ekonomi ledger'ı ve oyunların kalıcı durumu MongoDB kapalıyken sessizce
+belleğe düşüyordu.
+
+**Davranış değişikliği:** tespit düzeldiği için üretim (ve staging)
+ortamlarında, `MONGODB_REQUIRED` açıkken veya `bot`/`worker` rolünde MongoDB
+erişilemez olduğunda bu yollar artık **fail closed** çalışır. Ekonomi
+ledger'ı `economy_persistence_unavailable` hatası verir, oyunların kalıcı
+durumu `game_persistence_unavailable` hatası verir; hiçbir ödül veya oyun
+turu süreç belleğine yazılmaz. Ek olarak `EconomyStore` üretimde ilk yazmadan
+önce benzersiz `(user_id, chat_id)` index'inin var olduğunu garanti eder ve
+index oluşturulamazsa sessizce devam etmez. Bu, kök `AGENTS.md` kuralının
+(`storage ve database kalıcı veri erişimidir`) zaten istenen sonucudur, ancak
+operasyonel bir değişikliktir: MongoDB erişilemeyen bir üretim dağıtımında
+bot açılışı bu yollar nedeniyle durabilir.
+
 Grup analitiği de `GroupAnalyticsService` üzerinden çalışır; Mongo aggregate
 sorguları `Database.get_group_analytics` repository sınırında tutulur. Komut
 öncesi grup ve yönetici yetkisi tekrar doğrulanır, kullanıcı adları escape edilir.
@@ -250,13 +310,58 @@ Telegram or logs. Headers do not bypass authentication, private content or a
 platform's access controls, and an administrator cookie remains an explicit,
 disabled-by-default fallback.
 
-A cached Telegram `file_id` is treated as an expiring transport reference. If Telegram reports a stale or invalid reference, the cache entry is evicted and the original media pipeline is retried once for that job; unrelated Telegram delivery errors still fail the job without hiding the operational signal.
+A cached Telegram `file_id` is treated as an expiring transport reference. If Telegram reports a stale or invalid reference, the cache entry is evicted and the original media pipeline is retried once for that job; unrelated Telegram delivery errors still fail the job without hiding the operational signal. A stale reference is a definite refusal, so the send boundary of that attempt is released and the job stays deliverable: a provider failure after the eviction still lets the queue retry complete the delivery. Only a reference that Telegram names as unusable may release the boundary; an unrelated `BadRequest` keeps failing the job instead of turning into a full re-download and re-send.
 
 Identical active media requests are coalesced by the normalized URL hash. In a
 production worker Redis owns the short-lived cross-process lock; the combined
 development/test backend uses an instance-scoped asyncio lock. The lock is
 held through Telegram delivery so a waiting chat can reuse the first job's
 `file_id` cache entry instead of downloading the same public asset again.
+
+The queue claims a job atomically. The Mongo row is written before the Redis
+`WATCH` claim, so a claim that fails (a lost connection, a `WATCH` conflict or
+a cancelled enqueue) removes that row again and no failure path leaves an
+orphan job that a worker would only pick up after a restart. A transient
+failure is retried under an exponential backoff that grows with the attempt
+counter carried in the job payload, so a rate-limited or briefly unavailable
+upstream is not hammered by a burst of immediate re-queues. The delay is
+capped at five minutes, and a job that exhausts its attempts is dead-lettered
+with its error code.
+
+During that wait the row keeps the `queued` status while the job is not yet in
+the Redis list. `queued` belongs to the recovery set, so a worker restart
+inside the wait re-queues the job at once instead of finishing the remaining
+delay; the attempt counter is already incremented, so the next failure waits
+longer. The row status and the queue membership therefore disagree for the
+length of the backoff, and the recovery sweep is the deliberate winner.
+
+Media delivery is guarded by the shared send-boundary ledger. A worker claims
+`media:{job_id}` immediately before the Telegram upload, so a job whose worker
+died during the upload is never delivered twice; an upload with an unknown
+outcome is recorded as `uncertain` instead of being replayed. The claim belongs
+to the upload and not to the download, so a provider failure leaves the key
+unclaimed and the retry may still deliver the media. The media job store
+therefore stops re-queueing `sending` rows, because that state now belongs to
+the ledger, while `queued`, `probing`, `downloading` and `transcoding` rows
+stay recoverable. A row that stays in `sending` after a worker death is not
+re-queued; the job expiry reaper marks it `expired` after the job TTL, so the
+status view never reports it as in flight forever.
+
+Without MongoDB the media service degrades to its documented process-local mode
+and the ledger follows it, so the boundary is then only as durable as the
+process: a worker restart in that mode can repeat a delivery whose outcome was
+unknown. Production `bot` and `worker` roles require MongoDB and never run in
+that mode. A ledger that a caller supplies is used as it is and is never
+replaced or stripped of its backing.
+
+A job whose send boundary is already closed is closed again without running
+the pipeline: the worker reads the boundary state first, so a refused retry
+does not download the media again and does not replace the message of the
+failed attempt. The user message follows the recorded state and never claims a
+delivery that did not happen: a finished delivery reports that the media was
+sent, an in-flight boundary reports that the delivery is running and was not
+repeated, and an uncertain boundary keeps the honest error text of the failed
+attempt.
 
 When `MEDIA_ARIA2_ENABLED=true` and the executable is present, the yt-dlp
 adapter delegates direct HTTP byte transfer to aria2c with eight bounded
@@ -306,7 +411,7 @@ AI sticker keyword extraction now persists a bounded job containing only a Teleg
 
 ### Telegram output delivery ledger
 
-Worker-produced outputs use a shared `job_deliveries` ledger. Each output claims `namespace:job_id:output_type`; a second worker cannot send a terminal `sent` or `uncertain` key. The send boundary is explicitly `pending -> sending -> sent`; exceptions after `sending` become `uncertain`, preventing silent duplicates. Migration v12 adds a unique key and seven-day TTL index. Migration v13 adds the forum-topic subscription scope index. The ledger stores transport metadata only and never stores media bytes or user-authored payloads.
+Worker-produced outputs use a shared `job_deliveries` ledger. Each output claims `namespace:job_id:output_type`; media downloads claim `media:{job_id}` because a media job produces a single Telegram output. A second worker cannot send a terminal `sent` or `uncertain` key. The send boundary is explicitly `pending -> sending -> sent`; exceptions after `sending` become `uncertain`, preventing silent duplicates. A delivery that the platform definitively refused is the one exception: `release_started` returns that `sending` row to the claimable state, so the job can still be delivered, while an unknown outcome stays `uncertain` and is never replayed. `delivery_status` reads the recorded state without changing it, so a service can report what actually happened to the user. Migration v12 adds a unique key and seven-day TTL index. Migration v13 adds the forum-topic subscription scope index. The ledger stores transport metadata only and never stores media bytes or user-authored payloads.
 
 ### Worker-backed AI image generation
 
@@ -536,3 +641,12 @@ forum topic identifiers before mutation; a copied button cannot move a round
 in another topic. New chess and Connect Four rounds publish their prompt
 panel before storing the prompt message id, so a restart or a silent command
 never leaves a lobby without controls.
+## Normal Codex CLI sohbet rotası
+
+OpenAI birincil sohbet sağlayıcısı olarak etkinleştirildiğinde `ChatGPTCliProvider`
+normal `codex exec --json --ephemeral` sürecini typed `CompletionRequest` ile
+çağırır. Süreç kabuk üzerinden çalıştırılmaz, salt-okunur sandbox ile sınırlıdır
+ve yalnızca güvenli JSONL son yanıtı döndürür. CLI oturumu yoksa veya süreç
+başarısız olursa `AIProviderRouter` aynı isteği EVREN ve diğer izinli rotalara
+aktarır. Görsel, embedding, transcription ve araç çağrıları CLI'ye verilmez;
+capability filtreleri bunları destekleyen provider'lara yönlendirir.

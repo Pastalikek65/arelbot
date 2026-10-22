@@ -7,6 +7,7 @@ import logging
 import asyncio
 import time
 import traceback
+import unicodedata
 from html import escape
 import os
 import re
@@ -36,9 +37,11 @@ from src.games.engine import calculate_hangman_score, calculate_word_game_score,
 from src.games.hangman import apply_guess
 from src.services.word_game_ui import word_game_keyboard, render_word_game_text
 from src.services.word_guess_ui import word_guess_keyboard
+from src.services.word_chain_ui import render_word_chain, word_chain_keyboard
 from src.services.group_member_service import GroupMemberService
 from src.storage.handler_data_port import HandlerDataPort
 from src.storage.state_scope import get_scoped_state, pop_scoped_state
+from src.storage.game_scope import forum_thread_id
 from src.features.chat_feature_policy import is_chat_feature_enabled
 from src.ai.personality import PersonalityPolicy
 from src.ai.conversation_style import NORMAL_MODE, is_normal_mode
@@ -462,6 +465,17 @@ class MessageHandler:
         return False
 
     async def handle_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        edited_message = getattr(update, "edited_message", None)
+        if edited_message is not None:
+            # Edits are not new guesses. Recheck an active narrator's clue so
+            # a forbidden word cannot be introduced after its first delivery.
+            clue = str(getattr(edited_message, "text", None) or getattr(edited_message, "caption", None) or "").strip()
+            if clue and getattr(self, "tabu_handler", None):
+                await self.tabu_handler.on_text(update, context, tr_upper(clue))
+            word_arcade = getattr(self, "word_arcade_handler", None)
+            if clue and word_arcade:
+                await word_arcade.on_clue_text(update, context, clue)
+            return
         if not update.message or not update.message.text:
             return
 
@@ -550,10 +564,53 @@ class MessageHandler:
                 if event is not None and await self._enforce_moderation_decision(update, context, decision, event):
                     return
 
+        # While a secret game is active, ordinary private text is game input,
+        # not consent to send a role or clue to the AI conversation history.
+        if update.effective_chat.type == "private":
+            lookup = getattr(getattr(self, "data_port", None), "get_active_secret_game_for_user", None)
+            if callable(lookup):
+                try:
+                    secret_game = await lookup(int(update.effective_user.id))
+                except Exception as exc:
+                    logger.warning("Secret game private routing unavailable: %s", type(exc).__name__)
+                    await update.effective_message.reply_text("Oyun durumun kontrol edilemedi. Gizli bilgileri korumak için bu mesajı işlemedim; biraz sonra tekrar dene.")
+                    return
+                if secret_game:
+                    suite = getattr(self, "puzzle_suite", None)
+                    if suite:
+                        route_lookup = getattr(self.data_port, "list_active_secret_game_routes", None)
+                        try:
+                            routes = await route_lookup(int(update.effective_user.id)) if callable(route_lookup) else [secret_game]
+                            if await suite.on_private_text(update, context, raw_message_text, routes=routes):
+                                return
+                        except Exception as exc:
+                            logger.warning("Private game input routing unavailable: %s", type(exc).__name__)
+                            await update.effective_message.reply_text("Özel oyun panelin kontrol edilemedi. Bu mesaj yapay zekâya gönderilmedi; biraz sonra güncel panele yanıt vererek tekrar dene.")
+                            return
+                    await update.effective_message.reply_text("Gizli rol oyunun devam ediyor. Hamleni özel oyun panelindeki düğmelerle yap; soru ve ipuçlarını grubun oyun bölümüne yaz. Bu mesaj yapay zekâya gönderilmedi.")
+                    return
+
+        # Route puzzle answers before social clues, media and AI history.
+        puzzle_suite = getattr(self, "puzzle_suite", None)
+        if puzzle_suite:
+            if await puzzle_suite.on_text(update, context, raw_message_text):
+                return
+            if context is not None:
+                context._puzzle_checked_message = getattr(update.effective_message, "message_id", None)
+
+        # Secret-game inputs are consumed before media, AI and chat history.
+        spy = getattr(self, "spy_handler", None)
+        if spy and await spy.on_text(update, context, raw_message_text):
+            return
+
         # Social links are handled by the bounded media queue before AI chat.
         # This also works in groups where the bot is not explicitly mentioned.
         if media_url and getattr(self, "media_service", None):
             if self.sudo_manager.is_blacklisted(update.effective_user.id, update.effective_chat.id):
+                return
+            # A link in an active Tabu clue must still be checked for the
+            # target and forbidden words before any media shortcut returns.
+            if getattr(self, "tabu_handler", None) and await self.tabu_handler.on_text(update, context, text):
                 return
             await self.orchestrator_media_link(update, context, media_url)
             return
@@ -716,36 +773,152 @@ class MessageHandler:
             else:
                 await status.edit_text("⚠️ Medya işi başlatılamadı. Lütfen daha sonra tekrar deneyin.")
 
-    async def _check_game_inputs(self, update: Update, context: ContextTypes.DEFAULT_TYPE, text: str) -> bool:
-        await hydrate_games(self.data_port, update.effective_chat.id, context.chat_data)
-        age_state = context.chat_data.get("guess_age")
-        if (
-            getattr(self, "guess_age_service", None) is not None
-            and isinstance(age_state, dict)
-            and age_state.get("status") == "playing"
-            and str(text or "").strip().isdecimal()
-            and getattr(update.effective_chat, "type", None) in {"group", "supergroup"}
-        ):
-            try:
-                _, outcome = await self.guess_age_service.submit(
-                    chat_id=int(update.effective_chat.id),
-                    user_id=int(update.effective_user.id),
-                    display_name=str(update.effective_user.first_name or "oyuncu"),
-                    guess=str(text).strip(),
-                )
-                await update.effective_message.reply_text(
-                    f"tahmin kaydedildi · +{int(outcome.score)} puan",
-                    reply_to_message_id=getattr(update.effective_message, "message_id", None),
-                )
-            except GuessAgeServiceError as exc:
-                messages = {
-                    "GUESS_AGE_ROUND_EXPIRED": "bu turun süresi doldu; sonuç panelini yenile",
-                    "guess_age_already_answered": "bu tur için tahminini zaten bıraktın",
-                }
-                notice = messages.get(exc.code)
-                if notice:
-                    await update.effective_message.reply_text(notice)
+    async def _check_word_chain_input(self, update: Update, context: ContextTypes.DEFAULT_TYPE, text: str) -> bool:
+        service = getattr(self, "word_chain_service", None)
+        if service is None:
+            return False
+        chat = getattr(update, "effective_chat", None)
+        message = getattr(update, "effective_message", None) or getattr(update, "message", None)
+        candidate = unicodedata.normalize("NFC", str(getattr(message, "text", None) or "").strip())
+        if (chat is None or chat.type not in {"group", "supergroup"} or message is None
+                or not re.fullmatch(r"[A-Za-zÇĞİÖŞÜçğıöşüÂÎÛâîû]+", candidate)):
+            return False
+        thread_id = forum_thread_id(message)
+        state = await service.current(int(chat.id), thread_id)
+        if not state or state.get("phase") != "playing":
+            return False
+        user = getattr(update, "effective_user", None)
+        if user is None:
+            return False
+        user_id = int(user.id)
+        if not any(int(player["id"]) == user_id for player in state["players"]):
+            return False
+        action_id = f"msg:{int(message.message_id)}"
+        if (action_id in state.get("processed_actions", [])
+                or int(message.message_id) <= int(state.get("message_watermark", 0))):
             return True
+        if int(state["players"][int(state["turn_index"])]["id"]) != user_id:
+            return False
+        chat_data = getattr(context, "chat_data", None)
+        if chat_data is not None:
+            await hydrate_games(self.data_port, int(chat.id), chat_data)
+            terminal = {"won", "lost", "finished", "expired", "cancelled", "canceled", "failed"}
+            active_legacy = []
+            for game_key in ("hangman", "word_game", "word_guess"):
+                game = chat_data.get(game_key)
+                if not isinstance(game, dict) or str(game.get("status") or "").casefold() in terminal:
+                    continue
+                game_thread = game.get("thread_id")
+                if game_thread is not None and int(game_thread) != thread_id:
+                    continue
+                active_legacy.append(game)
+            if active_legacy:
+                replied = getattr(message, "reply_to_message", None)
+                replied_id = int(getattr(replied, "message_id", 0) or 0)
+                if any(replied_id and replied_id == int(game.get("prompt_message_id", 0) or 0)
+                       for game in active_legacy):
+                    return False
+                bot_id = getattr(getattr(context, "bot", None), "id", None)
+                sender = getattr(replied, "from_user", None)
+                markup = getattr(replied, "reply_markup", None)
+                prefix = f"chain:{state['round_id']}:{int(state['turn_count'])}:"
+                chain_panel_reply = (
+                    bot_id is not None and getattr(sender, "id", None) == bot_id
+                    and any(
+                        str(getattr(button, "callback_data", "") or "").startswith(prefix)
+                        for row in (getattr(markup, "inline_keyboard", None) or [])
+                        for button in row
+                    )
+                )
+                if not chain_panel_reply:
+                    await message.reply_text(
+                        "Birden fazla kelime oyunu açık; ilgili oyun paneline yanıtlayarak yaz veya diğerini kapat."
+                    )
+                    return True
+        try:
+            status, changed = await service.act(
+                chat_id=int(chat.id), thread_id=thread_id, user_id=user_id,
+                user_name=str(getattr(user, "first_name", None) or "Oyuncu"),
+                action_id=action_id, action="word", value=candidate,
+                expected_round_id=state["round_id"], expected_turn=int(state["turn_count"]),
+                submitted_at=message.date.timestamp() if getattr(message, "date", None) else None,
+            )
+        except ValueError as exc:
+            errors = {
+                "word_chain_invalid_word": "En az üç harfli tek bir Türkçe kelime yaz.",
+                "word_chain_unknown_word": "Bu kelime oyun sözlüğünde yok.",
+                "word_chain_repeated_word": "Bu kelime zaten kullanıldı.",
+                "word_chain_wrong_letter": "Kelime, önceki sözcüğün son harfiyle başlamalı.",
+                "word_chain_turn_expired": "Süren doldu; sıra birazdan geçecek.",
+                "word_chain_stale_turn": "Bu mesaj eski sıraya ait. Güncel paneli kullan.",
+                "word_chain_stale_round": "Bu mesaj eski maça ait. Güncel paneli kullan.",
+            }
+            await message.reply_text(errors.get(str(exc), "Bu kelime hamlesi artık geçerli değil."))
+            return True
+        except RuntimeError as exc:
+            logger.warning("Word chain text deferred: %s", type(exc).__name__)
+            await message.reply_text("Oyun kaydı şu an kullanılamıyor. Biraz sonra tekrar dene.")
+            return True
+        if status == "duplicate":
+            return True
+        if changed.get("score_pending"):
+            try:
+                await service.settle_scores(chat_id=int(chat.id), thread_id=thread_id)
+                changed = await service.current(int(chat.id), thread_id)
+            except Exception as exc:
+                logger.warning("Word chain rewards deferred: %s", type(exc).__name__)
+        await message.reply_text(render_word_chain(changed), parse_mode="HTML", reply_markup=word_chain_keyboard(changed))
+        await service.acknowledge_panel(
+            chat_id=int(chat.id), thread_id=thread_id, round_id=changed["round_id"],
+            expected_version=int(changed["version"]),
+        )
+        return True
+
+    async def _check_age_input(self, update, text: str, context=None) -> bool:
+        service = getattr(self, "guess_age_service", None)
+        chat = update.effective_chat
+        if service is None or getattr(chat, "type", None) not in {"group", "supergroup"} or not str(text).strip().isdecimal():
+            return False
+        from src.handlers.age_input import is_current_age_message
+        message = update.effective_message or update.message
+        try:
+            async with service.presentation_lock(int(chat.id)):
+                state = await service.current(int(chat.id))
+                if not is_current_age_message(state, message):
+                    return False
+                changed, _ = await service.submit(
+                    chat_id=int(chat.id), user_id=int(update.effective_user.id),
+                    display_name=str(update.effective_user.first_name or "Oyuncu"), guess=str(text).strip(),
+                    expected_round_id=state["round_id"], expected_round=int(state["round"]),
+                )
+                if context is not None and getattr(context, "bot", None):
+                    from src.handlers.age_surface import refresh_age_caption
+                    await refresh_age_caption(context.bot, changed)
+        except GuessAgeServiceError as exc:
+            notices = {
+                "GUESS_AGE_ROUND_EXPIRED": "Bu turun süresi doldu. Sonuçlar hazırlanıyor.",
+                "GUESS_AGE_STALE_ROUND": "Bu fotoğrafın turu kapandı. Güncel fotoğrafı bekle.",
+                "guess_age_already_answered": "Bu tur için tek tahmin hakkını kullandın. Sonucu bekle.",
+                "guess_age_out_of_range": "1 ile 120 arasında bir yaş yaz.",
+                "guess_age_full": "Bu maç 100 oyuncuya ulaştı. Sonraki maça katılabilirsin.",
+                "GUESS_AGE_ROUND_PREPARING": "Sonraki fotoğraf hazırlanıyor. Göründüğünde tahmin yazabilirsin.",
+            }
+            await message.reply_text(notices.get(exc.code, "Tahmin kaydedilemedi. Biraz sonra tekrar dene."))
+        return True
+
+    async def _check_game_inputs(self, update: Update, context: ContextTypes.DEFAULT_TYPE, text: str) -> bool:
+        puzzle_suite = getattr(self, "puzzle_suite", None)
+        already_checked = (getattr(context, "_puzzle_checked_message", None) is not None
+                           and getattr(context, "_puzzle_checked_message", None) == getattr(update.effective_message, "message_id", None))
+        if puzzle_suite and not already_checked and await puzzle_suite.on_text(update, context, text):
+            return True
+        if getattr(self, "tabu_handler", None) and await self.tabu_handler.on_text(update, context, text):
+            return True
+        if await self._check_word_chain_input(update, context, text):
+            return True
+        if await self._check_age_input(update, text, context):
+            return True
+        await hydrate_games(self.data_port, update.effective_chat.id, context.chat_data)
         word_guess = context.chat_data.get("word_guess")
         job_queue = getattr(context, "job_queue", None)
         if word_guess and job_queue is not None:
@@ -789,12 +962,12 @@ class MessageHandler:
                     hints_used=game.get("hints_used", 0),
                 )
                 await self._record_game_result(update, "hangman", score, "win")
-                await update.message.reply_text(f"🥳 <b>TEBRİKLER!</b> Kelimeyi buldun: <b>{game['word']}</b> 🏆", parse_mode='HTML')
+                await update.message.reply_text(f"<b>Doğru bildin!</b> Kelime: <b>{escape(str(game['word']))}</b>", parse_mode='HTML')
                 del context.chat_data['hangman']
                 await delete_game(self.data_port, update.effective_chat.id, "hangman")
                 return True
             if result['status'] == 'lost':
-                await update.message.reply_text(f"💀 <b>MAALESEF!</b> Canın bitti. Kelime: <b>{game['word']}</b> idi. 🪦", parse_mode='HTML')
+                await update.message.reply_text(f"Tahmin hakkın bitti. Kelime: <b>{escape(str(game['word']))}</b>", parse_mode='HTML')
                 del context.chat_data['hangman']
                 await delete_game(self.data_port, update.effective_chat.id, "hangman")
                 return True
@@ -862,7 +1035,7 @@ class MessageHandler:
                         hints_used=game.get("hints_used", 0),
                     )
                     await self._record_game_result(update, "word_game", score, "win")
-                    await update.message.reply_text(f"🏆 <b>TEBRİKLER!</b> {game['target_count']} kelimeyi buldunuz ve oyunu kazandınız! 🔥", parse_mode='HTML')
+                    await update.message.reply_text(f"<b>Oyun tamamlandı.</b> Hedefteki {game['target_count']} kelimenin tamamı bulundu.", parse_mode='HTML')
                     del context.chat_data['word_game']
                     await delete_game(self.data_port, update.effective_chat.id, "word_game")
                 else:
@@ -894,11 +1067,9 @@ class MessageHandler:
 
             if match:
                 await update.message.reply_text(
-                    f"🥳 <b>TEBRİKLER!</b>\n\n"
-                    f"Kelimeyi doğru bildiniz: <b>{escape(str(game['word']))}</b> 🏆\n\n"
-                    f"✍️ Bildiren: {update.effective_user.mention_html()}\n"
-                    f"🧠 <i>{escape(str(game['word']))} hakkında açıklama yukarıdaydı.</i>\n"
-                    f"⏳ <b>3 saniye sonra yeni kelime geliyor...</b>",
+                    f"<b>Doğru cevap: {escape(str(game['word']))}</b>\n\n"
+                    f"Bilen: {update.effective_user.mention_html()}\n"
+                    f"3 saniye sonra yeni kelime geliyor.",
                     parse_mode='HTML',
                     **self._game_reply_kwargs(update, game),
                 )
@@ -1193,8 +1364,9 @@ class MessageHandler:
             window_seconds=getattr(Config, "GROUP_REPLY_WINDOW_SECONDS", 300),
         )
         planning_started = time.perf_counter()
+        persona_mode = await self._resolve_persona_mode(update, chat_id)
         try:
-            raw_plan = await self.chat_engine.get_group_reply_plan(turn_context)
+            raw_plan = await self.chat_engine.get_group_reply_plan(turn_context, persona_mode=persona_mode)
         except Exception as exc:
             logger.warning("Group reply plan failed: %s", summarize_exception(exc, label="group_reply_plan"))
             raw_plan = None
@@ -1209,6 +1381,7 @@ class MessageHandler:
                     username=update.effective_user.username,
                     persist_conversation=False,
                     purpose="group_targeted_reply_fallback",
+                    persona_mode=persona_mode,
                     is_group_admin=await is_group_admin(update, context, authorization=getattr(self, "authorization", None)),
                 )
             except TypeError as exc:
@@ -1251,6 +1424,7 @@ class MessageHandler:
                             username=update.effective_user.username,
                             persist_conversation=False,
                             purpose="group_targeted_reply_empty_plan_fallback",
+                            persona_mode=persona_mode,
                             is_group_admin=await is_group_admin(update, context, authorization=getattr(self, "authorization", None)),
                         )
                     except Exception as exc:
@@ -1259,7 +1433,7 @@ class MessageHandler:
                             summarize_exception(exc, label="group_reply_empty_fallback"),
                         )
                 if not safe_fallback:
-                    safe_fallback = "buradayım ya, bağlantı bi an tökezledi 😅"
+                    safe_fallback = "Şu anda yanıt veremiyorum. Biraz sonra tekrar dene."
                 plan = GroupReplyPlan(
                     (ReplySegment(current_ref, str(safe_fallback).strip()[:4096]),),
                     plan.rejected_reason or "empty_plan_fallback",
@@ -1498,7 +1672,7 @@ class MessageHandler:
                         return
 
                     readable_error = (
-                        "❌ <b>Bir Sorun Oluştu</b>\n\n"
+                        "<b>İşlem tamamlanamadı</b>\n\n"
                         + escape(public_error_message(e, "İşlem tamamlanamadı; biraz sonra tekrar dene."))
                     )
                     try:
@@ -1509,7 +1683,7 @@ class MessageHandler:
                         )
                     except:
                         await update.effective_message.reply_text(
-                            "❌ Sistemde teknik bir aksaklık oluştu.",
+                            "İşlem tamamlanamadı. Biraz sonra tekrar dene.",
                             parse_mode=None,
                             **self._current_message_reply_kwargs(update),
                         )

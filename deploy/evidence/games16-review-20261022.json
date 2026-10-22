@@ -1,0 +1,47 @@
+{
+  "source_commit": "f58d01fba3b995433e607cb46cf8928ffa93a38c",
+  "review_model": "gpt-6-sol",
+  "review_effort": "medium",
+  "release_gate": {
+    "passed": 25,
+    "total": 25,
+    "host_pytest": {
+      "passed": 2941,
+      "skipped": 19
+    },
+    "docker_pytest": {
+      "passed": 2954,
+      "skipped": 6
+    }
+  },
+  "scope_commands": {
+    "default": 83,
+    "private": 83,
+    "administrator": 85,
+    "owner": 95,
+    "distinct_game_entries_in_each_scope": 45
+  },
+  "independent_final_review": "No new blocker after help visibility and callback proxy fixes; 25 targeted tests passed",
+  "real_mongo_due": {
+    "ok": true,
+    "scope": "isolated_synthetic_mongo_collection",
+    "due_cases": 447,
+    "selected": 257,
+    "private_projection_safe": true,
+    "secret_routes": 12,
+    "batched_public_projection_safe": true
+  },
+  "engine_review": "game-engine-review-20261022-wave16.json",
+  "readiness": {
+    "judgment_score": 14,
+    "out_of": 20,
+    "measurement": "Engineering assessment; not a measured SLA",
+    "open": [
+      "legacy board panel retry",
+      "live player UI acceptance",
+      "game concurrency and long outage exercise"
+    ]
+  },
+  "telegram_live_player_ui_tests": "DEFERRED_BY_USER",
+  "github_updated": false
+}

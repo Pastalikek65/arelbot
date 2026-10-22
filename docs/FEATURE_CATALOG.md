@@ -20,7 +20,7 @@
 | `web_reader` | AI tool | AI | Typed public web provider | Active - SSRF/private-host/redirect policy, bounded body and untrusted-context metadata; source sign-off pending |
 | `web_search` | `/ara`, `/search`, `@bot ara ...`, AI tool | AI | Typed Tavily provider | Active - key rotation, bounded results, cache/health/circuit, source attribution and automatic live-search routing for current/date/exam questions; terms sign-off pending |
 | `lyrics` | `/soz`, `/sarki`, `/lyrics`, `@bot soz ...`, AI tool | AI | Typed search + public page provider | Active - permitted-domain allowlist, bounded excerpt and source attribution; terms sign-off pending |
-| `image_generation` | `/image`, AI tool | AI | Typed Cloudflare Workers AI provider + image worker | Active - key rotation, bounded prompt/params/output, policy rejection handling, queue delivery and temp cleanup; provider sign-off pending |
+| `image_generation` | `/image`, AI tool | AI | HRMN Prism/Flare + Cloudflare yedeği + image worker | Aktif — sınırlandırılmış üretim/indirme, açık model seçimi, kuyruk ve geçici dosya temizliği; HRMN görsel hattı 23 Ekim’de HTTP 500: ayrıntı HRMN_IMAGE_DIAGNOSIS_2026-10-23.md |
 | `notes` | `/not`, `/notlar` | Kişisel | MongoDB/bellek | Aktif |
 | `tasks` | `/gorev`, `/gorevler` | Kişisel | MongoDB/bellek | Aktif |
 | `reminders` | `/remind`, `/hatirlat`, `/hatirlatmalar` | Kişisel | MongoDB/Redis | Aktif |
@@ -37,9 +37,9 @@
 | `multimodal_attachment_jobs` | Telegram photo, voice and sticker worker queue | AI / medya | Redis + MongoDB | Active - bounded attachment processing, retry/dead-letter and owner/group policy |
 | `memory_controls` | `/hafiza`, `/memory`, `/clear` | AI/RAG | MongoDB user memory store | Active - explicit opt-in, owner-scoped show/delete/clear and private-chat enforcement |
 | `group_moderation_settings` | `/ayar`, `/moderasyon [1\|7\|30]`, inline group settings | Grup | MongoDB chat settings + moderation violation ledger | Active - admin-scoped controls, persistent idempotent strikes, bounded admin summary, audit and 30-day retention |
-| `group_personality` | `/ayar kişilik ciddi|dengeli|iğneleyici|roast`, grup ayarları inline | Grup / AI | Persistent chat settings + PersonalityPolicy | Active - administrator-only scoped tone, explicit roast consent, bounded sharp banter, sensitive-topic override, and restart-safe persistence |
+| `group_personality` | `/ayar kişilik normal\|roast`, grup ayarları inline | Grup / AI | Persistent chat settings + PersonalityPolicy | Active - administrator-only scoped tone, explicit roast consent, explicit uncensored profanity/deyim in selected roast only, no keyword activation, sensitive help priority without changing stored mode, restart-safe persistence |
 | `guardian_moderation_enforcement` | Guardian tam komut yüzeyi, grup politikası ve captcha/lock/federasyon akışları | Grup | Embedded `GuardianSurface` + typed action executor + optional authenticated evaluator bridge | Active — Mongo/Redis scoped state, canonical Guardian command registry, gban/media-lock enforcement, join captcha, idempotent Telegram actions and per-group kill-switch ready |
-| `personal_personality` | `/persona`, `/uslup` ve inline seçim | Kişisel / AI | Persistent user settings + PersonalityPolicy | Active - private-chat-only preference, explicit roast consent, global fallback, bounded sharp banter and sensitive-topic override |
+| `personal_personality` | `/persona`, `/uslup` ve inline seçim | Kişisel / AI | Persistent user settings + PersonalityPolicy | Active - private-chat-only preference, explicit roast consent, global fallback, explicit uncensored profanity/deyim in selected roast only, no keyword activation, and sensitive help priority without changing stored mode |
 | `games_leaderboard` | `/quiz`, `/leaderboard`, `/liderlik`, `/lb`, `/profile`, `/profil` | Oyun | MongoDB game_scores/player_stats + local Pillow cards | Active - bounded, idempotent score events with deterministic profile and leaderboard cards plus text fallback |
 | `connect4` | `/connect4`, `/oyun` menüsü | Oyun | Persisted game state + round-scoped callback ledger | Active - schema 1, state key `connect4`, 6x7 board, connect 4, two-player lobby, round/message-scoped column buttons, turn validation, win/draw detection, restart recovery and owner/admin stop |
 | `tictactoe` | `/xox`, `/tictactoe`, `/oyun` menüsü | Oyun | Persisted game state + round-scoped callback ledger | Active - schema 1, state key `tictactoe`, selectable 6x6/7x7/8x8 board, four-in-a-row, two-player lobby, cell buttons, turn timeout, win/draw detection, restart recovery and owner/admin stop |
@@ -47,7 +47,38 @@
 | `chess` | `/satranc`, `/chess`, `/oyun` menüsü | Oyun | Native legal-move engine + persisted round-scoped callback ledger; upstream Piterden/chessbot interaction attribution | Active - schema 1, 8x8 PvP lobby, color selection, legal moves, castling, en passant, promotion, check/checkmate/stalemate/draw claims, resignation, active-player-at-bottom board with owner markers, capture targets retaining pieces, PGN/SAN/UCI replay and restart recovery |
 | `akinator` | `/akinator`, `/aki`, `/tahmin`, `/oyun` menüsü | Oyun | `akipy` 1.7.0 typed client; Akinator-Bot interaction reference | Active - Türkçe karakter turu, sahibine bağlı callback, bounded timeout/concurrency, güvenli provider hataları; kayıp upstream session yeni turla toparlanır ve bekleyen yanıt panelde görünür |
 | `guess_age` | `/yas`, `/yastahmin`, `/oyun` menüsü | Oyun | 300 Wikimedia portresi; Wikidata doğum tarihleri; dosya bazında lisans manifesti | Active - tam yaş seçimi, çekim tarihindeki yaş, yaş gruplarına dengeli seçim, maçlar arasında tekrar azaltma, kalıcı zamanlayıcı, aşamalı gönderim tekrarı ve puan sıralaması |
-| `uno` | `/uno`, `/oyun` menüsü | Oyun | Kalıcı MongoDB durumu ve bağımsız UNO kural motoru | Active - 108 kart, 2–8 oyuncu, gizli el, revizyonlu hamleler, otomatik süre ilerlemesi, +2/+4 ve son kart cezaları, UNO itirazı, 500 puanlık çok turlu maç ve yeniden başlatma sonrası devam |
+| `uno` | `/uno`, `/uno kaynak`, `/oyun` menüsü | Oyun | maildian/uno-telegram-bot AGPL kaynak motoru ve inline sticker galerisi; Arel kalıcı durum adaptörü | Aday (games20) - 108 kart, 2–8 oyuncu, renkli/soluk 114 özgün sticker, özel inline el, imzalı ve revizyonlu seçim, +2 biriktirme, +4 blöf itirazı, 500 puanlık maç; eski maçlar uyumlu motorda korunur |
+| `tabu` | `/tabu`, `/oyun` menüsü, kişiye bağlı özel hazırlık bağlantısı | Oyun | Özgün 166 Türkçe kart, konu bazlı CAS oturumu, gizli kart teslimi | Yayında (games8) — 166 özgün kart, dengeli takımlar, anlatıcı rotasyonu, sınırlı pas, itiraz ve uzatma; otomatik kurallar ve gerçek API teslimi geçti; insan Katıl/özel hazırlık düğmeleri bağlantı nedeniyle doğrulanamadı, tam insanlı maç NOT_RUN |
+| `harf_maratonu` | `/harfmaraton`, oyun salonu | Oyun | Özgün kalıcı Harf Maratonu motoru, Mongo CAS ve teslim makbuzları | games13 yayında; otomatik kural/özel bilgi/teslim denetimi geçti, insanlı canlı maç NOT_RUN |
+| `sozcuk_avi` | `/sozcukavi`, oyun salonu | Oyun | Özgün kalıcı Sözcük Avı motoru, Mongo CAS ve teslim makbuzları | games13 yayında; otomatik kural/özel bilgi/teslim denetimi geçti, insanlı canlı maç NOT_RUN |
+| `yasak_harf` | `/yasakharf`, oyun salonu | Oyun | Özgün kalıcı Yasak Harf motoru, Mongo CAS ve teslim makbuzları | games13 yayında; otomatik kural/özel bilgi/teslim denetimi geçti, insanlı canlı maç NOT_RUN |
+| `ortak_hikaye` | `/ortakhikaye`, oyun salonu | Oyun | Özgün kalıcı Ortak Hikâye motoru, Mongo CAS ve teslim makbuzları | games13 yayında; otomatik kural/özel bilgi/teslim denetimi geçti, insanlı canlı maç NOT_RUN |
+| `bomba` | `/bomba`, oyun salonu | Oyun | Özgün kalıcı Bomba motoru, Mongo CAS ve teslim makbuzları | games13 yayında; otomatik kural/özel bilgi/teslim denetimi geçti, insanlı canlı maç NOT_RUN |
+| `kor_siralama` | `/korsiralama`, oyun salonu | Oyun | Özgün kalıcı Kör Sıralama motoru, Mongo CAS ve teslim makbuzları | games13 yayında; otomatik kural/özel bilgi/teslim denetimi geçti, insanlı canlı maç NOT_RUN |
+| `kronoloji` | `/kronoloji`, oyun salonu | Oyun | Özgün kalıcı Kronoloji motoru, Mongo CAS ve teslim makbuzları | games13 yayında; otomatik kural/özel bilgi/teslim denetimi geçti, insanlı canlı maç NOT_RUN |
+| `dogru_yanlis` | `/dogruyanlis`, oyun salonu | Oyun | Özgün kalıcı Doğru–Yanlış motoru, Mongo CAS ve teslim makbuzları | games13 yayında; otomatik kural/özel bilgi/teslim denetimi geçti, insanlı canlı maç NOT_RUN |
+| `dedektif` | `/dedektif`, oyun salonu | Oyun | Özgün kalıcı Dedektif motoru, Mongo CAS ve teslim makbuzları | games13 yayında; otomatik kural/özel bilgi/teslim denetimi geçti, insanlı canlı maç NOT_RUN |
+| `amiral_batti` | `/amiral`, oyun salonu | Oyun | Özgün kalıcı Amiral Battı motoru, Mongo CAS ve teslim makbuzları | games13 yayında; otomatik kural/özel bilgi/teslim denetimi geçti, insanlı canlı maç NOT_RUN |
+| `iki_dogru_bir_yalan` | `/ikidogru`, oyun salonu | Oyun | Özgün kalıcı İki Doğru Bir Yalan motoru, Mongo CAS ve teslim makbuzları | games13 yayında; otomatik kural/özel bilgi/teslim denetimi geçti, insanlı canlı maç NOT_RUN |
+| `kimim_ben` | `/kimimben`, oyun salonu | Oyun | Özgün kalıcı Kimim Ben motoru, Mongo CAS ve teslim makbuzları | games13 yayında; otomatik kural/özel bilgi/teslim denetimi geçti, insanlı canlı maç NOT_RUN |
+| `takim_bilgi_ligi` | `/takimligi`, oyun salonu | Oyun | Özgün kalıcı Takım Bilgi Ligi motoru, Mongo CAS ve teslim makbuzları | games13 yayında; otomatik kural/özel bilgi/teslim denetimi geçti, insanlı canlı maç NOT_RUN |
+| `zehirli_kadeh` | `/kadeh`, oyun salonu | Oyun | Özgün kalıcı Zehirli Kadeh motoru, Mongo CAS ve teslim makbuzları | games13 yayında; otomatik kural/özel bilgi/teslim denetimi geçti, insanlı canlı maç NOT_RUN |
+| `pisti` | `/pisti` | Oyun | Yerel kalıcı kart motoru | Uygulandı - 2/4 kişi, karşılıklı takımlar, gizli el, pişti ve kart puanları, CAS ve teslim sonrası süre |
+| `papaz_kimde` | `/papazkimde` | Oyun | Yerel kalıcı kart motoru | Uygulandı - 3–8 kişi, gizli rastgele çekme, otomatik çift çıkarma, özel el onayı |
+| `2048` | `/2048` | Oyun | Yerel kalıcı 4×4 motor | Uygulandı - gerçek kaydırma/birleştirme, hamleye bağlı taş üretimi, kazanma ve devam |
+| `bes_ipucu` | `/besipucu` | Oyun | Özgün yerel çağrışım kartları | Uygulandı - ortak beş kademe, aşama başına hak, pas ve azalan puan |
+| `emoji_bilmece` | `/emojibilmece` | Oyun | Özgün yerel emoji bilmeceleri | Uygulandı - çok turlu resfebe, sınırlı tahmin, normal mesajla cevap |
+| `wordle_tr` | `/wordle`, oyun salonu | Oyun | Özgün kalıcı motor, Mongo CAS ve teslim makbuzu | Yayında (games10) — ayrı kural motoru, kalıcı CAS, teslim/zamanlayıcı ve ödül regresyonları geçti; insanlı Telegram testi kullanıcı tarafından ertelendi |
+| `karsi_kelime` | `/karsikelime`, oyun salonu | Oyun | Özgün kalıcı motor, Mongo CAS ve teslim makbuzu | Yayında (games10) — ayrı kural motoru, kalıcı CAS, teslim/zamanlayıcı ve ödül regresyonları geçti; insanlı Telegram testi kullanıcı tarafından ertelendi |
+| `anagram` | `/anagram`, oyun salonu | Oyun | Özgün kalıcı motor, Mongo CAS ve teslim makbuzu | Yayında (games10) — ayrı kural motoru, kalıcı CAS, teslim/zamanlayıcı ve ödül regresyonları geçti; insanlı Telegram testi kullanıcı tarafından ertelendi |
+| `hafiza_eslestirme` | `/eslestirme`, oyun salonu | Oyun | Özgün kalıcı motor, Mongo CAS ve teslim makbuzu | Yayında (games10) — ayrı kural motoru, kalıcı CAS, teslim/zamanlayıcı ve ödül regresyonları geçti; insanlı Telegram testi kullanıcı tarafından ertelendi |
+| `mayin_tarlasi` | `/mayin`, oyun salonu | Oyun | Özgün kalıcı motor, Mongo CAS ve teslim makbuzu | Yayında (games10) — ayrı kural motoru, kalıcı CAS, teslim/zamanlayıcı ve ödül regresyonları geçti; insanlı Telegram testi kullanıcı tarafından ertelendi |
+| `sudoku` | `/sudoku`, oyun salonu | Oyun | Özgün kalıcı motor, Mongo CAS ve teslim makbuzu | Yayında (games10) — ayrı kural motoru, kalıcı CAS, teslim/zamanlayıcı ve ödül regresyonları geçti; insanlı Telegram testi kullanıcı tarafından ertelendi |
+| `sayisal_tahmin` | `/sayitahmin`, oyun salonu | Oyun | Özgün kalıcı motor, Mongo CAS ve teslim makbuzu | Yayında (games10) — ayrı kural motoru, kalıcı CAS, teslim/zamanlayıcı ve ödül regresyonları geçti; insanlı Telegram testi kullanıcı tarafından ertelendi |
+| `hizli_buton` | `/refleks`, oyun salonu | Oyun | Özgün kalıcı motor, Mongo CAS ve teslim makbuzu | Yayında (games10) — ayrı kural motoru, kalıcı CAS, teslim/zamanlayıcı ve ödül regresyonları geçti; insanlı Telegram testi kullanıcı tarafından ertelendi |
+| `casus` | `/casus`, `/spy`, oyun salonu | Oyun | Özgün Türkçe mekân ve gizli rol motoru, konu bazlı CAS | Yayında (games8) — 4–16 oyuncu, 36 mekân, gizli rol onayı, soru sırası, gizli oy ve tek mekân tahmini; otomatik kurallar ve gerçek API teslimi geçti; insan Katıl/özel hazırlık düğmeleri bağlantı nedeniyle doğrulanamadı, tam insanlı maç NOT_RUN |
+| `vampir_koylu` | `/vampir`, `/vampirkoylu`, oyun salonu | Oyun | Özgün gece/gündüz rol motoru, konu bazlı CAS | Yayında (games8) — 7–20 oyuncu, vampir/şifacı/kâhin/köylü, gizli gece hamlesi, gündüz oyu ve rövanş; otomatik kurallar ve gerçek API teslimi geçti; insan Katıl/özel hazırlık düğmeleri bağlantı nedeniyle doğrulanamadı, tam insanlı maç NOT_RUN |
+| `kelime_zinciri` | `/zincir`, `/kelimezinciri`, `/oyun` menüsü | Oyun | Türkçe harfleri koruyan yerel sözlük, konu bazlı kalıcı oturum, tek CAS içinde hamle ve makbuz | Candidate - butonlu lobi, eşit hamle hakkı, iki pas, 30 saniyelik sıra, eski tur reddi, otomatik süre işçisi ve yeniden denenebilir puan/jeton kaydı; sunucu ve gerçek Telegram kabulü bekliyor |
 | `game_progression` | `/basarimlar`, `/sezon` | Oyun | MongoDB game_progress_events | Active - unique event ledger, achievement aggregation and quarterly chat-scoped seasons |
 | `blackjack` | `/blackjack [bahis]`, `/bitir`, oyun menüsü | Oyun | MongoDB game_states + action ledger + economy | Active - owner-scoped persistent hand, Hit/Stand/Double callbacks, idempotent settlement and charged-stake refund on cancel |
 | `batak` | `/batak`, `/bitir`, grup inline masası | Oyun | MongoDB game_states + action ledger + economy | Active - persistent lobby, owner/admin cancellation, turn-based trick play, follow-suit validation and settlement |
@@ -68,11 +99,9 @@ news/web/lyrics search, quote ranking (`top:<chat_id>`) and sticker search
 pagination; query length and offset limits are part of the feature contract.
 
 AI provider routing includes the typed `evren` route for the OpenAI-compatible
-DeepSeek V4.1 Flash endpoint. NVIDIA is preferred when its key is configured,
-with EVREN as the text/analysis/sticker failover route; the `nvidia` route targets NVIDIA NIM's
-`deepseek-ai/deepseek-v4.1-flash` endpoint and is enabled only through
-`NVIDIA_API_KEY`; an explicit reviewed `AI_PROVIDER_ROUTES` entry can pin the
-order. No key or prompt is stored in this catalog.
+DeepSeek V4.1 Flash endpoint. Media routes have their own model selection.
+The `nvidia` text fallback uses NVIDIA NIM with a separate `NVIDIA_CHAT_MODEL` override (deployed: Nemotron 3.5 Lightning) and is enabled only through
+`NVIDIA_API_KEY`. Text tasks rotate Cloudflare Workers AI (GPT-OSS 120B) and EVREN; NVIDIA remains an outage fallback because its sampled Turkish conversation quality was weak. Timeouts and circuit fallback remain bounded. Explicit `AI_PROVIDER_ROUTES` allowlists remain supported. Cloudflare chat stays out of media/embedding routes; d2api is retired. See `docs/AI_ROTATION_2026-10-22.md`. No key or prompt is stored in this catalog.
 
 
 
@@ -83,7 +112,7 @@ Tekrarlı hatırlatıcılar günlük, haftalık ve Türkçe hafta günü kuralla
 Notlar export edilebilir; toplu silme işlemleri kullanıcı kapsamı ve onay callback'i olmadan çalışmaz.
 Grup karşılama/ayrılma mesajları `/ayar` üzerinden admin kontrollüdür; geçişler ChatMemberHandler ile güvenli biçimde işlenir.
 Flood tekrarları admin kontrollü kademeli otomatik ban ile sınırlanabilir; karar motoru Telegram handler'ından ayrıdır.
-| `economy` | `/ekonomi`, `/bakiye`, `/gunluk` | Oyun | MongoDB/bellek ledger | Aktif — idempotent grup kapsamlı coin hesabı |
+| `economy` | `/ekonomi`, `/bakiye`, `/gunluk`, `/magaza`, `/envanter` | Oyun | MongoDB atomic account + durable receipts | Aktif — grup cüzdanı, İstanbul günlük seri, 150 jeton oyun sınırı, onaylı kozmetik alışverişi ve envanter |
 | `price_alerts` | `/alarm kur`, `/alarm liste`, `/alarm kapat` | Finans | Currency/Fuel typed provider | Active - persistent threshold condition, deduplication and quiet worker delivery |
 | `group_announcements` | `/duyuru`, inline stop | Grup | MongoDB/Redis subscription lease | Active - admin-only daily/weekly schedules, HTML-safe delivery, forum-topic scoped delivery and deduplication |
 | `multimodal_ai` | Görsel/ses mesajları, `/oku` | AI | AIProviderRouter + PersonalityPolicy | Active - typed vision/transcribe/embedding adapters, untrusted prompt boundary, serious-tone guardrail and ChatEngine voice response routing |
@@ -110,7 +139,7 @@ Flood tekrarları admin kontrollü kademeli otomatik ban ile sınırlanabilir; k
 
 ### Media provider capability and cache contract
 
-- `yt-dlp` is the first-party adapter for Instagram, TikTok, YouTube, X, Facebook and Reddit URLs. It uses a shared credential-free public-request policy for probe/download and exposes stable access/rate-limit error codes without leaking extractor text.
+- `yt-dlp` is the first-party adapter for Instagram, TikTok, YouTube, X, Facebook and Reddit URLs. It uses a shared public-request policy for probe/download that carries no credential while the media cookie vault is closed, and it exposes stable access/rate-limit error codes without leaking extractor text.
 - Configured HTTP fallbacks are wildcard providers; registry ordering prefers an exact platform capability before wildcard and unknown legacy adapters.
 - The former Spatula tool surface (`get_pharmacies`, `get_fuel_prices`, `get_currency_rates`, `get_recent_earthquakes`, `get_bim_deals`, `get_breaking_news`, `get_weather`, and `get_prayer_times`) delegates to the same typed providers; it has no direct HTTP or HTML scraper path.
 - Provider health delegates to the real adapter, records circuit/error/latency state, and surfaces missing dependencies.
@@ -151,3 +180,12 @@ The media feature exposes a typed MediaArtifact provider hand-off. Every adapter
 - Adam asmaca turu Türkçe alfabetik inline klavye, ipucu, turu bırakma ve kalan harfleri otomatik kapatma davranışıyla ilerler. Her callback action ledger üzerinden tekilleştirilir; grup içinde turu başlatan kişi veya yönetici kapatabilir.
 - Kelime türetme turu da inline kontrol paneli kullanır: harfleri karıştırma, ipucu, kategori/zorluk akışına dönme ve turu bitirme callback'leri kalıcı state ile çalışır; kullanılan ipuçları puan hesabına yansır.
 - Kelime anlatmaca turu; ipucu, pas geçme ve turu bitirme butonlarını kalıcı state ve action ledger ile sunar. İpucu açıldığında aynı mesaj paneli güncellenir; hedef cevap kullanıcıya gösterilmez.
+
+### Ortak buton görünümü
+
+Oyun ve menü inline düğmeleri ortak sunum katmanında simge ve durum rengi alır. 45 oyun başlığı eşlenmiştir; 38 doğrulanmış animasyonlu Telegram simgesi bulunur. Hamle kimlikleri, taş/kart/sayı ve cevap verileri korunur. API incelemesi ve kabul sınırları: docs/TELEGRAM_BUTTONS_UPDATE_2026-10-22.md. Bu değişiklik ayrı oyun veya yeni feature sayılmaz.
+
+
+## 45 oyun genişletmesi
+
+Yeni beş oyun ve oyuncuya özel kural yardımı: docs/GAMES45_PRODUCT_REVIEW_2026-10-22.md. Kurallar gizli kart veya cevap içermez. Tam oyunculu canlı kabul ayrı kaydedilir.

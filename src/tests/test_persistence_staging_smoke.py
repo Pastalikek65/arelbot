@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import pytest
 
 from scripts.persistence_staging_smoke import (
+    MONGO_AUTH_SCRIPT,
+    MONGO_TOOL_CONFIG,
     PersistenceSmokeError,
     _safe_report,
     _validate_name,
@@ -15,6 +18,24 @@ def test_persistence_smoke_allowlists_database_names():
     assert _validate_name("arel_bot_backup_smoke_abc123", "database") == "arel_bot_backup_smoke_abc123"
     with pytest.raises(PersistenceSmokeError, match="invalid_database"):
         _validate_name("../../unsafe", "database")
+
+
+def test_persistence_smoke_never_puts_the_mongo_credential_on_a_command_line():
+    """The smoke authenticates like the deployment does.
+
+    The connection string reaches the database tools through their
+    configuration file and the shell through its authentication script, so
+    no argument vector of the smoke contains a credential.
+    """
+
+    import scripts.persistence_staging_smoke as smoke
+
+    source = Path(smoke.__file__).read_text(encoding="utf-8")
+    assert "--uri=mongodb://" not in source
+    assert f"--config={{MONGO_TOOL_CONFIG}}" in source
+    assert f"load('{{MONGO_AUTH_SCRIPT}}')" in source
+    assert MONGO_AUTH_SCRIPT.startswith("/tmp/")
+    assert MONGO_TOOL_CONFIG.startswith("/tmp/")
 
 
 def test_persistence_smoke_report_is_bounded_and_atomic(tmp_path):

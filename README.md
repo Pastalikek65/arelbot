@@ -1,55 +1,66 @@
-![Arel — Telegram için sohbet, araçlar ve topluluk yönetimi](docs/images/arel-header.svg)
+![Arel — sohbet, oyun ve topluluk araçları](docs/images/arel-header.svg)
 
 <div align="center">
 
-Günlük işlerini düzenle. Bilgiye ulaş. İçerik üret. Birlikte oyna.
+**Sohbet et · Birlikte oyna · Gününü düzenle · Grubunu yönet**
 
-[Özellik rehberi](docs/FEATURES.md) · [Kurulum](#kurulum) · [Mimari](#mimari) · [Operasyon](docs/OPERATIONS.md)
+[Özellikler](docs/FEATURES.md) · [45 oyun](docs/GAMES.md) · [Kurulum](#kurulum) · [Operasyon](docs/OPERATIONS.md)
 
 </div>
 
----
+Arel, özel sohbetler ve Telegram grupları için geliştirilen açık kaynak bir Python botudur. **45 oyun** ve **91 kayıtlı özellik**; sohbet, üretkenlik, güncel bilgi, medya ve moderasyon araçlarıyla aynı menüde buluşur.
 
-Arel, özel sohbetlerde ve Telegram gruplarında çalışan modüler bir Python botudur. Sohbet ve belge analizi, medya indirme, notlar, hatırlatıcılar, güncel veri araçları, sticker ve alıntılar, oyunlar ve yönetici kontrollerini tek bir arayüzde toplar.
+## Özellikler
 
-> **Doğrulama durumu:** Kaynak, otomatik test ve canlı Telegram kabulü ayrı kaydedilir. Güncel sonuçlar [güvenilirlik kaydında](docs/RELIABILITY-2026-10-18.md) yer alır; bir komutun kayıtlı olması her grupta ve her yetkiyle başarılı olacağı anlamına gelmez.
-
-## Neler yapar?
-
-| Alan | Kaynakta bulunan yetenekler |
+| Alan | İçerik |
 |---|---|
-| **Sohbet ve yapay zekâ** | Bağlamlı sohbet, çeviri, web araması, hikâye ve görsel üretimi; görsel/ses işleme ve seslendirme |
-| **Belgeler ve hafıza** | PDF, DOCX ve TXT üzerinde arama; kişisel belge yönetimi ve açık rızaya bağlı kalıcı hafıza |
-| **Kişisel düzen** | Notlar, görevler, günlük/haftalık plan, tek seferlik veya tekrarlı hatırlatıcılar |
-| **Bilgi ve takip** | Hava, hava kalitesi, deprem, haber, kur, altın, kripto, borsa, eczane, akaryakıt, namaz vakitleri ve aktüel ürünler |
-| **Medya ve sticker** | Desteklenen herkese açık bağlantıları indirme; statik/video sticker, kişisel paketler, mesaj alıntıları |
-| **Oyun ve topluluk** | Quiz, kelime oyunları, adam asmaca, batak, blackjack ve sosyal oyunlar; puan, başarımlar, sezon ve sanal coin |
-| **Grup yönetimi** | Moderasyon, sohbet ayarları, karşılama/ayrılma mesajları, zamanlanmış duyurular ve grup istatistikleri |
+| **Sohbet ve üretim** | Bağlamlı Türkçe sohbet, kullanıcı/konu odaklı grup yanıtı; açık seçimli Normal ve Roast; çeviri, web araması, sayfa okuma, hikâye, görsel üretimi, görsel analizi/OCR, ses çözümleme ve seslendirme |
+| **Belgeler ve hafıza** | PDF/DOCX/TXT yükleme, kişisel belgelerde arama, belge listeleme/silme; izinli kalıcı hafıza, kayıtları görme ve temizleme |
+| **Günlük düzen** | Notlar, görevler, günlük/haftalık plan, Türkçe tarihli ve tekrarlı hatırlatıcılar, günlük özet, sessiz saatler, takip ve eşik alarmları |
+| **Bilgi araçları** | Şehir/ilçe, plaka/telefon kodu, hava ve hava kalitesi, deprem, nöbetçi eczane, akaryakıt, namaz, BİM aktüel; uçuş arama bağlantıları |
+| **Finans ve kültür** | Döviz/altın, kripto/borsa ve grafikler; kategorili haberler ve özet; film, dizi, kitap, müzik önerileri ve şarkı sözü araması |
+| **Medya ve sticker** | Desteklenen herkese açık medyayı indirme, dönüştürme, iş takibi/iptal; görsel mesaj alıntıları, temalar, alıntı arşivi; statik/video sticker, arama, etiketleme ve kişisel paket yönetimi |
+| **Oyun ve ekonomi** | Aşağıdaki 45 oyun; inline görselli kart elleri, lobiler, özel roller, skor/profil, başarımlar, sezon, sanal bakiye, günlük ödül, mağaza ve envanter |
+| **Topluluk yönetimi** | Yetkili moderasyon, uyarı/ceza, flood/link/kelime/medya koruması, captcha/raid, karşılama/veda, grup notları/filtreler, duyurular, istatistikler, federasyon ve raporlama |
+| **İşletim** | Inline arama, kapsamlı komut menüleri, özellik anahtarları; bot/worker ayrımı, kalıcı kuyruk, önbellek, sağlık/ölçüm, yedekleme ve geri dönüş araçları |
 
-Yeteneklerin komutları, koşulları ve kaynakları [özellik rehberinde](docs/FEATURES.md) yer alır. Kullanılabilirlik; yapılandırmaya, dış servis erişimine, Telegram izinlerine ve çalışan işleyicilere bağlıdır. Uçuş aracı arama bağlantısı üretir; canlı fiyat veya rezervasyon hizmeti sunmaz.
+[Tüm komutlar ve kullanım koşulları →](docs/FEATURES.md) · [91 özellik için teknik kayıt →](docs/FEATURE_CATALOG.md)
 
-## Güncel sürüm
+## 45 oyun, tek salon
 
-Güncel kaynak; komut yönlendirmesi, grup içi araç kullanımı, yetki kontrolleri, medya işlem ömrü ve kaynak bağlantılı film önerileri için düzeltmeler içerir. Guardian yönetici sınırları, federasyon onayı, özel sohbetten güvenli yönetim, kayıt kanalları ve karşılama denetimleri gerçek işleyicilere bağlanmıştır. Blackjack ve kelime oyunlarında kural ve ödeme tutarlılığı güçlendirilmiştir.
+| Kategori | Oyunlar |
+|---|---|
+| **Kelime** | Kelime Oyunu, Anlatmaca, Adam Asmaca, Kelime Zinciri, Türkçe Wordle, Karşı Kelime, Anagram, Harf Maratonu, Sözcük Avı, Yasak Harf |
+| **Tahta ve bulmaca** | Connect Four, Gomoku / Beşli, Satranç, XOX, Hafıza Eşleştirme, Mayın Tarlası, Sudoku, Amiral Battı, 2048 |
+| **Bilgi ve tahmin** | Akinatör, Yaş Tahmini, Bilgi Yarışması, Sayı Tahmini, Kör Sıralama, Kronoloji, Doğru–Yanlış, Dedektif, Beş İpucu, Emoji Bilmece |
+| **Kart** | UNO, Batak, Blackjack, Pişti, Papaz Kimde |
+| **Grup oyunları** | Takım Tabu, Casus, Vampir Köylü, Refleks, Ortak Hikâye, Bomba, İki Doğru Bir Yalan, Kimim Ben, Takım Bilgi Ligi, Zehirli Kadeh |
+| **Sosyal** | Şişe Çevirme |
 
-Özelliklerin komutları ve gereksinimleri [özellik rehberinde](docs/FEATURES.md), doğrulama kapsamı ve kalan sınırlar [güvenilirlik kaydında](docs/RELIABILITY-2026-10-18.md) açıklanır.
+`/oyun` salonu açar. [Oyun rehberi](docs/GAMES.md) her oyunun komutunu, oyuncu sayısını ve mekaniğini açıklar. Zar, yazı-tura ve doğruluk/cesaret gibi ek mini etkileşimler de bulunur.
 
-## Kullanım örnekleri
-
-Bot ile özel sohbet açıp `/start` veya `/menu` yazın. `/help` yardım ekranını, `/ayar` sohbet ayarlarını açar.
+## Hızlı kullanım
 
 ```text
-/not Toplantı için gündem hazırla
-/gorev Raporu tamamla
-/remind yarın 10:00 Toplantı
-/plan hafta
+/start
+/menu
 /hava İstanbul
-/ara Python belgeleri
+/not Toplantı gündemini hazırla
+/remind yarın 10:00 Toplantı
 /oyun
-/yas
+/uno
+/image Mavi seramik çaydanlık --model prism
 ```
 
-Bir mesaja yanıt olarak `/q` ile alıntı, desteklenen bir görsele/videoya yanıt olarak `/sticker` ile sticker oluşturma akışı vardır. `/bildirim` takip merkezini açar; grup ortak bildirimlerini grup yöneticileri düzenler.
+Bir mesaja `/q` ile yanıt vererek alıntı, uygun medyaya `/sticker` ile yanıt vererek sticker oluşturun. `/ayar` sohbet tercihlerini, `/bildirim` takip panelini açar.
+
+## Güncel durum
+
+Normal kişilik samimi ve esprili Türkçe kullanır; ciddi konularda üslubunu uyarlar. Roast ayrı ve açık seçimlidir. Sohbette normal **Codex CLI** birincildir; zaman bütçesi ve hata geçişi korunur. Görselde Prism/Flare ve mevcut yedek hat vardır.
+
+**Prism ve Flare için açık dış sorun:** 23 Ekim’de iki model HRMN tarafından listelenmesine rağmen yerelden ve sunucudan `HTTP 500 / no provider responded` döndürdü. Model seçilmemiş istekler mevcut yedeğe geçer; açık model seçimi başka modelmiş gibi başarılı gösterilmez. [Tanı ve yeniden test](docs/HRMN_IMAGE_DIAGNOSIS_2026-10-23.md).
+
+Güncel yerel kontrollerde **3.235 test geçti, 19 atlandı**; önceki dağıtımda canlı sohbet ve yedek görsel üretimi API üzerinden doğrulandı. Bunlar tüm oyunların gerçek oyuncularla Telegram kabulü değildir. Güncel kapsam: [dağıtım kanıtı](docs/AI_RELIABILITY_DEPLOYMENT_2026-10-23.md), [faz kaydı](docs/PHASE_STATUS.json).
 
 ## Kurulum
 
@@ -138,7 +149,7 @@ python scripts/feature_catalog_audit.py
 python scripts/phase_audit.py
 ```
 
-Bunlar test ve denetim girişleridir; burada başarılı çalıştırıldıkları iddia edilmez. Dış servislerin, Telegram tesliminin ve yeniden başlatma sonrası toparlanmanın kabulü ayrıca canlı kanıt gerektirir. [RELEASE_READINESS.md](docs/RELEASE_READINESS.md) sürüm kabul ölçütlerini içerir.
+Canlı Telegram teslimi ve yeniden başlatma sonrası toparlanma ayrıca kabul kanıtı gerektirir. [RELEASE_READINESS.md](docs/RELEASE_READINESS.md) sürüm kabul ölçütlerini içerir.
 
 ## Dokümantasyon
 
@@ -151,3 +162,7 @@ Bunlar test ve denetim girişleridir; burada başarılı çalıştırıldıklar�
 | [Veri kaynakları](docs/DATA_SOURCES.md) · [Lisans kayıtları](LICENSES.md) | Dış kaynaklar, atıf ve kullanım koşulları |
 
 Özellik eklerken komut kaydını, registry tanımını, testleri ve ilgili rehberleri birlikte güncelleyin. `.env`, erişim anahtarları, kullanıcı belgeleri ve indirilen içerikler repository'ye eklenmemelidir.
+
+## Katkı ve lisans
+
+[Katkı rehberi](CONTRIBUTING.md) yerel kontrolleri ve değişiklik sınırlarını açıklar. Özgün Arel dosyaları MIT bildirimi taşır; UNO entegrasyonu **AGPL-3.0-or-later**, diğer bağımlılıklar kendi lisansları kapsamındadır. Birleşik dağıtım tümüyle MIT olarak sunulmaz. Ayrıntılar: [LICENSES.md](LICENSES.md), [lisans envanteri](licenses.json), [AGPL metni](COPYING.AGPL-3.0).

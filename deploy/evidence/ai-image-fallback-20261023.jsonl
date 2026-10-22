@@ -1,0 +1,1 @@
+{"kind": "image_router", "status": "image_provider_not_configured", "attempts": [{"model": "gpt-image-2.5-prism", "status": "image_provider_upstream"}, {"model": "gpt-image-2.5-flare", "status": "image_provider_upstream"}], "seconds": 4.83}

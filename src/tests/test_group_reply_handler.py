@@ -66,11 +66,13 @@ class Engine:
     def __init__(self):
         self.plans = []
         self.records = []
+        self.persona_modes = []
 
     async def record_message(self, *args, **kwargs):
         self.records.append((args, kwargs))
 
-    async def get_group_reply_plan(self, context):
+    async def get_group_reply_plan(self, context, *, persona_mode=None):
+        self.persona_modes.append(persona_mode)
         self.plans.append(context)
         ids = [item.message_id for item in context.candidates]
         return '{"replies": [' + ",".join(
@@ -79,7 +81,7 @@ class Engine:
 
 
 class EmptyPlanEngine(Engine):
-    async def get_group_reply_plan(self, context):
+    async def get_group_reply_plan(self, context, *, persona_mode=None):
         return '{"replies": []}'
 
     async def get_response(self, *args, **kwargs):
@@ -103,6 +105,7 @@ async def test_triggered_group_turn_replies_to_each_recent_user_message_separate
         recent_message_index=RecentMessageIndex(),
         reply_delivery_ledger=ReplyDeliveryLedger(),
     )
+    handler._resolve_persona_mode = AsyncMock(return_value="roast")
     handler._log_event = AsyncMock()
     context = SimpleNamespace(bot=bot, chat_data={}, job_queue=None, application=None)
 
@@ -112,6 +115,7 @@ async def test_triggered_group_turn_replies_to_each_recent_user_message_separate
     assert [call["reply_to_message_id"] for call in bot.calls] == [101, 202]
     assert all(call["chat_id"] == -100 for call in bot.calls)
     assert len(engine.plans) == 1
+    assert engine.persona_modes == ["roast"]
 
 
 @pytest.mark.asyncio

@@ -1,0 +1,33 @@
+{
+  "status": "BLOCKED_UPSTREAM",
+  "date": "2026-10-23",
+  "models": [
+    "gpt-image-2.5-prism",
+    "gpt-image-2.5-flare"
+  ],
+  "model_inventory_http_status": 200,
+  "request_variants": [
+    "existing_size_stream",
+    "minimal_model_messages"
+  ],
+  "locations": [
+    "local",
+    "production_server"
+  ],
+  "result": "Both models return HTTP 500: no provider responded, server side error",
+  "server_requests": {
+    "gpt-image-2.5-prism": "req_edbfc0dfac9c4de0801bb3f8",
+    "gpt-image-2.5-flare": "req_5c46b94da4a0cdd05816d8d4"
+  },
+  "local_tests": {
+    "passed": 3235,
+    "skipped": 19,
+    "environment": "PYTHON_DOTENV_DISABLED=1; non-integration"
+  },
+  "architecture_issues": 0,
+  "feature_catalog": {
+    "runtime": 91,
+    "documented": 91
+  },
+  "telegram_ui": "NOT_RUN"
+}

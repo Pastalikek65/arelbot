@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import gzip
 import hashlib
 import json
 import os
@@ -86,6 +87,35 @@ def extract_source_archive(archive_path: Path, destination: Path) -> None:
                     shutil.copyfileobj(stream, output, length=1024 * 1024)
 
 
+def verify_gate_artifact() -> None:
+    """Fail the release when the committed gate artifact is stale.
+
+    The committed artifact is the evidence record of the last live gate run
+    and the phase contract audit reads it.  A release must not ship with an
+    artifact that no longer describes the gate.
+
+    The audit is strict here and outside the gate on purpose: the gate has
+    to stay green, and the process that repairs the drift is the gate run
+    itself.  The audit only reads the artifact, so no value of a check can
+    reach the release log.
+    """
+
+    result = subprocess.run(
+        [sys.executable, "scripts/gate_artifact_audit.py", "--strict"],
+        cwd=PROJECT_ROOT,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        check=False,
+    )
+    if result.returncode != 0:
+        raise SystemExit(
+            "the committed gate artifact does not describe the gate; "
+            "regenerate it with a live gate run before releasing"
+        )
+
+
 def build_release(version: str, output_dir: Path) -> tuple[Path, str]:
     if run_git("status", "--porcelain"):
         raise SystemExit("Refusing to build a release from a dirty worktree.")
@@ -117,6 +147,8 @@ def build_release(version: str, output_dir: Path) -> tuple[Path, str]:
             encoding="utf-8",
         )
 
+        build_source_offer(source_archive, release_root, commit)
+
         manifest_lines = _build_manifest(release_root)
         (release_root / "RELEASE_MANIFEST.sha256").write_bytes(
             ("\n".join(manifest_lines) + "\n").encode("utf-8")
@@ -132,6 +164,35 @@ def build_release(version: str, output_dir: Path) -> tuple[Path, str]:
                 )
 
     return archive_path, sha256(archive_path)
+
+
+def build_source_offer(source_archive: Path, release_root: Path, commit: str, *, chunk_bytes: int = 20 * 1024 * 1024) -> None:
+    """Offer the exact Git source, including third-party notices, in DM-sized parts.
+
+    The input is ``git archive HEAD``. Runtime env/account files and untracked
+    operator files never enter it. Parts avoid Telegram's document size limit.
+    """
+    if chunk_bytes < 1:
+        raise ValueError("invalid_source_chunk_size")
+    compressed = release_root.parent / "corresponding-source.tar.gz"
+    with source_archive.open("rb") as source, compressed.open("wb") as target:
+        with gzip.GzipFile(filename="", mode="wb", fileobj=target, mtime=0) as zipped:
+            shutil.copyfileobj(source, zipped)
+    parts = []
+    folder = release_root / "source"
+    folder.mkdir()
+    with compressed.open("rb") as source:
+        index = 1
+        while data := source.read(chunk_bytes):
+            name = f"source/arel-source.tar.gz.part{index:03d}"
+            target = release_root / name
+            target.write_bytes(data)
+            parts.append({"file": name, "bytes": len(data), "sha256": sha256(target)})
+            index += 1
+    (release_root / "SOURCE_OFFER.json").write_text(json.dumps({
+        "commit": commit, "format": "concatenated-gzip-tar", "sha256": sha256(compressed),
+        "parts": parts,
+    }, indent=2) + "\n", encoding="utf-8")
 
 
 def _build_manifest(release_root: Path) -> list[str]:
@@ -455,6 +516,7 @@ def main() -> None:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(errors="backslashreplace")
     args = parse_args()
+    verify_gate_artifact()
     archive, archive_sha = build_release(args.version, args.output_dir)
     print(f"archive={archive}")
     print(f"sha256={archive_sha}")

@@ -6,6 +6,7 @@ from src.ai.router import AIProviderRouter
 from src.ai.provider_base import AIProviderRequestError, CompletionRequest, CompletionResponse
 from src.chat_engine import ChatEngine
 from src.key_manager import ServiceType
+from src.ai.chatgpt_plan import PLAN_SCOPE, RESOURCE_SCOPE, _atomic_write_record
 from config import Config
 
 
@@ -67,7 +68,7 @@ def test_chat_engine_applies_configured_task_routes(monkeypatch):
     assert router.routes["transcribe"] == ["cerebras"]
     # Tasks without an explicit preference retain the configured provider set.
     assert set(router.routes["summary"]) == {
-        "freemodel", "groq", "gemini", "cerebras", "iamhc", "evren", "nvidia", "ninerouter"
+        "freemodel", "groq", "gemini", "cerebras", "iamhc", "evren", "nvidia", "ninerouter", "cloudflare"
     }
 
 
@@ -85,7 +86,57 @@ def test_chat_engine_drops_explicit_route_without_a_provider_key(monkeypatch):
     assert router.routes["vision"] == ["freemodel"]
 
 
-def test_chat_engine_defaults_text_tasks_to_nvidia_then_evren_when_route_is_empty(monkeypatch):
+def test_chatgpt_plan_is_first_for_text_and_excluded_from_media_routes(monkeypatch, tmp_path):
+    credentials = tmp_path / "credentials.json"
+    _atomic_write_record(credentials, {
+        "client_id": "oaiapp_test", "access_token": "access", "refresh_token": "refresh",
+        "scopes": [PLAN_SCOPE, RESOURCE_SCOPE], "expires_at": 2_000_000_000,
+    })
+    monkeypatch.setattr(Config, "OPENAI_CHATGPT_ENABLED", True)
+    monkeypatch.setattr(Config, "OPENAI_CHATGPT_MODE", "siwc")
+    monkeypatch.setattr(Config, "OPENAI_CHATGPT_MODEL", "gpt-5.6-luna")
+    monkeypatch.setattr(Config, "OPENAI_CHATGPT_CREDENTIALS_FILE", str(credentials))
+    monkeypatch.setattr(Config, "AI_PROVIDER_ROUTES", {
+        "chat": ["openai", "evren", "nvidia", "cloudflare"],
+        "fast": ["openai", "evren", "nvidia", "cloudflare"],
+        "vision": ["openai", "evren", "nvidia"],
+    })
+    engine = ChatEngine.__new__(ChatEngine)
+    engine.key_manager = SimpleNamespace(keys={
+        service: (["test-key"] if service in {ServiceType.EVREN, ServiceType.NVIDIA} else [])
+        for service in ChatEngine.SERVICE_PRIORITY + ChatEngine.SECONDARY_PROVIDERS
+    })
+    engine.http_client = SimpleNamespace()
+
+    router = engine._build_ai_router()
+
+    assert router.routes["chat"] == ["openai", "evren", "nvidia"]
+    assert router.routes["fast"] == ["openai", "evren", "nvidia"]
+    assert router.routes["vision"] == ["evren", "nvidia"]
+    assert router.providers["openai"].model == "gpt-5.6-luna"
+
+
+def test_codex_cli_is_primary_but_keeps_provider_fallback(monkeypatch):
+    monkeypatch.setattr(Config, "OPENAI_CHATGPT_ENABLED", True)
+    monkeypatch.setattr(Config, "OPENAI_CHATGPT_MODE", "cli")
+    monkeypatch.setattr(Config, "OPENAI_CHATGPT_CLI_BIN", "codex")
+    monkeypatch.setattr(Config, "OPENAI_CHATGPT_CLI_MODEL", "")
+    monkeypatch.setattr(Config, "AI_PROVIDER_ROUTES", {"chat": ["openai"], "fast": ["openai"]})
+    engine = ChatEngine.__new__(ChatEngine)
+    engine.key_manager = SimpleNamespace(keys={
+        service: (["test-key"] if service in {ServiceType.EVREN, ServiceType.NVIDIA} else [])
+        for service in ChatEngine.SERVICE_PRIORITY + ChatEngine.SECONDARY_PROVIDERS
+    })
+    engine.http_client = SimpleNamespace()
+
+    router = engine._build_ai_router()
+
+    assert router.routes["chat"][:2] == ["openai", "evren"]
+    assert router.routes["fast"][:2] == ["openai", "evren"]
+    assert router.providers["openai"].__class__.__name__ == "ChatGPTCliProvider"
+
+
+def test_chat_engine_defaults_text_tasks_to_ordered_provider_fallback_when_route_is_empty(monkeypatch):
     monkeypatch.setattr(Config, "AI_PROVIDER_ROUTES", {})
     engine = ChatEngine.__new__(ChatEngine)
     engine.key_manager = SimpleNamespace(
@@ -95,10 +146,10 @@ def test_chat_engine_defaults_text_tasks_to_nvidia_then_evren_when_route_is_empt
 
     router = engine._build_ai_router()
 
-    assert router.routes["chat"] == ["nvidia", "evren"]
-    assert router.routes["fast"] == ["nvidia", "evren"]
-    assert router.routes["analysis"] == ["nvidia", "evren"]
-    assert router.routes["summary"] == ["nvidia", "evren"]
+    assert router.routes["chat"] == ["evren", "nvidia", "cloudflare"]
+    assert router.routes["fast"] == ["evren", "nvidia", "cloudflare"]
+    assert router.routes["analysis"] == ["evren", "nvidia", "cloudflare"]
+    assert router.routes["summary"] == ["evren", "nvidia", "cloudflare"]
     assert router.routes["sticker_tagging"] == ["nvidia", "evren"]
 
 
@@ -137,6 +188,7 @@ def test_chat_engine_retires_cleanapis_route_without_registering_provider(monkey
 def test_chat_engine_exposes_nvidia_nim_provider_without_relabeling_evren(monkeypatch):
     monkeypatch.setattr(Config, "NVIDIA_URL", "https://integrate.api.nvidia.com/v1")
     monkeypatch.setattr(Config, "NVIDIA_MODEL", "deepseek-ai/deepseek-v4.1-flash")
+    monkeypatch.setattr(Config, "NVIDIA_CHAT_MODEL", "deepseek-ai/deepseek-v4.1-flash")
     monkeypatch.setattr(Config, "NVIDIA_VISION_MODEL", "nvidia-vision-fixture")
     monkeypatch.setattr(Config, "AI_PROVIDER_ROUTES", {"chat": ["nvidia"], "vision": ["nvidia"]})
     engine = ChatEngine.__new__(ChatEngine)
@@ -174,7 +226,7 @@ def test_chat_engine_uses_nvidia_as_safe_default_when_evren_is_unconfigured(monk
     assert router.routes["fast"] == ["nvidia"]
 
 
-def test_chat_engine_prefers_nvidia_then_evren_when_both_keys_are_configured(monkeypatch):
+def test_chat_engine_rotates_evren_and_nvidia_when_cloudflare_has_no_key(monkeypatch):
     monkeypatch.setattr(Config, "AI_PROVIDER_ROUTES", {})
     monkeypatch.setattr(Config, "EVREN_KEY", "fixture-evren-key")
     monkeypatch.setattr(Config, "NVIDIA_KEY", "fixture-nvidia-key")
@@ -190,8 +242,8 @@ def test_chat_engine_prefers_nvidia_then_evren_when_both_keys_are_configured(mon
 
     router = engine._build_ai_router()
 
-    assert router.routes["chat"] == ["nvidia", "evren"]
-    assert router.routes["fast"] == ["nvidia", "evren"]
+    assert router.routes["chat"] == ["evren", "nvidia"]
+    assert router.routes["fast"] == ["evren", "nvidia"]
 
 
 @pytest.mark.asyncio

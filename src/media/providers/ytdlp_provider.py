@@ -6,6 +6,7 @@ import io
 import logging
 import shutil
 import tempfile
+import time
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -81,11 +82,28 @@ class YtDlpProvider:
         self._background_cleanup_tasks: set[asyncio.Task[Any]] = set()
         self._deferred_cleanup_dirs: set[Path] = set()
 
-    async def wait_for_background_cleanup(self) -> None:
-        """Wait for timed-out yt-dlp workers before the spool is removed."""
+    async def wait_for_background_cleanup(self, timeout: Optional[float] = None) -> bool:
+        """Wait for timed-out yt-dlp workers before the spool is removed.
+
+        A bounded wait never cancels a pending reaper: the reaper owns the
+        job directory and has to survive until its worker thread stopped.
+        Returns True when every reaper finished and False when the bounded
+        wait expired first.
+        """
+        deadline = None if timeout is None else time.monotonic() + max(0.0, float(timeout))
         while self._background_cleanup_tasks:
             tasks = tuple(self._background_cleanup_tasks)
-            await asyncio.gather(*tasks, return_exceptions=True)
+            if deadline is None:
+                await asyncio.gather(*tasks, return_exceptions=True)
+            else:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    return False
+                _done, pending = await asyncio.wait(tasks, timeout=remaining)
+                if pending:
+                    return False
+            self._background_cleanup_tasks.difference_update(task for task in tasks if task.done())
+        return True
 
     @staticmethod
     async def _reap_timed_out_download(task: asyncio.Task[Any], job_dir: Path) -> None:
@@ -93,7 +111,7 @@ class YtDlpProvider:
             await task
         except BaseException:
             pass
-        shutil.rmtree(job_dir, ignore_errors=True)
+        await asyncio.to_thread(shutil.rmtree, job_dir, ignore_errors=True)
 
     def _schedule_timed_out_cleanup(self, task: asyncio.Task[Any], job_dir: Path) -> None:
         self._deferred_cleanup_dirs.add(job_dir)
@@ -209,7 +227,7 @@ class YtDlpProvider:
                 code, message = self._safe_source_error(exc, phase="probe")
                 raise MediaDownloadError(code, message) from exc
         finally:
-            shutil.rmtree(probe_dir, ignore_errors=True)
+            await asyncio.to_thread(shutil.rmtree, probe_dir, ignore_errors=True)
 
     @staticmethod
     def _probe_sync(yt_dlp, url: str, options: Dict[str, Any]) -> Dict[str, Any]:
@@ -286,7 +304,7 @@ class YtDlpProvider:
                 # A failed provider attempt has no result for the service's
                 # outer cleanup hook. Remove partial media here so retries do
                 # not inherit untrusted or oversized artifacts.
-                shutil.rmtree(job_dir, ignore_errors=True)
+                await asyncio.to_thread(shutil.rmtree, job_dir, ignore_errors=True)
 
     def _download_sync(self, url: str, job_dir: Path, cookie_file: Optional[str]) -> Dict[str, Any]:
         try:

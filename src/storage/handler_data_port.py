@@ -48,6 +48,22 @@ class HandlerDataPort:
     async def get_user(self, user_id: int) -> Any:
         return await self._invoke("get_user", user_id)
 
+    async def get_active_secret_game_for_user(self, user_id: int) -> Any:
+        if not self.supports("get_active_secret_game_for_user"):
+            return None
+        return await self._invoke("get_active_secret_game_for_user", user_id)
+
+    async def list_active_secret_game_routes(self, user_id: int) -> Any:
+        if not self.supports("list_active_secret_game_routes"):
+            row = await self.get_active_secret_game_for_user(user_id)
+            return [row] if row else []
+        return await self._invoke("list_active_secret_game_routes", user_id)
+
+    async def list_active_puzzle_routes(self, chat_id: int, thread_id: int | None, user_id: int) -> Any:
+        if not self.supports("list_active_puzzle_routes"):
+            return None
+        return await self._invoke("list_active_puzzle_routes", chat_id, thread_id, user_id)
+
     async def find_user_by_username(self, username: str) -> Any:
         """Find a previously observed Telegram username without exposing Mongo."""
         return await self._invoke("find_user_by_username", username)
@@ -96,11 +112,28 @@ class HandlerDataPort:
     async def save_game_state(self, chat_id: int, game_type: str, state: dict[str, Any]) -> Any:
         return await self._invoke("save_game_state", chat_id, game_type, state)
 
+    async def create_game_state_if_absent(self, chat_id: int, game_type: str, state: dict[str, Any]) -> Any:
+        return await self._invoke("create_game_state_if_absent", chat_id, game_type, state)
+
+    async def initialize_game_state_version_if_missing(self, chat_id: int, game_type: str) -> Any:
+        return await self._invoke("initialize_game_state_version_if_missing", chat_id, game_type)
+
+    async def compare_and_save_game_state(
+        self, chat_id: int, game_type: str, state: dict[str, Any], *, expected_version: int,
+    ) -> Any:
+        return await self._invoke(
+            "compare_and_save_game_state", chat_id, game_type, state,
+            expected_version=expected_version,
+        )
+
     async def get_game_state(self, chat_id: int, game_type: str) -> Any:
         return await self._invoke("get_game_state", chat_id, game_type)
 
     async def delete_game_state(self, chat_id: int, game_type: str) -> Any:
         return await self._invoke("delete_game_state", chat_id, game_type)
+
+    async def defer_board_recovery(self, chat_id: int, game_type: str, until: float) -> Any:
+        return await self._invoke("defer_board_recovery", chat_id, game_type, until)
 
     async def list_due_game_states(self, *, now: float, limit: int = 100) -> Any:
         return await self._invoke("list_due_game_states", now=now, limit=limit)
@@ -110,6 +143,17 @@ class HandlerDataPort:
 
     async def release_game_action(self, action_key: str) -> Any:
         return await self._invoke("release_game_action", action_key)
+
+    async def claim_game_lease(self, action_key: str, owner_token: str,
+                               lease_seconds: int, now: Any) -> Any:
+        return await self._invoke("claim_game_lease", action_key, owner_token, lease_seconds, now)
+
+    async def renew_game_lease(self, action_key: str, owner_token: str,
+                               lease_seconds: int, now: Any) -> Any:
+        return await self._invoke("renew_game_lease", action_key, owner_token, lease_seconds, now)
+
+    async def release_game_lease(self, action_key: str, owner_token: str) -> Any:
+        return await self._invoke("release_game_lease", action_key, owner_token)
 
     async def save_quote_template(self, user_id: int, name: str, options: dict[str, Any]) -> Any:
         return await self._invoke("save_quote_template", user_id, name, options)

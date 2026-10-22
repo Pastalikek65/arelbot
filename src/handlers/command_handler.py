@@ -27,6 +27,7 @@ from src.ai.prompt_policy import untrusted_context
 from src.ai.personality import PersonalityPolicy
 from src.ai.conversation_style import NORMAL_MODE, is_normal_mode, style_mode_label
 from src.games.state_store import hydrate_game, persist_game, delete_game
+from src.handlers.board_surface import open_board, board_panels, BoardTransport
 from src.games.engine import parse_word_game_request
 from src.games.blackjack import BlackjackGame
 from src.features.city_directory import normalize_text
@@ -71,6 +72,8 @@ from src.services.guess_age_service import GuessAgeServiceError
 from src.services.guess_age_ui import guess_age_keyboard, render_guess_age_text, render_guess_age_round_result
 from src.services.uno_service import UnoError
 from src.services.uno_ui import render_uno_text, uno_keyboard
+from src.services.word_chain_service import WordChainService
+from src.services.word_chain_ui import render_word_chain, word_chain_keyboard, word_chain_error
 from src.services.menu_service import tictactoe_surface_keyboard
 from src.features.culture_categories import normalize_culture_category
 from src.features.news_categories import normalize_news_category
@@ -152,8 +155,11 @@ class CommandHandler:
         self.akinator_service = akinator_service
         self.guess_age_service = guess_age_service
         self.uno_service = uno_service
+        self.word_chain_service = WordChainService(self.data_port, leaderboard=leaderboard_service, economy=economy_service)
         from src.handlers.game_runtime import GameRuntime
-        self.game_runtime = GameRuntime(self.data_port, guess_age=guess_age_service, uno=uno_service)
+        self.game_runtime = GameRuntime(self.data_port, guess_age=guess_age_service, uno=uno_service,
+                                        roulette=roulette_service, blackjack=blackjack_service,
+                                        leaderboard=leaderboard_service, economy=economy_service)
         # Injected by Orchestrator after the Telegram Application is built.
         # Handler methods never perform role lookups directly.
         self.authorization = authorization
@@ -331,6 +337,15 @@ class CommandHandler:
         from src.services import LeaderboardService
         leaderboard = self.leaderboard_service or LeaderboardService(self.data_port)
         text = await leaderboard.render_profile(update.effective_user.id, update.effective_user.first_name)
+        if self.economy_service:
+            try:
+                from src.games.economy_policy import CATALOG
+                wallet = await self.economy_service.snapshot(update.effective_user.id, update.effective_chat.id)
+                selected = [CATALOG[key].name for key in wallet.get('equipped', {}).values() if key in CATALOG]
+                if selected:
+                    text += '\n\n<b>Bu gruptaki profilin</b>\n' + ' · '.join(html.escape(label) for label in selected)
+            except Exception as error:
+                logger.warning('Economy profile unavailable: %s', type(error).__name__)
         if await self._try_send_card(
             update.effective_message,
             lambda path: leaderboard.render_profile_card(path, update.effective_user.id, update.effective_user.first_name),
@@ -1119,6 +1134,13 @@ class CommandHandler:
             await message.reply_text("Guardian işlemi uygulanamadı; hedefi mesaja yanıt vererek seçip tekrar dene")
 
     async def handle_economy_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        panel = getattr(self, 'economy_handler', None)
+        if panel:
+            parts = str(getattr(update.effective_message, 'text', '') or '').split()
+            command = parts[0].split('@')[0].lstrip('/') if parts else ''
+            view = {'magaza': 'shop', 'envanter': 'inventory'}.get(command, 'wallet')
+            await panel.command(update, context, view=view)
+            return
         if not self.economy_service:
             await update.effective_message.reply_text("Ekonomi servisi şu an kullanılamıyor.")
             return
@@ -1141,6 +1163,11 @@ class CommandHandler:
         await update.effective_message.reply_text("\n".join(lines), parse_mode="HTML")
 
     async def handle_daily_reward_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        panel = getattr(self, 'economy_handler', None)
+        if panel:
+            await self.economy_service.claim_daily(update.effective_user.id, update.effective_chat.id)
+            await panel.command(update, context, view='daily')
+            return
         if not self.economy_service:
             await update.effective_message.reply_text("Ekonomi servisi şu an kullanılamıyor.")
             return
@@ -2107,154 +2134,16 @@ class CommandHandler:
         remove_job_by_name(context, name)
 
     async def handle_connect4_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Open a restart-safe, two-player Connect Four lobby.
-
-        The menu callback can invoke the same method, so this surface does not
-        require a second transport or a separate game process.
-        """
-        message = update.effective_message or update.message
-        if message is None or update.effective_chat is None or update.effective_user is None:
-            return
-        await hydrate_game(self.data_port, update.effective_chat.id, context.chat_data, "connect4")
-        existing = context.chat_data.get("connect4")
-        if existing and str(existing.get("status")) in {"lobby", "playing"}:
-            reply_kwargs = {"reply_markup": connect4_keyboard(existing), "parse_mode": "HTML"}
-            thread_id = getattr(message, "message_thread_id", None)
-            if thread_id is not None:
-                reply_kwargs["message_thread_id"] = int(thread_id)
-            await message.reply_text(
-                render_connect4_text(existing),
-                **reply_kwargs,
-            )
-            return
-        state = new_connect4_state(
-            owner_id=int(update.effective_user.id),
-            owner_name=str(update.effective_user.first_name or "Oyuncu"),
-            chat_id=int(update.effective_chat.id),
-            thread_id=getattr(message, "message_thread_id", None),
-        )
-        context.chat_data["connect4"] = state
-        await persist_game(self.data_port, update.effective_chat.id, "connect4", state)
-        reply_kwargs = {"reply_markup": connect4_keyboard(state), "parse_mode": "HTML"}
-        thread_id = getattr(message, "message_thread_id", None)
-        if thread_id is not None:
-            reply_kwargs["message_thread_id"] = int(thread_id)
-        prompt = await message.reply_text(
-            render_connect4_text(state),
-            **reply_kwargs,
-        )
-        state["prompt_message_id"] = int(getattr(prompt, "message_id", 0) or 0)
-        await persist_game(self.data_port, update.effective_chat.id, "connect4", state)
+        await open_board(self, update, context, "connect4")
 
     async def handle_tictactoe_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Open a persistent two-player XOX lobby with round-scoped buttons."""
-        message = update.effective_message or update.message
-        if message is None or update.effective_chat is None or update.effective_user is None:
-            return
-        await hydrate_game(self.data_port, update.effective_chat.id, context.chat_data, "tictactoe")
-        existing = context.chat_data.get("tictactoe")
-        if existing and str(existing.get("status")) in {"lobby", "playing"}:
-            reply_kwargs = {
-                "reply_markup": tictactoe_surface_keyboard(existing),
-                "parse_mode": "HTML",
-            }
-            thread_id = getattr(message, "message_thread_id", None)
-            if thread_id is not None:
-                reply_kwargs["message_thread_id"] = int(thread_id)
-            await message.reply_text(
-                render_tictactoe_text(existing),
-                **reply_kwargs,
-            )
-            return
-        state = new_tictactoe_state(
-            owner_id=int(update.effective_user.id),
-            owner_name=str(update.effective_user.first_name or "Oyuncu"),
-            chat_id=int(update.effective_chat.id),
-            board_size=6,
-        )
-        thread_id = getattr(message, "message_thread_id", None)
-        if thread_id is not None:
-            state["thread_id"] = int(thread_id)
-        context.chat_data["tictactoe"] = state
-        await persist_game(self.data_port, update.effective_chat.id, "tictactoe", state)
-        reply_kwargs = {
-            "reply_markup": tictactoe_surface_keyboard(state),
-            "parse_mode": "HTML",
-        }
-        if thread_id is not None:
-            reply_kwargs["message_thread_id"] = int(thread_id)
-        prompt = await message.reply_text(
-            render_tictactoe_text(state),
-            **reply_kwargs,
-        )
-        state["prompt_message_id"] = int(getattr(prompt, "message_id", 0) or 0)
-        await persist_game(self.data_port, update.effective_chat.id, "tictactoe", state)
+        await open_board(self, update, context, "tictactoe")
 
     async def handle_gomoku_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Open a persistent two-player Gomoku lobby with a selectable board."""
-        message = update.effective_message or update.message
-        if message is None or update.effective_chat is None or update.effective_user is None:
-            return
-        await hydrate_game(self.data_port, update.effective_chat.id, context.chat_data, "gomoku")
-        existing = context.chat_data.get("gomoku")
-        if existing and str(existing.get("status")) in {"lobby", "playing"}:
-            reply_kwargs = {
-                "reply_markup": gomoku_keyboard(existing),
-                "parse_mode": "HTML",
-            }
-            thread_id = getattr(message, "message_thread_id", None)
-            if thread_id is not None:
-                reply_kwargs["message_thread_id"] = int(thread_id)
-            await message.reply_text(render_gomoku_text(existing), **reply_kwargs)
-            return
-        thread_id = getattr(message, "message_thread_id", None)
-        state = new_gomoku_state(
-            owner_id=int(update.effective_user.id),
-            owner_name=str(update.effective_user.first_name or "Oyuncu"),
-            chat_id=int(update.effective_chat.id),
-            thread_id=int(thread_id) if thread_id is not None else None,
-        )
-        context.chat_data["gomoku"] = state
-        await persist_game(self.data_port, update.effective_chat.id, "gomoku", state)
-        reply_kwargs = {
-            "reply_markup": gomoku_keyboard(state),
-            "parse_mode": "HTML",
-        }
-        if thread_id is not None:
-            reply_kwargs["message_thread_id"] = int(thread_id)
-        prompt = await message.reply_text(render_gomoku_text(state), **reply_kwargs)
-        state["prompt_message_id"] = int(getattr(prompt, "message_id", 0) or 0)
-        await persist_game(self.data_port, update.effective_chat.id, "gomoku", state)
+        await open_board(self, update, context, "gomoku")
 
     async def handle_chess_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Open a restart-safe two-player chess lobby."""
-        message = update.effective_message or update.message
-        if message is None or update.effective_chat is None or update.effective_user is None:
-            return
-        await hydrate_game(self.data_port, update.effective_chat.id, context.chat_data, "chess")
-        existing = context.chat_data.get("chess")
-        if existing and str(existing.get("status")) in {"lobby", "playing", "finished"}:
-            reply_kwargs = {"reply_markup": chess_keyboard(existing), "parse_mode": "HTML"}
-            thread_id = getattr(message, "message_thread_id", None)
-            if thread_id is not None:
-                reply_kwargs["message_thread_id"] = int(thread_id)
-            await message.reply_text(render_chess_text(existing), **reply_kwargs)
-            return
-        thread_id = getattr(message, "message_thread_id", None)
-        state = new_chess_state(
-            owner_id=int(update.effective_user.id),
-            owner_name=str(update.effective_user.first_name or "Oyuncu"),
-            chat_id=int(update.effective_chat.id),
-            thread_id=int(thread_id) if thread_id is not None else None,
-        )
-        context.chat_data["chess"] = state
-        await persist_game(self.data_port, update.effective_chat.id, "chess", state)
-        reply_kwargs = {"reply_markup": chess_keyboard(state), "parse_mode": "HTML"}
-        if thread_id is not None:
-            reply_kwargs["message_thread_id"] = int(thread_id)
-        prompt = await message.reply_text(render_chess_text(state), **reply_kwargs)
-        state["prompt_message_id"] = int(getattr(prompt, "message_id", 0) or 0)
-        await persist_game(self.data_port, update.effective_chat.id, "chess", state)
+        await open_board(self, update, context, "chess")
 
     async def handle_akinator_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         if self.akinator_service is None or update.effective_chat is None:
@@ -2319,6 +2208,19 @@ class CommandHandler:
         user = update.effective_user
         if message is None or chat is None or user is None or self.uno_service is None:
             return
+        bot = getattr(context, "bot", None)
+        username = getattr(bot, "username", None)
+        if isinstance(username, str) and username:
+            self.uno_service.bot_username = username
+        if (getattr(context, "args", None) or [""])[0].casefold() in {"kaynak", "source"}:
+            if getattr(chat, "type", None) == "private":
+                from src.handlers.uno_source import deliver_source
+                await deliver_source(update, context)
+            elif self.uno_service.bot_username:
+                await message.reply_text("Kaynak kodunu botun özel sohbetinden indirebilirsin.", reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("📦 Kaynak kodunu indir", url=f"https://t.me/{self.uno_service.bot_username}?start=uno_source")]
+                ]))
+            return
         if getattr(chat, "type", None) not in {"group", "supergroup"}:
             await message.reply_text("UNO grup oyunu; arkadaşlarını gruba çağırıp orada başlatabilirsin.")
             return
@@ -2365,21 +2267,36 @@ class CommandHandler:
         user = update.effective_user
         if message is None or chat is None or user is None:
             return
+        if "kaynaklar" in (getattr(context, "args", None) or []) and getattr(chat, "type", None) in {"group", "supergroup"}:
+            await message.reply_text("Fotoğraf kaynaklarını botun özel sohbetinde /yas kaynaklar ile açabilirsin.")
+            return
         if getattr(chat, "type", None) not in {"group", "supergroup"}:
-            await message.reply_text("yaş tahmini grup oyunu; özel sohbette başlatmam")
+            from src.services.guess_age_ui import render_age_sources
+            if "kaynaklar" in (getattr(context, "args", None) or []):
+                text, keyboard = render_age_sources(getattr(self.guess_age_service, "assets", []))
+                await message.reply_text(text, parse_mode="HTML", reply_markup=keyboard, disable_web_page_preview=True)
+                return
+            await message.reply_text("Yaş Tahmini grupta oynanır. Beni grubuna ekleyip /yas yazabilirsin.",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Fotoğraf kaynakları", callback_data="guessage:sources:0")]]))
             return
         if self.guess_age_service is None:
             await message.reply_text("yaş tahmini şu an hazır değil")
             return
         try:
-            await self.game_runtime.open_age(context.bot, chat_id=int(chat.id), owner_id=int(user.id),
-                owner_name=str(user.first_name or "Oyuncu"), thread_id=getattr(message, "message_thread_id", None))
+            from src.storage.game_scope import forum_thread_id
+            state, created = await self.game_runtime.open_age(context.bot, chat_id=int(chat.id), owner_id=int(user.id),
+                owner_name=str(user.first_name or "Oyuncu"), thread_id=forum_thread_id(message))
+            if not created:
+                notice = ("Tur sonuçları gösteriliyor. Sonraki ekran birazdan açılacak." if state and state.get("delivery_pending")
+                          else "Oyun devam ediyor. Son fotoğraf için tahminini sayı olarak yaz; /yas süreyi yenilemez.")
+                await message.reply_text(notice, reply_to_message_id=int((state or {}).get("prompt_message_id") or message.message_id))
         except GuessAgeServiceError as exc:
             messages = {
                 "GUESS_AGE_OTHER_TOPIC": "Yaş tahmini başka bir konuda açık. Oyunun kurulduğu konuda /yas yazarak devam edebilirsin.",
                 "GUESS_AGE_ACTIVE": "bu grupta zaten bir yaş tahmini turu dönüyor",
                 "GUESS_AGE_ASSET_MISSING": "oyun görseli bulunamadı; kurulum eksik görünüyor",
                 "GUESS_AGE_STORAGE_UNAVAILABLE": "oyun durumu kaydedilemedi; biraz sonra tekrar dene",
+                "GUESS_AGE_REWARDS_PENDING": "Önceki maçın puanları kaydediliyor. Yeni oyun için biraz sonra tekrar dene.",
             }
             await message.reply_text(messages.get(exc.code, "yaş tahmini başlatılamadı"))
 
@@ -2391,16 +2308,21 @@ class CommandHandler:
             return
         args = getattr(context, "args", None) or []
         if not args:
-            await message.reply_text("tahmini yaz: /yastahmin 27")
+            await message.reply_text("Oyun açıkken yaşını sayı olarak yazabilirsin. Örnek: 35")
             return
         try:
-            state, outcome = await self.guess_age_service.submit(
-                chat_id=int(chat.id),
-                user_id=int(user.id),
-                display_name=str(user.first_name or "oyuncu"),
-                guess=args[0],
-            )
-            await message.reply_text("Tahminin kaydedildi. Puan tur sonunda açıklanacak.", reply_to_message_id=getattr(message, "message_id", None))
+            from src.handlers.age_input import is_current_age_message
+            async with self.guess_age_service.presentation_lock(int(chat.id)):
+                current = await self.guess_age_service.current(int(chat.id))
+                if not is_current_age_message(current, message):
+                    await message.reply_text("Bu mesaj güncel fotoğrafa ait değil. Oyunun açık olduğu konuda /yas ile devam et.")
+                    return
+                state, outcome = await self.guess_age_service.submit(
+                    chat_id=int(chat.id), user_id=int(user.id), display_name=str(user.first_name or "Oyuncu"),
+                    guess=args[0], expected_round_id=current["round_id"], expected_round=int(current["round"]),
+                )
+                from src.handlers.age_surface import refresh_age_caption
+                await refresh_age_caption(context.bot, state)
         except GuessAgeServiceError as exc:
             messages = {
                 "GUESS_AGE_NOT_FOUND": "aktif yaş tahmini yok; /yas ile başlat",
@@ -2408,6 +2330,7 @@ class CommandHandler:
                 "guess_age_already_answered": "bu tur için tahminini zaten bıraktın",
                 "guess_age_invalid_number": "yaşı sayı olarak yaz",
                 "guess_age_out_of_range": "1 ile 120 arasında bir yaş yaz",
+                "guess_age_full": "Bu maç 100 oyuncuya ulaştı. Sonraki maça katılabilirsin.",
             }
             await message.reply_text(messages.get(exc.code, "tahmin kaydedilemedi"))
 
@@ -2472,6 +2395,44 @@ class CommandHandler:
             return
 
         if self.batak_service is not None:
+            from src.handlers.callback_handler import CallbackHandler
+
+            async def send_bound_panel(state):
+                chat_id = int(update.effective_chat.id)
+                async with self.batak_service.presentation_lock(chat_id):
+                    latest = await self.batak_service.snapshot(chat_id)
+                    if latest and latest.get("phase") in {"lobby", "playing"}:
+                        state = latest
+                    return await send_bound_panel_locked(state)
+
+            async def send_bound_panel_locked(state):
+                chat_id = int(update.effective_chat.id)
+                panel = await update.effective_message.reply_text(
+                    CallbackHandler._batak_public_text(state),
+                    reply_markup=CallbackHandler._batak_keyboard(state), parse_mode="HTML",
+                )
+                message_id = getattr(panel, "message_id", None)
+                if not isinstance(message_id, int) or message_id <= 0:
+                    return
+                try:
+                    bound = await self.batak_service.bind_panel(
+                        chat_id=chat_id, message_id=message_id,
+                        expected_lobby_id=state.get("lobby_id") if state.get("phase") == "lobby" else None,
+                        expected_game_id=state.get("game_id") if state.get("phase") == "playing" else None,
+                    )
+                except (RuntimeError, ValueError):
+                    return
+                inline = getattr(self, "batak_inline_service", None)
+                if bound.get("phase") == "playing" and inline is not None:
+                    markup = CallbackHandler._batak_keyboard(
+                        bound, create_query=inline.create_query, chat_id=chat_id,
+                    )
+                    try:
+                        await panel.edit_reply_markup(reply_markup=markup)
+                    except Exception:
+                        await self.batak_service.defer_panel(
+                            chat_id=chat_id, expected_game_id=bound["game_id"],
+                        )
             try:
                 result = await self.batak_service.create_lobby(
                     chat_id=update.effective_chat.id,
@@ -2479,21 +2440,23 @@ class CommandHandler:
                     owner_name=update.effective_user.first_name or "Oyuncu",
                 )
             except (RuntimeError, ValueError) as exc:
+                if str(exc) == "active_game":
+                    try:
+                        state = await self.batak_service.snapshot(update.effective_chat.id)
+                        if state and state.get("phase") in {"lobby", "playing"}:
+                            await send_bound_panel(state)
+                            return
+                    except RuntimeError:
+                        pass
                 message = {
-                    "active_game": "Bu grupta zaten aktif bir Batak masası var.",
+                    "active_game": "Bu grupta aktif bir Batak masası var. Biraz sonra /batak ile paneli yenile.",
                     "game_persistence_unavailable": "Oyun kaydı şu an kullanılamıyor. Biraz sonra tekrar dene.",
                 }.get(
                     str(exc), "Batak masası oluşturulamadı."
                 )
                 await update.effective_message.reply_text(message)
                 return
-            keyboard = InlineKeyboardMarkup([
-                [InlineKeyboardButton("🃏 Masaya katıl", callback_data="batak:join")],
-                [InlineKeyboardButton("🏁 Oyunu başlat", callback_data="batak:start")],
-            ])
-            await update.effective_message.reply_text(
-                sanitize_html(result["text"]), reply_markup=keyboard, parse_mode="HTML"
-            )
+            await send_bound_panel(result["state"])
             return
 
         from src.games.batak import BatakGame
@@ -2554,7 +2517,9 @@ class CommandHandler:
         try:
             bet = service.validate_bet(raw_bet)
             message_id = getattr(message, "message_id", 0) or 0
-            event_id = f"{update.effective_chat.id}:{message_id}:{update.effective_user.id}"
+            callback = getattr(update, "callback_query", None)
+            origin = f"callback:{callback.id}" if callback is not None else f"message:{message_id}"
+            event_id = f"{update.effective_chat.id}:{origin}:{update.effective_user.id}"
             result = await service.start(
                 chat_id=update.effective_chat.id,
                 user_id=update.effective_user.id,
@@ -2580,7 +2545,20 @@ class CommandHandler:
 
         text = sanitize_html(str(result.get("text", "Blackjack")))
         markup = None if result.get("terminal") else self._blackjack_keyboard(update.effective_user.id, result.get("state"))
-        await message.reply_text(text, reply_markup=markup, parse_mode="HTML")
+        from src.services.blackjack_visual import render_blackjack_table
+        import asyncio
+        try:
+            image = await asyncio.to_thread(render_blackjack_table, result)
+        except (OSError, ValueError, KeyError):
+            image = None
+        if image is not None and len(text) <= 1024:
+            panel = await message.reply_photo(image, caption=text, reply_markup=markup, parse_mode="HTML")
+        else:
+            panel = await message.reply_text(text, reply_markup=markup, parse_mode="HTML")
+        if result.get("terminal"):
+            await service.acknowledge_terminal_panel(chat_id=update.effective_chat.id,
+                user_id=update.effective_user.id, event_id=result["state"]["event_id"],
+                message_id=panel.message_id)
 
     async def handle_oyun_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         if self.menu_service:
@@ -2619,10 +2597,149 @@ class CommandHandler:
             parse_mode='HTML'
         )
 
+    async def handle_tabu_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        await self.tabu_handler.command(update, context)
+
+    async def handle_word_chain_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        message = update.effective_message
+        chat = update.effective_chat
+        user = update.effective_user
+        if message is None or chat is None or user is None:
+            return
+        if getattr(chat, "type", None) not in {"group", "supergroup"}:
+            await message.reply_text("Kelime zinciri grup oyunudur. Bir grupta /zincir yazarak masa açabilirsin.")
+            return
+        from src.storage.game_scope import forum_thread_id
+        thread_id = forum_thread_id(message)
+        args = list(getattr(context, "args", None) or [])
+        action = str(args[0]).casefold() if args else "open"
+        if action not in {"open", "durum", "katil", "basla", "pas", "bitir", "ayril", "kelime"}:
+            args.insert(0, "kelime")
+            action = "kelime"
+        errors = {
+            "word_chain_not_found": "Önce /zincir ile masa aç.",
+            "word_chain_lobby_closed": "Bu masa artık katılıma açık değil.",
+            "word_chain_already_joined": "Zaten bu masadasın.",
+            "word_chain_lobby_full": "Masa dolu.",
+            "word_chain_not_owner": "Bu işlemi masayı kuran kişi veya grup yöneticisi yapabilir.",
+            "word_chain_need_players": "Başlamak için en az iki oyuncu katılmalı.",
+            "word_chain_not_playing": "Tur henüz başlamadı veya bitti.",
+            "word_chain_not_your_turn": "Şu anda sıra sende değil.",
+            "word_chain_turn_expired": "Süren doldu. Sırayı geçirmek için /zincir pas yaz.",
+            "word_chain_invalid_word": "En az üç harfli tek bir kelime yaz.",
+            "word_chain_unknown_word": "Bu kelime oyun sözlüğünde yok.",
+            "word_chain_repeated_word": "Bu kelime zaten kullanıldı.",
+            "word_chain_wrong_letter": "Kelime, önceki sözcüğün son harfiyle başlamalı.",
+            "word_chain_already_ended": "Bu masa zaten kapanmış.",
+        }
+        try:
+            if action in {"open", "durum"}:
+                if action == "open":
+                    status, state = await self.word_chain_service.open(
+                        chat_id=int(chat.id), thread_id=thread_id, user_id=int(user.id),
+                        user_name=str(user.first_name or "Oyuncu"),
+                    )
+                else:
+                    status = "current"
+                    state = await self.word_chain_service.current(int(chat.id), thread_id)
+                if state is None:
+                    raise ValueError("word_chain_not_found")
+            else:
+                if action == "kelime" and len(args) < 2:
+                    await message.reply_text("Bir sözcük yaz. Örnek: /zincir kalem")
+                    return
+                moderator = False
+                if action == "bitir":
+                    moderator = await is_admin(update, context, self.sudo_manager, authorization=self.authorization)
+                observed = await self.word_chain_service.current(int(chat.id), thread_id)
+                if observed is None:
+                    raise ValueError("word_chain_not_found")
+                status, state = await self.word_chain_service.act(
+                    chat_id=int(chat.id), thread_id=thread_id, user_id=int(user.id),
+                    user_name=str(user.first_name or "Oyuncu"),
+                    action_id=f"cmd:{int(getattr(message, 'message_id', 0) or 0)}",
+                    action={"katil": "join", "basla": "start", "pas": "pass", "bitir": "stop", "ayril": "leave"}.get(action, "word"),
+                    value=" ".join(args[1:]) if action == "kelime" else None,
+                    moderator=moderator,
+                    expected_round_id=observed["round_id"],
+                    submitted_at=getattr(message, "date", None).timestamp() if getattr(message, "date", None) else None,
+                )
+                if state.get("score_pending"):
+                    await self.word_chain_service.settle_scores(chat_id=int(chat.id), thread_id=thread_id)
+                    state = await self.word_chain_service.current(int(chat.id), thread_id)
+            await message.reply_text(
+                render_word_chain(state, notice="Bu komut daha önce işlendi." if status == "duplicate" else None),
+                parse_mode="HTML", reply_markup=word_chain_keyboard(state),
+            )
+            await self.word_chain_service.acknowledge_panel(
+                chat_id=int(chat.id), thread_id=thread_id, round_id=state["round_id"],
+                expected_version=int(state["version"]),
+            )
+        except ValueError as exc:
+            await message.reply_text(errors.get(str(exc), word_chain_error(str(exc))))
+        except RuntimeError as exc:
+            logger.warning("Word chain command failed: %s", summarize_exception(exc, label="word_chain"))
+            await message.reply_text("Oyun kaydı şu an kullanılamıyor. Biraz sonra tekrar dene.")
+
     async def handle_oyunbitir_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         cancelled: list[str] = []
+        age_notice = None
+        puzzle_suite = getattr(self, "puzzle_suite", None)
+        if puzzle_suite and await puzzle_suite.cancel_for(update, context):
+            cancelled.append("Bulmaca oyunları")
         user_id = int(update.effective_user.id)
         chat_id = int(update.effective_chat.id)
+
+        stop_message = getattr(update, "effective_message", None) or getattr(update, "message", None)
+        from src.storage.game_scope import forum_thread_id
+        thread_id = forum_thread_id(stop_message)
+        legacy_cleanup_allowed = update.effective_chat.type not in {"group", "supergroup"} or await is_admin(
+            update, context, self.sudo_manager, authorization=self.authorization,
+        )
+        for name, title in (("spy_handler", "Casus"), ("vampire_handler", "Vampir Köylü")):
+            social = getattr(self, name, None)
+            if social and update.effective_chat.type in {"group", "supergroup"}:
+                try:
+                    table = await social.service.current(chat_id, thread_id)
+                    if table and table["phase"] not in {"finished", "cancelled"}:
+                        moderator = await is_admin(update, context, self.sudo_manager, authorization=self.authorization)
+                        await social.service.act(chat_id=chat_id, thread_id=thread_id, user_id=user_id,
+                            action_id=f"cmd:{int(getattr(stop_message, 'message_id', 0) or 0)}", action="stop",
+                            round_id=table["round_id"], moderator=moderator)
+                        await social._flush(context, chat_id, thread_id)
+                        cancelled.append(title)
+                except (ValueError, RuntimeError):
+                    logger.warning("Secret game cancellation deferred: %s", name)
+        adapter = getattr(self, "tabu_handler", None)
+        if adapter and update.effective_chat.type in {"group", "supergroup"}:
+            try:
+                table = await adapter.service.current(chat_id, thread_id)
+                if table and table["phase"] not in {"finished", "cancelled"}:
+                    moderator = await is_admin(update, context, self.sudo_manager, authorization=self.authorization)
+                    await adapter.service.act(chat_id=chat_id, thread_id=thread_id, user_id=user_id,
+                        action_id=f"cmd:{int(getattr(stop_message, 'message_id', 0) or 0)}", action="stop",
+                        round_id=table["round_id"], card_id=table.get("card_id"), moderator=moderator)
+                    await adapter._flush(context, chat_id, thread_id)
+                    cancelled.append("Tabu")
+            except (ValueError, RuntimeError):
+                logger.warning("Tabu cancellation could not be completed")
+        try:
+            chain = await self.word_chain_service.current(chat_id, thread_id) if update.effective_chat.type in {"group", "supergroup"} else None
+            if chain and chain.get("phase") in {"lobby", "playing"}:
+                moderator = await is_admin(
+                    update, context, self.sudo_manager, authorization=self.authorization,
+                ) if update.effective_chat.type in {"group", "supergroup"} else False
+                await self.word_chain_service.act(
+                    chat_id=chat_id, thread_id=thread_id, user_id=user_id,
+                    action_id=f"cmd:{int(getattr(stop_message, 'message_id', 0) or 0)}",
+                    action="stop", moderator=moderator,
+                )
+                cancelled.append("kelime zinciri")
+        except ValueError as exc:
+            if str(exc) != "word_chain_not_owner":
+                logger.warning("Word chain cancellation rejected: %s", summarize_exception(exc, label="word_chain_cancel"))
+        except RuntimeError as exc:
+            logger.warning("Word chain cancellation failed: %s", summarize_exception(exc, label="word_chain_cancel"))
 
         # Persistent game state must be cancelled through its domain service;
         # clearing Telegram's in-memory chat data alone leaves a restart-safe
@@ -2668,27 +2785,51 @@ class CommandHandler:
                 if str(exc) not in {"game_expired", "not_owner"}:
                     logger.warning("Roulette cancellation rejected: %s", summarize_exception(exc, label="roulette_cancel"))
 
-        game_keys = ['word_guess', 'hangman', 'word_game', 'connect4', 'tictactoe', 'gomoku', 'chess', 'akinator', 'guess_age', 'uno', 'batak_players', 'sise_lobby', 'quiz_answer', 'quiz_question', 'quiz_round_id']
+        board_service = board_panels(self)
+        moderator = bool(legacy_cleanup_allowed)
+        for board_key, title in (("connect4", "Connect Four"), ("tictactoe", "XOX"),
+                                 ("gomoku", "Gomoku"), ("chess", "Satranç")):
+            try:
+                if await board_service.cancel(chat_id, board_key, user_id,
+                                               moderator=moderator, thread_id=thread_id):
+                    cancelled.append(title)
+                await board_service.process(BoardTransport(context), chat_id, board_key)
+                current_board = await board_service.current(chat_id, board_key)
+                if current_board is not None:
+                    context.chat_data[board_key] = current_board
+            except (ValueError, RuntimeError, TimeoutError) as error:
+                logger.warning("Board cancellation deferred: %s", type(error).__name__)
+
+        game_keys = ['word_guess', 'hangman', 'word_game', 'akinator', 'guess_age', 'uno', 'batak_players', 'sise_lobby', 'quiz_answer', 'quiz_question', 'quiz_round_id']
         cleared = False
+        akinator_state = context.chat_data.get("akinator")
         for key in game_keys:
-            if key in context.chat_data:
+            if legacy_cleanup_allowed and key in context.chat_data:
                 del context.chat_data[key]
                 cleared = True
 
         # Text games also survive a process restart in the durable game-state
         # collection.  Clearing only Telegram's in-memory chat_data would
         # make a cancelled quiz or word game reappear after the next update.
-        if self.akinator_service is not None:
+        if self.akinator_service is not None and legacy_cleanup_allowed:
             try:
-                state = context.chat_data.get("akinator")
+                state = akinator_state
                 if state:
                     await self.akinator_service.close(state)
             except Exception:
                 logger.debug("Akinator cancellation cleanup failed", exc_info=True)
         if self.guess_age_service is not None:
             try:
-                if await self.guess_age_service.cancel(chat_id):
-                    cleared = True
+                age = await self.guess_age_service.current(chat_id)
+                if age and (age.get("status") in {"playing", "expired"} or age.get("delivery_pending")):
+                    moderator = await is_admin(update, context, self.sudo_manager, authorization=self.authorization) if update.effective_chat.type in {"group", "supergroup"} else False
+                    if age.get("thread_id") != thread_id:
+                        age_notice = "Yaş Tahmini başka bir konuda açık; o konudan bitirebilirsin."
+                    elif user_id != int(age["owner_id"]) and not moderator:
+                        age_notice = "Yaş Tahmini'ni oyunu açan kişi veya grup yöneticisi bitirebilir."
+                    elif await self.guess_age_service.cancel(chat_id, expected_round_id=age["round_id"]):
+                        cleared = True
+                        cancelled.append("Yaş Tahmini")
             except Exception:
                 logger.debug("Guess age cancellation cleanup failed", exc_info=True)
         if self.uno_service is not None:
@@ -2701,29 +2842,37 @@ class CommandHandler:
                     cleared = True
             except Exception:
                 logger.debug("UNO cancellation cleanup failed", exc_info=True)
-        for game_type in ("word_guess", "hangman", "word_game", "connect4", "tictactoe", "gomoku", "chess", "akinator", "guess_age", "uno", "batak", "bottle", "quiz"):
-            await delete_game(self.data_port, chat_id, game_type)
+        if legacy_cleanup_allowed:
+            # Domain-owned games retain history and pending reward receipts.
+            for game_type in ("word_guess", "hangman", "word_game", "akinator", "bottle", "quiz"):
+                await delete_game(self.data_port, chat_id, game_type)
 
         job_name = f"word_guess_timeout_{update.effective_chat.id}"
-        current_jobs = context.job_queue.get_jobs_by_name(job_name)
+        current_jobs = context.job_queue.get_jobs_by_name(job_name) if legacy_cleanup_allowed else []
         for job in current_jobs:
             job.schedule_removal()
             cleared = True
         jobs_method = getattr(context.job_queue, "jobs", None)
-        if callable(jobs_method):
+        if callable(jobs_method) and (legacy_cleanup_allowed or "Yaş Tahmini" in cancelled):
             for job in jobs_method():
                 if str(getattr(job, "name", "")).startswith(f"guess_age:{update.effective_chat.id}:"):
                     job.schedule_removal()
                     cleared = True
 
+        if age_notice:
+            await update.message.reply_text(age_notice)
+            if not cancelled and not cleared:
+                return
         if cancelled:
             labels = ", ".join(cancelled)
             await update.message.reply_text(
-                f"✅ Aktif oyun kapatıldı: <b>{labels}</b>. Kalıcı oyun durumu da temizlendi.",
+                f"✅ Sonlandırılan oyunlar: <b>{labels}</b>.",
                 parse_mode='HTML',
             )
         elif cleared:
             await update.message.reply_text("✅ Aktif oyunlar ve lobi durumları temizlendi. Yeni bir oyuna başlayabilirsin!", parse_mode='HTML')
+        elif not legacy_cleanup_allowed:
+            await update.message.reply_text("Kendi oyununu güncel panelindeki Oyunu bitir düğmesiyle kapatabilirsin. Gruptaki oyunları topluca bitirmek için yönetici olmalısın.")
         else:
             await update.message.reply_text("🤔 Şu an aktif bir oyun görünmüyor.", parse_mode='HTML')
 
@@ -2779,13 +2928,13 @@ class CommandHandler:
         phase = state.get("phase")
         if phase == "lobby":
             return InlineKeyboardMarkup([
-                [InlineKeyboardButton("👤 Katıl", callback_data="roulette:join")],
-                [InlineKeyboardButton("🏁 Oyunu başlat", callback_data="roulette:start")],
-                [InlineKeyboardButton("🛑 Lobiyi kapat", callback_data="roulette:cancel")],
+                [InlineKeyboardButton("👤 Katıl", callback_data=f"roulette:join:{state['game_id']}")],
+                [InlineKeyboardButton("🏁 Oyunu başlat", callback_data=f"roulette:start:{state['game_id']}")],
+                [InlineKeyboardButton("🛑 Lobiyi kapat", callback_data=f"roulette:cancel:{state['game_id']}")],
             ])
         return InlineKeyboardMarkup([
-            [InlineKeyboardButton("🔫 Tetiği çek", callback_data="roulette:pull")],
-            [InlineKeyboardButton("🛑 Oyunu bitir", callback_data="roulette:cancel")],
+            [InlineKeyboardButton("🔫 Tetiği çek", callback_data=f"roulette:pull:{state['game_id']}")],
+            [InlineKeyboardButton("🛑 Oyunu bitir", callback_data=f"roulette:cancel:{state['game_id']}")],
         ])
 
     async def handle_rusruleti_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -2804,11 +2953,12 @@ class CommandHandler:
             code = normalize_error_code(exc, "GAME_ERROR").lower()
             await update.effective_message.reply_text(messages.get(code, "Rulet lobisi oluşturulamadı."))
             return
-        await update.effective_message.reply_text(
+        panel = await update.effective_message.reply_text(
             sanitize_html(result["text"]),
             reply_markup=self._roulette_keyboard(result["state"]),
             parse_mode="HTML",
         )
+        await service.acknowledge_panel(update.effective_chat.id, result["state"]["game_id"], panel.message_id)
 
     async def handle_zar_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         from src.games.roulette import RouletteGame
@@ -3814,13 +3964,13 @@ class CommandHandler:
                 and raw_requested not in PersonalityPolicy.MODE_ALIASES
             ):
                 await update.message.reply_text(
-                    "Kullanım: /ayar kişilik normal | ciddi | dengeli | iğneleyici | roast"
+                    "Kullanım: /ayar kişilik normal | roast"
                 )
                 return
             mode = NORMAL_MODE if is_normal_mode(raw_requested) else PersonalityPolicy.normalize_mode(raw_requested)
             if PersonalityPolicy.requires_roast_consent(mode):
                 await update.message.reply_text(
-                    "⚠️ <b>Roast / taşlama modu</b> Arel'e yöneltilen kaba çıkışlarda keskin ama sınırlı yanıtlar verir. "
+                    "⚠️ <b>Roast / taşlama modu</b> açık küfürler ve küfürlü deyimler içeren sert şakalaşmalar yapabilir. Yalnızca sen seçtiğinde açılır. "
                     "Tehdit, nefret söylemi, cinsel aşağılama ve hedefli taciz üretmez. Etkinleştirmek için onayla.",
                     reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(
                         "✅ Roast modunu onayla", callback_data="ayar_persona_roast_confirm"
@@ -3836,7 +3986,7 @@ class CommandHandler:
                 parse_mode="HTML",
             )
             return
-        await update.message.reply_text("Kullanım: /ayar moderation|link|repeat on/off · /ayar flood 8 · /ayar word kelime · /ayar kişilik ciddi|dengeli|iğneleyici|roast")
+        await update.message.reply_text("Kullanım: /ayar moderation|link|repeat on/off · /ayar flood 8 · /ayar word kelime · /ayar kişilik normal|roast")
 
     async def handle_personality_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Manage a private user's persistent tone preference.
@@ -3875,12 +4025,12 @@ class CommandHandler:
                 selected = PersonalityPolicy.normalize_mode(raw)
             else:
                 await update.effective_message.reply_text(
-                    "Kullanım: /persona normal | ciddi | dengeli | iğneleyici | roast | varsayılan"
+                    "Kullanım: /persona normal | roast | varsayılan"
                 )
                 return
             if selected == "roast":
                 await update.effective_message.reply_text(
-                    "⚠️ <b>Roast / taşlama modu</b> Arel'e doğrudan kaba çıkışlarda keskin karşılıklar verir. "
+                    "⚠️ <b>Roast / taşlama modu</b> açık küfürler ve küfürlü deyimler içeren sert şakalaşmalar yapabilir. Yalnızca sen seçtiğinde açılır. "
                     "Tehdit, nefret söylemi, cinsel aşağılama ve hedefli taciz yoktur. Etkinleştirmek için onayla.",
                     reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(
                         "✅ Roast modunu onayla", callback_data="persona_user:roast_confirm"
@@ -3910,7 +4060,7 @@ class CommandHandler:
             else f"Varsayılan ({style_mode_label(NORMAL_MODE)})"
         )
         keyboard = []
-        for mode in ("normal", "serious", "balanced", "needle", "roast"):
+        for mode in ("normal", "roast"):
             marker = "✅ " if current == mode else ""
             callback = "persona_user:roast" if mode == "roast" else f"persona_user:{mode}"
             keyboard.append([InlineKeyboardButton(
@@ -3924,7 +4074,7 @@ class CommandHandler:
         await update.effective_message.reply_text(
             "🎭 <b>Arel üslubu</b>\n\n"
             f"Aktif tercih: <b>{active_label}</b>\n"
-            "İğne kısa ve duruma yönelik kalır; hassas veya teknik konularda otomatik susar.",
+            "Normal: samimi, esprili ve dobra. Roast: ayrıca onayla açılır.",
             reply_markup=InlineKeyboardMarkup(keyboard),
             parse_mode="HTML",
         )

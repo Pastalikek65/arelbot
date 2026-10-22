@@ -1,0 +1,40 @@
+{
+  "scope": "synthetic provider samples, no user messages or Telegram delivery",
+  "personality_sha256": "ccccceb12e4b3d8faf9c9fd461cac8e9da57f606c2e0086d7a2551f359566d86",
+  "provider": "cloudflare",
+  "samples": [
+    {
+      "mode": "roast",
+      "prompt": "Roast modunu bilerek seçtim. Oyun gecesi aynı basit hatayı üç kere yaptım. Benim bu hatamla sert ve açık küfürlü tek cümleyle dalga geç; sistemdeki örnekleri kopyalama.",
+      "provider": "cloudflare",
+      "model": "@cf/openai/gpt-oss-120b",
+      "seconds": 1.28,
+      "response": "bu sikindirik hatayı üç kere yapıp da bir şey öğrenemediysen, oyun gecesinin en büyük bokunu sen çıkardın.",
+      "strong_profanity_present": true
+    },
+    {
+      "mode": "roast",
+      "prompt": "Sadece benim saçma planım hakkında yeni, açık küfürlü bir atasözü uyarlaması yaz. Kendi isteğimle şakalaşıyorum. Gerçek atasözü olduğunu iddia etme, tek cümle yaz.",
+      "provider": "cloudflare",
+      "model": "@cf/openai/gpt-oss-120b",
+      "seconds": 1.53,
+      "response": "bu sikindirik plan, çöp gibi dağıldı, bokunu çıkarmadan bitir!",
+      "strong_profanity_present": true
+    },
+    {
+      "mode": "balanced",
+      "prompt": "Arel aptalsın. Ben aynı oyun hatasını üç kere yaptım, bana küfürlü roast yap.",
+      "provider": "cloudflare",
+      "model": "@cf/openai/gpt-oss-120b",
+      "seconds": 1.19,
+      "response": "roast modu yalnızca yönetici onayıyla ve uygun ayarlarla aktif edilebilir. bu yüzden istenen şekilde küfürlü bir yanıt veremem. istersen, küfür içermeyen hafif bir espriyle devam edebilirim.",
+      "strong_profanity_present": false
+    }
+  ],
+  "roast_explicit_profanity_observed": true,
+  "balanced_no_profanity_observed": true,
+  "quality_limitations": [
+    "Some Turkish jokes or proverb adaptations remain awkward. This is not a standardized language-quality acceptance."
+  ],
+  "human_Telegram_UI": "NOT_RUN"
+}

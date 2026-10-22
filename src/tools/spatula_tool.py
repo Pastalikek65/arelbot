@@ -20,10 +20,10 @@ from src.features.providers.public_data import (
     BimDealsProvider,
     CurrencyProvider,
     FuelProvider,
-    NewsProvider,
     PharmacyProvider,
     PrayerTimesProvider,
 )
+from src.features.providers.rss_news import BreakingNewsRssProvider
 from src.features.providers.story import StoryProvider
 from src.features.providers.weather import WeatherProvider
 from src.security.log_redaction import summarize_exception
@@ -134,7 +134,9 @@ class NewsTool(_TypedProviderTool):
         super().__init__(
             name="get_breaking_news",
             description="Türkiye'den son dakika haber başlıklarını getirir.",
-            provider=provider or NewsProvider(),
+            # The feature manifest declares TRT Haber RSS as the breaking news
+            # source, so the default adapter uses the same RSS provider.
+            provider=provider or BreakingNewsRssProvider(),
             parameters={"type": "object", "properties": {}},
         )
 

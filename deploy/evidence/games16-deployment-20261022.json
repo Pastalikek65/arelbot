@@ -1,0 +1,205 @@
+{
+  "schema_version": 1,
+  "release": "2026.10.22-games-16",
+  "checked_at_utc": "2026-10-22T00:15:25.269392+00:00",
+  "runtime_source_commit": "49c8bca89243068e23266a1cae3e26e923107844",
+  "accepted_implementation_commit": "f58d01fba3b995433e607cb46cf8928ffa93a38c",
+  "distinct_games": 45,
+  "runtime_features": 91,
+  "database_schema": 21,
+  "release_gate": {
+    "passed": 25,
+    "total": 25,
+    "host_pytest": {
+      "passed": 2941,
+      "skipped": 19
+    },
+    "docker_pytest": {
+      "passed": 2954,
+      "skipped": 6
+    }
+  },
+  "candidate": {
+    "ok": true,
+    "stage": "ready",
+    "build_mode": "offline_overlay_on_running_games15_images",
+    "dependency_files_identical": true,
+    "test_summary": "2954 passed, 6 skipped, 9 warnings in 190.84s (0:03:10)"
+  },
+  "activation": {
+    "ok": true,
+    "release": "2026.10.22-games-16",
+    "schema_version": 21,
+    "archive_integrity_verified": true,
+    "services_healthy": true,
+    "github_updated": false
+  },
+  "health": {
+    "release": "2026.10.22-games-16",
+    "source": {
+      "version": "2026.10.22-games-16",
+      "commit": "49c8bca89243068e23266a1cae3e26e923107844"
+    },
+    "services": {
+      "bot": {
+        "status": "running",
+        "health": "healthy",
+        "restarts": 0,
+        "image": "sha256:9c06bb4af5073c7d12284607123418ea2eee96699a597ce4ce0d868d911a5c5c",
+        "recent_tracebacks": 0
+      },
+      "worker": {
+        "status": "running",
+        "health": "healthy",
+        "restarts": 0,
+        "image": "sha256:b78c07a388d4f59e2e9008440262764c18b7edac4a04887368b3be878846c6db",
+        "recent_tracebacks": 0
+      },
+      "mongo": {
+        "status": "running",
+        "health": "healthy",
+        "restarts": 0,
+        "image": "sha256:d0d926f94df099bff534b7ee5b5986458131a22489dfff8664509af0c1e2ca9c"
+      },
+      "redis": {
+        "status": "running",
+        "health": "healthy",
+        "restarts": 0,
+        "image": "sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499"
+      }
+    },
+    "telegram_read_only_probe_exit": 0,
+    "telegram": {
+      "ok": true,
+      "bot_username": "ArelChat_Bot",
+      "catalog_games": 45,
+      "webhook_configured": false,
+      "pending_update_count": 0,
+      "custom_emoji_verified": 38,
+      "animated_icons": 38,
+      "transport_class": "ThemedHTTPXRequest",
+      "premium_buttons_enabled": true
+    }
+  },
+  "telegram_command_scopes_read_only": {
+    "ok": true,
+    "scopes": {
+      "default": {
+        "commands": 83,
+        "unique": 83,
+        "missing_games": [],
+        "help_visible": true,
+        "cancel_visible": true
+      },
+      "private": {
+        "commands": 83,
+        "unique": 83,
+        "missing_games": [],
+        "help_visible": true,
+        "cancel_visible": true
+      },
+      "administrator": {
+        "commands": 85,
+        "unique": 85,
+        "missing_games": [],
+        "help_visible": true,
+        "cancel_visible": true
+      },
+      "owner": {
+        "commands": 95,
+        "unique": 95,
+        "missing_games": [],
+        "help_visible": true,
+        "cancel_visible": true
+      }
+    },
+    "daily_rewards": [
+      25,
+      30,
+      35,
+      40,
+      45,
+      50
+    ],
+    "game_daily_limit": 150,
+    "cosmetic_count": 10
+  },
+  "real_mongo_due": {
+    "ok": true,
+    "scope": "isolated_synthetic_mongo_collection",
+    "due_cases": 447,
+    "selected": 257,
+    "private_projection_safe": true,
+    "secret_routes": 12,
+    "batched_public_projection_safe": true
+  },
+  "backup_directory": "/opt/arel/backups/games-20261022-games16-product",
+  "backup_verification": {
+    "post_restore_services": {
+      "bot": {
+        "status": "running",
+        "health": "healthy",
+        "restarts": 0
+      },
+      "worker": {
+        "status": "running",
+        "health": "healthy",
+        "restarts": 0
+      },
+      "mongo": {
+        "status": "running",
+        "health": "healthy",
+        "restarts": 0
+      },
+      "redis": {
+        "status": "running",
+        "health": "healthy",
+        "restarts": 0
+      }
+    },
+    "mongo_archive_sha256_matches": true,
+    "backups": {
+      "mongo.archive.gz": {
+        "bytes": 1566302,
+        "mode": "0o600"
+      },
+      "redis.rdb": {
+        "bytes": 1482110,
+        "mode": "0o600"
+      },
+      "production.env": {
+        "bytes": 2042,
+        "mode": "0o600"
+      }
+    }
+  },
+  "restore_drill": {
+    "ok": true,
+    "scope": "isolated_restore_namespace_on_server",
+    "production_database_modified": false,
+    "restore": {
+      "collections": 46,
+      "documents": 42131
+    },
+    "temporary_database_removed": true,
+    "temporary_archive_removed": true
+  },
+  "restore_drill_script_sha256": "1d4ed5ef291191730be393d83e0507e7deb36dc13ed58364374801d24e3994f8",
+  "restore_drill_limits": "Mongo archive restored and read in isolated database on same server; not full Mongo/Redis/application disaster recovery or measured RTO",
+  "archive_sha256": "8d33eab72814dcc21f9995049ea37252e02da96eb9e2b1b5828d0e62e31713a4",
+  "delta_sha256": "71e1d9ae966f6d16c00149d74c9812756f47c4eb546d848c5a806cce1d77c699",
+  "telegram_live_player_ui_tests": "DEFERRED_BY_USER",
+  "telegram_messages_sent_for_testing": false,
+  "github_updated": false,
+  "readiness_assessment": {
+    "score": 14,
+    "out_of": 20,
+    "meaning": "Engineering judgment, not measured SLA",
+    "open": [
+      "legacy board panel retry",
+      "live multi-player UI acceptance",
+      "concurrency/load and sustained outage exercise",
+      "full disaster recovery drill"
+    ]
+  }
+}

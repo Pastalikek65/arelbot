@@ -6,6 +6,7 @@ import sys
 
 import pytest
 
+from scripts.backup import create_backup
 from scripts.production_preflight import (
     CheckResult,
     PreflightError,
@@ -28,8 +29,8 @@ def _valid_values() -> dict[str, str]:
         "MONGODB_REQUIRED": "true",
         "REDIS_REQUIRED": "true",
         "MEDIA_REDIS_REQUIRED": "true",
-        "MONGODB_URI": "mongodb://mongo:27017/arel_bot",
-        "REDIS_URL": "redis://redis:6379/0",
+        "MONGODB_URI": "mongodb://areladmin:mongo-secret@mongo:27017/arel_bot?authSource=admin",
+        "REDIS_URL": "redis://:redis-secret@redis:6379/0",
     }
 
 
@@ -207,6 +208,118 @@ def test_production_preflight_rejects_missing_database_endpoints():
     checks = validate_production_env(values)
     codes = {check.code for check in checks if not check.ok}
     assert {"mongodb_uri_invalid", "redis_uri_invalid"} <= codes
+
+
+def test_production_requires_mongo_credentials():
+    """A production deployment must not reach MongoDB anonymously."""
+
+    values = _valid_values()
+    values["MONGODB_URI"] = "mongodb://mongo:27017/arel_bot"
+
+    checks = validate_production_env(values)
+
+    assert any(
+        check.code == "mongodb_credentials_missing"
+        for check in checks
+        if not check.ok
+    )
+
+
+def test_production_requires_redis_password():
+    """A production deployment must not reach Redis anonymously."""
+
+    values = _valid_values()
+    values["REDIS_URL"] = "redis://redis:6379/0"
+    checks = validate_production_env(values)
+
+    assert any(
+        check.code == "redis_credentials_missing"
+        for check in checks
+        if not check.ok
+    )
+
+
+def test_production_preflight_rejects_a_password_with_a_reserved_character():
+    """The password character set is a rule, not only a documented note.
+
+    Compose interpolates the password into the connection string without
+    escaping it, so a reserved character would produce a broken URI.
+    """
+
+    values = _valid_values()
+    values["MONGO_APP_PASSWORD"] = "mongo@app-secret"
+
+    checks = validate_production_env(values)
+
+    assert any(
+        check.code == "mongodb_password_charset_invalid"
+        for check in checks
+        if not check.ok
+    )
+
+
+def test_production_preflight_rejects_a_redis_password_with_a_reserved_character():
+    values = _valid_values()
+    values["REDIS_PASSWORD"] = "redis@app-secret"
+
+    checks = validate_production_env(values)
+
+    assert any(
+        check.code == "redis_password_charset_invalid"
+        for check in checks
+        if not check.ok
+    )
+
+
+def test_production_preflight_accepts_the_documented_password_character_set():
+    values = _valid_values()
+    values["MONGO_ROOT_PASSWORD"] = "mongo-root-secret"
+    values["MONGO_APP_PASSWORD"] = "mongo-app-secret"
+    values["MONGO_TEST_PASSWORD"] = "mongo-test-secret"
+    values["REDIS_PASSWORD"] = "redis-secret"
+
+    checks = validate_production_env(values)
+
+    assert all(check.ok for check in checks)
+
+
+def test_backup_command_does_not_expose_uri_on_command_line(tmp_path: Path):
+    """The backup command line must not carry the database credentials.
+
+    Every process on the host can read the argument vector of another
+    process, so a connection string in ``argv`` publishes the MongoDB and
+    Redis passwords to every local user.
+    """
+
+    chroma = tmp_path / "chroma_db"
+    chroma.mkdir()
+    captured: list[tuple[list[str], dict[str, str]]] = []
+
+    def capture(command: list[str], environment: dict[str, str]) -> None:
+        captured.append((list(command), dict(environment)))
+        for part in command:
+            if part.startswith("--archive="):
+                Path(part.split("=", 1)[1]).write_bytes(b"mongo")
+            elif part == "--rdb":
+                Path(command[command.index("--rdb") + 1]).write_bytes(b"redis")
+
+    create_backup(
+        tmp_path / "backups",
+        mongo_uri="mongodb://areladmin:mongo-secret@localhost:27017/arel_bot",
+        redis_url="redis://:redis-secret@localhost:6379/0",
+        chroma_dir=chroma,
+        command_runner=capture,
+    )
+
+    assert len(captured) == 2
+    for command, environment in captured:
+        assert not any("mongo-secret" in part or "redis-secret" in part for part in command)
+    mongo_command, mongo_environment = captured[0]
+    redis_command, redis_environment = captured[1]
+    assert mongo_command[0] == "mongodump"
+    assert redis_command[0] == "redis-cli"
+    assert mongo_environment["MONGODB_URI"] == "mongodb://areladmin:mongo-secret@localhost:27017/arel_bot"
+    assert redis_environment["REDISCLI_AUTH"] == "redis-secret"
 
 
 @pytest.mark.parametrize(

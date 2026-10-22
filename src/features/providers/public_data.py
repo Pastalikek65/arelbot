@@ -26,7 +26,10 @@ from src.security.tls import httpx_verify_kwargs
 DEFAULT_HEADERS = {
     "Accept": "text/html,application/xhtml+xml",
     "Accept-Language": "tr-TR,tr;q=0.9,en;q=0.7",
-    "User-Agent": "Arelbot/1.0 (+https://arelbot.local)",
+    # The user agent identifies the application only.  A URL would name a host
+    # that no license record can govern, because the project has no public
+    # contact domain.
+    "User-Agent": "Arelbot/1.0",
 }
 
 # Public HTML pages are untrusted input. Keep the parser bounded even when an
@@ -442,36 +445,6 @@ class CurrencyProvider(_HtmlProvider):
             source=self.source_name,
             source_url=self.source_url,
             metadata={"provider_kind": "typed", "records": len(rates)},
-        )
-
-
-class NewsProvider(_HtmlProvider):
-    name = "get_breaking_news"
-    capabilities = {"news", "breaking_news"}
-    source_name = "NTV son dakika"
-    source_url = "https://www.ntv.com.tr/son-dakika"
-
-    async def fetch(self, request: ProviderRequest) -> ProviderResponse[dict[str, Any]]:
-        soup = await self._fetch_html(request, self.source_url)
-        cards = soup.select("a.group, a.news-card, div.news-card")
-        titles: list[str] = []
-        seen: set[str] = set()
-        for card in cards:
-            title = _text(card.select_one("h2, h3, .card-text, .title")) or _text(card)
-            if title and title not in seen and len(title) >= 8:
-                titles.append(title)
-                seen.add(title)
-            if len(titles) >= 10:
-                break
-        if not titles:
-            raise RuntimeError("news_schema_error")
-        lines = ["<b>📰 Son Dakika Haberleri (NTV)</b>", ""]
-        lines.extend(f"{index}. {html.escape(title)}" for index, title in enumerate(titles[:8], 1))
-        return ProviderResponse(
-            data={"titles": titles, "content": "\n\n".join(lines)},
-            source=self.source_name,
-            source_url=self.source_url,
-            metadata={"provider_kind": "typed", "records": len(titles)},
         )
 
 

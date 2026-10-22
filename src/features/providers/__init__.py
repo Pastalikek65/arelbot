@@ -9,7 +9,6 @@ from .public_data import (
     BimDealsProvider,
     CurrencyProvider,
     FuelProvider,
-    NewsProvider,
     PharmacyProvider,
     PrayerTimesProvider,
 )
@@ -28,7 +27,6 @@ __all__ = [
     "PharmacyProvider",
     "FuelProvider",
     "CurrencyProvider",
-    "NewsProvider",
     "BimDealsProvider",
     "PrayerTimesProvider",
     "FlightSearchLinkProvider",

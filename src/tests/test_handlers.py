@@ -454,6 +454,9 @@ class TestCommandHandler:
                 return []
 
         class DataPort:
+            async def get_game_state(self, chat_id, game_type):
+                return None
+
             async def delete_game_state(self, chat_id, game_type):
                 deleted.append((chat_id, game_type))
 
@@ -474,8 +477,10 @@ class TestCommandHandler:
         await handler.handle_oyunbitir_command(update, context)
 
         assert {game_type for _, game_type in deleted} == {
-            "word_guess", "hangman", "word_game", "connect4", "tictactoe", "gomoku", "chess", "akinator", "guess_age", "uno", "batak", "bottle", "quiz"
+            "word_guess", "hangman", "word_game", "akinator", "bottle", "quiz"
         }
+        # Domain-owned games preserve finished history and pending rewards.
+        assert not {"connect4", "tictactoe", "gomoku", "chess", "guess_age", "uno", "batak", "tabu", "casus", "vampir_koylu"}.intersection(game_type for _, game_type in deleted)
 
     @pytest.mark.asyncio
     async def test_quiz_menu_exposes_the_science_category(self):
@@ -608,7 +613,10 @@ class TestCallbackHandler:
         await handler._handle_ayar_callback(update, query, context, "ayar_mod_toggle")
         assert db.settings["moderation_enabled"] is True
         await handler._handle_ayar_callback(update, query, context, "ayar_persona_cycle")
-        assert db.settings["persona_mode"] == "balanced"
+        assert {b.callback_data for row in query.markup.inline_keyboard for b in row} >= {"ayar_persona_normal", "ayar_persona_roast_request"}
+        assert "persona_mode" not in db.settings
+        await handler._handle_ayar_callback(update, query, context, "ayar_persona_normal")
+        assert db.settings["persona_mode"] == "normal"
 
     @pytest.mark.asyncio
     async def test_group_persona_command_persists_scoped_mode(self):
@@ -645,15 +653,15 @@ class TestCallbackHandler:
             data_port=HandlerDataPort(db),
         )
         await handler.handle_ayar_command(update, SimpleNamespace(args=["kişilik", "iğneleyici"]))
-        assert db.settings["persona_mode"] == "needle"
-        assert "İğneleyici" in message.reply[0]
+        assert db.settings["persona_mode"] == "normal"
+        assert "Normal" in message.reply[0]
         await handler.handle_ayar_command(update, SimpleNamespace(args=["kişilik", "İĞNELEYİCİ"]))
-        assert db.settings["persona_mode"] == "needle"
+        assert db.settings["persona_mode"] == "normal"
         await handler.handle_ayar_command(update, SimpleNamespace(args=["KİŞİLİK", "CİDDİ"]))
-        assert db.settings["persona_mode"] == "serious"
+        assert db.settings["persona_mode"] == "normal"
         await handler.handle_ayar_command(update, SimpleNamespace(args=[]))
-        assert "Kişilik" in message.reply[0]
-        assert "Ciddi" in message.reply[0]
+        assert "Üslup" in message.reply[0]
+        assert "Normal" in message.reply[0]
 
     @pytest.mark.asyncio
     async def test_private_persona_command_persists_user_only_preference(self):
@@ -690,11 +698,11 @@ class TestCallbackHandler:
             data_port=HandlerDataPort(db),
         )
         await handler.handle_personality_command(update, SimpleNamespace(args=["İĞNELEYİCİ"]))
-        assert db.user["persona_mode"] == "needle"
-        assert "İğneleyici" in message.reply[0]
+        assert db.user["persona_mode"] == "normal"
+        assert "Normal" in message.reply[0]
         await handler.handle_personality_command(update, SimpleNamespace(args=[]))
         buttons = message.reply[1]["reply_markup"].inline_keyboard
-        assert any(button.callback_data == "persona_user:needle" for row in buttons for button in row)
+        assert any(button.callback_data == "persona_user:normal" for row in buttons for button in row)
 
     @pytest.mark.asyncio
     async def test_private_persona_callback_is_owner_scoped_and_persistent(self):
@@ -729,13 +737,13 @@ class TestCallbackHandler:
         )
         query = Query()
         await handler._handle_persona_user_callback(update, query, "persona_user:needle")
-        assert db.user["persona_mode"] == "needle"
-        assert "İğneleyici" in query.text
+        assert db.user["persona_mode"] == "normal"
+        assert "Normal" in query.text
 
         update.effective_user.id = 99
         update.effective_chat.id = 99
         await handler._handle_persona_user_callback(update, query, "persona_user:serious")
-        assert db.user["persona_mode"] == "needle"
+        assert db.user["persona_mode"] == "normal"
         assert query.answers[-1][1].get("show_alert") is True
 
     @pytest.mark.asyncio
@@ -877,7 +885,7 @@ class TestCallbackHandler:
 
         formatted = CommandHandler(None, None, None, None)._format_feature_result(result, "fallback")
 
-        assert "tazelik hedefinin dışında" in formatted
+        assert "Bu bilgi beklenenden eski olabilir" in formatted
         assert "Kaynak: <a href=\"https://example.test/rates\">Fixture provider</a>" in formatted
 
 
@@ -950,7 +958,7 @@ class TestMessageHandler:
             effective_message=message,
         )
         await handler.process_chat_request(update, 42, "Kısa bir cevap ver", SimpleNamespace())
-        assert engine.calls[0]["persona_mode"] == "needle"
+        assert engine.calls[0]["persona_mode"] == "normal"
         assert message.reply[0] == "Tamam."
 
     @pytest.mark.asyncio

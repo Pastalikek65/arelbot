@@ -19,6 +19,13 @@ class BatakRound:
     MAX_PLAYERS = 4
     TURN_TIMEOUT_SECONDS = 300
 
+    @staticmethod
+    def turn_token(state: dict[str, Any]) -> str:
+        """Identify the exact decision point represented by a card button."""
+        return (f"{str(state.get('game_id') or '')[:12]}:"
+                f"{int(state.get('completed_tricks', 0))}:"
+                f"{len(state.get('trick', []))}")
+
     @classmethod
     def lobby(cls, owner_id: int, owner_name: str) -> dict[str, Any]:
         if int(owner_id) <= 0:
@@ -26,6 +33,7 @@ class BatakRound:
         return {
             "version": 2,
             "phase": "lobby",
+            "lobby_id": uuid4().hex[:12],
             "owner_id": int(owner_id),
             "players": [{"id": int(owner_id), "name": str(owner_name)[:80]}],
             "turn_timeout_seconds": cls.TURN_TIMEOUT_SECONDS,
@@ -46,6 +54,8 @@ class BatakRound:
 
     @classmethod
     def start(cls, state: dict[str, Any], *, rng: random.Random | None = None) -> None:
+        if state.get("phase") != "lobby":
+            raise ValueError("game_started")
         players = list(state.get("players", []))
         if len(players) < 2:
             raise ValueError("minimum_players")
@@ -71,6 +81,7 @@ class BatakRound:
             "talon": [list(card) for card in remainder],
             "current_turn": player_ids[0],
             "trick": [],
+            "last_trick": None,
             "tricks_won": {str(player_id): 0 for player_id in player_ids},
             "completed_tricks": 0,
             "turn_expires_at": None,
@@ -113,6 +124,9 @@ class BatakRound:
             return {"phase": "playing", "trick_complete": False}
 
         winner = cls._trick_winner(trick, str(state["trump"]))
+        state["last_trick"] = {"winner_id": winner,
+                               "cards": [{"player_id": item["player_id"],
+                                          "card": list(item["card"])} for item in trick]}
         state["tricks_won"][str(winner)] = int(state["tricks_won"].get(str(winner), 0)) + 1
         state["completed_tricks"] = int(state.get("completed_tricks", 0)) + 1
         state["trick"] = []
@@ -167,11 +181,8 @@ class BatakRound:
         current_name = next((p.get("name", "Oyuncu") for p in players if int(p["id"]) == current), "Oyuncu")
         trick = state.get("trick", [])
         table = " ".join(f"{item['player_id']}: {item['card'][0]}{item['card'][1]}" for item in trick) or "boş"
-        hand = state.get("hands", {}).get(str(int(viewer_id)), [])
-        hand_text = " ".join(f"{index + 1}:{card[0]}{card[1]}" for index, card in enumerate(hand)) or "el tamamlandı"
         return (
             "🃏 <b>Batak</b>\n\n"
             f"Koz: <b>{state.get('trump')}</b> · Sıra: <b>{current_name}</b>\n"
-            f"Masadaki kartlar: {table}\n"
-            f"Senin elin: {hand_text}"
+            f"Masadaki kartlar: {table}"
         )

@@ -79,7 +79,7 @@ class OpenAICompatibleProvider:
     ) -> None:
         self.service = service
         self.name = service.value
-        self.base_url = self._validate_base_url(base_url)
+        self.base_url = self._validate_base_url(base_url, service=service)
         self.model = model
         self.key_manager = key_manager
         self.http_client = http_client
@@ -120,6 +120,29 @@ class OpenAICompatibleProvider:
                 raise KeyManagerError(f"No key configured for {self.name}")
             key = self.key_manager.get_key(self.service)
             messages = self._bounded_messages(request.messages)
+            if self.service is ServiceType.D2API and (
+                request.task not in {"chat", "fast", "analysis", "summary"}
+                or any(not isinstance(message.get("content"), str) for message in messages)
+            ):
+                raise AIProviderRequestError("D2API_TEXT_ONLY")
+            d2api_json_object = False
+            if self.service is ServiceType.D2API and request.response_format is not None:
+                if request.response_format != {"type": "json_object"}:
+                    raise AIProviderProtocolError("D2API_RESPONSE_FORMAT_UNSUPPORTED")
+                d2api_json_object = True
+                instruction = "Return exactly one valid JSON object. No Markdown, code fence, or text outside the object."
+                messages = [dict(message) for message in messages]
+                system = next((message for message in messages if message["role"] == "system"), None)
+                if system is not None:
+                    system["content"] = f"{system['content']}\n{instruction}"
+                elif len(messages) < 64:
+                    messages.insert(0, {"role": "system", "content": instruction})
+                else:
+                    raise AIProviderProtocolError("D2API_JSON_PROMPT_TOO_LARGE")
+                try:
+                    messages = self._bounded_messages(messages)
+                except AIProviderRequestError as exc:
+                    raise AIProviderProtocolError("D2API_JSON_PROMPT_TOO_LARGE") from exc
             selected_model = self._resolve_model(request.model, self.model)
             payload = {
                 "model": selected_model,
@@ -135,35 +158,72 @@ class OpenAICompatibleProvider:
             if request.tools:
                 payload["tools"] = request.tools
                 payload["tool_choice"] = "auto"
-            if request.response_format is not None:
+            if request.response_format is not None and self.service is not ServiceType.D2API:
                 payload["response_format"] = dict(request.response_format)
             # Clean APIs exposes DeepSeek V4 through the OpenAI wire format.
             # Make the thinking policy explicit so short chats do not inherit
             # an expensive upstream default. Generic providers keep the
             # portable payload and can still be used as failover targets.
-            if self.service in {ServiceType.EVREN, ServiceType.CLEANAPIS, ServiceType.IAMHC}:
+            if self.service in {ServiceType.EVREN, ServiceType.CLEANAPIS, ServiceType.IAMHC, ServiceType.HRMN}:
                 effort = str(request.reasoning_effort or "").strip().casefold()
                 if effort in {"none", "low", "high", "max"}:
                     payload["reasoning_effort"] = effort
                     payload["thinking"] = {
                         "type": "enabled" if (request.thinking_enabled is True or effort != "none") else "disabled"
                     }
+            if self.service is ServiceType.NVIDIA and "deepseek-v4" in selected_model.casefold():
+                effort = str(request.reasoning_effort or "none").strip().casefold()
+                if request.thinking_enabled is False or effort not in {"none", "high", "max"}:
+                    effort = "none"
+                elif request.thinking_enabled is True and effort == "none":
+                    effort = "high"
+                payload["reasoning_effort"] = effort
+                payload["chat_template_kwargs"] = {"thinking": effort != "none"}
+            if self.service is ServiceType.NVIDIA and selected_model == "nvidia/nemotron-3.5-lightning-30b-a3b":
+                payload["chat_template_kwargs"] = {
+                    "enable_thinking": request.thinking_enabled is True or request.reasoning_effort in {"high", "max"}
+                }
+            if self.service is ServiceType.CLOUDFLARE and selected_model.startswith("@cf/openai/gpt-oss-"):
+                # GPT-OSS requires low/medium/high rather than Qwen's /no_think.
+                effort = str(request.reasoning_effort or "low").casefold()
+                if request.thinking_enabled is False:
+                    effort = "low"
+                elif effort == "max":
+                    effort = "high"
+                elif request.thinking_enabled is True and effort in {"none", "low"}:
+                    effort = "medium"
+                payload["reasoning_effort"] = effort if effort in {"low", "medium", "high"} else "low"
             response = await self._post_completion(
-                f"{self.base_url}/chat/completions",
-                json=payload,
-                headers={
-                    "Authorization": f"Bearer {key}",
-                    "Content-Type": "application/json",
-                },
+                self._completion_url(key),
+                json=self._completion_payload(payload),
+                headers=self._headers(key),
                 timeout=self.fast_timeout_seconds if request.task == "fast" else self.timeout_seconds,
+                **({"follow_redirects": False} if self.service in {ServiceType.D2API, ServiceType.CLOUDFLARE} else {}),
             )
             data = self._json(response)
             self._ensure_ok(response, data)
             message = self._completion_message(data)
+            self._validate_tool_calls(message.get("tool_calls"))
             usage = self._usage(data)
             content = self._content_text(message.get("content"))
+            if not content.strip() and not message.get("tool_calls"):
+                raise AIProviderProtocolError("AI_RESPONSE_EMPTY")
             if len(content) > self.max_response_chars:
                 raise AIProviderProtocolError("AI_RESPONSE_TOO_LARGE")
+            if self.service is ServiceType.D2API:
+                # The proxy currently ignores max_tokens. This local character
+                # budget is a safety bound, not a token-count guarantee.
+                if request.max_tokens is not None and len(content) > max(256, min(
+                    self.max_response_chars, int(request.max_tokens) * 8
+                )):
+                    raise AIProviderProtocolError("D2API_RESPONSE_TOO_LONG")
+                if d2api_json_object and not message.get("tool_calls"):
+                    try:
+                        parsed_content = json.loads(content)
+                    except (TypeError, ValueError) as exc:
+                        raise AIProviderProtocolError("D2API_JSON_OBJECT_INVALID") from exc
+                    if not isinstance(parsed_content, dict):
+                        raise AIProviderProtocolError("D2API_JSON_OBJECT_INVALID")
             self.key_manager.report_success(self.service, key)
             await self._record_usage(True, started, usage)
             return CompletionResponse(
@@ -174,7 +234,7 @@ class OpenAICompatibleProvider:
                 raw={
                     "message": message,
                     "service": self.service,
-                    "url": f"{self.base_url}/chat/completions",
+                    "url": self._completion_url(key),
                     "timeout": self.timeout_seconds,
                 },
             )
@@ -268,6 +328,8 @@ class OpenAICompatibleProvider:
 
     async def vision(self, request: VisionRequest | dict[str, Any]) -> CompletionResponse:
         """Call an OpenAI-compatible multimodal chat completion endpoint."""
+        if self.service is ServiceType.D2API:
+            raise AIProviderRequestError("D2API_TEXT_ONLY")
         if isinstance(request, dict):
             request = VisionRequest(**request)
         image = self._read_media(request.image_path, request.image_bytes, request.mime_type)
@@ -336,6 +398,8 @@ class OpenAICompatibleProvider:
             raise
 
     async def transcribe(self, audio: AudioInput | dict[str, Any]) -> Transcription:
+        if self.service is ServiceType.D2API:
+            raise AIProviderRequestError("D2API_TEXT_ONLY")
         """Transcribe an audio file through ``/audio/transcriptions``."""
         if isinstance(audio, dict):
             audio = AudioInput(**audio)
@@ -386,6 +450,8 @@ class OpenAICompatibleProvider:
             raise
 
     async def embed(self, texts: list[str]) -> list[list[float]]:
+        if self.service is ServiceType.D2API:
+            raise AIProviderRequestError("D2API_TEXT_ONLY")
         """Generate bounded embeddings through ``/embeddings``."""
         values = [str(text)[:12000] for text in (texts or [])]
         if not values:
@@ -476,6 +542,12 @@ class OpenAICompatibleProvider:
     def _headers(key: str) -> dict[str, str]:
         return {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
 
+    def _completion_url(self, key: str) -> str:
+        return f"{self.base_url}/chat/completions"
+
+    def _completion_payload(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return payload
+
     @staticmethod
     def _json(response: Any) -> dict[str, Any]:
         try:
@@ -516,6 +588,26 @@ class OpenAICompatibleProvider:
             raise AIProviderProtocolError("AI_RESPONSE_MESSAGE_INVALID")
         return message
 
+    @staticmethod
+    def _validate_tool_calls(calls: Any) -> None:
+        if calls is None or calls == []:
+            return
+        if not isinstance(calls, list) or len(calls) > 8:
+            raise AIProviderProtocolError("AI_TOOL_CALLS_INVALID")
+        for call in calls:
+            function = call.get("function") if isinstance(call, dict) else None
+            if not isinstance(function, dict):
+                raise AIProviderProtocolError("AI_TOOL_CALLS_INVALID")
+            call_id, name, arguments = call.get("id"), function.get("name"), function.get("arguments")
+            if not isinstance(call_id, str) or not call_id.strip() or len(call_id)>128 or not isinstance(name,str) or not name.strip() or len(name)>128 or not isinstance(arguments,str) or len(arguments)>16384:
+                raise AIProviderProtocolError("AI_TOOL_CALLS_INVALID")
+            try:
+                parsed = json.loads(arguments)
+            except (TypeError, ValueError) as exc:
+                raise AIProviderProtocolError("AI_TOOL_CALLS_INVALID") from exc
+            if not isinstance(parsed, dict) or len(json.dumps(parsed, ensure_ascii=False, separators=(",", ":"))) > 16384:
+                raise AIProviderProtocolError("AI_TOOL_CALLS_INVALID")
+
     def _bounded_messages(self, messages: Any) -> list[dict[str, Any]]:
         if not isinstance(messages, list) or not messages or len(messages) > 64:
             raise AIProviderRequestError("AI_MESSAGES_INVALID")
@@ -540,7 +632,11 @@ class OpenAICompatibleProvider:
         return bounded
 
     @staticmethod
-    def _validate_base_url(value: str) -> str:
+    def _validate_base_url(value: str, *, service: ServiceType | None = None) -> str:
+        if service is ServiceType.D2API:
+            if value not in {"http://d2api:9655/v1", "http://127.0.0.1:9655/v1"}:
+                raise AIProviderConfigurationError("AI_PROVIDER_URL_INVALID")
+            return value
         raw = str(value or "").strip().rstrip("/")
         try:
             parsed = urlsplit(raw)

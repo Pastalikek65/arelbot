@@ -84,22 +84,32 @@ class MediaJobQueue:
             if self.store:
                 await self.store.create(payload)
             key = f"arel:media:job:{job_id}"
-            async with self.redis.pipeline(transaction=True) as pipe:
-                await pipe.watch(f"arel:media:dedup:{dedup_key}")
-                existing = await pipe.get(f"arel:media:dedup:{dedup_key}")
-                if existing:
-                    await pipe.unwatch()
-                    # Mongo is the durable source of truth.  Remove the row
-                    # created before the Redis WATCH claim so a dedup race
-                    # cannot leave an orphan that restart recovery requeues.
-                    if self.store:
-                        await self.store.delete(job_id)
-                    return existing, True
-                pipe.multi()
-                pipe.set(f"arel:media:dedup:{dedup_key}", job_id, ex=self.DEDUP_TTL)
-                pipe.set(key, json.dumps(payload), ex=self.JOB_TTL)
-                pipe.lpush(self.QUEUE_KEY, json.dumps(payload))
-                await pipe.execute()
+            try:
+                async with self.redis.pipeline(transaction=True) as pipe:
+                    await pipe.watch(f"arel:media:dedup:{dedup_key}")
+                    existing = await pipe.get(f"arel:media:dedup:{dedup_key}")
+                    if existing:
+                        await pipe.unwatch()
+                        # Mongo is the durable source of truth.  Remove the row
+                        # created before the Redis WATCH claim so a dedup race
+                        # cannot leave an orphan that restart recovery requeues.
+                        if self.store:
+                            await self.store.delete(job_id)
+                        return existing, True
+                    pipe.multi()
+                    pipe.set(f"arel:media:dedup:{dedup_key}", job_id, ex=self.DEDUP_TTL)
+                    pipe.set(key, json.dumps(payload), ex=self.JOB_TTL)
+                    pipe.lpush(self.QUEUE_KEY, json.dumps(payload))
+                    await pipe.execute()
+            except (Exception, asyncio.CancelledError):
+                # The Mongo row is written before the Redis claim, so a failed
+                # claim would leave a row no worker can see.  Remove it before
+                # the error propagates so the enqueue leaves no orphan job.
+                # The cleanup is shielded because a cancelled task may be
+                # cancelled again while the delete runs, and the row still has
+                # to go.
+                await asyncio.shield(self._remove_job_row(job_id))
+                raise
             return job_id, False
 
         async with self._dedup_lock:
@@ -115,6 +125,38 @@ class MediaJobQueue:
             self.local_jobs[job_id] = dict(payload)
             await self.local_queue.put(dict(payload))
             return job_id, False
+
+    async def _remove_job_row(self, job_id: str) -> None:
+        """Delete the Mongo row of a job that never reached the queue."""
+        if not self.store:
+            return
+        try:
+            await self.store.delete(job_id)
+        except Exception as exc:
+            # The enqueue failure is the actionable error.  A store that is not
+            # required logs the failed delete itself and keeps running; this
+            # branch only fires for a required store, where the delete raises.
+            logger.error(
+                "Failed to remove orphan media job row job=%s (%s)",
+                job_id,
+                summarize_exception(exc, label="media_job_cleanup"),
+            )
+
+    @staticmethod
+    def _read_attempt(payload: Dict[str, Any]) -> int:
+        """Read the attempt counter; a malformed value must not kill the worker."""
+        raw = payload.get("attempt", 0)
+        try:
+            attempt = int(raw)
+        except (TypeError, ValueError):
+            attempt = -1
+        if attempt < 0:
+            logger.warning(
+                "Media job %s has an unusable attempt counter; the job restarts from the first attempt",
+                payload.get("job_id"),
+            )
+            return 0
+        return attempt
 
     async def get_job(self, job_id: str) -> Optional[Dict[str, Any]]:
         if self.store:
@@ -189,11 +231,15 @@ class MediaJobQueue:
                 )
                 if payload:
                     code = getattr(exc, "code", "internal_error")
-                    attempt = int(payload.get("attempt", 0))
+                    attempt = self._read_attempt(payload)
                     if self.retry_policy.should_retry(code, attempt):
                         payload["attempt"] = attempt + 1
                         payload["status"] = "queued"
                         await self._set_status(payload, "queued", code)
+                        # A transient failure must not be retried in a burst: the
+                        # job waits an exponential backoff before it becomes
+                        # visible to a worker again.
+                        await asyncio.sleep(self.retry_policy.backoff_seconds(attempt))
                         if self.redis:
                             await self.redis.lpush(self.QUEUE_KEY, json.dumps(payload))
                         else:

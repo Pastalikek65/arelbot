@@ -1,0 +1,15 @@
+{
+  "attempted_release": "2026.10.22-games-20",
+  "runtime_source_commit": "46a6270",
+  "failure": "NameError: inline_secret undefined in _init_handlers",
+  "activated": false,
+  "automatic_rollback_verified": true,
+  "recovered_release": "2026.10.22-games-19",
+  "all_five_services_healthy": true,
+  "schema_version": 22,
+  "production_database_restored": false,
+  "new_game_updates_processed": false,
+  "github_updated": false,
+  "fix_commit": "b306c55",
+  "regression": "test_card_gallery_bootstrap constructs real Orchestrator handler/controller graph"
+}

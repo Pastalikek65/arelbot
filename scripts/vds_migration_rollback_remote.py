@@ -38,10 +38,38 @@ database="arelbot_migration_live_${nonce//[^0-9]/}"
 mongo="$(docker ps -q --filter label=com.docker.compose.project=arelbot-prod --filter label=com.docker.compose.service=mongo | head -n 1)"
 worker="$(docker ps -q --filter label=com.docker.compose.project=arelbot-prod --filter label=com.docker.compose.service=worker | head -n 1)"
 test -n "${mongo}" && test -n "${worker}"
+# The credential document is removed from the container even when the drill
+# fails, so a plaintext administrative password never survives the run.
+mongo_auth="/tmp/arel-vds-migration-auth.js"
+cleanup() {
+  [ -n "${mongo}" ] && docker exec "${mongo}" rm -f "${mongo_auth}" >/dev/null 2>&1 || true
+}
+trap cleanup EXIT
+# The administrative credential is read from the configuration of the MongoDB
+# container and handed to the tools through the environment, so it never
+# reaches a command line and never leaves the VDS.
+mongo_env="$(docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "${mongo}")"
+mongo_user="$(printf '%s\n' "${mongo_env}" | sed -n 's/^MONGO_INITDB_ROOT_USERNAME=//p')"
+mongo_credential="$(printf '%s\n' "${mongo_env}" | sed -n 's/^MONGO_INITDB_ROOT_PASSWORD=//p')"
+test -n "${mongo_user}" && test -n "${mongo_credential}"
+# The password ends up in a connection string that is not escaped here, so
+# the documented character set is enforced instead of assumed.  The user name
+# lands in the same string and in the authentication script.
+case "${mongo_user}" in
+  *[!A-Za-z0-9._~-]*) printf 'mongo user contains an unsupported character\n' >&2; exit 1 ;;
+esac
+case "${mongo_credential}" in
+  *[!A-Za-z0-9._~-]*) printf 'mongo credential contains an unsupported character\n' >&2; exit 1 ;;
+esac
+docker exec -i "${mongo}" sh -c "cat > ${mongo_auth}" <<EOF
+db.getSiblingDB("admin").auth("${mongo_user}", "${mongo_credential}");
+EOF
+mongo_credentials="${mongo_user}:${mongo_credential}"
+export MONGODB_URI="mongodb://${mongo_credentials}@mongo:27017/?authSource=admin"
 # The smoke performs migrate twice, rolls back to v3, migrates to the latest,
 # checks the resulting indexes, and drops this disposable database in finally.
-docker exec -e "MONGODB_URI=mongodb://mongo:27017/${database}" "${worker}" python scripts/mongo_migration_smoke.py >/dev/null 2>&1
-remaining="$(docker exec "${mongo}" mongosh --quiet --eval "db.getSiblingDB('${database}').getCollectionNames().length == 0" | tr -d '\r\n')"
+docker exec -e MONGODB_URI -e "MONGODB_SMOKE_DATABASE=${database}" "${worker}" python scripts/mongo_migration_smoke.py >/dev/null 2>&1
+remaining="$(docker exec "${mongo}" mongosh --quiet --eval "load('${mongo_auth}'); db.getSiblingDB('${database}').getCollectionNames().length == 0" | tr -d '\r\n')"
 test "${remaining}" = true
 printf 'ARELBOT_VDS_MIGRATION_RESULT=%s\n' '{"scope":"vds-migration-rollback","ok":true,"mode":"live-disposable-staging","checks":{"rollback_to_v3":true,"forward_to_latest":true,"index_contract_verified":true,"disposable_database_cleaned":true,"production_namespace_untouched":true},"secret_free":true}'
 '''

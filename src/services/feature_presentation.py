@@ -35,19 +35,19 @@ def format_feature_result(result: Any, fallback: str) -> str:
     """Render a typed result with bounded source and freshness annotations."""
 
     if not getattr(result, "ok", False):
-        return sanitize_html(str(fallback or "Veri alınamadı."))
+        return sanitize_html(str(fallback or "Veri alınamadı. Biraz sonra tekrar dene."))
 
     blocks = getattr(result, "display_blocks", ()) or ()
-    content = "\n\n".join(sanitize_html(str(block)) for block in blocks if str(block).strip()) if blocks else "Veri bulunamadı."
+    content = "\n\n".join(sanitize_html(str(block)) for block in blocks if str(block).strip()) if blocks else "Gösterilecek veri bulunamadı."
     annotations: list[str] = []
     metadata = getattr(result, "metadata", {}) or {}
     if getattr(result, "stale", False):
         annotations.append(
-            "<i>Kaynak geçici olarak kullanılamadı; önbellekteki son veri gösteriliyor.</i>"
+            "<i>Kaynak geçici olarak kullanılamadı. Son alınan veri gösteriliyor; güncelliğini kaynaktan kontrol et.</i>"
         )
     elif metadata.get("fresh") is False:
         annotations.append(
-            "<i>Uyarı: Veri tazelik hedefinin dışında; kaynak zamanını kontrol edin.</i>"
+            "<i>Bu bilgi beklenenden eski olabilir; güncelliğini kontrol et.</i>"
         )
 
     source = str(getattr(result, "source", "") or "").strip()

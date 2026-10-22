@@ -21,6 +21,11 @@ from src.security.log_redaction import summarize_exception
 # Configure logging
 logger = logging.getLogger(__name__)
 
+# How many account groups the economy ledger seed processes between two
+# progress records.  The seed is a one-time data migration, so its progress
+# has to be visible to the operator without flooding the log.
+ECONOMY_SEED_PROGRESS_INTERVAL = 500
+
 
 def _safe_db_url(value: str) -> str:
     try:
@@ -184,6 +189,22 @@ class Database:
     def available(self) -> bool:
         # Motor database objects intentionally reject truth-value testing.
         return Database._db is not None and Database._last_ping_ok is not False
+
+    @property
+    def is_production_database(self) -> bool:
+        """Whether this deployment requires durable production persistence.
+
+        The economy ledger and the games' durable state must not fall back to
+        process-local memory behind the production database: a restart would
+        lose the balance, a paid reward or a running round.  A production or
+        staging deployment, a deployment that requires MongoDB, and the
+        bot/worker roles therefore hold the database to the durable standard.
+        """
+        return (
+            Config.APP_ENV in {"production", "staging"}
+            or Config.MONGODB_REQUIRED
+            or Config.APP_ROLE in {"bot", "worker"}
+        )
 
     @property
     def reachable(self) -> bool | None:
@@ -667,6 +688,279 @@ class Database:
                 expireAfterSeconds=180 * 24 * 60 * 60,
                 name="moderation_policy_updated_ttl",
             )
+
+        async def apply_economy_atomic_ledger(database: Any) -> None:
+            """Give every economy account one document with an atomic ledger.
+
+            The balance and the stamp of each applied event live in the same
+            account document, so a ledger event is written with a single
+            atomic update instead of a transaction row plus a balance write.
+            The unique account identity makes that document the only place a
+            balance can live.
+
+            The applied-event map is seeded from the historical transaction
+            rows first.  Every reward that was already paid is recorded in
+            ``economy_transactions``; without the seed an event id that was
+            used before the migration looks new again and a replayed reward -
+            the deterministic daily claim of the deploy day, for example -
+            would be paid twice.  The seed writes the same values again on a
+            repeated run, so a partially completed migration is safe to
+            repeat.
+
+            Deploy note: the seed closes the double-claim window of the
+            deploy day.  A deployment that cannot read the seeded rows before
+            the next ``/gunluk`` claim window must not cross that claim.
+            """
+            accounts = database["economy_accounts"]
+            # The index is declared exactly like the base schema so a
+            # database that already carries it is not rebuilt under a second
+            # name, and the migration stays idempotent.
+            await accounts.create_index([("user_id", 1), ("chat_id", 1)], unique=True)
+            # A ledger event is applied with $inc on "balance" and $set on
+            # "applied_events.<key>".  Both operators need a numeric balance
+            # and an object container, so every legacy account is normalized
+            # before the ledger writes to it.  A balance that was stored as
+            # a numeric string keeps its value; only a value that cannot be
+            # read as a number falls back to zero.
+            await accounts.update_many(
+                {"balance": {"$not": {"$type": "number"}}},
+                {
+                    "$set": {
+                        "balance": {
+                            "$convert": {
+                                "input": {"$ifNull": ["$balance", 0]},
+                                "to": "long",
+                                "onError": 0,
+                            }
+                        }
+                    }
+                },
+            )
+            await accounts.update_many(
+                {"applied_events": {"$not": {"$type": "object"}}},
+                {"$set": {"applied_events": {}}},
+            )
+            await seed_economy_ledger_from_transactions(database)
+
+        async def seed_economy_ledger_from_transactions(database: Any) -> None:
+            """Seed the applied-event map from the historical transaction rows.
+
+            The rows are grouped by their account.  Each account receives the
+            newest ``MAX_APPLIED_EVENTS`` rows of its own history; a row
+            whose event was already seeded is skipped, which keeps the seed
+            idempotent and resumable.  A group without an account document
+            cannot be seeded and is reported instead of being swallowed.
+
+            The grouping runs on disk and is streamed, so a mature database
+            does not have to fit its groups in memory.  The work is one
+            document update per account, therefore the first run of this
+            migration can take minutes on a large database.  A run that is
+            interrupted is continued by the next run: the seed skips the
+            events it already wrote.
+            """
+            # The import stays local so the database layer and the storage
+            # layer do not import each other at module load time.
+            from src.storage.economy_store import MAX_APPLIED_EVENTS, EconomyStore
+
+            accounts = database["economy_accounts"]
+            transactions = database["economy_transactions"]
+            groups = transactions.aggregate(
+                [{"$group": {"_id": {"user_id": "$user_id", "chat_id": "$chat_id"}}}],
+                allowDiskUse=True,
+            )
+            seeded = 0
+            skipped = 0
+            processed = 0
+            async for group_row in groups:
+                processed += 1
+                if processed % ECONOMY_SEED_PROGRESS_INTERVAL == 0:
+                    logger.info(
+                        "Economy ledger seed progress groups=%s seeded_events=%s skipped_groups=%s",
+                        processed,
+                        seeded,
+                        skipped,
+                    )
+                identity = group_row.get("_id") or {}
+                user_id = int(identity.get("user_id") or 0)
+                chat_id = int(identity.get("chat_id") or 0)
+                account = await accounts.find_one(
+                    {"user_id": user_id, "chat_id": chat_id}, {"_id": 0, "applied_events": 1}
+                )
+                if account is None:
+                    skipped += 1
+                    logger.warning(
+                        "Economy ledger seed skipped: no account document for chat_id=%s",
+                        chat_id,
+                    )
+                    continue
+                existing = account.get("applied_events") or {}
+                history = transactions.find(
+                    {"user_id": user_id, "chat_id": chat_id},
+                    {
+                        "_id": 0,
+                        "event_key": 1,
+                        "amount": 1,
+                        "direction": 1,
+                        "delta": 1,
+                        "reason": 1,
+                        "created_at": 1,
+                    },
+                ).sort("created_at", -1).limit(MAX_APPLIED_EVENTS)
+                rows = await history.to_list(length=MAX_APPLIED_EVENTS)
+                update: Dict[str, Any] = {}
+                for transaction in rows:
+                    event_key = str(transaction.get("event_key") or "")
+                    if not event_key:
+                        continue
+                    safe_key = EconomyStore.safe_event_key(event_key)
+                    if safe_key in existing or safe_key in update:
+                        continue
+                    update[f"applied_events.{safe_key}"] = {
+                        "event_key": event_key,
+                        "amount": int(transaction.get("amount") or 0),
+                        "direction": str(transaction.get("direction") or "credit"),
+                        "delta": int(transaction.get("delta") or 0),
+                        "reason": str(transaction.get("reason") or ""),
+                        "at": transaction.get("created_at"),
+                    }
+                if update:
+                    seeded += len(update)
+                # The seed and the prune are one document update per
+                # account, so the account is never seen half-seeded.
+                merged = {**existing, **update}
+                dropped = [
+                    key
+                    for key in EconomyStore.excess_event_keys(merged)
+                    if key not in update
+                ]
+                document_update: Dict[str, Any] = {}
+                if update:
+                    document_update["$set"] = update
+                if dropped:
+                    document_update["$unset"] = {
+                        f"applied_events.{key}": "" for key in dropped
+                    }
+                if document_update:
+                    await accounts.update_one(
+                        {"user_id": user_id, "chat_id": chat_id}, document_update
+                    )
+            logger.info(
+                "Economy ledger seed complete groups=%s seeded_events=%s skipped_groups=%s",
+                processed,
+                seeded,
+                skipped,
+            )
+
+        async def rollback_economy_atomic_ledger(database: Any) -> None:
+            """Restore the legacy ledger shape.
+
+            The applied-event map is written back to
+            ``economy_transactions`` before it is removed, so the legacy
+            history reader keeps the events that only ever existed in the
+            account document.  The account identity index is dropped, which
+            leaves the database without the index the base schema declares
+            until the migrations run forward again; the legacy code path did
+            not depend on it for its idempotency, which came from the unique
+            ``event_key`` index on ``economy_transactions``.
+            """
+            accounts = database["economy_accounts"]
+            transactions = database["economy_transactions"]
+            cursor = accounts.find({}, {"_id": 0, "user_id": 1, "chat_id": 1, "applied_events": 1})
+            # The cursor is streamed: a mature database holds one event map
+            # of up to 500 entries per account, which must not be
+            # materialized in memory during a rollback.
+            async for account in cursor:
+                events = account.get("applied_events") or {}
+                for record in events.values():
+                    if not isinstance(record, dict):
+                        continue
+                    event_key = str(record.get("event_key") or "")
+                    if not event_key:
+                        continue
+                    try:
+                        await transactions.update_one(
+                            {"event_key": event_key},
+                            {
+                                "$setOnInsert": {
+                                    "event_key": event_key,
+                                    "user_id": int(account.get("user_id") or 0),
+                                    "chat_id": int(account.get("chat_id") or 0),
+                                    "amount": int(record.get("amount") or 0),
+                                    "direction": str(record.get("direction") or "credit"),
+                                    "delta": int(record.get("delta") or 0),
+                                    "reason": str(record.get("reason") or ""),
+                                    "created_at": record.get("at") or datetime.now(timezone.utc),
+                                }
+                            },
+                            upsert=True,
+                        )
+                    except Exception as exc:
+                        if getattr(exc, "code", None) != 11000:
+                            raise
+            await accounts.update_many({}, {"$unset": {"applied_events": ""}})
+            try:
+                await accounts.drop_index([("user_id", 1), ("chat_id", 1)])
+            except Exception:
+                pass
+
+        async def apply_economy_receipts(database: Any) -> None:
+            # Backfill only known applied stamps. Balances, inventory and
+            # daily progression are unchanged; missing historical events
+            # cannot be reconstructed from a previously pruned account.
+            from src.storage.economy_store import EconomyStore
+            accounts = database['economy_accounts']
+            async for account in accounts.find({}, {'user_id': 1, 'chat_id': 1}):
+                await EconomyStore.prune_account(accounts, int(account['user_id']), int(account['chat_id']))
+            await database['game_states'].update_many(
+                {"$or": [
+                    {"game_type": {"$regex": r"^blackjack:[0-9]+$"},
+                     "state.economy_required": {"$ne": False}},
+                    {"state.score_pending": True}, {"state.settlement_pending": True},
+                    {"state.refund_pending": True}, {"state.terminal_panel_pending": True},
+                    {"game_type": "roulette", "state.panel_dirty": True},
+                ]}, {"$unset": {"expires_at": ""}},
+            )
+
+        async def rollback_economy_receipts(database: Any) -> None:
+            # Additive safety records remain through a code rollback. Never
+            # erase paid-event evidence, ownership or real wallet balances.
+            return None
+
+        async def apply_board_panel_recovery(database: Any) -> None:
+            games = database["game_states"]
+            keys = ["connect4", "tictactoe", "gomoku", "chess"]
+            async for document in games.find({"game_type": {"$in": keys}},
+                                             {"chat_id": 1, "game_type": 1, "state": 1}):
+                state = document.get("state") or {}
+                if "board_panel_revision" in state:
+                    continue
+                fields = {"state.board_panel_revision": 0, "state.board_panel_dirty": True,
+                          "state.board_panel_retry_at": 0,
+                          "state.board_panel_delivery_unknown": not bool(state.get("prompt_message_id")),
+                          "state.board_score_pending": False,
+                          "state.board_score_round_id": state.get("round_id"),
+                          "state.leaderboard_required": True, "state.economy_required": True}
+                if "version" not in state:
+                    fields["state.version"] = 0
+                await games.update_one(
+                    {"chat_id": document["chat_id"], "game_type": document["game_type"],
+                     "state.board_panel_revision": {"$exists": False}},
+                    {"$set": fields, "$unset": {"expires_at": ""}})
+            for fields, name in (
+                ([("game_type", 1), ("state.board_panel_dirty", 1), ("state.board_panel_retry_at", 1)], "board_panel_due"),
+                ([("game_type", 1), ("state.board_score_pending", 1), ("board_recovery_after", 1)], "board_score_due"),
+                ([("game_type", 1), ("state.status", 1), ("state.turn_expires_at", 1)], "board_clock_due"),
+            ):
+                await games.create_index(fields, name=name)
+
+        async def rollback_board_panel_recovery(database: Any) -> None:
+            # Delivery state and score evidence survive code rollback.
+            for name in ("board_panel_due", "board_score_due", "board_clock_due"):
+                try:
+                    await database["game_states"].drop_index(name)
+                except Exception:
+                    pass
+
         return MigrationRunner(
             Database._db,
             [
@@ -779,6 +1073,15 @@ class Database:
                     apply_user_username_index,
                     rollback_user_username_index,
                 ),
+                Migration(
+                    20,
+                    "economy-atomic-account-ledger",
+                    apply_economy_atomic_ledger,
+                    rollback_economy_atomic_ledger,
+                ),
+                Migration(21, 'economy-durable-receipts-and-cosmetics',
+                          apply_economy_receipts, rollback_economy_receipts),
+                Migration(22, 'board-panel-recovery', apply_board_panel_recovery, rollback_board_panel_recovery),
             ],
         )
 
@@ -1145,6 +1448,9 @@ class Database:
         }
         if event_id:
             document["event_id"] = str(event_id)
+            # Existing score rows predate this recovery contract. Only newly
+            # inserted rows may replay their player-stats update.
+            document["stats_protocol_version"] = 2
         try:
             await self.game_scores.insert_one(document)
             return True
@@ -1153,6 +1459,22 @@ class Database:
             if getattr(exc, "code", None) == 11000 and event_id:
                 return False
             raise
+
+    async def score_stats_retryable(
+        self, *, event_id: str, user_id: int, chat_id: int, game_type: str, score: int,
+    ) -> bool:
+        row = await self.game_scores.find_one(
+            {"event_id": str(event_id)},
+            {"_id": 0, "user_id": 1, "chat_id": 1, "game_type": 1,
+             "score": 1, "stats_protocol_version": 1},
+        )
+        if not row or int(row.get("stats_protocol_version", 0)) != 2:
+            return False
+        if (int(row["user_id"]), int(row["chat_id"]), row["game_type"], int(row["score"])) != (
+            int(user_id), int(chat_id), str(game_type), int(score)
+        ):
+            raise ValueError("game_score_event_conflict")
+        return True
 
     async def get_leaderboard(self, chat_id: int, game_type: str = None, limit: int = 10) -> List[Dict]:
         match = {"chat_id": chat_id}
@@ -1170,18 +1492,44 @@ class Database:
     async def get_player_stats(self, user_id: int) -> Optional[Dict]:
         return await self.player_stats.find_one({"_id": user_id})
 
-    async def update_player_stats(self, user_id: int, score_delta: int, user_name: str = None):
+    async def update_player_stats(
+        self, user_id: int, score_delta: int, user_name: str = None,
+        event_id: str | None = None,
+    ) -> bool:
         update = {
             "$inc": {"total_score": score_delta, "games_played": 1},
             "$set": {"last_played": datetime.utcnow()}
         }
         if user_name:
             update["$set"]["user_name"] = user_name
-        await self.player_stats.update_one(
-            {"_id": user_id},
-            update,
-            upsert=True
-        )
+        if event_id is None:
+            await self.player_stats.update_one({"_id": user_id}, update, upsert=True)
+            return True
+        # The event marker and counters change in one document write. A retry
+        # after a lost acknowledgement cannot increment the profile twice.
+        update["$addToSet"] = {"applied_score_events": str(event_id)}
+        for attempt in range(4):
+            try:
+                result = await self.player_stats.update_one(
+                    {"_id": int(user_id), "applied_score_events": {"$ne": str(event_id)}},
+                    update, upsert=True,
+                )
+                return bool(result.modified_count or result.upserted_id is not None)
+            except Exception as exc:
+                if getattr(exc, "code", None) != 11000:
+                    raise
+                # A filtered upsert also collides when a different score
+                # creates this player's profile concurrently. Retry that
+                # case, while treating our own stamped event as complete.
+                existing = await self.player_stats.find_one(
+                    {"_id": int(user_id), "applied_score_events": str(event_id)},
+                    {"_id": 1},
+                )
+                if existing:
+                    return False
+                if attempt == 3:
+                    raise
+        raise RuntimeError("player_stats_conflict")
 
     async def record_game_progress(
         self,
@@ -1249,6 +1597,43 @@ class Database:
     async def release_game_action(self, action_key: str) -> None:
         if Database._db is not None:
             await self.game_action_ledger.delete_one({"action_key": str(action_key)})
+
+    async def claim_game_lease(self, action_key: str, owner_token: str,
+                               lease_seconds: int, now: datetime) -> bool:
+        """Acquire an expired lease atomically; unique action_key excludes rivals."""
+        if Database._db is None:
+            raise RuntimeError("game_persistence_unavailable")
+        until = now + timedelta(seconds=max(1, min(300, int(lease_seconds))))
+        try:
+            result = await self.game_action_ledger.update_one(
+                {"action_key": action_key, "lease_until": {"$lte": now}},
+                {"$set": {"owner_token": owner_token, "lease_until": until,
+                          "created_at": now, "kind": "owner_lease"},
+                 "$setOnInsert": {"action_key": action_key}}, upsert=True,
+            )
+            return bool(result.modified_count or result.upserted_id is not None)
+        except Exception as exc:
+            if getattr(exc, "code", None) == 11000:
+                return False
+            raise
+
+    async def renew_game_lease(self, action_key: str, owner_token: str,
+                               lease_seconds: int, now: datetime) -> bool:
+        if Database._db is None:
+            raise RuntimeError("game_persistence_unavailable")
+        result = await self.game_action_ledger.update_one(
+            {"action_key": action_key, "owner_token": owner_token, "lease_until": {"$gt": now}},
+            {"$set": {"lease_until": now + timedelta(seconds=max(1, min(300, int(lease_seconds)))),
+                      "created_at": now}},
+        )
+        return bool(result.matched_count)
+
+    async def release_game_lease(self, action_key: str, owner_token: str) -> bool:
+        if Database._db is None:
+            raise RuntimeError("game_persistence_unavailable")
+        result = await self.game_action_ledger.delete_one(
+            {"action_key": action_key, "owner_token": owner_token})
+        return bool(result.deleted_count)
 
     async def get_game_achievements(self, user_id: int, chat_id: int, limit: int = 50) -> List[Dict]:
         if Database._db is None:
@@ -1382,32 +1767,176 @@ class Database:
             upsert=True
         )
 
+    @staticmethod
+    def _game_has_financial_obligation(game_type: str, state: Dict[str, Any]) -> bool:
+        # Paid hands must survive inactivity too: cancellation still owes a refund.
+        return (str(game_type).startswith("blackjack:") and state.get("economy_required") is not False
+                or any(state.get(key) for key in ("score_pending", "settlement_pending", "refund_pending", "terminal_panel_pending", "board_score_pending", "board_panel_dirty"))
+                or str(game_type) == "roulette" and bool(state.get("panel_dirty")))
+
     async def save_game_state(self, chat_id: int, game_type: str, state: Dict[str, Any]) -> None:
         if Database._db is None:
-            return
+            raise RuntimeError("game_persistence_unavailable")
+        now = datetime.now(timezone.utc)
+        fields = {"chat_id": chat_id, "game_type": game_type, "state": state, "updated_at": now}
+        update = {"$set": fields}
+        if self._game_has_financial_obligation(game_type, state):
+            update["$unset"] = {"expires_at": ""}
+        else:
+            fields["expires_at"] = now + timedelta(hours=24)
         await self.game_states.update_one(
-            {"chat_id": chat_id, "game_type": game_type},
-            {"$set": {"chat_id": chat_id, "game_type": game_type, "state": state,
-                       "updated_at": datetime.utcnow(),
-                       "expires_at": datetime.utcnow() + timedelta(hours=24)}},
-            upsert=True,
+            {"chat_id": chat_id, "game_type": game_type}, update, upsert=True,
         )
+
+    async def create_game_state_if_absent(self, chat_id: int, game_type: str, state: Dict[str, Any]) -> bool:
+        """Create one game session without replacing a concurrent lobby."""
+        if Database._db is None:
+            raise RuntimeError("game_persistence_unavailable")
+        now = datetime.now(timezone.utc)
+        initial = {"chat_id": int(chat_id), "game_type": str(game_type), "state": state, "updated_at": now}
+        if not self._game_has_financial_obligation(game_type, state):
+            initial["expires_at"] = now + timedelta(hours=24)
+        try:
+            result = await self.game_states.update_one(
+                {"chat_id": int(chat_id), "game_type": str(game_type)},
+                {"$setOnInsert": initial},
+                upsert=True,
+            )
+        except Exception as exc:
+            if getattr(exc, "code", None) == 11000:
+                return False
+            raise
+        return result.upserted_id is not None
+
+    async def initialize_game_state_version_if_missing(self, chat_id: int, game_type: str) -> bool:
+        """Backfill only the CAS field on a legacy game without replacing its payload."""
+        if Database._db is None:
+            raise RuntimeError("game_persistence_unavailable")
+        result = await self.game_states.update_one(
+            {"chat_id": int(chat_id), "game_type": str(game_type), "state.version": {"$exists": False}},
+            {"$set": {"state.version": 0}},
+        )
+        return bool(result.modified_count)
+
+    async def compare_and_save_game_state(
+        self, chat_id: int, game_type: str, state: Dict[str, Any], *, expected_version: int,
+    ) -> bool:
+        """Save a transition only if no other process changed the session."""
+        if Database._db is None:
+            raise RuntimeError("game_persistence_unavailable")
+        if int(state.get("version", -1)) != int(expected_version) + 1:
+            raise ValueError("game_state_version_invalid")
+        now = datetime.now(timezone.utc)
+        update = {"$set": {"state": state, "updated_at": now}}
+        if self._game_has_financial_obligation(game_type, state):
+            update["$unset"] = {"expires_at": ""}
+        else:
+            update["$set"]["expires_at"] = now + timedelta(hours=24)
+        result = await self.game_states.update_one(
+            {"chat_id": int(chat_id), "game_type": str(game_type), "state.version": int(expected_version)},
+            update,
+        )
+        return bool(result.modified_count)
 
     async def get_game_state(self, chat_id: int, game_type: str) -> Optional[Dict[str, Any]]:
         if Database._db is None:
-            return None
+            raise RuntimeError("game_persistence_unavailable")
         document = await self.game_states.find_one({"chat_id": chat_id, "game_type": game_type})
         return document.get("state") if document else None
 
     async def delete_game_state(self, chat_id: int, game_type: str) -> None:
-        if Database._db is not None:
-            await self.game_states.delete_one({"chat_id": chat_id, "game_type": game_type})
+        if Database._db is None:
+            raise RuntimeError("game_persistence_unavailable")
+        await self.game_states.delete_one({"chat_id": chat_id, "game_type": game_type})
+
+    @staticmethod
+    def _active_secret_route_query(user_id: int) -> dict:
+        import re
+        from src.games.puzzle_catalog import SECRET_GAME_KEYS
+        pattern = "^(?:" + "|".join(re.escape(key) for key in sorted(SECRET_GAME_KEYS)) + ")(?:_t[0-9]+)?$"
+        return {"game_type": {"$regex": pattern},
+                "state.phase": {"$nin": ["lobby", "finished", "cancelled", "expired"]},
+                "state.players": {"$elemMatch": {"id": int(user_id), "active": True}}}
+
+    async def get_active_secret_game_for_user(self, user_id: int) -> dict | None:
+        """Return safe routing metadata, never a role, target, clue or ballot."""
+        if Database._db is None:
+            raise RuntimeError("game_persistence_unavailable")
+        return await self.game_states.find_one(self._active_secret_route_query(user_id),
+                                               {"_id": 0, "chat_id": 1, "game_type": 1})
+
+    async def list_active_secret_game_routes(self, user_id: int) -> list[dict]:
+        if Database._db is None:
+            raise RuntimeError("game_persistence_unavailable")
+        return await self.game_states.find(self._active_secret_route_query(user_id),
+            {"_id": 0, "chat_id": 1, "game_type": 1}).limit(50).to_list(length=50)
+
+    async def list_active_puzzle_routes(self, chat_id: int, thread_id: int | None, user_id: int) -> list[dict]:
+        """One bounded metadata read replaces per-game secret-state fetches."""
+        if Database._db is None:
+            raise RuntimeError("game_persistence_unavailable")
+        from src.games.puzzle_catalog import TEXT_PUZZLE_KEYS
+        keys = [key if thread_id is None else f"{key}_t{int(thread_id)}" for key in sorted(TEXT_PUZZLE_KEYS)]
+        query = {"chat_id": int(chat_id), "game_type": {"$in": keys},
+                 "state.phase": {"$nin": ["lobby", "finished", "cancelled", "expired"]},
+                 "$or": [{"state.owner_id": int(user_id)},
+                         {"state.players": {"$elemMatch": {"id": int(user_id), "active": {"$ne": False}}}}]}
+        projection = {"_id": 0, "game_type": 1, "state.game_key": 1, "state.phase": 1,
+                      "state.panel_message_id": 1, "state.owner_id": 1, "state.thread_id": 1,
+                      "state.players.id": 1, "state.players.active": 1}
+        return await self.game_states.find(query, projection).limit(len(keys)).to_list(length=len(keys))
+
+    async def defer_board_recovery(self, chat_id: int, game_type: str, until: float) -> None:
+        if str(game_type) not in {"connect4", "tictactoe", "gomoku", "chess"}:
+            raise ValueError("board_unknown_game")
+        if Database._db is None:
+            raise RuntimeError("game_persistence_unavailable")
+        await self.game_states.update_one(
+            {"chat_id": int(chat_id), "game_type": str(game_type)},
+            {"$set": {"board_recovery_after": float(until), "updated_at": datetime.now(timezone.utc)}},
+        )
 
     async def list_due_game_states(self, *, now: float, limit: int = 100) -> list[dict]:
         """Find durable timers and undelivered panels after any process restart."""
         if Database._db is None:
             raise RuntimeError("game_persistence_unavailable")
+        import re
+        from src.games.puzzle_catalog import PUZZLE_KEYS
+        puzzle_pattern = "^(?:" + "|".join(re.escape(key) for key in sorted(PUZZLE_KEYS)) + ")(?:_t[0-9]+)?$"
         query = {"$or": [
+            {"game_type": {"$in": ["connect4", "tictactoe", "gomoku", "chess"]}, "$and": [
+                {"$or": [{"board_recovery_after": {"$exists": False}},
+                         {"board_recovery_after": {"$lte": now}}]},
+                {"$or": [
+                {"state.board_score_pending": True},
+                {"state.board_panel_dirty": True, "state.board_panel_delivery_unknown": {"$ne": True},
+                 "state.board_panel_retry_at": {"$lte": now}},
+                {"state.status": "playing", "state.turn_expires_at": {"$lte": now}},
+            ]}]},
+            {'game_type': 'roulette', 'state.phase': 'playing', 'state.turn_expires_at': {'$lte': now}},
+            {'game_type': 'roulette', 'state.phase': {'$in': ['finished', 'expired']}, '$or': [
+                {'state.score_pending': True},
+                {'state.panel_dirty': True, 'state.panel_retry_at': {'$lte': now}},
+            ]},
+            {'game_type': {'$regex': r'^blackjack:[0-9]+$'}, '$or': [
+                {'state.settlement_pending': True}, {'state.refund_pending': True},
+                {'state.terminal_panel_pending': True, 'state.panel_retry_at': {'$lte': now}},
+                {'state.status': {'$in': ['pending_bet', 'pending_double']}},
+            ]},
+            {"game_type": {"$regex": puzzle_pattern}, "$or": [
+                {"state.phase": {"$nin": ["finished", "cancelled"]}, "state.deadline": {"$gt": 0, "$lte": now}},
+                {"state.phase": {"$nin": ["finished", "cancelled"]}, "state.panel_wait_until": {"$gt": 0, "$lte": now}},
+                {"state.lobby_expires_at": {"$gt": 0, "$lte": now}, "state.phase": "lobby"},
+                {"state.panel_dirty": True, "$or": [
+                    {"state.delivery_retry_at": {"$lte": now}},
+                    {"state.delivery_retry_at": {"$exists": False}},
+                ]},
+                {"state.score_pending": True},
+                {"state.private_dirty": True, "$or": [
+                    {"state.private_retry_at": {"$exists": False}},
+                    {"state.private_retry_at": {"$lte": now}},
+                ]},
+            ]},
             {"game_type": "uno", "$or": [
                 {"state.status": "playing", "state.turn_expires_at": {"$lte": now, "$ne": None}},
                 {"state.status": {"$in": ["lobby", "playing"]}, "state.last_activity_at": {"$lte": now - 900}},
@@ -1421,8 +1950,52 @@ class Database:
                     {"state.prompt_message_id": {"$in": [0, None]}},
                 ]},
             ]},
+            {"game_type": {"$regex": r"^kelime_zinciri(?:_t[0-9]+)?$"}, "$or": [
+                {"state.phase": "playing", "state.turn_expires_at": {"$lte": now, "$ne": None}},
+                {"state.panel_dirty": True},
+                {"state.score_pending": True},
+            ]},
+            {"game_type": {"$regex": r"^tabu(?:_t[0-9]+)?$"}, "$or": [
+                {"state.phase": "lobby", "state.last_activity_at": {"$lte": now - 1200}},
+                {"state.phase": "card_delivery", "state.last_activity_at": {"$lte": now - 120}},
+                {"state.phase": "card_delivery", "state.delivered": False, "$or": [
+                    {"state.card_retry_at": {"$exists": False}}, {"state.card_retry_at": {"$lte": now}},
+                ]},
+                {"state.phase": "active", "state.deadline": {"$lte": now, "$ne": None}},
+                {"state.phase": "appeal", "state.appeal_until": {"$lte": now}},
+                {"state.phase": "adjudication", "$or": [
+                    {"state.judge_deadline": {"$lte": now}},
+                    {"state.judge_decision": {"$exists": True, "$ne": None}},
+                ]},
+                {"state.panel_dirty": True, "$or": [
+                    {"state.panel_retry_at": {"$exists": False}}, {"state.panel_retry_at": {"$lte": now}},
+                ]},
+                {"state.score_pending": True},
+            ]},
+            {"game_type": {"$regex": r"^(?:casus|vampir_koylu)(?:_t[0-9]+)?$"}, "$or": [
+                {"state.phase": {"$nin": ["finished", "cancelled"]}, "state.panel_wait_until": {"$lte": now, "$ne": None}},
+                {"state.phase": {"$nin": ["finished", "cancelled"]}, "state.deadline": {"$lte": now, "$ne": None}},
+                {"state.phase": "lobby", "state.last_activity_at": {"$lte": now - 1200}},
+                {"state.phase": "role_delivery", "state.last_activity_at": {"$lte": now - 600}},
+                {"state.phase": "delivery", "state.players": {"$elemMatch": {"active": True, "delivered": False}}, "$or": [
+                    {"state.role_retry_at": {"$exists": False}}, {"state.role_retry_at": {"$lte": now, "$ne": None}},
+                ]},
+                {"state.panel_dirty": True, "$or": [
+                    {"state.panel_retry_at": {"$exists": False}}, {"state.panel_retry_at": {"$lte": now}},
+                ]},
+                {"state.private_dirty": True, "$or": [
+                    {"state.private_retry_at": {"$exists": False}}, {"state.private_retry_at": {"$lte": now}},
+                ]},
+                {"state.score_pending": True},
+            ]},
         ]}
-        query = {"$and": [query, {"$or": [{"state.delivery_retry_at": {"$exists": False}}, {"state.delivery_retry_at": {"$lte": now}}]}]}
+        # Puzzle families already guard the public panel branch with its own
+        # lease. Other due work (private hand, timer, score) remains independent.
+        query = {"$and": [query, {"$or": [
+            {"game_type": {"$regex": puzzle_pattern}},
+            {"state.delivery_retry_at": {"$exists": False}},
+            {"state.delivery_retry_at": {"$lte": now}},
+        ]}]}
         return await self.game_states.find(query, {"_id": 0, "chat_id": 1, "game_type": 1, "state": 1}).sort("updated_at", 1).limit(max(1, min(500, limit))).to_list(length=max(1, min(500, limit)))
 
     async def get_memory_consent(self, user_id: int) -> bool:

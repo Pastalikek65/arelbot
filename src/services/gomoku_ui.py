@@ -243,14 +243,14 @@ def gomoku_keyboard(state: dict[str, Any]) -> InlineKeyboardMarkup:
         rows = [sizes[:3], sizes[3:]]
         join_row = [InlineKeyboardButton("➕ Katıl", callback_data=f"gomoku:{rid}:join")]
         if len(_players(state)) >= 2:
-            join_row.append(InlineKeyboardButton("▶️ Başlat", callback_data=f"gomoku:{rid}:start"))
+            join_row.append(InlineKeyboardButton("Maçı başlat", callback_data=f"gomoku:{rid}:start"))
         rows.append(join_row)
-        rows.append([InlineKeyboardButton("🛑 Lobiyi kapat", callback_data=f"gomoku:{rid}:stop")])
+        rows.append([InlineKeyboardButton("Oyunu bitir", callback_data=f"gomoku:{rid}:stop")])
         return InlineKeyboardMarkup(rows)
     if status not in {"playing"}:
         return InlineKeyboardMarkup([
             [InlineKeyboardButton("🎮 Yeni Gomoku", callback_data="game_start_gomoku")],
-            [InlineKeyboardButton("🛑 Oyunu kapat", callback_data=f"gomoku:{rid}:stop")],
+            [InlineKeyboardButton("Oyunu bitir", callback_data=f"gomoku:{rid}:stop")],
         ])
     try:
         size = _board_size(state.get("board_size", DEFAULT_BOARD_SIZE))
@@ -280,19 +280,21 @@ def render_gomoku_text(state: dict[str, Any], *, note: str | None = None) -> str
         pass
     status = str(state.get("status") or "lobby")
     if status == "lobby":
-        turn = "İkinci oyuncu katılsın; sonra başlat düğmesine basılır."
+        turn = "İkinci oyuncu katıldığında oyunu kuran kişi maçı başlatabilir."
     elif status == "playing":
         current_id = engine.turn_player_id if engine is not None else state.get("current_player_id")
         turn = f"Sıra: <b>{escape(_name(state, current_id))}</b>"
     elif status == "won":
         turn = f"🏆 Kazanan: <b>{escape(_name(state, state.get('winner_id')))}</b>"
+    elif status == "cancelled":
+        turn = "Oyun iptal edildi."
     elif status == "expired":
         turn = "⌛ Süre doldu; bu tur kapandı."
     else:
         turn = "🤝 Berabere."
     note_text = f"\n\n{escape(str(note))}" if note else ""
     return (
-        "⚫⚪ <b>GOMOKU BEŞLİ</b>\n\n"
+        "⚫⚪ <b>Gomoku (Beşli)</b>\n\n"
         f"Tahta: <b>{size}×{size}</b>\n"
         "Hedef: <b>5 taş</b>\n"
         f"Oyuncular: {names}\n{turn}\n\n"

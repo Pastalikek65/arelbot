@@ -17,6 +17,7 @@ Arelbot is a production-candidate Telegram bot. Typed provider contracts, Redis/
 - An AST-based audit now parses every Telegram handler module and blocks recurring ASCII regressions such as `Kullanim`, `Gecersiz`, `alinamadi`, malformed sticker-thumbnail text, and untranslated cookie/help messages; handler strings and affected callback expectations are UTF-8 tested.
 - Docker Compose dev/test/prod/monitoring profiles with MongoDB, Redis, FFmpeg, and ffprobe health checks.
 - Architecture check, security replay, provider matrix, compileall, and deterministic release gate.
+- GitHub Actions gate workflow calls the release gate itself on every pull request and `main` push (`python scripts/release_gate.py --requests 8 --concurrency 2`, plus the same command with `--docker` for the Compose scope), so CI cannot drift into a subset of the gate. No job reads a repository credential.
 
 ### Typed city and public-data providers
 

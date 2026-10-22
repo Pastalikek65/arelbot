@@ -15,6 +15,13 @@ yt-dlp==2026.08.19
 pytest==8.4.2
 pytest-asyncio==1.2.0
 pytest-mock==3.15.1
+pytest-timeout==2.3.1
+pytest-cov==5.0.0
+coverage==7.16.2
+# PyYAML parses the CI workflow in the structural contract test.  An unpinned
+# or undeclared parser turns that test into a silent skip and the workflow
+# contract stops being enforced.
+pyyaml==6.0.3
 # Direct application dependencies not already listed above.
 groq==1.7.0
 google-generativeai==0.8.6

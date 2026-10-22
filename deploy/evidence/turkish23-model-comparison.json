@@ -1,0 +1,522 @@
+{
+  "scope": "synthetic Turkish API samples; manually assessed, no real conversation or roast content",
+  "cases": [
+    "sohbet",
+    "baglam",
+    "dil"
+  ],
+  "standardized_benchmark": false,
+  "quality_limitations": [
+    "Some outputs still ignore desired casual tone or unsolicited-advice constraint.",
+    "No claim of universally fluent responses."
+  ],
+  "runs": {
+    "cloudflare_baseline": [
+      {
+        "model": "@cf/qwen/qwen3-30b-a3b-fp8",
+        "case": "sohbet",
+        "status": 200,
+        "seconds": 2.16,
+        "text": "\n\nİşten sonra biraz nefes alman çok önemli, hemen düşünmene gerek yok. Birkaç dakika sessizlik içine çek, sonra ne yapmak istersen yap.",
+        "finish": "stop",
+        "usage": {
+          "prompt_tokens": 93,
+          "completion_tokens": 47,
+          "total_tokens": 140,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "neurons": 1.8624002933502197
+        }
+      },
+      {
+        "model": "@cf/qwen/qwen3-30b-a3b-fp8",
+        "case": "baglam",
+        "status": 200,
+        "seconds": 6.89,
+        "text": "\n\nDört kişiyiz. UNO daha rahat akar.",
+        "finish": "stop",
+        "usage": {
+          "prompt_tokens": 148,
+          "completion_tokens": 19,
+          "total_tokens": 167,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "neurons": 1.2634587287902832
+        }
+      },
+      {
+        "model": "@cf/qwen/qwen3-30b-a3b-fp8",
+        "case": "dil",
+        "status": 200,
+        "seconds": 2.83,
+        "text": "\n\nKatılım işleminizin başarıyla gerçekleştirildiği tespit edilmiştir ve oyun başlangıcı için bekleme durumuna geçilmiştir. Açıklama: Lütfen oyunun başlamasını bekleyin.",
+        "finish": "stop",
+        "usage": {
+          "prompt_tokens": 104,
+          "completion_tokens": 58,
+          "total_tokens": 162,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "neurons": 2.248493194580078
+        }
+      },
+      {
+        "model": "@cf/zai-org/glm-4.7-flash",
+        "case": "sohbet",
+        "status": 200,
+        "seconds": 1.61,
+        "text": "Tamam, o anki zihniyeti boşaltmak için en iyisi kendine biraz zaman ayırmak. Şu anki işini bir kenara bırak, günü bitir. Biraz yürüyüş yaparak kafanı dağıtmanı öneririm.",
+        "finish": "stop",
+        "usage": {
+          "prompt_tokens": 85,
+          "completion_tokens": 66,
+          "total_tokens": 151,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "neurons": 2.8699
+        }
+      },
+      {
+        "model": "@cf/zai-org/glm-4.7-flash",
+        "case": "baglam",
+        "status": 200,
+        "seconds": 1.2,
+        "text": "Şu an **dört kişi**siniz. UNO daha hızlı biter ve daha eğlenceli olur.",
+        "finish": "stop",
+        "usage": {
+          "prompt_tokens": 134,
+          "completion_tokens": 27,
+          "total_tokens": 161,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "neurons": 1.7198
+        }
+      },
+      {
+        "model": "@cf/zai-org/glm-4.7-flash",
+        "case": "dil",
+        "status": 200,
+        "seconds": 6.34,
+        "text": "Katılım işleminiz başarıyla tamamlandı, oyun oynamaya hazırız.",
+        "finish": "stop",
+        "usage": {
+          "prompt_tokens": 100,
+          "completion_tokens": 19,
+          "total_tokens": 119,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "neurons": 1.2416
+        }
+      },
+      {
+        "model": "@cf/mistralai/mistral-small-3.1-24b-instruct",
+        "case": "sohbet",
+        "status": 200,
+        "seconds": 3.95,
+        "text": "Anladım, işten çıktıktan sonra da kafanız dolu oluyor. Önce bir nevi dinlenme zamanı ayırın, bir kahve içip bir kitap okumak ya da kısa bir yürüyüş yapmak faydalı olabilir. Dikkatinizi başka bir şeye çekmek işinizi unutmanıza yardımcı olabilir.",
+        "finish": "stop",
+        "usage": {
+          "prompt_tokens": 82,
+          "completion_tokens": 85,
+          "total_tokens": 167,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "neurons": 6.905312538146973
+        }
+      },
+      {
+        "model": "@cf/mistralai/mistral-small-3.1-24b-instruct",
+        "case": "baglam",
+        "status": 200,
+        "seconds": 1.52,
+        "text": "Dört kişiyiz. İkisi daha rahat akar: UNO.",
+        "finish": "stop",
+        "usage": {
+          "prompt_tokens": 132,
+          "completion_tokens": 19,
+          "total_tokens": 151,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "neurons": 5.166903972625732
+        }
+      },
+      {
+        "model": "@cf/mistralai/mistral-small-3.1-24b-instruct",
+        "case": "dil",
+        "status": 200,
+        "seconds": 0.78,
+        "text": "Katılım işleminizin başarıyla gerçekleştirildiği tespit edildiği için, şimdi oyun başlangıcı için bekleme durumuna geçilmiştir.",
+        "finish": "stop",
+        "usage": {
+          "prompt_tokens": 98,
+          "completion_tokens": 38,
+          "total_tokens": 136,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "neurons": 5.042392253875732
+        }
+      },
+      {
+        "model": "@cf/google/gemma-3-12b-it",
+        "case": "sohbet",
+        "status": 403,
+        "seconds": 0.62
+      },
+      {
+        "model": "@cf/google/gemma-3-12b-it",
+        "case": "baglam",
+        "status": 403,
+        "seconds": 0.08
+      },
+      {
+        "model": "@cf/google/gemma-3-12b-it",
+        "case": "dil",
+        "status": 403,
+        "seconds": 0.08
+      },
+      {
+        "model": "@cf/openai/gpt-oss-120b",
+        "case": "sohbet",
+        "status": 200,
+        "seconds": 0.61,
+        "text": "Anladım, bazen aklını boşaltmak zor oluyor. Biraz yürüyüş yap ya da sevdiğin bir şarkıyı aç; beynin bir mola alır, sonra işler daha net görünür. 🌿🎶",
+        "finish": "stop",
+        "usage": {
+          "prompt_tokens": 137,
+          "completion_tokens": 68,
+          "total_tokens": 205,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "neurons": 8.995428085327148
+        }
+      },
+      {
+        "model": "@cf/openai/gpt-oss-120b",
+        "case": "baglam",
+        "status": 200,
+        "seconds": 1.05,
+        "text": "Şu an 4 kişiyiz. Kuralları daha basit ve akışı hızlı olduğu için **UNO** daha rahat akar.",
+        "finish": "stop",
+        "usage": {
+          "prompt_tokens": 188,
+          "completion_tokens": 61,
+          "total_tokens": 249,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "neurons": 10.140872955322266
+        }
+      },
+      {
+        "model": "@cf/openai/gpt-oss-120b",
+        "case": "dil",
+        "status": 200,
+        "seconds": 0.89,
+        "text": "Katılım işleminiz başarıyla gerçekleştirildi ve oyun başlangıcı için bekleme aşamasına geçtiniz.",
+        "finish": "stop",
+        "usage": {
+          "prompt_tokens": 147,
+          "completion_tokens": 47,
+          "total_tokens": 194,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "neurons": 7.8817901611328125
+        }
+      }
+    ],
+    "cloudflare_finalists": [
+      {
+        "model": "@cf/openai/gpt-oss-120b",
+        "case": "sohbet",
+        "status": 200,
+        "seconds": 1.64,
+        "text": "Anladım, işten çıkınca aklın hâlâ orada takılıyor; bir şeyler yapmadan önce biraz derin bir nefes al ve kendine “şimdi sadece dinlenme zamanı” de. Biraz müzik aç, sevdiğin bir şeyle meşgul ol, zihnin yavaş yavaş boşalacak.",
+        "finish": "stop",
+        "usage": {
+          "prompt_tokens": 137,
+          "completion_tokens": 94,
+          "total_tokens": 231,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "neurons": 10.768155097961426
+        }
+      },
+      {
+        "model": "@cf/openai/gpt-oss-120b",
+        "case": "baglam",
+        "status": 200,
+        "seconds": 1.62,
+        "text": "Şu an 4 kişiyiz. UNO, bu sayıda daha rahat akıp gider.",
+        "finish": "stop",
+        "usage": {
+          "prompt_tokens": 188,
+          "completion_tokens": 55,
+          "total_tokens": 243,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "neurons": 9.731782913208008
+        }
+      },
+      {
+        "model": "@cf/openai/gpt-oss-120b",
+        "case": "dil",
+        "status": 200,
+        "seconds": 1.12,
+        "text": "Katılımınız başarıyla gerçekleşti, oyun başlangıcı için bekleme moduna geçtiniz.",
+        "finish": "stop",
+        "usage": {
+          "prompt_tokens": 147,
+          "completion_tokens": 45,
+          "total_tokens": 192,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "neurons": 7.745426177978516
+        }
+      },
+      {
+        "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+        "case": "sohbet",
+        "status": 200,
+        "seconds": 1.33,
+        "text": "Eve gelince iş thoughtsını bir kenara bırak, biraz müzik dinle veya doğada yürüyüş yap. Zihnin boşalır ve kendini daha iyi hissedeceksin.",
+        "finish": "stop",
+        "usage": {
+          "prompt_tokens": 103,
+          "completion_tokens": 40,
+          "total_tokens": 143,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "neurons": 10.938982963562012
+        }
+      },
+      {
+        "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+        "case": "baglam",
+        "status": 200,
+        "seconds": 0.88,
+        "text": "Dört kişiyiz. UNO daha rahat akar bence.",
+        "finish": "stop",
+        "usage": {
+          "prompt_tokens": 154,
+          "completion_tokens": 16,
+          "total_tokens": 170,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "neurons": 7.383706092834473
+        }
+      },
+      {
+        "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+        "case": "dil",
+        "status": 200,
+        "seconds": 1.31,
+        "text": "Oyun katılımınız başarılı bir şekilde tamamlanmıştır, şimdi oyunun başlaması için beklemeniz yeterli.",
+        "finish": "stop",
+        "usage": {
+          "prompt_tokens": 117,
+          "completion_tokens": 24,
+          "total_tokens": 141,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "neurons": 8.035445213317871
+        }
+      },
+      {
+        "model": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+        "case": "sohbet",
+        "status": 403,
+        "seconds": 0.3
+      },
+      {
+        "model": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+        "case": "baglam",
+        "status": 403,
+        "seconds": 0.3
+      },
+      {
+        "model": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+        "case": "dil",
+        "status": 403,
+        "seconds": 0.08
+      }
+    ],
+    "cloudflare_20b": [
+      {
+        "model": "@cf/openai/gpt-oss-20b",
+        "case": "sohbet",
+        "status": 200,
+        "seconds": 1.59,
+        "text": "Anlaşılan gün bitince bile aklından iş çıkmıyor. Belki bir şeyleri boşa atmak için en azından bir kahve; ardından “İşin üstüne bakmak için zamana ihtiyacın var, ama şimdi rahatla, seninle bir kahve” diyebilirsin. Kendine biraz izin ver, yoksa kalbin de yorulur.",
+        "finish": "stop",
+        "usage": {
+          "prompt_tokens": 143,
+          "completion_tokens": 95,
+          "total_tokens": 238,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "neurons": 5.1909039
+        }
+      },
+      {
+        "model": "@cf/openai/gpt-oss-20b",
+        "case": "baglam",
+        "status": 200,
+        "seconds": 1.45,
+        "text": "Dört kişiniz var. UNO, 4 kişiyle daha akıcı ve kolay bir şekilde oynanır. Tabu ise 4 kişiyle de oynanabilir ama konuşma yoğunluğu biraz artar. İsterseniz UNO ile başlayalım!",
+        "finish": "stop",
+        "usage": {
+          "prompt_tokens": 192,
+          "completion_tokens": 74,
+          "total_tokens": 266,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "neurons": 5.5090854
+        }
+      },
+      {
+        "model": "@cf/openai/gpt-oss-20b",
+        "case": "dil",
+        "status": 200,
+        "seconds": 0.84,
+        "text": "Katılım işleminiz başarıyla gerçekleşti; oyun başlangıcı için bekleme durumuna geçilmiştir.",
+        "finish": "stop",
+        "usage": {
+          "prompt_tokens": 153,
+          "completion_tokens": 38,
+          "total_tokens": 191,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "neurons": 3.818178
+        }
+      }
+    ],
+    "extra_language_instruction": [
+      {
+        "model": "@cf/openai/gpt-oss-120b",
+        "case": "sohbet",
+        "status": 200,
+        "seconds": 1.58,
+        "text": "Anladım, bir şeyler konuşmak iyi gelebilir. Neyi aklında tutuyorsun, belki bir şeyler paylaşmak rahatlatır?",
+        "finish": "stop",
+        "usage": {
+          "prompt_tokens": 227,
+          "completion_tokens": 55,
+          "total_tokens": 282,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "neurons": 10.972684860229492
+        }
+      },
+      {
+        "model": "@cf/openai/gpt-oss-120b",
+        "case": "baglam",
+        "status": 200,
+        "seconds": 1.72,
+        "text": "Şu an 4 kişiyiz. UNO, daha hızlı ve akıcı ilerlediği için bu gruba daha çok uyar.",
+        "finish": "stop",
+        "usage": {
+          "prompt_tokens": 278,
+          "completion_tokens": 72,
+          "total_tokens": 350,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "neurons": 13.754493713378906
+        }
+      },
+      {
+        "model": "@cf/openai/gpt-oss-120b",
+        "case": "dil",
+        "status": 200,
+        "seconds": 0.75,
+        "text": "Katılımınız başarıyla tamamlandı, şimdi oyunun başlamasını bekleyebilirsiniz.",
+        "finish": "stop",
+        "usage": {
+          "prompt_tokens": 237,
+          "completion_tokens": 33,
+          "total_tokens": 270,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "neurons": 9.790864944458008
+        }
+      }
+    ],
+    "existing_evren_nvidia": [
+      {
+        "provider": "evren",
+        "model": "deepseek-v4.1-flash",
+        "case": "sohbet",
+        "seconds": 2.49,
+        "text": "Of ya, o kafa doluluğu eve de taşınıyor demek ki; bazen iş zihinden çıkmıyor kolayca. Şu an yapman gereken tek şey kendine biraz alan açmak, gerisi zaten akşamı bulur."
+      },
+      {
+        "provider": "evren",
+        "case": "baglam",
+        "error": "AIProviderUnavailable"
+      },
+      {
+        "provider": "evren",
+        "model": "deepseek-v4.1-flash",
+        "case": "dil",
+        "seconds": 10.25,
+        "text": "Katılım işleminiz başarıyla gerçekleştirildi ve oyunun başlaması için bekleme durumuna geçildi."
+      },
+      {
+        "provider": "nvidia",
+        "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+        "case": "sohbet",
+        "seconds": 2.48,
+        "text": "Ruhunu biraz rahatlatmak için:\n\n1. **İşten ayrılma ritüeli:** Ev girdiğinde ayakkabılarını değiştir, bir su iç ve 5 dakika \"hareket etmeyin\".\n2. **Mutfak kaosuna ses:** İşten sıkılmışken yemek pişirmek zor. Bir şey pişirmek yerine, arkadaşınızla ya da sadece bir podcastle mutlaka konuşmadan 15 dakika \"boş\" vakit geçir.\n\nGözlerin ışık almalı, işten çıkma mutluluğunu ya da yemeği sırtına almayı unutma. Dün yarın daha iyi gidecek! 😉"
+      },
+      {
+        "provider": "nvidia",
+        "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+        "case": "baglam",
+        "seconds": 0.71,
+        "text": "Kısa cevap: **4** kişi var.\n\nDaha rahat akar oyun: **UNO**. Tabu'da sohbet çok önemli, ama UNO'da sadece kartlar önemli."
+      },
+      {
+        "provider": "nvidia",
+        "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+        "case": "dil",
+        "seconds": 0.7,
+        "text": "Harika! Katılım işleminiz başarıyla tamamlandığına göre artık oyun başlangıcına hazırsınız. Lütfen bekleme moduna geçilerek keyifli anlarımızın başlangıcına hazırlanıyoruz."
+      }
+    ]
+  },
+  "candidate_capabilities": [
+    {
+      "name": "json",
+      "ok": true,
+      "seconds": 2.12
+    },
+    {
+      "name": "tool",
+      "ok": true,
+      "seconds": 2.77
+    }
+  ],
+  "first_256_token_json_protocol_error": true
+}

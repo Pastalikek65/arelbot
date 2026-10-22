@@ -4,9 +4,29 @@ services:
     restart: unless-stopped
     environment:
       MONGO_INITDB_DATABASE: arel_bot
+      # The administrative account lives in the `admin` database, so every
+      # administrative connection string has to carry `authSource=admin`.
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:-areladmin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?MONGO_ROOT_PASSWORD is required}
+      # The application principals are created by the init script.  The
+      # `MONGO_INITDB_` prefix makes the image entrypoint drop them before
+      # mongod starts, so the running server keeps no credential in its
+      # environment.
+      MONGO_INITDB_APP_USERNAME: ${MONGO_APP_USERNAME:-arel_app}
+      MONGO_INITDB_APP_PASSWORD: ${MONGO_APP_PASSWORD:?MONGO_APP_PASSWORD is required}
+      MONGO_INITDB_TEST_USERNAME: ${MONGO_TEST_USERNAME:-arel_test}
+      MONGO_INITDB_TEST_PASSWORD: ${MONGO_TEST_PASSWORD:?MONGO_TEST_PASSWORD is required}
     volumes:
       - mongo_data:/data/db
+      # The init script runs only while the volume is created for the first
+      # time. Existing production volumes must retain their data: create
+      # the application principals before enabling authentication instead.
+      - ./deploy/mongo/init-app-users.js:/docker-entrypoint-initdb.d/10-arel-app-users.js:ro
     healthcheck:
+      # `ping` is one of the few commands MongoDB answers before a client
+      # authenticates, so the probe proves the server is up without
+      # publishing a credential.  The application health check connects with
+      # the real credential and fails when authentication is broken.
       test: ["CMD-SHELL", "mongosh --quiet --eval 'db.adminCommand({ ping: 1 }).ok' | grep 1"]
       interval: 10s
       timeout: 5s
@@ -15,11 +35,17 @@ services:
   redis:
     image: redis:7.4-alpine
     restart: unless-stopped
-    command: ["redis-server", "--appendonly", "yes", "--save", "60", "1"]
+    command: ["redis-server", "--appendonly", "yes", "--save", "60", "1", "--requirepass", "${REDIS_PASSWORD:?REDIS_PASSWORD is required}"]
+    environment:
+      # `redis-cli` reads the password from the environment, so neither the
+      # health probe nor the in-container tooling puts it on a command line.
+      REDISCLI_AUTH: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      # Without the password Redis answers with `NOAUTH`, so the probe has to
+      # look for the reply instead of the exit code.
+      test: ["CMD-SHELL", "redis-cli ping | grep -q PONG"]
       interval: 5s
       timeout: 3s
       retries: 12
@@ -60,8 +86,8 @@ services:
     environment:
       APP_ROLE: bot
       APP_ENV: production
-      MONGODB_URI: mongodb://mongo:27017/arel_bot
-      REDIS_URL: redis://redis:6379/0
+      MONGODB_URI: mongodb://${MONGO_APP_USERNAME:-arel_app}:${MONGO_APP_PASSWORD:?MONGO_APP_PASSWORD is required}@mongo:27017/arel_bot?authSource=arel_bot
+      REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379/0
       MEDIA_REDIS_REQUIRED: "true"
       MONGODB_REQUIRED: "true"
       AKINATOR_SOLVER_URL: ${AKINATOR_SOLVER_URL:-http://flaresolverr:8191}
@@ -76,6 +102,14 @@ services:
       GUARDIAN_REQUIRE_PEER_CREDENTIALS: ${GUARDIAN_REQUIRE_PEER_CREDENTIALS:-true}
       GUARDIAN_PEER_UIDS: ${GUARDIAN_PEER_UIDS:-}
       GUARDIAN_PEER_GIDS: ${GUARDIAN_PEER_GIDS:-}
+      CODEX_HOME: ${OPENAI_CHATGPT_CODEX_HOME:-/run/arel-openai/codex}
+      OPENAI_CHATGPT_CLI_BIN: ${OPENAI_CHATGPT_CLI_BIN:-codex}
+      OPENAI_CHATGPT_ENABLED: ${OPENAI_CHATGPT_ENABLED:-false}
+      OPENAI_CHATGPT_MODE: ${OPENAI_CHATGPT_MODE:-siwc}
+      OPENAI_CHATGPT_MODEL: ${OPENAI_CHATGPT_MODEL:-gpt-5.6-luna}
+      OPENAI_CHATGPT_CLI_MODEL: ${OPENAI_CHATGPT_CLI_MODEL:-}
+      OPENAI_CHATGPT_CLI_WORKDIR: ${OPENAI_CHATGPT_CLI_WORKDIR:-/tmp}
+      AI_PROVIDER_ROUTES: ${AI_PROVIDER_ROUTES:-}
     # Bind only to the VDS loopback; an HTTPS reverse proxy terminates TLS.
     # WEBHOOK_PORT is intentionally shared by host and container so the
     # operator can change it without an undocumented second setting.
@@ -93,6 +127,10 @@ services:
       - arel_data:/app/data
       - arel_downloads:/app/downloads
       - chroma_data:/app/chroma_db
+      - ${OPENAI_CHATGPT_CREDENTIALS_HOST_DIR:-./secrets/openai-chatgpt}:/run/arel-openai:rw
+      # The CLI account is mounted separately from SIWC credentials. Arel only
+      # reads the normal Codex login state; it never copies or logs auth data.
+      - ${OPENAI_CHATGPT_CODEX_HOST_DIR:-/root/.codex}:/run/arel-openai/codex:rw
       - /run/kek-guardian:/run/kek-guardian:ro
     secrets:
       - arelbot_ca
@@ -110,8 +148,8 @@ services:
     environment:
       APP_ROLE: combined
       APP_ENV: development
-      MONGODB_URI: mongodb://mongo:27017/arel_bot
-      REDIS_URL: redis://redis:6379/0
+      MONGODB_URI: mongodb://${MONGO_APP_USERNAME:-arel_app}:${MONGO_APP_PASSWORD:?MONGO_APP_PASSWORD is required}@mongo:27017/arel_bot?authSource=arel_bot
+      REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379/0
       MONGODB_REQUIRED: "true"
       MEDIA_REDIS_REQUIRED: "false"
       AKINATOR_SOLVER_URL: ${AKINATOR_SOLVER_URL:-http://flaresolverr:8191}
@@ -121,6 +159,14 @@ services:
       OBSERVABILITY_PORT: ${OBSERVABILITY_PORT:-9108}
       OBSERVABILITY_WORKER_PORT: ${OBSERVABILITY_WORKER_PORT:-9109}
       OBSERVABILITY_TOKEN_FILE: /run/secrets/arelbot_observability_token
+      CODEX_HOME: ${OPENAI_CHATGPT_CODEX_HOME:-/run/arel-openai/codex}
+      OPENAI_CHATGPT_CLI_BIN: ${OPENAI_CHATGPT_CLI_BIN:-codex}
+      OPENAI_CHATGPT_ENABLED: ${OPENAI_CHATGPT_ENABLED:-false}
+      OPENAI_CHATGPT_MODE: ${OPENAI_CHATGPT_MODE:-siwc}
+      OPENAI_CHATGPT_MODEL: ${OPENAI_CHATGPT_MODEL:-gpt-5.6-luna}
+      OPENAI_CHATGPT_CLI_MODEL: ${OPENAI_CHATGPT_CLI_MODEL:-}
+      OPENAI_CHATGPT_CLI_WORKDIR: ${OPENAI_CHATGPT_CLI_WORKDIR:-/tmp}
+      AI_PROVIDER_ROUTES: ${AI_PROVIDER_ROUTES:-}
     depends_on:
       mongo: { condition: service_healthy }
       redis: { condition: service_healthy }
@@ -133,6 +179,8 @@ services:
       - arel_data:/app/data
       - arel_downloads:/app/downloads
       - chroma_data:/app/chroma_db
+      - ${OPENAI_CHATGPT_CREDENTIALS_HOST_DIR:-./secrets/openai-chatgpt}:/run/arel-openai:rw
+      - ${OPENAI_CHATGPT_CODEX_HOST_DIR:-/root/.codex}:/run/arel-openai/codex:rw
     secrets:
       - arelbot_ca
       - arelbot_observability_token
@@ -153,8 +201,8 @@ services:
     environment:
       APP_ROLE: worker
       APP_ENV: production
-      MONGODB_URI: mongodb://mongo:27017/arel_bot
-      REDIS_URL: redis://redis:6379/0
+      MONGODB_URI: mongodb://${MONGO_APP_USERNAME:-arel_app}:${MONGO_APP_PASSWORD:?MONGO_APP_PASSWORD is required}@mongo:27017/arel_bot?authSource=arel_bot
+      REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379/0
       MEDIA_REDIS_REQUIRED: "true"
       MONGODB_REQUIRED: "true"
       AKINATOR_SOLVER_URL: ${AKINATOR_SOLVER_URL:-http://flaresolverr:8191}
@@ -169,6 +217,14 @@ services:
       GUARDIAN_REQUIRE_PEER_CREDENTIALS: ${GUARDIAN_REQUIRE_PEER_CREDENTIALS:-true}
       GUARDIAN_PEER_UIDS: ${GUARDIAN_PEER_UIDS:-}
       GUARDIAN_PEER_GIDS: ${GUARDIAN_PEER_GIDS:-}
+      CODEX_HOME: ${OPENAI_CHATGPT_CODEX_HOME:-/run/arel-openai/codex}
+      OPENAI_CHATGPT_CLI_BIN: ${OPENAI_CHATGPT_CLI_BIN:-codex}
+      OPENAI_CHATGPT_ENABLED: ${OPENAI_CHATGPT_ENABLED:-false}
+      OPENAI_CHATGPT_MODE: ${OPENAI_CHATGPT_MODE:-siwc}
+      OPENAI_CHATGPT_MODEL: ${OPENAI_CHATGPT_MODEL:-gpt-5.6-luna}
+      OPENAI_CHATGPT_CLI_MODEL: ${OPENAI_CHATGPT_CLI_MODEL:-}
+      OPENAI_CHATGPT_CLI_WORKDIR: ${OPENAI_CHATGPT_CLI_WORKDIR:-/tmp}
+      AI_PROVIDER_ROUTES: ${AI_PROVIDER_ROUTES:-}
     depends_on:
       mongo: { condition: service_healthy }
       redis: { condition: service_healthy }
@@ -181,6 +237,8 @@ services:
       - arel_data:/app/data
       - arel_downloads:/app/downloads
       - chroma_data:/app/chroma_db
+      - ${OPENAI_CHATGPT_CREDENTIALS_HOST_DIR:-./secrets/openai-chatgpt}:/run/arel-openai:rw
+      - ${OPENAI_CHATGPT_CODEX_HOST_DIR:-/root/.codex}:/run/arel-openai/codex:rw
       - /run/kek-guardian:/run/kek-guardian:ro
     secrets:
       - arelbot_ca
@@ -215,12 +273,16 @@ services:
         - arelbot_ca
     profiles: ["test"]
     command: ["pytest", "-q"]
-    env_file: .env
+    # The test profile reads the synthetic environment, never the production
+    # one.  The project `.env` stays the interpolation source of the
+    # connection strings below, but Compose resolves it on the host and does
+    # not inject it into the container.
+    env_file: .env.test
     environment:
       APP_ROLE: test
       APP_ENV: test
-      MONGODB_URI: mongodb://mongo:27017/arel_bot_test
-      REDIS_URL: redis://redis:6379/1
+      MONGODB_URI: mongodb://${MONGO_TEST_USERNAME:-arel_test}:${MONGO_TEST_PASSWORD:?MONGO_TEST_PASSWORD is required}@mongo:27017/arel_bot_test?authSource=arel_bot_test
+      REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379/1
       MONGODB_REQUIRED: "false"
       MEDIA_REDIS_REQUIRED: "false"
       ARELBOT_EXTRA_CA_CERT: /run/secrets/arelbot_ca

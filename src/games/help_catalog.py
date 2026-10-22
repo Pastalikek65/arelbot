@@ -1,0 +1,32 @@
+"""Static public rules: never interpolate a session's hidden cards or answers."""
+from types import MappingProxyType
+
+GAME_HELP = MappingProxyType({
+    "wordle_tr": "Beş harfli kelimeyi altı denemede bul. 🟩 doğru yerde, 🟨 başka yerde, ⬛ kelimede yok. Her deneme yerel sözlükte bulunan bir kelime olmalı. Cevabını güncel oyun paneline yanıt olarak yaz.",
+    "karsi_kelime": "Gösterilen kelimenin zıt anlamını yaz. Önce lobiye katıl; ilk doğru yanıt tur puanını alır. Birden fazla oyun açıksa cevabını ilgili panele yanıtla.",
+    "anagram": "Karışık harflerden hedef kelimeyi bul. İlk doğru yanıt puan alır; ipucu kullanıldıkça tur değeri azalır. Cevabını normal mesaj olarak yaz; birden fazla oyunda ilgili paneli yanıtla.",
+    "hafiza_eslestirme": "4×4 tabloda sekiz çifti bul. Önizlemede kartları hatırla; sıranda iki kapalı kart seç. Eşleşme bir puan ve ek hamle verir. Yanlış çift kısa süre görünür, sonra sıra ilerler. Açılmış çiftler yeniden seçilemez.",
+    "mayin_tarlasi": "6×6 tabloda altı mayından kaçın ve 30 güvenli hücreyi aç. İlk açılan hücre ve komşuları güvenlidir. Bayrak/Aç düğmesi dokunuşun işlevini değiştirir. En fazla altı bayrak kullanılabilir; zafer için güvenli hücrelerin tamamını açmalısın.",
+    "sudoku": "Her satır, sütun ve kutuda rakamlar birer kez yer almalı. Önce bant, satır ve hücre seç; ardından rakama bas. Başlangıç rakamları sabittir. Hata yaparsan Sil veya Geri alı kullan; ipucunun puan etkisini panelden izle.",
+    "sayisal_tahmin": "Gizli sayıyı sırayla tahmin edin. Her yanıt kalan aralığı daraltır. Sıra sana geldiğinde paneldeki güncel aralıkta bir sayı yaz. Başka oyunun açıksa bu paneli yanıtla.",
+    "hizli_buton": "Lobiye katıl ve GO işaretini bekle. Erken dokunmak avantaj sağlamaz. GO gelince gösterilen hedef simgeye bas; tur sonucunu ve puanları ortak panelden izle.",
+    "harf_maratonu": "Verilen harfle istenen kategorilere yanıt üret. Yanıtlarını botun özel sohbetindeki güncel oyun mesajına yanıt olarak yaz. Toplama süresi bitince cevaplar karşılaştırılır; aynı cevabı tekrar kullanmak avantaj sağlamaz.",
+    "sozcuk_avi": "Harf tahtasında bitişik hücrelerden kelimeler kur. Aynı kelimede hücreyi tekrar kullanma. Bulduğun geçerli kelimeyi güncel oyun paneline yanıtla; tekrar kelimeler yeniden puan getirmez.",
+    "yasak_harf": "Anlatıcı gizli kartını özel sohbette alır ve onaylar. Hedefi veya yasak harfi kullanmadan gruba ipucu yazar. Diğer oyuncular normal mesajla tahmin eder. Gizli kartı yalnız anlatıcı görür.",
+    "ortak_hikaye": "Sırayla ortak hikâyeye tam iki cümle ekleyin. Paneldeki gerekli sözcüğü ve varsa önceki katkının bağ sözcüğünü kullanın. Güncel sıra ve oluşan hikâye ortak panelde görünür; kurucu lobiyi başlatır.",
+    "bomba": "Sıra sana geldiğinde koşula uyan geçerli kelimeyi süre dolmadan yaz. Kullanılmış kelimeler kabul edilmez. Bomba patladığında eleme uygulanır; güncel sıra ve kalan oyuncular panelde görünür.",
+    "kor_siralama": "Gösterilen değeri henüz boş olan sıralardan birine yerleştir. Sonraki değerleri önceden göremezsin. Seçtiğin yerler kilitlenir; sonunda kurduğun sıralamanın başarısı hesaplanır.",
+    "kronoloji": "Tamamen kurgusal beş olayı verilen gün aralığı ipuçlarıyla en erkenden en geçe diz. Düğmelerle sırayı oluştur; onaylamadan önce seçimi sıfırlayabilirsin. Onaylanan sıra değiştirilemez. Sonuç ve puanlar tur sonunda açıklanır.",
+    "dogru_yanlis": "İfadeyi değerlendir, Doğru veya Yanlış seç. Kalkan daha güvenli, Risk daha yüksek kazanç ve kayıp demektir. Bir turda tek seçim yapabilirsin; başkalarının seçimini sonuçtan önce göremezsin.",
+    "dedektif": "Üç kurgu vakada kişi, yer ve nesneyi ipuçlarından çıkar. Tahminini kişi / yer / nesne biçiminde güncel vaka paneline yanıt olarak yaz. Oyuncu başına en fazla üç suçlama vardır; ek ipucu almak turun puanını azaltır.",
+    "amiral_batti": "İki oyuncu özel sohbette gemi panosunu hazırlar. Sıranda ortak atış tablosundan bir hedef seç. Rakibin gizli gemileri gösterilmez; isabetleri ve atış sırasını panelden izle.",
+    "iki_dogru_bir_yalan": "Sıradaki oyuncu özel sohbette iki doğru, bir yanlış ifade hazırlar. Diğerleri gizli oyuyla yalanı bulur. Oylar sonuç aşamasına kadar açıklanmaz; yazılan ifadelerin kişisel bilgi içermemesine dikkat et.",
+    "kimim_ben": "Gizli kimliğini anlamak için sıranda botun özel sohbetindeki güncel oyun mesajına yanıt ver. Evet/hayır sorusunun başına ? koy; kimlik tahmininin başına = koy. Diğer oyuncular özel oyla yanıtlar. Yanlış kimlik tahmini bir hakkını götürür; sekiz soruluk sınırı panelden izle.",
+    "takim_bilgi_ligi": "Lobide takımlar kurulur. Sıradaki takımın kaptanı Risk 1 veya Risk 2 seçip soruyu yanıtlar; Pas hakkı da kullanılabilir. Doğru yanıt risk kadar puan kazandırır, yanlış yanıt o kadar puan kaybettirir. Sıra ve takım toplamları ortak panelde görünür.",
+    "zehirli_kadeh": "Gizli roller ve kadeh kararları özel sohbette hazırlanır. Sunulan kadeh için paneldeki sırayı izleyip kararını ver. Gizli seçimler sonuçlanmadan ortak sohbette açıklanmaz.",
+    "pisti": "2 kişi bireysel, 4 kişi karşılıklı takım oynar. Sıranda özel elinden bir kart seç: aynı değer masayı toplar, vale tüm masayı alır. Tek karta aynı değer pişti 10; tek valeye vale 20 puandır. As/vale 1, sinek 2 iki, karo 10 üç puan; fazla kart 3 puan. Eller özel sohbette kalır.",
+    "papaz_kimde": "3–8 oyuncu; üç papaz çıkarılmış 49 kart dağıtılır. Aynı değerde çiftler otomatik bırakılır. Sırandaki çekme işlemi komşunun elinden gizli ve rastgele kart alır. Eli boşalan çıkar; son tek papazı tutan kaybeder. Kartların yüzünü yalnız sahibi görür.",
+    "2048": "Yön düğmeleriyle tüm taşları kaydır. Aynı sayıdaki iki taş birleşir; her taş bir hamlede yalnız bir kez birleşebilir. Geçerli hamleden sonra yeni taş gelir. 2048'e ulaşmaya çalış; boş hücre ve birleşme kalmazsa oyun biter. Hamleleri yalnız oyunu açan kişi yapabilir.",
+    "bes_ipucu": "Grupta önce Katıl düğmesine bas. Beş aşamada açılan çağrışımlardan hedefi bul. Her aşamada kişi başına bir tahmin hakkı vardır. Erken doğru yanıt daha çok puan getirir. Pas vererek yeni ipucunu bekleyebilirsin; bütün oyuncular hakkını kullanır veya pas verirse sonraki aşama erken açılır.",
+    "emoji_bilmece": "Grupta önce Katıl düğmesine bas. Emoji dizisinin anlattığı Türkçe kelimeyi veya ifadeyi bul. Tur başına iki tahmin hakkın var; ilk tahminde doğru bilmek daha çok puan getirir. Cevabını normal mesaj olarak yaz; birden fazla oyun açıksa ilgili paneli yanıtla.",
+})

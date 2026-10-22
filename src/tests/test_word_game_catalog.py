@@ -43,7 +43,9 @@ async def test_quiz_tool_renders_the_question_without_exposing_the_answer():
 def test_games_menu_opens_word_game_category_picker():
     _text, markup = MenuService().games_menu()
     callbacks = [button.callback_data for row in markup.inline_keyboard for button in row]
-
+    assert "menu_games:words" in callbacks
+    _text, markup = MenuService().games_menu(category="words")
+    callbacks = [button.callback_data for row in markup.inline_keyboard for button in row]
     assert "game_word_categories" in callbacks
 
 

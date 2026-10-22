@@ -40,3 +40,7 @@ def test_catalog_audit_accepts_exact_runtime_documentation_parity():
         "undocumented": [],
         "duplicates": [],
     }
+
+
+def test_numeric_game_key_is_a_real_catalog_entry():
+    assert audit_feature_catalog([SimpleNamespace(key='2048')], '| `2048` | `/2048` |\n').ok

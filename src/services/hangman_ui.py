@@ -29,7 +29,7 @@ def hangman_keyboard(state: dict) -> InlineKeyboardMarkup:
         ])
     rows.append([
         InlineKeyboardButton("💡 İpucu", callback_data=_scoped("hangman_hint", state)),
-        InlineKeyboardButton("🛑 Oyunu bırak", callback_data=_scoped("hangman_stop", state)),
+        InlineKeyboardButton("Oyunu bitir", callback_data=_scoped("hangman_stop", state)),
     ])
     return InlineKeyboardMarkup(rows)
 
@@ -42,15 +42,16 @@ def render_hangman_text(state: dict, *, result: str | None = None) -> str:
     lives = int(state.get("lives", 0) or 0)
     max_lives = int(state.get("max_lives", lives) or lives)
     hints = int(state.get("hints_used", 0) or 0)
-    header = "🪑 <b>ADAM ASMACA</b>"
+    header = "🪑 <b>Adam Asmaca</b>"
     if result == "won":
-        header = "🥳 <b>ADAM ASMACA — KAZANDIN</b>"
+        header = "<b>Adam Asmaca · Kazandın</b>"
     elif result == "lost":
-        header = "💀 <b>ADAM ASMACA — CANLAR BİTTİ</b>"
+        header = "<b>Adam Asmaca · Canların bitti</b>"
     return (
         f"{header}\n\n"
         f"Kelime: <code>{hidden}</code>\n"
         f"Can: <b>{lives}/{max_lives}</b> · Zorluk: <b>{difficulty}</b>\n"
         f"Tahminler: <code>{guessed}</code> · İpucu: <b>{hints}</b>\n\n"
-        "Bir harfe bas; klavye kalan seçenekleri gösterir."
+        + ("Yeni oyun için /adamasmaca yaz." if result in {"won", "lost"}
+           else "Bir harf seç veya tek harfi mesaj olarak yaz.")
     )

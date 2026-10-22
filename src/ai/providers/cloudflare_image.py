@@ -163,6 +163,15 @@ class CloudflareImageProvider:
         }
         if request.negative_prompt:
             params["negative_prompt"] = request.negative_prompt[: self.max_prompt_chars]
+        model = request.model or Config.CLOUDFLARE_IMAGE_MODEL
+        multipart = model == "@cf/black-forest-labs/flux-2-klein-4b"
+        if multipart:
+            # FLUX.2 requires multipart even for text-only prompts. Klein's
+            # distilled step count is fixed, not a configurable form field.
+            params.pop("num_steps", None)
+            negative = params.pop("negative_prompt", None)
+            if negative:
+                params["prompt"] += "\nAvoid: " + negative
 
         last_error: ImageProviderError | None = None
         for _ in range(self.max_attempts):
@@ -171,13 +180,18 @@ class CloudflareImageProvider:
                 raw_key = self.key_manager.get_key(ServiceType.CLOUDFLARE)
                 account_id, api_token = self._parse_key(raw_key)
             except (NoKeysConfiguredError, ServiceCircuitOpenError):
-                raise ImageProviderError("image_provider_not_configured")
-            endpoint = f"{self.endpoint_base}/{account_id}/ai/run/{request.model or Config.CLOUDFLARE_IMAGE_MODEL}"
+                raise last_error or ImageProviderError("image_provider_not_configured")
+            endpoint = f"{self.endpoint_base}/{account_id}/ai/run/{model}"
             try:
+                payload = ({"files": {key: (None, str(value)) for key, value in params.items()}}
+                           if multipart else {"json": params})
+                headers = {"Authorization": f"Bearer {api_token}"}
+                if not multipart:
+                    headers["Content-Type"] = "application/json"
                 response = await client.post(
                     endpoint,
-                    json=params,
-                    headers={"Authorization": f"Bearer {api_token}", "Content-Type": "application/json"},
+                    **payload,
+                    headers=headers,
                     timeout=min(max(float(request.timeout_seconds), 0.5), self.timeout_seconds),
                 )
                 status = int(response.status_code)
@@ -188,6 +202,10 @@ class CloudflareImageProvider:
                     return artifact
                 if self._is_policy_rejection(response.text[:512]):
                     raise ImageProviderError("image_policy_rejected")
+                if status in {400, 404, 415, 422}:
+                    # A request/model schema error says nothing about the
+                    # shared account key's chat permissions or availability.
+                    raise ImageProviderError("image_provider_rejected")
                 if status in {401, 403, 429}:
                     last_error = ImageProviderError(
                         "image_provider_quota" if status == 429 else "image_provider_auth",

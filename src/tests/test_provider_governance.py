@@ -20,6 +20,7 @@ from src.features.provider_governance import (
 )
 from src.features.catalog import SOURCE_METADATA
 from src.features.registry import FeatureRegistry
+from scripts.architecture_check import check_license_registry
 from scripts.provider_governance import build_approval_evidence, main as governance_main
 from scripts.provider_governance import _static_registry
 
@@ -314,3 +315,33 @@ def test_review_template_cli_is_a_successful_non_approval_report(monkeypatch, ca
     assert payload["ok"] is True
     assert payload["kind"] == "provider-approval-review-template"
     assert payload["features"]
+
+
+def test_every_license_entry_declares_a_host():
+    """A license record without a host cannot govern an external source."""
+
+    root = Path(__file__).resolve().parents[2]
+    data = json.loads((root / "licenses.json").read_text(encoding="utf-8"))
+
+    missing = [source["name"] for source in data["sources"] if not source.get("host")]
+
+    assert missing == []
+
+
+def test_registry_covers_every_provider_host():
+    """Every host the provider code reaches must be recorded in licenses.json."""
+
+    root = Path(__file__).resolve().parents[2]
+
+    assert check_license_registry(root) == []
+
+
+def test_lyrics_allowlist_hosts_are_registered_one_by_one():
+    """Each lyrics site has its own terms, so each one has its own record."""
+
+    root = Path(__file__).resolve().parents[2]
+    data = json.loads((root / "licenses.json").read_text(encoding="utf-8"))
+
+    hosts = {str(source.get("host") or "") for source in data["sources"]}
+
+    assert {"musixmatch.com", "lyrics.com", "azlyrics.com", "songlyrics.com"} <= hosts

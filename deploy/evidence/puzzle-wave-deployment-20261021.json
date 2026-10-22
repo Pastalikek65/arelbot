@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "scope": "eight_distinct_persistent_puzzle_games",
+  "release": "2026.10.21-games-10",
+  "runtime_source_commit": "4a5627277b149bdf84acef49bd72657f865a7318",
+  "games": [
+    "wordle_tr",
+    "karsi_kelime",
+    "anagram",
+    "hafiza_eslestirme",
+    "mayin_tarlasi",
+    "sudoku",
+    "sayisal_tahmin",
+    "hizli_buton"
+  ],
+  "distinct_catalog_entries": 26,
+  "target_minimum_games": 40,
+  "remaining_catalog_gap": 14,
+  "human_acceptance_is_not_catalog_count": true,
+  "release_archive_sha256": "cd37e36301816ef5cf501b10ed48261691ba4b2fa6886c0bd72d87595359e986",
+  "delta_sha256": "a8922985a49cc56b21b57a9b4df640252e244e099aabed9e2056cceffa0b9d78",
+  "release_gate": {
+    "passed": 25,
+    "total": 25,
+    "host_pytest": {
+      "passed": 2580,
+      "skipped": 19
+    },
+    "local_docker_pytest": {
+      "passed": 2593,
+      "skipped": 6
+    }
+  },
+  "isolated_real_mongo": {
+    "cases": 85,
+    "due_selected": 37,
+    "safe_private_projection": true,
+    "ok": true,
+    "production_collection_used": false
+  },
+  "server_candidate": {
+    "status": "PASS",
+    "passed": 2593,
+    "skipped": 6,
+    "build_mode": "offline_overlay_on_running_games8_images",
+    "dependency_files_identical": true,
+    "network_during_tests": "none"
+  },
+  "server_activation": {
+    "ok": true,
+    "release": "2026.10.21-games-10",
+    "schema_version": 20,
+    "archive_integrity_verified": true,
+    "services_healthy": true,
+    "github_updated": false,
+    "backup_restore_tested_for_this_update": false
+  },
+  "live_telegram_ui": "NOT_RUN - explicitly deferred by operator",
+  "real_human_matches": "NOT_RUN - explicitly deferred by operator",
+  "synthetic_full_match_coverage": [
+    "five-round word games",
+    "two-player eight-pair memory game",
+    "all-safe-cell mines victory",
+    "five-round number game",
+    "five-round reflex match",
+    "Sudoku solution and reward recovery"
+  ],
+  "independent_reviews": {
+    "callback_ack": "fixed with regression",
+    "late_grid_delivery_repair": "fixed with regression",
+    "word_explicit_refresh": "fixed with regression",
+    "logic_actionable_panel_before_deadline": "fixed with regression",
+    "telegram_unicode_name_bounds": "fixed with regression",
+    "wordle_tabu_reply_routing": "fixed with regression",
+    "coarse_clock_phase_identity": "fixed with regression",
+    "terminal_timer_cleanup": "five RED then GREEN regressions; final gate rerun"
+  },
+  "build_recovery": {
+    "initial_games9_build": "Docker Hub DNS resolution failed; running games8 unaffected",
+    "successful_games9_candidate": "superseded before activation after final terminal timer review",
+    "selected_strategy": "offline source overlay on exact running games8 image IDs",
+    "dependency_equivalence_required": [
+      "Dockerfile",
+      "requirements.txt",
+      "requirements-optional.txt",
+      "constraints.txt",
+      "entrypoint.sh",
+      ".dockerignore"
+    ],
+    "network_during_candidate_tests": "none"
+  },
+  "github_updated": false,
+  "documentation_checks": {
+    "feature_catalog": "72/72 matched; features are not games",
+    "phase_audit": "no blocking phases; unrelated phase9 live evidence remains pending"
+  },
+  "final_health_snapshot": [
+    "/arelbot-prod-bot-1 running healthy",
+    "/arelbot-prod-worker-1 running healthy",
+    "/opt/arel/releases/2026.10.21-games-10"
+  ],
+  "completed_at_istanbul": "2026-10-22T00:02:43.799879+03:00"
+}

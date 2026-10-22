@@ -3,16 +3,41 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import sys
 from pathlib import Path
+from urllib.parse import urlsplit, urlunsplit
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from config import Config
 from src.database import Database
 
 
+def _smoke_uri() -> str | None:
+    """Return the ambient connection string with the disposable database.
+
+    The release gate runs this smoke against a throwaway database so the
+    migration rollback never touches a persistent volume.  The database name
+    travels in its own environment variable because the connection string
+    carries the credential and must never reach a command line.
+    """
+
+    database_name = os.getenv("MONGODB_SMOKE_DATABASE", "").strip()
+    if not database_name:
+        return None
+    base = Config.MONGODB_URI or os.getenv("MONGODB_URI", "")
+    try:
+        parsed = urlsplit(base)
+    except ValueError as exc:
+        raise SystemExit("MONGODB_SMOKE_DATABASE requires a valid MONGODB_URI") from exc
+    if parsed.scheme not in {"mongodb", "mongodb+srv"} or not parsed.netloc:
+        raise SystemExit("MONGODB_SMOKE_DATABASE requires a valid MONGODB_URI")
+    return urlunsplit((parsed.scheme, parsed.netloc, f"/{database_name}", parsed.query, ""))
+
+
 async def main() -> None:
-    database = Database()
+    database = Database(_smoke_uri())
     if not await database.ping():
         raise SystemExit("MongoDB ping failed")
     try:

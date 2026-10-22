@@ -1,0 +1,147 @@
+{
+  "ok": true,
+  "runtime_source_commit": "a6c971b078d55b8e0d120c7a726bae934b643646",
+  "release": "2026.10.22-games-23",
+  "offline_pytest": {
+    "passed": 3136,
+    "skipped": 21
+  },
+  "isolated_server_pytest": {
+    "passed": 3151,
+    "skipped": 6
+  },
+  "fresh_gate_checks_passed": 25,
+  "server": {
+    "activation": {
+      "ok": true,
+      "release": "2026.10.22-games-23",
+      "runtime_source_commit": "a6c971b078d55b8e0d120c7a726bae934b643646",
+      "schema_version": 22,
+      "core_services_healthy": true,
+      "native": {
+        "ok": true,
+        "unique_used_stickers": 219,
+        "locked_faces": 106,
+        "inline_enabled": true
+      },
+      "live_rotation_verified": true,
+      "all_three_providers_verified": true,
+      "d2api_stopped": true,
+      "cloudflare_model": "@cf/openai/gpt-oss-120b",
+      "nvidia_chat_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "protected_styles_unchanged_hash_verified": true,
+      "primary_rotation": [
+        "cloudflare",
+        "evren"
+      ],
+      "outage_fallback": [
+        "nvidia"
+      ],
+      "github_updated": false
+    },
+    "live_probe": {
+      "ok": true,
+      "routes": {
+        "chat": [
+          "cloudflare",
+          "evren",
+          "nvidia"
+        ],
+        "fast": [
+          "cloudflare",
+          "evren",
+          "nvidia"
+        ],
+        "analysis": [
+          "cloudflare",
+          "evren",
+          "nvidia"
+        ],
+        "summary": [
+          "cloudflare",
+          "evren",
+          "nvidia"
+        ],
+        "vision": [
+          "evren",
+          "nvidia"
+        ],
+        "embedding": [
+          "evren",
+          "nvidia"
+        ],
+        "transcribe": [
+          "evren",
+          "nvidia"
+        ],
+        "sticker_tagging": [
+          "evren",
+          "nvidia"
+        ]
+      },
+      "direct": [
+        {
+          "provider": "cloudflare",
+          "has_content": true,
+          "marker": true,
+          "latency_seconds": 1.345
+        },
+        {
+          "provider": "evren",
+          "has_content": true,
+          "marker": true,
+          "latency_seconds": 3.292
+        },
+        {
+          "provider": "nvidia",
+          "has_content": true,
+          "marker": true,
+          "latency_seconds": 0.662
+        }
+      ],
+      "rotation_results": [
+        "cloudflare",
+        "evren",
+        "cloudflare",
+        "evren",
+        "cloudflare",
+        "evren"
+      ],
+      "cloudflare_json": true,
+      "cloudflare_tools": true,
+      "injected_503_fallback": "evren",
+      "two_primary_failures_fallback": "nvidia",
+      "d2api_registered": false,
+      "cloudflare_model": "@cf/openai/gpt-oss-120b",
+      "nvidia_chat_model": "nvidia/nemotron-3.5-lightning-30b-a3b"
+    },
+    "services": {
+      "bot": {
+        "status": "running",
+        "health": "healthy",
+        "restarts": 0
+      },
+      "worker": {
+        "status": "running",
+        "health": "healthy",
+        "restarts": 0
+      },
+      "mongo": {
+        "status": "running",
+        "health": "healthy",
+        "restarts": 0
+      },
+      "redis": {
+        "status": "running",
+        "health": "healthy",
+        "restarts": 0
+      }
+    },
+    "mongo_backup_gzip_valid": true,
+    "redis_backup_present": true
+  },
+  "human_Telegram_UI": "NOT_RUN",
+  "quality_assessment": "Manual synthetic samples: more fluent than Qwen baseline, still imperfect casual tone and instruction following; no standardized benchmark claim.",
+  "roast_content_read": false,
+  "github_updated": false
+}

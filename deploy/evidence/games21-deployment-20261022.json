@@ -1,0 +1,31 @@
+{
+  "ok": true,
+  "release": "2026.10.22-games-21",
+  "runtime_source_commit": "446bedc2cd993e744afc1395c46043d6ee36dd6b",
+  "schema_version": 22,
+  "core_services_healthy": true,
+  "native": {
+    "ok": true,
+    "unique_used_stickers": 219,
+    "locked_faces": 106,
+    "inline_enabled": true
+  },
+  "llm_primary_completion_verified": false,
+  "llm_fallback_available": true,
+  "protected_styles_unchanged_hash_verified": true,
+  "github_updated": false,
+  "local_tests": {
+    "passed": 3108,
+    "skipped": 21
+  },
+  "isolated_server_tests": {
+    "passed": 3123,
+    "skipped": 6
+  },
+  "human_multiplayer": "NOT_RUN",
+  "roast_content_read": false,
+  "backup_integrity_verified": true,
+  "schema_changed": false,
+  "d2api_status": "AWAITING_OPERATOR_CREDENTIAL_REFRESH",
+  "review": "docs/GAMES_AUDIT_2026-10-22_WAVE21.md"
+}

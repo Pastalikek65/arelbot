@@ -12,6 +12,14 @@ python_functions = ["test_*"]
 filterwarnings = [
     "ignore::pytest.PytestUnraisableExceptionWarning",
 ]
+timeout = 300
+# Pin the coverage configuration path for every pytest run. pytest-cov otherwise
+# exports its default ".coveragerc" path to subprocesses; a subprocess that
+# starts in another working directory then finds no configuration, records
+# statement-only data and aborts the run with "Can't combine branch coverage
+# data with statement data". The option only pins the path, it does not enable
+# coverage, so a plain "pytest -q" still runs without collecting coverage.
+addopts = ["--cov-config=pyproject.toml"]
 
 [tool.black]
 line-length = 120
@@ -20,3 +28,19 @@ target-version = ['py312']
 [tool.ruff]
 line-length = 120
 target-version = "py312"
+
+[tool.coverage.run]
+branch = true
+source = ["src"]
+
+[tool.coverage.report]
+# Measured baselines are 63% statement coverage and 60% branch coverage; the
+# threshold keeps a five point regression budget below both so the gate reports
+# regressions without blocking the current state.
+fail_under = 58
+show_missing = true
+skip_covered = false
+omit = [
+    "src/tests/*",
+    "src/ai/providers/*",
+]

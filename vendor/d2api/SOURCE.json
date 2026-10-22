@@ -1,0 +1,75 @@
+{
+  "source": "operator-provided local d2api snapshot",
+  "captured_on": "2026-10-22",
+  "package_license_declaration": "MIT; no standalone LICENSE present in source",
+  "files": {
+    "server.js": {
+      "upstream_sha256": "2f002c1942976d80d39f3ebd7e0172cc710d8ff880eed5c4d42c785bccac59ad",
+      "vendored_sha256": "623416cdd3e6324f2035829ce4240ad505ea53898fa3f188a281ded53ef22c14"
+    },
+    "package.json": {
+      "upstream_sha256": "504f153b4535afd5e54cca3b692d8e7cf16678899ac9be908fe2871b98105991",
+      "vendored_sha256": "504f153b4535afd5e54cca3b692d8e7cf16678899ac9be908fe2871b98105991"
+    },
+    "README.md": {
+      "upstream_sha256": "85bd08a48b990804bf20f8d78331e854b577893a599e24d73d2936ba01235e23",
+      "vendored_sha256": "85bd08a48b990804bf20f8d78331e854b577893a599e24d73d2936ba01235e23"
+    },
+    "lib/deepseek.js": {
+      "upstream_sha256": "ba2655c47cdacc8ca763ca438172600f1e4b9cc2613d80d2e1cbf264eb1a0b00",
+      "vendored_sha256": "ba2655c47cdacc8ca763ca438172600f1e4b9cc2613d80d2e1cbf264eb1a0b00"
+    },
+    "lib/env.js": {
+      "upstream_sha256": "fc296ef62fd788e27bf021cd05e45e4d61a7d8eb7a8cc17f4c3e459c042dc91e",
+      "vendored_sha256": "fc296ef62fd788e27bf021cd05e45e4d61a7d8eb7a8cc17f4c3e459c042dc91e"
+    },
+    "lib/models.js": {
+      "upstream_sha256": "71fe95b086a9c7d2874fd2c7bbcee29795eef71ef17dcf8feeeb5f4f8260313b",
+      "vendored_sha256": "71fe95b086a9c7d2874fd2c7bbcee29795eef71ef17dcf8feeeb5f4f8260313b"
+    },
+    "lib/pow.js": {
+      "upstream_sha256": "dd51e9ac31744434724e7c936507233553bebaa97d4460c5357cdb64dddad14b",
+      "vendored_sha256": "dd51e9ac31744434724e7c936507233553bebaa97d4460c5357cdb64dddad14b"
+    },
+    "lib/sse.js": {
+      "upstream_sha256": "b6dfa2ec24e1176cbdd90f3c6a52182cc6f68c15caa0f5a7de246eb8eeeea439",
+      "vendored_sha256": "4615528d49e77f96b3b930dfaefbf40a769d0b6e70c8c935b0f2295edb8e6fe6"
+    },
+    "lib/store.js": {
+      "upstream_sha256": "dbf3391a134eeb7cc0afcd11ebf50420dc740ee791b14f5393a48426c805e191",
+      "vendored_sha256": "dbf3391a134eeb7cc0afcd11ebf50420dc740ee791b14f5393a48426c805e191"
+    },
+    "lib/tools.js": {
+      "upstream_sha256": "e8af5b210288532fef3cd656697af980d18bdbfcea450087eb2ca9965028d8ec",
+      "vendored_sha256": "e8af5b210288532fef3cd656697af980d18bdbfcea450087eb2ca9965028d8ec"
+    },
+    "test/run.js": {
+      "upstream_sha256": "be7aa69d5f078358a0b869bdaec0189deef337d5f92d20fe9bab0e8c09858e84",
+      "vendored_sha256": "714858974a12ea28c4cf7b4bceea5faec543d160660b7fa4fb61100ca7eecaa6"
+    },
+    "test/mock-upstream.js": {
+      "upstream_sha256": "611a35692900da92bd09b9a7b2543ef22ed42cfa40404e7bd57e20f55628ce72",
+      "vendored_sha256": "2dababa87bab0ef80d9f9fddf6d6f265a4f6dd1eeeb967e36d11f9ccbf94915a"
+    }
+  },
+  "excluded": [
+    "data/",
+    ".env",
+    "telegram-bot.js",
+    "login.js",
+    "assets/deepseek_hash.wasm"
+  ],
+  "private_runtime_asset": {
+    "name": "deepseek_hash.wasm",
+    "sha256": "b3fca8cc072c1defbd60c02266a8e48bd307a1804aaff4314900aea720e72f7d",
+    "license": "UNKNOWN; not redistributed in repository",
+    "origin": "https://fe-static.deepseek.com/chat/static/sha3_wasm_bg.7b9ca65ddd.wasm"
+  },
+  "arel_changes": [
+    "LF normalization",
+    "auth before status page",
+    "abort-aware semaphore and bounded session cleanup",
+    "finite request body timeout and bounded SSE/output",
+    "private-key-required startup with umask0077"
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "route": [
+    "openai",
+    "hrmn",
+    "cloudflare",
+    "evren",
+    "nvidia"
+  ],
+  "hrmn_model": "deepseek-v4.1-flash-1017",
+  "image_models": [
+    "gpt-image-2.5-prism",
+    "gpt-image-2.5-flare"
+  ],
+  "source_offer_parts": 3,
+  "openai_mode": "cli",
+  "release": "2026.10.22-hrmn-3",
+  "server_chat_probe": {
+    "nonempty": true,
+    "seconds": 2.28
+  },
+  "running_code_matches_candidate": true,
+  "other_provider_env": "unchanged",
+  "codex_cli": "codex-cli 0.147.0",
+  "service_health": "/arelbot-prod-bot-1 health=healthy restarts=0\n/arelbot-prod-worker-1 health=healthy restarts=0",
+  "codex_mount_configuration": "preserved: compose and preexisting environment match base",
+  "github": "untouched",
+  "telegram_human_ui": "NOT_RUN"
+}

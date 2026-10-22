@@ -1,3 +1,4 @@
+from copy import deepcopy
 from types import SimpleNamespace
 
 import pytest
@@ -15,13 +16,31 @@ class DataPort:
     reachable = True
 
     def __init__(self, state):
-        self.state = state
+        self.state = deepcopy(state)
 
     async def get_game_state(self, chat_id, game_type):
-        return self.state if game_type == "tictactoe" else None
+        return deepcopy(self.state) if game_type == "tictactoe" else None
 
     async def save_game_state(self, chat_id, game_type, state):
-        self.state = state
+        self.state = deepcopy(state)
+
+    async def initialize_game_state_version_if_missing(self, chat_id, game_type):
+        if self.state is not None and "version" not in self.state:
+            self.state["version"] = 0
+            return True
+        return False
+
+    async def create_game_state_if_absent(self, chat_id, game_type, state):
+        if self.state is not None:
+            return False
+        self.state = deepcopy(state)
+        return True
+
+    async def compare_and_save_game_state(self, chat_id, game_type, state, *, expected_version):
+        if self.state is None or self.state.get("version") != expected_version:
+            return False
+        self.state = deepcopy(state)
+        return True
 
     async def delete_game_state(self, chat_id, game_type):
         self.state = None
@@ -57,7 +76,7 @@ async def test_tictactoe_callback_scopes_round_and_persists_moves():
     await handler._handle_tictactoe_callback(update(2), query, context, f"tictactoe:{state['round_id']}:join")
     await handler._handle_tictactoe_callback(update(1), query, context, f"tictactoe:{state['round_id']}:start")
     await handler._handle_tictactoe_callback(update(1), query, context, f"tictactoe:{state['round_id']}:cell:0")
-    assert state["board"][0] == 1
+    assert data_port.state["board"][0] == 1
     assert query.edits
 
 
@@ -69,6 +88,6 @@ async def test_tictactoe_callback_rejects_old_prompt_without_mutating():
     context = SimpleNamespace(chat_data={"tictactoe": state})
     query = Query(message_id=100)
     await handler._handle_tictactoe_callback(update(2), query, context, f"tictactoe:{state['round_id']}:join")
-    assert len(state["players"]) == 1
+    assert len(data_port.state["players"]) == 1
     assert query.answers
 

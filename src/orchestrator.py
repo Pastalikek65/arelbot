@@ -22,8 +22,13 @@ from src.image_router import ImageRouter
 from src.chat_engine import ChatEngine
 from src.sudo_manager import SudoManager
 from src.mcp_manager import McpManager
-from src.utils import cleanup_old_files
-from src.media import MediaDownloadService
+from src.utils import (
+    CLEANUP_INTERVAL_SECONDS,
+    CLEANUP_MAX_AGE_SECONDS,
+    cleanup_directories,
+    cleanup_old_files,
+)
+from src.media import SHUTDOWN_CLEANUP_TIMEOUT_SECONDS, MediaDownloadService
 from src.documents import DocumentIngestionService
 from src.attachments import AttachmentProcessingService
 from src.media.cookie_vault import CookieVaultError
@@ -72,6 +77,8 @@ from src.observability import MetricsRegistry
 from src.services.akinator_service import AkinatorService
 from src.services.guess_age_service import GuessAgeService
 from src.services.uno_service import UnoService
+from src.services.uno_inline_service import UnoInlineService
+from src.services.uno_media_registry import load_sticker_ids
 
 logger = logging.getLogger(__name__)
 
@@ -155,11 +162,19 @@ class Orchestrator:
             self.data_port,
             asset_dir="assets/guess_age",
             rounds=getattr(Config, "GUESS_AGE_ROUNDS", 5),
-            round_seconds=getattr(Config, "GUESS_AGE_ROUND_SECONDS", 60),
+            round_seconds=getattr(Config, "GUESS_AGE_ROUND_SECONDS", 30),
         )
+        from src.services.inline_signing import signing_key
+        inline_secret = signing_key(Config.TELEGRAM_TOKEN)
+        self._card_inline_secret = inline_secret
         self.uno_service = UnoService(
             self.data_port,
             turn_seconds=getattr(Config, "UNO_TURN_SECONDS", 60),
+            inline_secret=inline_secret,
+        )
+        self.uno_inline_service = UnoInlineService(
+            self.uno_service, secret=inline_secret,
+            file_ids=load_sticker_ids(),
         )
         self.inline_query_service = InlineQueryService(
             self.chat_engine.city_directory,
@@ -212,7 +227,7 @@ class Orchestrator:
         self.leaderboard_service = LeaderboardService(self.chat_engine.db, card_renderer=self.card_renderer)
         self.guess_age_service.leaderboard_service = self.leaderboard_service
         self.uno_service.leaderboard = self.leaderboard_service
-        self.economy_service = EconomyService(self.chat_engine.db)
+        self.economy_service = EconomyService(self.chat_engine.db, intent_signing_key=Config.TELEGRAM_TOKEN)
         self.reminder_service = ReminderService()
         self.productivity_service = ProductivityService(self.chat_engine.db)
         self.subscription_service = SubscriptionService(SubscriptionStore(self.chat_engine.db))
@@ -357,6 +372,7 @@ class Orchestrator:
             authorization=getattr(self, "telegram_authorization", None),
             guess_age_service=self.guess_age_service,
         )
+        self.message_handler.word_chain_service = self.command_handler.word_chain_service
         self.media_handler = MediaHandler(
             chat_engine=self.chat_engine,
             sudo_manager=self.sudo_manager,
@@ -373,6 +389,102 @@ class Orchestrator:
         self.command_handler.media_handler = self.media_handler
         self.callback_handler.message_handler = self.message_handler
         self.callback_handler.media_handler = self.media_handler
+        from src.services.tabu_service import TabuService
+        from src.handlers.tabu_handler import TabuHandler
+        self.tabu_handler = TabuHandler(
+            TabuService(self.data_port, leaderboard=self.leaderboard_service, economy=self.economy_service),
+            sudo_manager=self.sudo_manager, authorization=getattr(self, "telegram_authorization", None),
+        )
+        self.command_handler.tabu_handler = self.tabu_handler
+        self.callback_handler.tabu_handler = self.tabu_handler
+        self.message_handler.tabu_handler = self.tabu_handler
+        self.command_handler.game_runtime.tabu_handler = self.tabu_handler
+        from src.services.spy_service import SpyService
+        from src.handlers.spy_handler import SpyHandler
+        from src.services.vampire_service import VampireService
+        from src.handlers.vampire_handler import VampireHandler
+        for name, service_class, handler_class in (("spy_handler", SpyService, SpyHandler),
+                                                    ("vampire_handler", VampireService, VampireHandler)):
+            adapter = handler_class(
+                service_class(self.data_port, leaderboard=self.leaderboard_service, economy=self.economy_service),
+                sudo_manager=self.sudo_manager, authorization=getattr(self, "telegram_authorization", None),
+            )
+            setattr(self, name, adapter)
+            for surface in (self.command_handler, self.callback_handler, self.message_handler, self.command_handler.game_runtime):
+                setattr(surface, name, adapter)
+        from src.games.puzzle_catalog import PUZZLES
+        from src.handlers.puzzle_suite import PuzzleSuite
+        from src.handlers.economy_handler import EconomyHandler
+        self.economy_handler = EconomyHandler(self.economy_service)
+        self.command_handler.economy_handler = self.economy_handler
+        self.callback_handler.economy_handler = self.economy_handler
+        from src.handlers.word_puzzles_handler import WordPuzzlesHandler
+        from src.handlers.grid_puzzles_handler import GridPuzzlesHandler
+        from src.handlers.logic_puzzles_handler import LogicPuzzlesHandler
+        from src.services.word_puzzles_service import WordPuzzlesService
+        from src.services.grid_puzzles_service import GridPuzzlesService
+        from src.services.logic_puzzles_service import LogicPuzzlesService
+        from src.handlers.word_arcade_handler import WordArcadeHandler
+        from src.services.word_arcade_service import WordArcadeService
+        from src.handlers.reasoning_arcade_handler import ReasoningArcadeHandler
+        from src.services.reasoning_arcade_service import ReasoningArcadeService
+        from src.handlers.social_arcade_handler import SocialArcadeHandler
+        from src.services.social_arcade_service import SocialArcadeService
+        from src.handlers.card_table import CardTableHandler
+        from src.services.card_table_service import CardTableService
+        from src.handlers.tile2048 import Tile2048Handler
+        from src.services.tile2048_service import Tile2048Service
+        from src.handlers.clue_arcade import ClueArcadeHandler
+        from src.services.clue_arcade_service import ClueArcadeService
+        puzzle_adapters = {
+            "word": WordPuzzlesHandler(WordPuzzlesService(self.data_port, leaderboard=self.leaderboard_service, economy=self.economy_service), sudo_manager=self.sudo_manager, authorization=getattr(self, "telegram_authorization", None)),
+            "grid": GridPuzzlesHandler(GridPuzzlesService(self.data_port, leaderboard=self.leaderboard_service, economy=self.economy_service), sudo_manager=self.sudo_manager, authorization=getattr(self, "telegram_authorization", None)),
+            "logic": LogicPuzzlesHandler(LogicPuzzlesService(self.data_port, leaderboard=self.leaderboard_service, economy=self.economy_service), sudo_manager=self.sudo_manager, authorization=getattr(self, "telegram_authorization", None)),
+        }
+        for family, adapter_class, service_class in (
+            ("word_arcade", WordArcadeHandler, WordArcadeService),
+            ("reasoning_arcade", ReasoningArcadeHandler, ReasoningArcadeService),
+            ("social_arcade", SocialArcadeHandler, SocialArcadeService),
+            ("card_table", CardTableHandler, CardTableService),
+            ("tile2048", Tile2048Handler, Tile2048Service),
+            ("clue_arcade", ClueArcadeHandler, ClueArcadeService),
+        ):
+            adapter = adapter_class(service_class(self.data_port, leaderboard=self.leaderboard_service, economy=self.economy_service),
+                                    sudo_manager=self.sudo_manager, authorization=getattr(self, "telegram_authorization", None))
+            puzzle_adapters[family] = adapter
+            setattr(self, family + "_handler", adapter)
+            setattr(self.message_handler, family + "_handler", adapter)
+        from src.services.playing_card_ui import load_sticker_ids as load_playing_card_ids
+        from src.services.card_table_inline_service import CardTableInlineService
+        from src.services.batak_inline_service import BatakInlineService
+        card_ids = load_playing_card_ids()
+
+        async def card_table_applied(context, state):
+            await self.card_table_handler.process(context.bot, {"state": state})
+
+        async def batak_delivery_failed(chat_id, state):
+            await self.batak_service.defer_panel(
+                chat_id=chat_id, expected_game_id=state["game_id"])
+
+        self.card_table_inline_service = CardTableInlineService(
+            self.card_table_handler.service, self._card_inline_secret, card_ids,
+            on_applied=card_table_applied)
+        self.card_table_handler.inline_service = self.card_table_inline_service
+        self.batak_inline_service = BatakInlineService(
+            self.batak_service, secret=self._card_inline_secret, file_ids=card_ids,
+            render_public=self.callback_handler._batak_public_text,
+            keyboard=self.callback_handler._batak_keyboard,
+            defer_delivery=batak_delivery_failed)
+        self.command_handler.batak_inline_service = self.batak_inline_service
+        self.callback_handler.batak_inline_service = self.batak_inline_service
+        self.puzzle_suite = PuzzleSuite({p.key: puzzle_adapters[p.family] for p in PUZZLES}, repository=self.data_port)
+        for surface in (self.command_handler, self.callback_handler, self.message_handler, self.command_handler.game_runtime):
+            surface.puzzle_suite = self.puzzle_suite
+        from src.services.board_panel_service import BoardPanelService
+        self.board_panel_service = BoardPanelService(self.data_port,
+            leaderboard=self.leaderboard_service, economy=self.economy_service)
+        for surface in (self.command_handler, self.callback_handler, self.command_handler.game_runtime):
+            surface.board_panels = self.board_panel_service
         self.quote_handler = QuoteHandler(
             chat_engine=self.chat_engine,
             sudo_manager=self.sudo_manager,
@@ -403,13 +515,20 @@ class Orchestrator:
 
     async def _background_cleanup_task(self):
         while True:
-            try:
-                cleanup_old_files("downloads", max_age_seconds=3600)
-                cleanup_old_files("temp", max_age_seconds=3600)
-                cleanup_old_files("temp/stickers", max_age_seconds=3600)
-            except Exception as e:
-                logger.error("Background cleanup error: %s", summarize_exception(e, label="background_cleanup"))
-            await asyncio.sleep(3600)
+            for target in cleanup_directories():
+                try:
+                    # The sweep removes whole job directories, so it runs
+                    # outside the event loop instead of blocking the bot.
+                    removed = await asyncio.to_thread(
+                        cleanup_old_files, target, max_age_seconds=CLEANUP_MAX_AGE_SECONDS
+                    )
+                    if removed:
+                        self.media_service.metrics_registry.inc(
+                            "media_cleanup_entries_removed", removed
+                        )
+                except Exception as e:
+                    logger.error("Background cleanup error: %s", summarize_exception(e, label="background_cleanup"))
+            await asyncio.sleep(CLEANUP_INTERVAL_SECONDS)
 
     async def start_background_tasks(self, bot=None, job_queue=None):
         logger.info("🧹 Starting background cleanup task...")
@@ -844,6 +963,9 @@ class Orchestrator:
         if self._background_tasks:
             await asyncio.gather(*self._background_tasks, return_exceptions=True)
         self._background_tasks.clear()
+        # Drain the media reapers before the service stops: a timed-out
+        # download must not leave its job directory behind.
+        await self.media_service.wait_for_background_cleanup(timeout=SHUTDOWN_CLEANUP_TIMEOUT_SECONDS)
         await self.media_service.close()
         await self.document_service.close()
         await self.attachment_service.close()
@@ -985,6 +1107,8 @@ class Orchestrator:
         moderate = getattr(self.media_handler, "moderate_update", None)
         if callable(moderate) and await moderate(update, context):
             return
+        if await self._route_social_caption(update, context):
+            return
         url = extract_media_url(message.caption or "")
         if url:
             await self._queue_media_download(update, url)
@@ -1003,6 +1127,8 @@ class Orchestrator:
         moderate = getattr(self.media_handler, "moderate_update", None)
         if callable(moderate) and await moderate(update, context):
             return
+        if await self._route_social_caption(update, context):
+            return
         from src.media.url_normalizer import extract_media_url
 
         url = extract_media_url(getattr(message, "caption", None) or "")
@@ -1010,6 +1136,19 @@ class Orchestrator:
             await self._queue_media_download(update, url)
         # A GIF never starts vision/sticker work implicitly. A /sticker
         # command replying to this message remains an explicit command path.
+
+    async def _route_social_caption(self, update, context):
+        text = str(getattr(update.effective_message, "caption", None) or "").strip()
+        if not text:
+            return False
+        word_arcade = getattr(self, "word_arcade_handler", None)
+        if word_arcade and await word_arcade.on_clue_text(update, context, text):
+            return True
+        for name in ("tabu_handler", "spy_handler"):
+            adapter = getattr(self, name, None)
+            if adapter and await adapter.on_text(update, context, text):
+                return True
+        return False
 
     async def handle_photo(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         await self.media_handler.handle_photo(update, context)
@@ -1461,6 +1600,18 @@ class Orchestrator:
         return await self._handle_deep_link(update, context, payload)
 
     async def _handle_deep_link(self, update: Update, context: ContextTypes.DEFAULT_TYPE, payload: str) -> bool:
+        if payload == "uno_source":
+            from src.handlers.uno_source import deliver_source
+            await deliver_source(update, context)
+            return True
+        for prefix, name in (("sp_", "spy_handler"), ("vp_", "vampire_handler"),
+                             ("wa_", "word_arcade_handler"), ("sa_", "social_arcade_handler"),
+                             ("ct_", "card_table_handler")):
+            adapter = getattr(self, name, None)
+            if payload.startswith(prefix) and adapter:
+                return await adapter.deep_link(update, context, payload)
+        if payload.startswith("tb_") and getattr(self, "tabu_handler", None):
+            return await self.tabu_handler.deep_link(update, context, payload)
         import json
         import uuid
         logger.info("Processing deep link payload: %s", summarize_private_text(payload, label="deep_link"))
@@ -1593,7 +1744,17 @@ class Orchestrator:
         await self.command_handler.handle_stpack_command(update, context)
 
     async def handle_inline_query(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        for controller in (self.uno_inline_service, self.card_table_inline_service,
+                           self.batak_inline_service):
+            if await controller.answer_query(update, context):
+                return
         await self._handle_inline_query(update, context)
+
+    async def handle_chosen_inline_result(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        for controller in (self.uno_inline_service, self.card_table_inline_service,
+                           self.batak_inline_service):
+            if await controller.chosen_result(update, context):
+                return
 
     async def _handle_inline_query(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         await self._handle_inline_query_typed(update, context)
@@ -1821,6 +1982,21 @@ class Orchestrator:
     async def handle_uno_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         await self.command_handler.handle_uno_command(update, context)
 
+    async def handle_word_chain_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        await self.command_handler.handle_word_chain_command(update, context)
+
+    async def handle_tabu_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        await self.command_handler.handle_tabu_command(update, context)
+
+    async def handle_puzzle_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        await self.puzzle_suite.command(update, context)
+
+    async def handle_spy_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        await self.spy_handler.command(update, context)
+
+    async def handle_vampire_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        await self.vampire_handler.command(update, context)
+
     async def handle_batak_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         await self.command_handler.handle_batak_command(update, context)
 
@@ -1936,23 +2112,25 @@ class Orchestrator:
     async def handle_help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Open the categorized help menu; detailed pages stay in callbacks."""
         help_text = (
-            "🌟 <b>AREL ASİSTAN — KOMUT REHBERİ</b> 🌟\n\n"
-            "Bir kategori seçin; komutları kullanım örnekleri ve izin kapsamlarıyla açalım. 👇"
+            "<b>Arel yardım</b>\n\n"
+            "Bir konu seç. İlgili komutları ve kısa kullanım örneklerini görebilirsin."
         )
         keyboard = [
             [
-                InlineKeyboardButton("🤖 Yapay Zeka", callback_data="help_cat_ai"),
+                InlineKeyboardButton("🤖 Yapay zekâ", callback_data="help_cat_ai"),
                 InlineKeyboardButton("🎮 Oyunlar", callback_data="help_cat_games"),
             ],
             [
-                InlineKeyboardButton("🎨 Sticker Sistemi", callback_data="help_cat_sticker"),
-                InlineKeyboardButton("📊 Finans & Kültür", callback_data="help_cat_finance"),
+                InlineKeyboardButton("🎨 Sticker", callback_data="help_cat_sticker"),
+                InlineKeyboardButton("📊 Finans ve öneriler", callback_data="help_cat_finance"),
             ],
             [
-                InlineKeyboardButton("⚙️ Araçlar & Diğer", callback_data="help_cat_tools"),
-                InlineKeyboardButton("🚀 Geliştirme Fikirleri", callback_data="help_cat_suggestions"),
+                InlineKeyboardButton("⚙️ Diğer araçlar", callback_data="help_cat_tools"),
+                InlineKeyboardButton("📹 Medya indirme", callback_data="help_cat_download"),
             ],
-            [InlineKeyboardButton("🛡️ Guardian Moderasyon", callback_data="help_cat_guardian")],
+            [InlineKeyboardButton("🪙 Ekonomi ve mağaza", callback_data="help_feat_economy"),
+             InlineKeyboardButton("🎮 Tüm oyun rehberi", callback_data="help_feat_catalog_0")],
+            [InlineKeyboardButton("🛡️ Grup yönetimi", callback_data="help_cat_guardian")],
         ]
         await update.effective_message.reply_text(
             help_text,

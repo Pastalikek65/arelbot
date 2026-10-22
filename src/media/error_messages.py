@@ -6,26 +6,26 @@ from src.security.error_codes import normalize_error_code, public_error_message,
 
 
 _MEDIA_URL_MESSAGES = {
-    "UNSUPPORTED_SCHEME": "Bu ba\u011flant\u0131 t\u00fcr\u00fc desteklenmiyor.",
-    "INVALID_URL": "Ba\u011flant\u0131 ge\u00e7ersiz.",
-    "UNSUPPORTED_PORT": "Bu ba\u011flant\u0131 noktas\u0131 desteklenmiyor.",
-    "UNSUPPORTED_PLATFORM": "Bu platform \u015fu anda desteklenmiyor.",
-    "HOST_UNAVAILABLE": "Ba\u011flant\u0131 kayna\u011f\u0131na ula\u015f\u0131lamad\u0131.",
-    "NON_PUBLIC_HOST": "Bu ba\u011flant\u0131 g\u00fcvenli bir d\u0131\u015f kayna\u011fa y\u00f6nlenmiyor.",
+    "UNSUPPORTED_SCHEME": "Bu bağlantı türü desteklenmiyor. Bir HTTPS bağlantısı gönder.",
+    "INVALID_URL": "Bağlantı okunamadı. Tam adresi yeniden gönder.",
+    "UNSUPPORTED_PORT": "Bu bağlantı adresi kabul edilmiyor. Platformun paylaşım bağlantısını gönder.",
+    "UNSUPPORTED_PLATFORM": "Bu platform desteklenmiyor. Desteklenen bir platformun bağlantısını gönder.",
+    "HOST_UNAVAILABLE": "Bağlantının kaynağına ulaşılamadı. Adresi kontrol edip sonra tekrar dene.",
+    "NON_PUBLIC_HOST": "Bu bağlantı güvenli bir dış kaynağa yönlenmiyor. Herkese açık bir platform bağlantısı gönder.",
 }
 
 _MEDIA_JOB_MESSAGES = {
-    "FILE_TOO_LARGE": "Medya dosyas\u0131 Telegram g\u00f6nderim s\u0131n\u0131r\u0131n\u0131 a\u015f\u0131yor.",
-    "DURATION_LIMIT": "Video izin verilen s\u00fcre s\u0131n\u0131r\u0131n\u0131 a\u015f\u0131yor.",
-    "TIMEOUT": "Kaynak zaman\u0131nda yan\u0131t vermedi. Daha sonra yeniden deneyebilirsin.",
-    "NON_PUBLIC_HOST": "Bu ba\u011flant\u0131 g\u00fcvenli bir d\u0131\u015f kayna\u011fa y\u00f6nlenmiyor.",
-    "UNSUPPORTED_PLATFORM": "Bu platform \u015fu anda desteklenmiyor.",
-    "FFMPEG_UNAVAILABLE": "Bu video bi\u00e7imini Telegram i\u00e7in d\u00f6n\u00fc\u015ft\u00fcrmek \u00fczere FFmpeg gerekli.",
-    "ARTIFACT_MISSING": "Medya dosyas\u0131 haz\u0131rlanamad\u0131.",
-    "SOURCE_ACCESS_RESTRICTED": "Kaynak herkese a\u00e7\u0131k eri\u015fime izin vermiyor.",
-    "SOURCE_RATE_LIMITED": "Kaynak ge\u00e7ici olarak \u00e7ok fazla istek ald\u0131; biraz sonra yeniden dene.",
-    "PROBE_FAILED": "Kayna\u011f\u0131n medya bilgileri al\u0131namad\u0131.",
-    "DOWNLOAD_FAILED": "Bu ba\u011flant\u0131 \u015fu anda indirilemedi.",
+    "FILE_TOO_LARGE": "Dosya Telegram'ın gönderim sınırını aşıyor. Daha küçük bir dosya dene.",
+    "DURATION_LIMIT": "Video süre sınırını aşıyor. Daha kısa bir video dene.",
+    "TIMEOUT": "Kaynak zamanında yanıt vermedi. Biraz sonra tekrar dene.",
+    "NON_PUBLIC_HOST": "Bu bağlantı güvenli bir dış kaynağa yönlenmiyor. Herkese açık bir platform bağlantısı gönder.",
+    "UNSUPPORTED_PLATFORM": "Bu platform desteklenmiyor. Desteklenen bir platformun bağlantısını gönder.",
+    "FFMPEG_UNAVAILABLE": "Video dönüştürme şu anda kullanılamıyor. Daha sonra tekrar dene.",
+    "ARTIFACT_MISSING": "Medya hazırlanamadı. Biraz sonra tekrar dene.",
+    "SOURCE_ACCESS_RESTRICTED": "Kaynak herkese açık erişime izin vermiyor. Herkese açık başka bir bağlantı gönder.",
+    "SOURCE_RATE_LIMITED": "Kaynak şu anda çok fazla istek alıyor. Biraz sonra tekrar dene.",
+    "PROBE_FAILED": "Kaynağın medya bilgileri okunamadı. Farklı bir bağlantı deneyebilirsin.",
+    "DOWNLOAD_FAILED": "Medya indirilemedi. Bağlantıyı kontrol edip sonra tekrar dene.",
 }
 
 
@@ -33,16 +33,16 @@ def media_url_error_message(error: BaseException | object) -> str:
     """Map URL validation codes without echoing arbitrary exception text."""
 
     code = normalize_error_code(str(error), "INVALID_URL")
-    return _MEDIA_URL_MESSAGES.get(code, "Bu ba\u011flant\u0131 desteklenmiyor veya g\u00fcvenli de\u011fil.")
+    return _MEDIA_URL_MESSAGES.get(code, "Bu bağlantı desteklenmiyor veya güvenli değil. Başka bir bağlantı gönder.")
 
 
 def cookie_error_message(error: BaseException | object) -> str:
     """Preserve only short parser-owned cookie validation text."""
 
-    return public_validation_message(error, "Cookie i\u015flemi ge\u00e7ersiz.")
+    return public_validation_message(error, "Oturum bilgisi kabul edilmedi. Biçimini kontrol edip tekrar dene.")
 
 
 def media_delivery_error_message(error: BaseException | object) -> str:
     """Map media/transcode codes to bounded Telegram-safe messages."""
 
-    return public_error_message(error, "Medya i\u015flemi tamamlanamad\u0131.", messages=_MEDIA_JOB_MESSAGES)
+    return public_error_message(error, "Medya hazırlanamadı. Biraz sonra tekrar dene.", messages=_MEDIA_JOB_MESSAGES)

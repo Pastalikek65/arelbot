@@ -2,6 +2,20 @@
   "schema_version": 1,
   "project": "arelbot",
   "purpose": "Machine-readable phase contract for release and coding agents.",
+  "game_platform_40": {
+    "status": "deployed_automated_verified_human_ui_deferred",
+    "target_games": 40,
+    "current_step": "forty_distinct_mechanics_deployed",
+    "current_step_live_accepted": false,
+    "deployment": "2026.10.22-games-13 healthy; schema20; source4b9c421; game mechanics unchanged",
+    "github_publication": "waiting_for_explicit_user_request",
+    "plan": "docs/GAME_PLATFORM_ROADMAP_2026-10-21.md",
+    "execution_record": "docs/GAME_EXECUTION_2026-10-21.md",
+    "current_step_acceptance_scope": "40 registered mechanics; 14 new games full synthetic matches and independent review; gate25/25; server2726/6 skipped; isolated Mongo246/115due; human Telegram UI explicitly deferred",
+    "current_step_evidence": "deploy/evidence/games40-deployment-20261022.json",
+    "current_step_automated_accepted": true,
+    "catalog_registered_games": 40
+  },
   "evidence_contracts": [
     {
       "file": "vds-readiness.json",
@@ -57,50 +71,88 @@
     {
       "id": "0",
       "name": "stabilization",
-      "required_checks": ["architecture", "pytest", "compose_profiles", "docker_pytest", "docker_health"]
+      "required_checks": [
+        "architecture",
+        "pytest",
+        "compose_profiles",
+        "docker_pytest",
+        "docker_health"
+      ]
     },
     {
       "id": "1",
       "name": "typed_media_and_providers",
-      "required_checks": ["provider_matrix", "provider_load", "media_replay_matrix", "media_delivery_replay"]
+      "required_checks": [
+        "provider_matrix",
+        "provider_load",
+        "media_replay_matrix",
+        "media_delivery_replay"
+      ]
     },
     {
       "id": "2",
       "name": "durable_state_and_persistence",
-      "required_checks": ["mongo_migration_smoke", "mongo_ledger_smoke"],
-      "required_evidence": ["persistence-staging.json"]
+      "required_checks": [
+        "mongo_migration_smoke",
+        "mongo_ledger_smoke"
+      ],
+      "required_evidence": [
+        "persistence-staging.json"
+      ]
     },
     {
       "id": "3",
       "name": "quote_and_sticker_platform",
-      "required_checks": ["mongo_sticker_operation_smoke", "pytest"]
+      "required_checks": [
+        "mongo_sticker_operation_smoke",
+        "pytest"
+      ]
     },
     {
       "id": "4",
       "name": "ai_and_rag",
-      "required_checks": ["pytest", "docker_pytest"]
+      "required_checks": [
+        "pytest",
+        "docker_pytest"
+      ]
     },
     {
       "id": "5",
       "name": "groups_and_automation",
-      "required_checks": ["pytest", "docker_pytest"]
+      "required_checks": [
+        "pytest",
+        "docker_pytest"
+      ]
     },
     {
       "id": "6",
       "name": "games_and_economy",
       "progress_artifact": "docs/GAMES_PRODUCT_STATUS.json",
-      "required_checks": ["pytest", "mongo_ledger_smoke"]
+      "required_checks": [
+        "pytest",
+        "mongo_ledger_smoke"
+      ]
     },
     {
       "id": "7",
       "name": "observability_and_operations",
-      "required_checks": ["monitoring_config", "monitoring_alert_replay", "monitoring_alert_delivery_replay", "evidence_audit"]
+      "required_checks": [
+        "monitoring_config",
+        "monitoring_alert_replay",
+        "monitoring_alert_delivery_replay",
+        "evidence_audit"
+      ]
     },
     {
       "id": "8",
       "name": "telegram_surfaces",
-      "required_checks": ["architecture", "pytest"],
-      "required_live_files": ["telegram-staging.json"]
+      "required_checks": [
+        "architecture",
+        "pytest"
+      ],
+      "required_live_files": [
+        "telegram-staging.json"
+      ]
     },
     {
       "id": "9",
@@ -115,5 +167,207 @@
         "evren-staging.json"
       ]
     }
-  ]
+  ],
+  "telegram_button_theme": {
+    "status": "deployed_automated_verified_visual_ui_deferred",
+    "release": "2026.10.22-games-13",
+    "runtime_source_commit": "4b9c421be230c09b977039ad6363b8dd0608fb12",
+    "verified_animated_custom_emojis": 38,
+    "game_icons": 40,
+    "automated_accepted": true,
+    "visual_live_accepted": false,
+    "live_ui": "NOT_RUN - operator deferred",
+    "evidence": "deploy/evidence/telegram-buttons-deployment-20261022.json",
+    "github_updated": false
+  },
+  "games45_wave": {
+    "status": "deployed_automated_verified_human_ui_deferred",
+    "catalog_games": 45,
+    "automated_accepted": true,
+    "human_live_accepted": false,
+    "live_ui": "NOT_RUN - operator deferred",
+    "review": "docs/GAMES45_PRODUCT_REVIEW_2026-10-22.md",
+    "github_updated": false,
+    "release": "2026.10.22-games-14",
+    "runtime_source_commit": "545fd0a370c2255c4bb18003623a1f6fcb4ca5fd",
+    "evidence": "deploy/evidence/games45-deployment-20261022.json"
+  },
+  "board_recovery_wave17": {
+    "status": "deployed_automated_verified_human_ui_deferred",
+    "games": [
+      "chess",
+      "tictactoe",
+      "gomoku",
+      "connect4"
+    ],
+    "schema_version": 22,
+    "human_live_accepted": false,
+    "live_ui": "NOT_RUN - operator deferred",
+    "load_scope": "real isolated Mongo with synthetic Telegram; 100 tables, 1000 legal transitions",
+    "review": "deploy/evidence/games17-review-20261022.json",
+    "github_updated": false,
+    "automated_accepted": true,
+    "release": "2026.10.22-games-17",
+    "runtime_source_commit": "139ad0344ceb2aa03368851c48a9a5e52b1a1a3b",
+    "evidence": "deploy/evidence/games17-deployment-20261022.json"
+  },
+  "chess_board_wave18": {
+    "status": "deployed_automated_verified_client_visual_deferred",
+    "release": "2026.10.22-games-18",
+    "runtime_source_commit": "13947c0f0ebe8c0843d9c00dfadbeefff33470d2",
+    "accepted_implementation_commit": "76439c120ad8b15f183097195b105b054d7be681",
+    "native_tiles": 26,
+    "automated_accepted": true,
+    "human_live_accepted": false,
+    "live_ui": "NOT_RUN - operator deferred",
+    "evidence": "deploy/evidence/games18-deployment-20261022.json",
+    "github_updated": false
+  },
+  "games_d2api_wave19": {
+    "status": "deployed_automated_verified_human_ui_deferred",
+    "release": "2026.10.22-games-19",
+    "runtime_source_commit": "2cc5b0d25883e2c0b59f6b3606378706089a7c67",
+    "accepted_implementation_commit": "a55f31549797d2b45e2a3efe93f719de617dab44",
+    "automated_accepted": true,
+    "human_live_accepted": false,
+    "live_ui": "NOT_RUN - operator deferred",
+    "evidence": "deploy/evidence/games19-deployment-20261022.json",
+    "github_updated": false
+  },
+  "card_galleries_wave20": {
+    "status": "deployed_automated_verified_human_ui_deferred",
+    "release": "2026.10.22-games-20.1",
+    "accepted_implementation_commit": "b306c55bfc5d1fe2533ee584ad7c9d2b259fbe6a",
+    "automated_accepted": true,
+    "human_live_accepted": false,
+    "native_stickers": 219,
+    "review": "deploy/evidence/games20-review-20261022.json",
+    "github_updated": false,
+    "failure": "deploy/evidence/games20-failed-attempt-20261022.json",
+    "runtime_source_commit": "e4c9b5c16779c9804b755bfcb73419748bfd0ac8",
+    "evidence": "deploy/evidence/games20b-deployment-20261022.json",
+    "llm_primary_completion_verified": false,
+    "llm_fallback_available": true
+  },
+  "locked_cards_wave21": {
+    "status": "deployed_automated_verified_human_ui_deferred",
+    "release": "2026.10.22-games-21",
+    "runtime_source_commit": "446bedc2cd993e744afc1395c46043d6ee36dd6b",
+    "automated_accepted": true,
+    "human_live_accepted": false,
+    "locked_faces": 106,
+    "evidence": "deploy/evidence/games21-deployment-20261022.json",
+    "review": "docs/GAMES_AUDIT_2026-10-22_WAVE21.md",
+    "llm_primary_completion_verified": false,
+    "github_updated": false
+  },
+  "ai_rotation_wave22": {
+    "status": "deployed_automated_and_live_provider_api_verified_human_ui_deferred",
+    "release": "2026.10.22-games-22",
+    "runtime_source_commit": "fdd918fc92a8d7edeb154accd57479af71f2661a",
+    "automated_accepted": true,
+    "live_provider_api_accepted": true,
+    "human_live_accepted": false,
+    "providers": [
+      "cloudflare",
+      "evren",
+      "nvidia"
+    ],
+    "d2api_stopped": true,
+    "evidence": "deploy/evidence/cloudflare22-deployment-20261022.json",
+    "github_updated": false
+  },
+  "turkish_quality_wave23": {
+    "status": "deployed_automated_and_live_provider_api_verified_human_ui_deferred",
+    "automated_accepted": true,
+    "human_live_accepted": false,
+    "cloudflare_model": "@cf/openai/gpt-oss-120b",
+    "primary_rotation": [
+      "cloudflare",
+      "evren"
+    ],
+    "outage_fallback": [
+      "nvidia"
+    ],
+    "quality_evidence": "deploy/evidence/turkish23-model-comparison.json",
+    "github_updated": false,
+    "release": "2026.10.22-games-23",
+    "runtime_source_commit": "a6c971b078d55b8e0d120c7a726bae934b643646",
+    "live_provider_api_accepted": true,
+    "evidence": "deploy/evidence/turkish23-deployment-20261022.json"
+  },
+  "explicit_roast_wave24": {
+    "status": "deployed_automated_and_live_provider_api_verified_human_ui_deferred",
+    "automated_accepted": true,
+    "human_live_accepted": false,
+    "mode_selected_by": "persisted user or authorized group-admin choice",
+    "message_keyword_activation": false,
+    "explicit_uncensored_profanity_in_roast": true,
+    "github_updated": false,
+    "release": "2026.10.22-games-24",
+    "runtime_source_commit": "d59dc102fc87915e21c7379fbaa4e75d425f0504",
+    "live_provider_api_accepted": true,
+    "evidence": "deploy/evidence/roast24-deployment-20261022.json"
+  },
+  "chat_quality_20261022": {
+    "status": "server_staged_offline_verified_activation_blocked",
+    "scope": "Turkish output gate, distinct selected styles, parallel preparation, approved Luna model policy",
+    "live_verified": false,
+    "model_order": [
+      "gpt-5.6-luna",
+      "gpt-6-luna"
+    ],
+    "application_access": "pending_authorized_grant",
+    "server_deployment": "/opt/arel/candidates/chat-quality-20261022-4d89e366eb33",
+    "github_publication": "not_requested",
+    "offline_server_tests": {
+      "passed": 3194,
+      "skipped": 6
+    },
+    "offline_local_tests": {
+      "tests": 3200,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 22,
+      "passed": 3178
+    },
+    "evidence": "deploy/evidence/chat-quality-candidate-20261022.json"
+  },
+  "hrmn_provider": {
+    "status": "deployed_automated_verified",
+    "evidence": "deploy/evidence/hrmn-provider-live-20261022.json",
+    "scope": "OpenAI then HRMN text; HRMN Prism/Flare then existing image provider",
+    "existing_provider_settings": "source definitions, per-release env and shared env compared; unchanged except new HRMN key",
+    "github_publication": "not_authorized",
+    "release": "2026.10.22-hrmn-3",
+    "verification": "112 focused tests; server3176 passed/6 skipped; server chat2.28s; both image models downloaded and validated",
+    "telegram_human_ui": "NOT_RUN"
+  },
+  "two_persona_20261023": {
+    "status": "deployed_automated_and_api_samples_verified",
+    "scope": "Normal and Roast selectable; retired preferences resolve to Normal",
+    "evidence": "deploy/evidence/two-persona-20261023.json",
+    "telegram_human_ui": "NOT_RUN",
+    "github_updated": false,
+    "deployment_evidence": "deploy/evidence/two-persona-live-20261023.json",
+    "release": "2026.10.23-persona-5",
+    "normal_style_live_quality": "API_SAMPLES_VERIFIED",
+    "quality_followup": "deploy/evidence/ai-reliability-live-20261023.json"
+  },
+  "ai_reliability_20261023": {
+    "status": "deployed_primary_failover_image_api_verified",
+    "evidence": "deploy/evidence/ai-reliability-live-20261023.json",
+    "scope": "conversation timeout budgets, explicit approved CLI model, subprocess cancellation cleanup, Cloudflare image multipart, HRMN credential rotation",
+    "github_updated": false,
+    "telegram_human_ui": "NOT_RUN",
+    "release": "2026.10.23-ai-reliability-1",
+    "tests": {
+      "local_passed": 3232,
+      "local_skipped": 19,
+      "server_passed": 3236,
+      "server_skipped": 6
+    },
+    "normal_style": "API_samples_verified",
+    "hrmn_image_upstream": "HTTP_500_fallback_verified"
+  }
 }

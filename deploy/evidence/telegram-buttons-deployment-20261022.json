@@ -1,0 +1,115 @@
+{
+  "schema_version": 1,
+  "scope": "telegram_inline_button_theme",
+  "release": "2026.10.22-games-13",
+  "checked_at_utc": "2026-10-21T22:15:42.535490+00:00",
+  "runtime_source_commit": "4b9c421be230c09b977039ad6363b8dd0608fb12",
+  "accepted_implementation_commit": "f4d83babf5633c9c749c5f8b464ea38ac645292a",
+  "distinct_games_unchanged": 40,
+  "verified_animated_custom_emoji_count": 38,
+  "emoji_source": "Telegram official Topics set; getForumTopicIconStickers and getCustomEmojiStickers",
+  "configured_owner_premium_observed": true,
+  "component_tests_passed": 34,
+  "release_gate": {
+    "passed": 25,
+    "total": 25,
+    "host_pytest": {
+      "passed": 2747,
+      "skipped": 19
+    },
+    "local_docker_pytest": {
+      "passed": 2760,
+      "skipped": 6
+    }
+  },
+  "server_candidate": {
+    "ok": true,
+    "stage": "ready",
+    "build_mode": "offline_overlay_on_running_games11_images",
+    "dependency_files_identical": true,
+    "test_summary": "2760 passed, 6 skipped, 9 warnings in 83.54s (0:01:23)"
+  },
+  "server_activation": {
+    "ok": true,
+    "release": "2026.10.22-games-13",
+    "schema_version": 20,
+    "archive_integrity_verified": true,
+    "services_healthy": true,
+    "github_updated": false,
+    "backup_restore_tested_for_this_update": false
+  },
+  "health": {
+    "release": "2026.10.22-games-13",
+    "source": {
+      "version": "2026.10.22-games-13",
+      "commit": "4b9c421be230c09b977039ad6363b8dd0608fb12"
+    },
+    "services": {
+      "bot": {
+        "status": "running",
+        "health": "healthy",
+        "restarts": 0,
+        "image": "sha256:ae5dff7434dbe0fa2394bbc502fa67801f0d9a01285b7233daca643af4f8eef9",
+        "recent_tracebacks": 0
+      },
+      "worker": {
+        "status": "running",
+        "health": "healthy",
+        "restarts": 0,
+        "image": "sha256:9391209abfac512610ef9820a808c85dd84566401f1bd7e094301932209d85fa",
+        "recent_tracebacks": 0
+      },
+      "mongo": {
+        "status": "running",
+        "health": "healthy",
+        "restarts": 0,
+        "image": "sha256:d0d926f94df099bff534b7ee5b5986458131a22489dfff8664509af0c1e2ca9c"
+      },
+      "redis": {
+        "status": "running",
+        "health": "healthy",
+        "restarts": 0,
+        "image": "sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499"
+      }
+    },
+    "telegram_read_only_probe_exit": 0,
+    "telegram": {
+      "ok": true,
+      "bot_username": "ArelChat_Bot",
+      "catalog_games": 40,
+      "webhook_configured": false,
+      "pending_update_count": 0,
+      "custom_emoji_verified": 38,
+      "animated_icons": 38,
+      "transport_class": "ThemedHTTPXRequest",
+      "premium_buttons_enabled": true
+    }
+  },
+  "release_archive_sha256": "9f393f23c4ea2ead99332cb4dfc4e7803f9170b13c54902faaa16439e48bc69f",
+  "delta_sha256": "5e669b31aa31444e78326544792e3d130c1a802d4ec87b7ed7b01e83656ccdc4",
+  "independent_review": "PASS - final implementation; 34 component tests; request-time catalog file access prohibited",
+  "protocol_preserved": [
+    "callback_data",
+    "URL",
+    "copy payload",
+    "pay",
+    "protect_content",
+    "chat/topic/round/phase controls",
+    "board and answer data"
+  ],
+  "fallback_policy": "Only explicit HTTP400 custom emoji rejection gets one Unicode retry; no network/429/5xx retry; seekable upload position restored; unseekable upload starts with Unicode",
+  "dependency_files_unchanged": [
+    "Dockerfile",
+    "requirements.txt",
+    "requirements-optional.txt",
+    "constraints.txt",
+    "entrypoint.sh",
+    ".dockerignore"
+  ],
+  "superseded_candidate": "games12 passed isolated image tests but was never activated; startup preload improvement ships in games13",
+  "live_telegram_ui": "NOT_RUN - operator explicitly deferred",
+  "real_human_matches": "NOT_RUN - operator explicitly deferred",
+  "outbound_telegram_test_messages_sent": false,
+  "metadata_verification_is_not_visual_render_acceptance": true,
+  "github_updated": false
+}

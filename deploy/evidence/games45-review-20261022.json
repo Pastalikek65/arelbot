@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "source_commit": "e36bd0e1dc950109d19d19771404a46daf01795c",
+  "models": "gpt-6-sol / medium",
+  "independent_review": "PASS",
+  "focused_tests": 76,
+  "live_player_acceptance": "NOT_RUN - operator deferred",
+  "resolved_findings": [
+    "public panel lease blocked independent timer/private/score work",
+    "unfinished card matches awarded synthetic points",
+    "plain text routing required public metadata-only acceptance",
+    "clue membership rules differed from shared routing",
+    "public rule help omitted private answer formats"
+  ],
+  "accepted_limitations": [
+    "Telegram text timestamps have one-second precision",
+    "ephemeral delivery is not guaranteed; public rules only"
+  ],
+  "github_updated": false
+}

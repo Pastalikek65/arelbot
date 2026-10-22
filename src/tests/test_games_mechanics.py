@@ -136,6 +136,9 @@ def test_initial_naturals_settle_the_charged_stake_once(
         assert economy.balance == expected_balance
         assert economy.debits == [100]
         assert economy.credits == expected_credit
+        assert database.states[(-10, "blackjack:7")]["terminal_panel_pending"]
+        assert await service.acknowledge_terminal_panel(chat_id=-10, user_id=7,
+            event_id=result["state"]["event_id"], message_id=91)
         assert database.states == {}
         with pytest.raises(ValueError, match="game_expired"):
             await service.action(chat_id=-10, user_id=7, action="stand", action_id="late")
@@ -154,6 +157,8 @@ def test_double_down_debits_two_stakes_and_returns_the_doubled_winning_payout():
         assert economy.debits == [100, 100]
         assert economy.credits == [400]
         assert economy.balance == 1200
+        assert await service.acknowledge_terminal_panel(chat_id=-10, user_id=7,
+            event_id=result["state"]["event_id"], message_id=91)
         assert database.states == {}
         with pytest.raises(ValueError, match="duplicate_action"):
             await service.action(chat_id=-10, user_id=7, action="double", action_id="double-action")
@@ -171,6 +176,8 @@ def test_hit_to_twenty_one_settles_once_and_removes_the_persisted_hand():
         assert result["winnings"] == 100
         assert economy.balance == 1100
         assert economy.credits == [200]
+        assert await service.acknowledge_terminal_panel(chat_id=-10, user_id=7,
+            event_id=result["state"]["event_id"], message_id=91)
         assert database.states == {}
         with pytest.raises(ValueError, match="game_expired"):
             await service.action(chat_id=-10, user_id=7, action="stand", action_id="unneeded-stand")
@@ -215,6 +222,8 @@ def test_double_down_push_loss_and_bust_payouts(player, draw, expected_balance, 
         assert economy.debits == [100, 100]
         assert economy.credits == credits
         assert economy.balance == expected_balance
+        assert await service.acknowledge_terminal_panel(chat_id=-10, user_id=7,
+            event_id=result["state"]["event_id"], message_id=91)
         assert database.states == {}
     asyncio.run(scenario())
 

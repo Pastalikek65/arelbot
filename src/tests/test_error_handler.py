@@ -19,7 +19,7 @@ class TestErrorClasses:
         err = ArelError("test error")
         assert err.message == "test error"
         assert err.code == "UNKNOWN_ERROR"
-        assert err.user_message == "Bir hata oluştu. Lütfen tekrar deneyin."
+        assert err.user_message == "İşlem tamamlanamadı. Biraz sonra tekrar dene."
         assert err.details == {}
 
     def test_arel_error_custom(self):
@@ -33,7 +33,8 @@ class TestErrorClasses:
         assert err.code == "AI_API_ERROR"
         assert err.service == "gemini"
         assert err.status_code == 503
-        assert "gemini" in err.user_message
+        assert err.user_message == "Yanıt alınamadı. Biraz sonra tekrar dene."
+        assert "gemini" not in err.user_message
 
     def test_rate_limit_error(self):
         err = RateLimitError("Too many", service="groq", retry_after=30)
@@ -45,7 +46,8 @@ class TestErrorClasses:
         err = ToolExecutionError("Failed", tool_name="weather")
         assert err.code == "TOOL_EXECUTION_ERROR"
         assert err.tool_name == "weather"
-        assert "weather" in err.user_message
+        assert "weather" not in err.user_message
+        assert "tekrar dene" in err.user_message
 
     def test_database_error(self):
         err = DatabaseError("Connection lost", db_name="mongo", operation="find")
@@ -89,7 +91,7 @@ class TestErrorHandler:
     def test_handle_standard_exception(self):
         err = ValueError("something wrong")
         msg = ErrorHandler.handle(err)
-        assert msg == "Beklenmedik bir hata oluştu. Lütfen tekrar deneyin."
+        assert msg == "İşlem tamamlanamadı. Biraz sonra tekrar dene."
         stats = ErrorHandler.get_stats()
         assert stats["total_errors"] >= 1
         assert "ValueError" in stats["errors_by_type"]
@@ -119,7 +121,7 @@ class TestErrorHandler:
     def test_handle_with_none_context(self):
         err = RuntimeError("critical")
         msg = ErrorHandler.handle(err, context=None)
-        assert msg == "Beklenmedik bir hata oluştu. Lütfen tekrar deneyin."
+        assert msg == "İşlem tamamlanamadı. Biraz sonra tekrar dene."
 
 
 @pytest.mark.asyncio

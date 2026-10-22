@@ -123,6 +123,52 @@ class JobDeliveryLedger:
             if item and item.get("status") == "pending":
                 item.update(update)
 
+    async def release_started(self, delivery_key: str, error: str | None = None) -> None:
+        """Return a started send boundary to the re-claimable state.
+
+        Only a caller that knows the delivery did not happen may use this:
+        a platform response that definitively refused the request, for
+        example a rejected transport reference. An unknown outcome must stay
+        ``uncertain`` so that it is never replayed. The row becomes
+        ``failed``, exactly like ``release`` does for a send that never
+        started, and the key can be claimed again. The send-start marker is
+        cleared, because the refused attempt never sent anything.
+
+        The other worker services never call this, so their send-boundary
+        semantics are unchanged.
+        """
+        key = str(delivery_key)
+        update = {"status": "failed", "claimed_at": None, "send_started_at": None, "updated_at": _now()}
+        if error:
+            update["last_error"] = str(error)[:200]
+        collection = self.collection
+        if collection is not None:
+            await collection.update_one({"delivery_key": key, "status": "sending"}, {"$set": update})
+            return
+        async with self._lock:
+            item = self._items.get(key)
+            if item and item.get("status") == "sending":
+                item.update(update)
+
+    async def delivery_status(self, delivery_key: str) -> str | None:
+        """Return the recorded state of a delivery boundary.
+
+        Read-only: it never changes a boundary. The other worker services
+        never call it, so their send-boundary semantics are unchanged.
+        """
+        key = str(delivery_key)[:256]
+        collection = self.collection
+        if collection is not None:
+            existing = await collection.find_one({"delivery_key": key}, {"_id": 0})
+            if not existing:
+                return None
+            return existing.get("status")
+        async with self._lock:
+            item = self._items.get(key)
+            if not item:
+                return None
+            return item.get("status")
+
     async def mark_uncertain(self, delivery_key: str, error: str | None = None) -> None:
         key = str(delivery_key)
         update = {"status": "uncertain", "claimed_at": None, "updated_at": _now()}

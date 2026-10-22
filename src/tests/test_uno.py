@@ -109,7 +109,7 @@ def test_missed_uno_challenge_penalizes_target():
 def test_score_and_service_persistence():
     assert score_card({"kind": "draw4", "color": "black"}) == 50
     db = MemoryGameDb()
-    service = UnoService(db)
+    service = UnoService(db, ruleset="legacy")
 
     async def scenario():
         state = await service.start(chat_id=-100, owner_id=1, owner_name="bir")
@@ -143,6 +143,7 @@ def test_group_keyboard_hides_cards_and_stays_usable_after_turn_changes():
     callbacks = [button.callback_data for row in markup.inline_keyboard for button in row if button.callback_data]
     assert "Kırmızı 7" not in labels
     assert "🃏 #1" in labels
+    assert "🃏 #2" not in labels  # Current player's hand has only one card.
     assert not any("secret-red" in callback for callback in callbacks)
     assert f"uno:{state['round_id']}:{state.get('revision', 0)}:playpos:1" in callbacks
     assert "Kırmızı 7" in render_uno_hand_alert(state, user_id=1)
@@ -173,7 +174,7 @@ def test_draw_penalties_apply_immediately_and_skip_the_target():
 @pytest.mark.asyncio
 async def test_expired_turn_draws_and_advances_instead_of_ending_match():
     db = MemoryGameDb()
-    service = UnoService(db)
+    service = UnoService(db, ruleset="legacy")
     state = await service.start(chat_id=-100, owner_id=1, owner_name="bir")
     await service.join(chat_id=-100, user_id=2, name="iki")
     state = await service.begin(chat_id=-100, user_id=1, action_id="begin")
@@ -189,7 +190,7 @@ async def test_expired_turn_draws_and_advances_instead_of_ending_match():
 @pytest.mark.asyncio
 async def test_numbered_card_button_plays_only_current_players_card():
     db = MemoryGameDb()
-    service = UnoService(db)
+    service = UnoService(db, ruleset="legacy")
     await service.start(chat_id=-100, owner_id=1, owner_name="bir")
     await service.join(chat_id=-100, user_id=2, name="iki")
     state = await service.begin(chat_id=-100, user_id=1, action_id="begin")
@@ -207,7 +208,7 @@ async def test_numbered_card_button_plays_only_current_players_card():
 @pytest.mark.asyncio
 async def test_uno_callback_rejects_cross_topic_forum_click():
     db = MemoryGameDb()
-    service = UnoService(db)
+    service = UnoService(db, ruleset="legacy")
     state = await service.start(chat_id=-100, owner_id=1, owner_name="bir", thread_id=42)
 
     class Query:
@@ -235,7 +236,7 @@ async def test_uno_callback_rejects_cross_topic_forum_click():
 @pytest.mark.asyncio
 async def test_old_card_position_cannot_mutate_a_new_hand_revision():
     db = MemoryGameDb()
-    service = UnoService(db)
+    service = UnoService(db, ruleset="legacy")
     await service.start(chat_id=-100, owner_id=1, owner_name="bir")
     await service.join(chat_id=-100, user_id=2, name="iki")
     state = await service.begin(chat_id=-100, user_id=1, action_id="begin")
@@ -270,7 +271,7 @@ def test_spectator_cannot_penalize_a_player():
 @pytest.mark.asyncio
 async def test_next_round_preserves_match_score_and_rotates_dealer():
     db = MemoryGameDb()
-    service = UnoService(db)
+    service = UnoService(db, ruleset="legacy")
     await service.start(chat_id=-100, owner_id=1, owner_name="bir")
     await service.join(chat_id=-100, user_id=2, name="iki")
     state = await service.begin(chat_id=-100, user_id=1, action_id="begin")
@@ -290,7 +291,7 @@ async def test_large_round_points_are_normalized_without_blocking_next_round():
         async def record_score(self, **kwargs):
             assert 0 <= kwargs["score"] <= 100
     db = MemoryGameDb()
-    service = UnoService(db, leaderboard_service=Leaderboard())
+    service = UnoService(db, ruleset="legacy", leaderboard_service=Leaderboard())
     state = _playing()
     state.update(status="finished", winner_id=1, round_points=240, score_pending=True)
     state["players"][0]["score"] = 240
@@ -306,7 +307,7 @@ async def test_opening_uno_in_another_forum_topic_does_not_replace_its_panel():
     from unittest.mock import AsyncMock
     from src.handlers.command_handler import CommandHandler
     db = MemoryGameDb()
-    service = UnoService(db)
+    service = UnoService(db, ruleset="legacy")
     await service.start(chat_id=-100, owner_id=1, owner_name="Bir", thread_id=42)
     await service.set_prompt_message(chat_id=-100, message_id=700)
     message = SimpleNamespace(message_thread_id=99, reply_text=AsyncMock(return_value=SimpleNamespace(message_id=701)))
@@ -316,3 +317,47 @@ async def test_opening_uno_in_another_forum_topic_does_not_replace_its_panel():
     await handler.handle_uno_command(update, SimpleNamespace())
     assert (await service.current(-100))["prompt_message_id"] == 700
     assert not message.reply_text.call_args.kwargs.get("reply_markup")
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("delivery_error", [None, "bad_request", "timeout"])
+async def test_uno_card_page_callback_changes_only_markup_and_rejects_stale_revision(delivery_error):
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock
+    from telegram.error import BadRequest, TimedOut
+
+    db = MemoryGameDb()
+    service = UnoService(db, ruleset="legacy")
+    await service.start(chat_id=-100, owner_id=1, owner_name="Bir")
+    await service.join(chat_id=-100, user_id=2, name="İki")
+    state = await service.begin(chat_id=-100, user_id=1, action_id="begin")
+    state["players"][0]["hand"] = [
+        {"id": f"card-{i}", "color": "red", "kind": "8"} for i in range(25)
+    ]
+    state["prompt_message_id"] = 700
+    db.states[(-100, "uno")] = state
+    handler = CallbackHandler(SimpleNamespace(), SimpleNamespace(), None,
+                              data_port=db, uno_service=service)
+    query = SimpleNamespace(message=SimpleNamespace(message_id=700, message_thread_id=None),
+                            edit_message_text=AsyncMock(), answer=AsyncMock())
+    update = SimpleNamespace(effective_chat=SimpleNamespace(id=-100, type="supergroup"),
+                             effective_user=SimpleNamespace(id=1, first_name="Bir"))
+    data = f"uno:{state['round_id']}:{state['revision']}:cardpage:2"
+    if delivery_error:
+        query.edit_message_text.side_effect = (BadRequest("message unavailable")
+                                               if delivery_error == "bad_request" else TimedOut())
+    await handler._handle_uno_callback(update, query, SimpleNamespace(), data)
+    if delivery_error:
+        assert "/uno" in query.answer.await_args.args[0]
+        assert query.answer.await_args.kwargs["show_alert"] is True
+    else:
+        labels = [button.text for row in query.edit_message_text.await_args.kwargs["reply_markup"].inline_keyboard
+                  for button in row]
+        assert "🃏 #25" in labels and "🃏 #1" not in labels
+    assert (await service.current(-100))["revision"] == state["revision"]
+
+    query.edit_message_text.reset_mock()
+    await handler._handle_uno_callback(update, query, SimpleNamespace(),
+                                       f"uno:{state['round_id']}:{state['revision'] - 1}:cardpage:2")
+    assert query.edit_message_text.await_count == 0
+    assert "Masa değişti" in query.answer.await_args.args[0]

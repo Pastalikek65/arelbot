@@ -55,6 +55,6 @@ def test_turkish_keyboard_has_callback_buttons_and_hides_used_normalized_letters
 
 def test_hangman_render_is_bounded_and_contains_round_context():
     text = render_hangman_text(_state())
-    assert "ADAM ASMACA" in text
+    assert "<b>Adam Asmaca</b>" in text
     assert "6/6" in text
     assert "Normal" in text

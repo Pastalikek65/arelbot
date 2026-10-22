@@ -1,0 +1,57 @@
+{
+  "source_commit": "fd2cbaa",
+  "scope": "four_board_panel_recovery",
+  "independent_review": {
+    "model": "gpt-6-sol",
+    "effort": "medium",
+    "blockers": 0,
+    "reviewed": [
+      "durable delivery and CAS fencing",
+      "global stop keeps terminal state and rewards",
+      "migration22 idempotency and legacy reward guard",
+      "known 429 rejection and full server retry delay"
+    ]
+  },
+  "load": {
+    "ok": true,
+    "profile": "isolated_synthetic_mongo_and_telegram",
+    "real_telegram_load": false,
+    "tables": 100,
+    "transitions": 1000,
+    "duplicate_rejections": 1000,
+    "failures": 0,
+    "duration_seconds": 20.102,
+    "throughput_transitions_per_second": 49.75,
+    "action_latency_ms": {
+      "p50": 424.49,
+      "p95": 706.07,
+      "p99": 1038.63
+    },
+    "synthetic_transport_faults": {
+      "rate_limit": 1,
+      "timeout": 2,
+      "deleted": 1
+    },
+    "runtime_fairness": {
+      "unhealthy_deferred": 100,
+      "later_healthy_processed": 40,
+      "tick_limit": 100
+    },
+    "stale_cas_rejections": 1
+  },
+  "load_cleanup_residual_collections": 0,
+  "telegram_live_player_ui_tests": "DEFERRED_BY_USER",
+  "github_updated": false,
+  "release_gate": {
+    "passed": 25,
+    "total": 25,
+    "pytest": {
+      "passed": 2974,
+      "skipped": 19
+    },
+    "docker_pytest": {
+      "passed": 2987,
+      "skipped": 6
+    }
+  }
+}

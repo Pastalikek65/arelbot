@@ -1,0 +1,133 @@
+{
+  "ok": true,
+  "release": "2026.10.22-games-22",
+  "runtime_source_commit": "fdd918fc92a8d7edeb154accd57479af71f2661a",
+  "schema_version": 22,
+  "core_services_healthy": true,
+  "native": {
+    "ok": true,
+    "unique_used_stickers": 219,
+    "locked_faces": 106,
+    "inline_enabled": true
+  },
+  "live_rotation_verified": true,
+  "all_three_providers_verified": true,
+  "d2api_stopped": true,
+  "cloudflare_model": "@cf/qwen/qwen3-30b-a3b-fp8",
+  "nvidia_chat_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+  "protected_styles_unchanged_hash_verified": true,
+  "github_updated": false,
+  "live_probe": {
+    "ok": true,
+    "routes": {
+      "chat": [
+        "cloudflare",
+        "evren",
+        "nvidia"
+      ],
+      "fast": [
+        "cloudflare",
+        "evren",
+        "nvidia"
+      ],
+      "analysis": [
+        "cloudflare",
+        "evren",
+        "nvidia"
+      ],
+      "summary": [
+        "cloudflare",
+        "evren",
+        "nvidia"
+      ],
+      "vision": [
+        "evren",
+        "nvidia"
+      ],
+      "embedding": [
+        "evren",
+        "nvidia"
+      ],
+      "transcribe": [
+        "evren",
+        "nvidia"
+      ],
+      "sticker_tagging": [
+        "evren",
+        "nvidia"
+      ]
+    },
+    "direct": [
+      {
+        "provider": "cloudflare",
+        "has_content": true,
+        "marker": true,
+        "latency_seconds": 0.685
+      },
+      {
+        "provider": "evren",
+        "has_content": true,
+        "marker": true,
+        "latency_seconds": 2.876
+      },
+      {
+        "provider": "nvidia",
+        "has_content": true,
+        "marker": true,
+        "latency_seconds": 0.682
+      }
+    ],
+    "rotation_results": [
+      "cloudflare",
+      "evren",
+      "nvidia",
+      "cloudflare",
+      "evren",
+      "nvidia"
+    ],
+    "cloudflare_json": true,
+    "cloudflare_tools": true,
+    "injected_503_fallback": "evren",
+    "d2api_registered": false,
+    "cloudflare_model": "@cf/qwen/qwen3-30b-a3b-fp8",
+    "nvidia_chat_model": "nvidia/nemotron-3.5-lightning-30b-a3b"
+  },
+  "local_tests": {
+    "passed": 3125,
+    "skipped": 21
+  },
+  "isolated_server_tests": {
+    "passed": 3140,
+    "skipped": 6
+  },
+  "human_Telegram_UI": "NOT_RUN",
+  "operator_account_authorization": "explicit user request and own account credentials; no legal permission assertion",
+  "protected_roast_content_read": false,
+  "backup_integrity_verified": true,
+  "schema_changed": false,
+  "review": "docs/AI_ROTATION_2026-10-22.md",
+  "game_audit": "docs/GAMES_AUDIT_2026-10-22_WAVE21.md",
+  "post_activation_health": {
+    "ok": true,
+    "services": [
+      {
+        "service": "bot",
+        "state": "running healthy 0"
+      },
+      {
+        "service": "worker",
+        "state": "running healthy 0"
+      },
+      {
+        "service": "mongo",
+        "state": "running healthy 0"
+      },
+      {
+        "service": "redis",
+        "state": "running healthy 0"
+      }
+    ],
+    "d2api_state": "exited",
+    "temporary_account_copy_removed": true
+  }
+}

@@ -112,6 +112,8 @@ async def test_register_bot_commands_publishes_scope_specific_menus(monkeypatch)
     public_names = {item.command for item in bot.calls[0][0]}
     admin_names = {item.command for item in bot.calls[2][0]}
     owner_names = {item.command for item in bot.calls[3][0]}
+    assert public_names.issubset(owner_names)
+    assert {"help", "iptal", "pisti", "2048", "emojibilmece"}.issubset(owner_names)
     assert "moderasyon" not in public_names
     assert "moderasyon" in admin_names
     assert "hizlikur" not in admin_names

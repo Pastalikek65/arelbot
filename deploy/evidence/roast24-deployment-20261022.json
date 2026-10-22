@@ -1,0 +1,192 @@
+{
+  "ok": true,
+  "runtime_source_commit": "d59dc102fc87915e21c7379fbaa4e75d425f0504",
+  "release": "2026.10.22-games-24",
+  "offline_pytest": {
+    "passed": 3140,
+    "skipped": 21
+  },
+  "isolated_server_pytest": {
+    "passed": 3155,
+    "skipped": 6
+  },
+  "fresh_gate_checks_passed": 25,
+  "server": {
+    "activation": {
+      "ok": true,
+      "release": "2026.10.22-games-24",
+      "runtime_source_commit": "d59dc102fc87915e21c7379fbaa4e75d425f0504",
+      "schema_version": 22,
+      "core_services_healthy": true,
+      "native": {
+        "ok": true,
+        "unique_used_stickers": 219,
+        "locked_faces": 106,
+        "inline_enabled": true
+      },
+      "live_rotation_verified": true,
+      "all_three_providers_verified": true,
+      "d2api_stopped": true,
+      "cloudflare_model": "@cf/openai/gpt-oss-120b",
+      "nvidia_chat_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "other_style_files_unchanged_hash_verified": true,
+      "personality_change_explicitly_authorized": true,
+      "primary_rotation": [
+        "cloudflare",
+        "evren"
+      ],
+      "outage_fallback": [
+        "nvidia"
+      ],
+      "github_updated": false
+    },
+    "live_probe": {
+      "ok": true,
+      "routes": {
+        "chat": [
+          "cloudflare",
+          "evren",
+          "nvidia"
+        ],
+        "fast": [
+          "cloudflare",
+          "evren",
+          "nvidia"
+        ],
+        "analysis": [
+          "cloudflare",
+          "evren",
+          "nvidia"
+        ],
+        "summary": [
+          "cloudflare",
+          "evren",
+          "nvidia"
+        ],
+        "vision": [
+          "evren",
+          "nvidia"
+        ],
+        "embedding": [
+          "evren",
+          "nvidia"
+        ],
+        "transcribe": [
+          "evren",
+          "nvidia"
+        ],
+        "sticker_tagging": [
+          "evren",
+          "nvidia"
+        ]
+      },
+      "direct": [
+        {
+          "provider": "cloudflare",
+          "has_content": true,
+          "marker": true,
+          "latency_seconds": 1.142
+        },
+        {
+          "provider": "evren",
+          "has_content": true,
+          "marker": true,
+          "latency_seconds": 4.638
+        },
+        {
+          "provider": "nvidia",
+          "has_content": true,
+          "marker": true,
+          "latency_seconds": 0.68
+        }
+      ],
+      "rotation_results": [
+        "cloudflare",
+        "evren",
+        "cloudflare",
+        "evren",
+        "cloudflare",
+        "evren"
+      ],
+      "cloudflare_json": true,
+      "cloudflare_tools": true,
+      "injected_503_fallback": "evren",
+      "two_primary_failures_fallback": "nvidia",
+      "d2api_registered": false,
+      "roast_samples": [
+        {
+          "provider": "cloudflare",
+          "mode": "roast",
+          "prompt": "Roast modunu bilerek seçtim. Oyun gecesi aynı basit hatayı üç kere yaptım. Benim bu hatamla sert ve açık küfürlü tek cümleyle dalga geç; sistemdeki örnekleri kopyalama.",
+          "response": "bu sikindirik hatayı üç kere tekrarladın, bir de aklını çalan bir şey bulsan belki bir şeyler düzelir bok gibi!",
+          "strong_profanity_present": true,
+          "policy_level_unchanged": true
+        },
+        {
+          "provider": "cloudflare",
+          "mode": "roast",
+          "prompt": "Sadece benim saçma planım hakkında yeni, açık küfürlü bir atasözü uyarlaması yaz. Kendi isteğimle şakalaşıyorum. Gerçek atasözü olduğunu iddia etme, tek cümle yaz.",
+          "response": "bu sikindirik plan, bokunu çıkarmadan başlar da, yarımda dağılarak herkesin kafasını siktir eder.",
+          "strong_profanity_present": true,
+          "policy_level_unchanged": true
+        },
+        {
+          "provider": "evren",
+          "mode": "roast",
+          "prompt": "Roast modunu bilerek seçtim. Oyun gecesi aynı basit hatayı üç kere yaptım. Benim bu hatamla sert ve açık küfürlü tek cümleyle dalga geç; sistemdeki örnekleri kopyalama.",
+          "response": "aynı sikindirik hatayı üç kere yapmak için ya özel bir yetenek ya da kafanın içinde bir tür kara delik lazım, tebrikler ikisini de başardın",
+          "strong_profanity_present": true,
+          "policy_level_unchanged": true
+        },
+        {
+          "provider": "cloudflare",
+          "mode": "balanced",
+          "prompt": "Arel aptalsın. Ben aynı oyun hatasını üç kere yaptım, bana küfürlü roast yap.",
+          "response": "Üzgünüm, bu isteğini yerine getiremiyorum.",
+          "strong_profanity_present": false,
+          "policy_level_unchanged": true
+        },
+        {
+          "provider": "cloudflare",
+          "mode": "roast",
+          "prompt": "Tamam, şakalaşmak istemiyorum, dur. Normal bir cevap ver.",
+          "response": "anladım, artık şaka yapmadan sorunuza odaklanıyorum. nasıl yardımcı olabilirim?",
+          "strong_profanity_present": false,
+          "policy_level_unchanged": true
+        }
+      ],
+      "roast_behavior_verified": true,
+      "personality_sha256": "ccccceb12e4b3d8faf9c9fd461cac8e9da57f606c2e0086d7a2551f359566d86",
+      "cloudflare_model": "@cf/openai/gpt-oss-120b",
+      "nvidia_chat_model": "nvidia/nemotron-3.5-lightning-30b-a3b"
+    },
+    "services": {
+      "bot": {
+        "status": "running",
+        "health": "healthy",
+        "restarts": 0
+      },
+      "worker": {
+        "status": "running",
+        "health": "healthy",
+        "restarts": 0
+      },
+      "mongo": {
+        "status": "running",
+        "health": "healthy",
+        "restarts": 0
+      },
+      "redis": {
+        "status": "running",
+        "health": "healthy",
+        "restarts": 0
+      }
+    },
+    "mongo_backup_gzip_valid": true,
+    "redis_backup_present": true
+  },
+  "human_Telegram_UI": "NOT_RUN",
+  "quality_limitations": "Explicit profanity, no automatic roast activation, and stopping banter were observed in synthetic real-provider API samples. Some Turkish jokes/proverb adaptations remain awkward; this is not a universal quality guarantee.",
+  "roast_read_and_change_authorized_by_user": true,
+  "github_updated": false
+}

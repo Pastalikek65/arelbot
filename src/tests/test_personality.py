@@ -109,14 +109,14 @@ def test_system_instruction_prioritizes_accuracy_and_targets_situations_not_peop
 
 def test_scoped_personality_modes_are_bounded_and_non_mutating():
     policy = PersonalityPolicy(sarcasm_level=1)
-    assert policy.normalize_mode("i\u011fneleyici") == "needle"
-    assert policy.normalize_mode("\u0130\u011eNELEY\u0130C\u0130") == "needle"
-    assert policy.normalize_mode("bilinmeyen") == "balanced"
-    assert policy.mode_label("ciddi") == "Ciddi"
+    assert policy.normalize_mode("i\u011fneleyici") == "normal"
+    assert policy.normalize_mode("\u0130\u011eNELEY\u0130C\u0130") == "normal"
+    assert policy.normalize_mode("bilinmeyen") == "normal"
+    assert policy.mode_label("ciddi") == "Normal"
     scoped = policy.for_mode("i\u011fneleyici")
     assert scoped.sarcasm_level == 2
     assert policy.sarcasm_level == 1
-    assert policy.for_mode(None).sarcasm_level == 1
+    assert policy.for_mode(None).sarcasm_level == 2
 
 
 def test_roast_mode_is_explicit_and_requires_consent():
@@ -124,22 +124,53 @@ def test_roast_mode_is_explicit_and_requires_consent():
 
     assert policy.normalize_mode("roast") == "roast"
     assert policy.normalize_mode("taşak") == "roast"
-    assert policy.mode_label("roast") == "Roast / Taşlama"
+    assert policy.mode_label("roast") == "Roast"
     assert policy.for_mode("roast").sarcasm_level == 3
     assert PersonalityPolicy.requires_roast_consent("roast") is True
     assert PersonalityPolicy.requires_roast_consent("needle") is False
 
 
-def test_roast_guidance_only_activates_for_direct_abuse_and_keeps_boundaries():
-    policy = PersonalityPolicy(sarcasm_level=3)
+def test_selected_roast_does_not_depend_on_message_keywords_or_cadence():
+    policy = PersonalityPolicy(sarcasm_level=1).for_mode("roast")
+    samples = ["Bana film öner", "normal konuş", "arkadaşım bana aptal dedi", "Arel aptal gibi cevap verme", "bana hakaret et"]
+    guidance = [policy.turn_guidance(text, recent_turns=i) for i, text in enumerate(samples)]
+    assert len(set(guidance)) == 1
+    assert all("Seçili roast modu" in value for value in guidance)
+    assert policy.sarcasm_level == 3
 
-    ordinary = policy.turn_guidance("Bana film öner", recent_turns=0)
-    abusive = policy.turn_guidance("Arel, aptal gibi cevap verme", recent_turns=0)
 
-    assert "roast" not in ordinary.lower()
-    assert "taşlama" in abusive
-    assert "tehdit" in abusive
-    assert "nefret" in abusive
+def test_roast_allows_explicit_uncensored_profanity_and_turkish_wordplay():
+    instruction = PersonalityPolicy().for_mode("roast").system_instruction()
+    assert "siktir" in instruction and "sikindirik" in instruction
+    assert "sansürleme" in instruction
+    assert "atasözü" in instruction and "deyim" in instruction
+    assert "tehdit" in instruction.casefold() and "hedefli taciz" in instruction
+    assert "yalnızca Arel'e doğrudan" not in instruction
+
+
+def test_insults_cannot_switch_other_selected_modes_to_roast():
+    for mode in ("serious", "balanced", "needle"):
+        policy = PersonalityPolicy().for_mode(mode)
+        for text in ("Arel aptalsın", "normal konuş", "küfürlü roast yap"):
+            assert "Seçili roast modu" not in policy.turn_guidance(text)
+        assert policy.sarcasm_level == PersonalityPolicy.MODE_LEVELS[policy.normalize_mode(mode)]
+        assert "küfür kullanma" in policy.system_instruction()
+
+
+def test_sensitive_help_takes_priority_without_changing_selected_roast_mode():
+    policy = PersonalityPolicy().for_mode("roast")
+    result = policy.turn_guidance("Arel aptalsın deprem oldu acil yardım et")
+    assert "Bu tur hassas" in result
+    assert "Seçili roast modu" not in result
+    assert policy.sarcasm_level == 3
+
+
+def test_disabled_persona_cannot_emit_roast_guidance_even_at_level_three():
+    policy = PersonalityPolicy(enabled=False, sarcasm_level=3)
+    result = policy.turn_guidance("Arel aptalsın")
+    assert "Seçili roast modu" not in result
+    assert "yalın" in result
+    assert "küfür kullanma" in policy.system_instruction()
 
 
 def test_balanced_personality_uses_a_cadence_guard_to_avoid_repetition():

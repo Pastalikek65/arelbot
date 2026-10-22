@@ -15,7 +15,32 @@ URL-safe secret ve 1-65535 port aralığı uygulama başlamadan kontrol edilir.
 
     docker compose --profile dev up -d mongo redis
     python -m pytest -q
+    python -m pytest -q --cov=src --cov-report=term:skip-covered
     python scripts/architecture_check.py --strict
+
+Compose MongoDB ve Redis servisleri anonim bağlantıyı reddeder. Yerel
+çalıştırma için `.env` dosyasında beş kimlik değişkeni tanımlanmalıdır;
+Compose bu değerleri zorunlu tutar ve eksik olduğunda `docker compose
+config` hata verir:
+
+    MONGO_ROOT_USERNAME=areladmin
+    MONGO_ROOT_PASSWORD=<yerel gelistirme parolasi>
+    MONGO_APP_PASSWORD=<yerel gelistirme parolasi>
+    MONGO_TEST_PASSWORD=<yerel gelistirme parolasi>
+    REDIS_PASSWORD=<yerel gelistirme parolasi>
+
+`MONGO_ROOT_*` idari hesabın, `MONGO_APP_*` uygulama hesabının ve
+`MONGO_TEST_*` test hesabının parolasıdır. Bu değerler `.env` dosyasına
+yazılır, Git'e girmez ve yalnızca yerel gelistirme içindir. Üretim
+parolaları deployment secret store'da tutulur.
+
+Pytest çalıştırması `pyproject.toml` içindeki `timeout = 300` ayarı ile her
+testi 300 saniyeyle sınırlar; asılı kalan bir test bütün suite'i kilitlemez.
+Kapsama ölçümü `pytest-cov` ile alınır; `[tool.coverage.run]` altındaki
+`branch = true` ayarı dal kapsamasını da ölçer ve `--cov-config` seçeneği alt
+süreçlerin aynı kapsama yapılandırmasını okumasını sağlar. Toplam kapsama
+`[tool.coverage.report]` bloğundaki `fail_under` eşiğinin altına düşerse
+kapsama komutu başarısız sonuçlanır.
 
 Windows'ta varsayılan olarak işletim sisteminin doğrulanmış kök sertifika deposu
 kullanılır. Kurumsal HTTPS inspection kullanılıyorsa doğrulanmış kök CA dosyası
@@ -27,6 +52,33 @@ Bootstrap dispatch'i de aynı sözleşmeyi kullanır: Windows polling profili
 yalnızca `run_polling`, Linux webhook profili yalnızca `run_webhook`
 çağrısı alır. Bu seçim `src/tests/test_main_transport.py` içinde PTB
 uygulaması başlatılmadan iki yönlü olarak doğrulanır.
+
+## Compose ortam dosyaları
+
+Compose'ta iki ayrı ortam kaynağı vardır ve karıştırılmamalıdır:
+
+* **Interpolasyon kaynağı** — `--env-file` ile verilen dosya. `${MONGO_TEST_PASSWORD:?...}`
+  gibi referanslar buradan çözülür. Bu dosya konteynere **hiçbir şey enjekte etmez**.
+* **`env_file`** — servis tanımındaki dosya. **Konteynere enjekte edilir.**
+
+Profil başına kural:
+
+| Profil | Interpolasyon kaynağı | Konteynere enjekte edilen dosya |
+|---|---|---|
+| `test` (pytest) | `.env.test` (`--env-file .env.test`) | `.env.test` (`env_file:`) |
+| `dev`, `prod`, `monitoring` | `.env` (proje kökü) | `.env` (`env_file:`) |
+
+`test` profili **her zaman** sentetik dosyadan interpolasyon yapar; böylece test
+konteynerine production parolası giremez. `.env.test` Git'e girmez; kaynak
+commit'li `.env.test.example` dosyasıdır ve eksikse gate bu dosyadan kopyalar:
+
+    python scripts/release_gate.py --docker --requests 20 --concurrency 10
+
+Sürüm kapısı testleri `arelbot-gate` adlı ayrı Compose projesinde çalışır.
+Bu projenin Mongo/Redis hacimleri sentetik `.env.test` ayarlarıyla oluşturulur;
+üretim ve mevcut geliştirme hacimleri kullanılmaz. Profil grafiği doğrulaması
+da sentetik dosyayı kullanır. `bot` ve `worker`
+servisleri her zaman `env_file: .env` ile gerçek `.env` üzerinde çalışır.
 
 ## Linux VDS production
 
@@ -69,7 +121,11 @@ girer.
 
 Production preflight, MONGODB_REQUIRED=true, REDIS_REQUIRED=true ve
 MEDIA_REDIS_REQUIRED=true ayarlarinin acik olmasini kontrol eder; bellek
-fallback'iyle production deploy devam etmez. Public observability bind
+fallback'iyle production deploy devam etmez. Preflight ayrica production
+`.env` icindeki MONGODB_URI ve REDIS_URL degerlerinin bir kimlik
+tadigini tasidigini dogrular; anonim bir baglanti string'i
+`mongodb_credentials_missing` veya `redis_credentials_missing` hata koduyla
+reddedilir. Public observability bind
 kullaniliyorsa OBSERVABILITY_ENABLED=true, OBSERVABILITY_LISTEN=0.0.0.0 ve
 host tarafinda 0600 izinli ARELBOT_OBSERVABILITY_TOKEN_FILE tanimlanir.
 Preflight token icerigini loglamadan dosya varligini, izinlerini ve URL-safe
@@ -280,6 +336,11 @@ alınır. BACKUP.json SHA-256 ve byte boyutlarını taşır.
 
     python scripts/backup.py --output-dir backups
 
+MongoDB ve Redis parolasi komut satirinda gecmez: `mongodump`/`mongorestore`
+baglanti dizisini gecici bir 0600 YAML dosyasindan okur, `redis-cli` parolayi
+`REDISCLI_AUTH` ortam degiskeninden alir. Ayrinti icin "MongoDB ve Redis
+üretim ağı" bolumune bakin.
+
 Restore varsayılan olarak yalnızca checksum doğrular. Destructive işlem için
 confirm gerekir.
 
@@ -326,13 +387,48 @@ alınır; bu koşucu bunu kendiliğinden üretim verisine uygulamaz.
 
 ## Migration ve rollback
 
-Migration runner ileri ve geri yürütülebilir; mevcut schema v14'tür.
+Migration runner ileri ve geri yürütülebilir; mevcut schema v20'tür.
 
     python scripts/migrate.py
     python scripts/mongo_migration_smoke.py
 
 Production rollback öncesi backup alınır. Migration rollback sonrası index,
 TTL ve unique constraint'ler tekrar smoke ile doğrulanır.
+
+### v20 ekonomi ledger seed'i
+
+v20, ekonomi hesabını tek belgeye taşır ve `economy_transactions` koleksiyonundaki
+geçmiş satırları hesap dokümanındaki `applied_events` alanına seed eder. Seed
+olmadan migration öncesi kullanılmış bir `event_id` yeni görünür ve deploy
+gününün `daily:` claim'i iki kez ödenebilirdi.
+
+- Seed bir **veri migration**'ıdır: gruplar `allowDiskUse` ile diskte gruplanır
+  ve akış halinde işlenir, hesap başına en fazla 500 satır yazılır, ilerleme
+  her 500 grupta bir loglanır. Büyük bir veritabanında ilk çalışma **dakikalar
+  sürebilir**.
+- Migration bot açılışında da çalışır. Büyük veritabanında botu beklemeden
+  `python scripts/migrate.py` ile uygulamak, seed'i bot açılışından ayırmak
+  için önerilen yoldur.
+- Seed idempotent ve resumable'dır: aynı satırlar aynı değerlerle yazılır,
+  zaten seed edilmiş event'ler atlanır. Hata ile durursa v20 uygulanmış
+  sayılmaz; `python scripts/migrate.py` tekrar çalıştırıldığında kaldığı yerden
+  devam eder. **Seed tamamlanmadan bot başlatılmamalıdır** (bot bu durumda
+  açılmaz).
+- **Deploy penceresi:** seed, deploy gününün çift claim penceresini kapatır.
+  Seed satırları okunmadan bir `/gunluk` claim penceresini geçen deploy
+  yapılmamalıdır.
+
+### v20 rollback'in kaybı
+
+Rollback `applied_events` alanını silmeden önce içindeki history'yi
+`economy_transactions` koleksiyonuna geri yazar, böylece yalnızca hesap
+dokümanında duran event'ler kaybolmaz. Ancak rollback hesap kimliği
+(`user_id`, `chat_id`) unique index'ini de düşürür; index base şema tarafından
+yeniden kurulana kadar veritabanı v1'in tanımladığı index'ten yoksundur. Geri
+alınan kod yolunun idempotency'i bu index'e değil, `economy_transactions`
+üzerindeki unique `event_key` index'ine dayandığı için geri alınan kod yolu
+doğru çalışmaya devam eder. Migration rollback sonrası index, TTL ve unique
+constraint'ler tekrar smoke ile doğrulanır.
 
 ## Worker kuyrukları
 
@@ -349,6 +445,48 @@ refresh task'lerini durdurup cache/inflight state'ini temizler; provider HTTP
 istemcileri ancak bundan sonra kapanır. Böylece restart sonrasında eski bir
 task'in kapanmış istemci üzerinden yeni network çağrısı başlatması engellenir.
 
+## Medya diski ve geçici dosya temizliği
+
+Bot ve worker ayrı konteynerlerde çalışır ve **aynı `arel_downloads` adlı
+hacmi** paylaşır (`/app/downloads`). Bu yüzden iki süpürücü de aynı hacmi
+temizler: bot süpürücüsü worker'ın ürettiği iş dizinlerine de ulaşır, ama
+süpürücüyü yalnızca bot sürecine bırakmak savunma derinliği olmazdı. İki
+süreç de kendi süpürücüsünü çalıştırır.
+
+    bot     : src/orchestrator.py -> arel-file-cleanup görevi (3600 sn)
+    worker  : src/worker.py       -> arel-file-cleanup görevi (3600 sn)
+
+Süpürücü yalnızca dosya silmez: `downloads/<job id>/` gibi eski iş dizinlerini
+de kaldırır. Süpürülen dizinler yapılandırmadan okunur
+(`MEDIA_DOWNLOAD_DIR`, `RAG_UPLOAD_DIR`, `TTS_OUTPUT_DIR`, `QUOTE_OUTPUT_DIR`,
+`STICKER_TEMP_DIR`, `ATTACHMENT_TEMP_DIR`, `STICKER_TAG_TEMP_DIR`); üretici ile
+süpürücü aynı değeri okuduğu için taşınmış bir dizin artık geride kalmaz.
+
+Süpürücü temizlediği dizinin dışına çıkmaz. Sembolik bağlantı, Windows
+junction ve mount point takip edilmez ve kökün dışına çözen bir girdi hiçbir
+zaman silinmez; böylece spool içindeki bir bağlantı dışarıdaki dosyaları
+silemez. Bir dizin ancak süpürme sonrası boşaldıysa kaldırılır, böylece
+indirmesi devam eden iş dizini kaybolmaz. Dosya silme işlemi `asyncio.to_thread`
+ile event loop dışında yürütülür; bot ve worker'ın olay döngüsü süpürme
+sırasında bloklanmaz. Geri alınan girdi sayısı `media_cleanup_entries_removed`
+sayacıyla `/metrics` çıktısında görünür.
+
+Zaman aşımına düşen indirme iş dizinini bir arka plan reaper'ına devreder.
+Reaper, indirme işçisi gerçekten durmadan dizini silmez; servis periyodik
+görevi ve kapanış sırasındaki `wait_for_background_cleanup()` bu reaper'ları
+sınırlı süre bekleyerek boşaltır. Reaper takılırsa dizin yaş kuralıyla da bir
+saat sonra geri alınır.
+
+`downloads` hacmi dolduğunda **tüm medya teslimatı durur**. Kapasite izlemede
+bu hacim için ayrı alarm tanımlanmalıdır. Elle müdahale yalnızca acil durum
+içindir:
+
+    docker compose --profile prod exec worker sh -c 'du -sh /app/downloads'
+    docker compose --profile prod restart worker
+
+Normal akışta elle silme yapılmaz; süpürücü aynı yaş kuralını kendiliğinden
+uygular.
+
 ## Replay ve kalite kapıları
 
     python scripts/release_gate.py --docker --requests 20 --concurrency 10
@@ -361,9 +499,15 @@ task'in kapanmış istemci üzerinden yeni network çağrısı başlatması enge
 
 Release gate; architecture, provider metadata, compileall, pytest, Docker
 build/test, health, migration, provider matrix, Mongo ledger, security replay
-ve media delivery replay kontrollerini birlikte çalıştırır. Canlı
+ve media delivery replay kontrollerini, ayrıca commit'lenmiş kanıt denetimi
+(`scripts/evidence_audit.py`) ve faz sözleşme denetimini
+(`scripts/phase_audit.py`) birlikte çalıştırır. Canlı
 Telegram, VDS webhook ve platform medya matrisi bu deterministic kapının
 yerine geçmez; staging kimlik bilgileriyle ayrı yürütülür.
+
+`--requests` ve `--concurrency` değerleri yük kanıtının gücünü belirler; arşiv
+olan `deploy/evidence/release-gate.json` bu değerleri kaydeder. Kanıtı
+üretirken operasyon runbook'undaki değerler kullanılmalıdır.
 
 ## Monitoring profile
 
@@ -677,14 +821,218 @@ shadow/active canary evidence is collected.
 
 ### MongoDB ve Redis üretim ağı
 
-Compose servisleri varsayılan olarak yalnızca iç Compose ağına bağlanır; bu
-tek başına kimlik doğrulama kanıtı değildir. Üretime geçmeden önce MongoDB için
-SCRAM kullanıcısı, Redis için ACL kullanıcısı ve ayrı secret dosyalarıyla
-kimlik doğrulama etkinleştirilmelidir. Bot ve worker yalnızca en az yetkili
-hesaplarla bağlanmalı, bağlantı dizeleri loglara veya `/health` çıktısına
-girmemelidir. Bu değişiklik için mevcut verinin korunacağı bir migration,
-backup/restore denemesi ve rollback kanıtı gerekir; kanıt oluşana kadar bu
-madde faz 9 operasyon önkoşulu olarak açık kalır.
+Compose MongoDB ve Redis servisleri artık anonim bağlantıyı reddeder.
+MongoDB `MONGO_INITDB_ROOT_USERNAME`/`MONGO_INITDB_ROOT_PASSWORD` ile SCRAM
+kullanıcısı açar, Redis `--requirepass` ile parola ister. Compose ağındaki
+her konteyner (flaresolverr, prometheus, grafana, test) veritabanının
+tamamını ve kuyruk Redis'ini kimliksiz okuyup yazamadığı için ağ izolasyonu
+tek başına yeterli değildir.
+
+MongoDB'de üç ayrı kimlik vardır ve her biri **kendi veritabanında** yaşar.
+Bu yüzden bağlantı dizisindeki `authSource` sorgu parametresi kimliğin hangi
+veritabanında tutulduğunu açıkça belirtmelidir:
+
+| Kimlik | Veritabanı | Yetki | Bağlantı dizisi |
+|---|---|---|---|
+| `arel_app` | `arel_bot` | `readWrite` | `mongodb://arel_app:<parola>@mongo:27017/arel_bot` + `?authSource=arel_bot` |
+| `arel_test` | `arel_bot_test` | `readWrite` + `dbOwner` | `mongodb://arel_test:<parola>@mongo:27017/arel_bot_test` + `?authSource=arel_bot_test` |
+| `areladmin` (idari) | `admin` | `root` | `mongodb://areladmin:<parola>@mongo:27017` + `?authSource=admin` |
+
+Bot, worker ve geliştirme profili `arel_app` ile bağlanır; test profili
+`arel_test` ile. `areladmin` yalnızca kurulum, backup/restore ve parola
+rotasyonu gibi idari işlerde kullanılır, uygulama bağlantı dizisinde
+**bulunmaz**.
+
+#### 1. Parola kurulumu
+
+Parolalar deployment secret store'da üretilir; `.env` dosyası 0600 izinli
+olmalıdır ve Git'e girmez. `.env` içinde şu kimlikler tanımlanır:
+
+    MONGO_ROOT_USERNAME=areladmin
+    MONGO_ROOT_PASSWORD=<üretim parolası>
+    MONGO_APP_PASSWORD=<üretim parolası>
+    MONGO_TEST_PASSWORD=<üretim parolası>
+    REDIS_PASSWORD=<üretim parolası>
+
+`MONGO_ROOT_*` idari hesabın, `MONGO_APP_*` uygulama hesabının ve
+`MONGO_TEST_*` test hesabının parolasıdır; `arel_app` ve `arel_test`
+kullanıcıları init script'i tarafından oluşturulur. Compose bağlantı
+dizisini paroladan birebir kurar:
+
+    MONGODB_URI=mongodb://arel_app:<parola>@mongo:27017/arel_bot
+    REDIS_URL=redis://:<parola>@redis:6379/0
+
+Uygulama hesabı `arel_bot` veritabanında yaşadığı için bu adres
+`?authSource=arel_bot` sorgu parametresiyle, test hesabı ise
+`?authSource=arel_bot_test` parametresiyle kullanılmalıdır; `docker-compose.yml`
+parametreleri kendisi yazar. İdari bağlantıda ise `?authSource=admin`
+gerekir, çünkü root kullanıcısı `admin` veritabanında oluşturulur.
+Parametre yoksa kullanıcı reddedilir.
+
+Parola URI'ye doğrudan gömüldüğü için `A-Z a-z 0-9 - _ . ~` karakterleriyle
+sınırlanmalıdır; `@ : / # %` gibi ayırıcı karakterler bağlantı
+dizisini bozar. Bu sınır bir **kuraldır**, yalnızca bir not değil:
+`scripts/production_preflight.py` parolaları doğrular ve küme dışında bir
+karakter varsa deployment'ı `mongodb_password_charset_invalid` veya
+`redis_password_charset_invalid` hata koduyla durdurur; uygulama da
+production'da başlarken aynı kuralı uygular. Operasyonel problar da aynı
+kuralı kendi doğrulamasıyla uygular, böylece sessizce bozuk bir
+bağlantı dizisi üretilmez. Bu karakterlerden biri gerekiyorsa parolayı
+değiştirin. Uygulama tarafında `config.build_mongodb_uri()` parolayı
+URL-encode eder, ancak Compose değişkeni kendisi encode edemez; bu yüzden
+kural uygulamanın kendi bağlantı dizesinde bile geçerlidir.
+
+`deploy/mongo/init-app-users.js` init script'i `arel_app` kullanıcısını
+`arel_bot` veritabanında yalnızca `readWrite` yetkisiyle, `arel_test`
+kullanıcısını `arel_bot_test` veritabanında `readWrite` ve geçici migration
+veritabanında `dbOwner` yetkisiyle oluşturur; `areladmin` yalnızca `admin`
+veritabanındaki `root` rolünü korur. Script tekrar çalıştırıldığında aynı
+duruma gelir, yani kullanıcılar zaten varsa yetkileri güncellenir. Bu iş
+yalnızca `mongo_data` volume'u ilk kez oluşturulduğunda çalışır.
+
+#### 2. Mevcut üretim verisini koruyarak kimlikli bağlantıya geçiş
+
+Init script'leri yalnızca boş volume üzerinde çalışır. Mevcut üretim
+volume'u silinmez. İlk kimlikli deployment şu sırayla yapılır:
+
+1. Mongo archive, Redis snapshot ve mevcut ortam dosyası yalnız root'un
+   okuyabildiği bir yedek klasörüne alınır. Mongo yedeği üretim ağı ve
+   volume'ları bağlanmamış geçici bir veritabanına geri yüklenerek doğrulanır.
+2. Eski kimliksiz Mongo henüz çalışırken localhost bağlantısından `admin`
+   veritabanında idari kullanıcı, `arel_bot` içinde `arel_app` ve test
+   veritabanında `arel_test` oluşturulur. Var olan kullanıcılar önce
+   denetlenir; bilinmeyen hesabın parolası otomatik değiştirilmez. Parolalar
+   komut satırı argümanına veya log'a yazılmaz; süreç standart girdisinden
+   geçirilir ve yeni ortam dosyası 0600 izinle hazırlanır.
+3. Bot ve worker durdurulur; son tutarlı yedek alınır. Yeni ortam ve Compose
+   yapılandırmasıyla Mongo auth ve Redis parola zorunluluğu etkinleştirilir.
+   Aynı veri volume'ları kullanılır.
+4. Yeni uygulama kimliğiyle bağlantı, veri sayıları, migration ve bot/worker
+   sağlık kontrolleri doğrulanır. Kimliksiz koleksiyon okumasının reddedildiği
+   ayrıca denetlenir. Sağlık doğrulanmadan current release değiştirilmez.
+5. Başarısızlıkta önceki sürüm, önceki ortam ve önceki bağlantı yapılandırması
+   geri alınır; yedekler korunur. Yeni ekonomi şemasına geçilmişse eski ekonomi
+   kodu açılmadan önce aşağıdaki v20 geri dönüş prosedürü uygulanır.
+
+Redis parola değişikliği de mevcut veri volume'unu koruyarak yapılır.
+Boş geliştirme veritabanı kurmak için kullanılan hacim silme komutları
+üretim geçişinin parçası değildir.
+
+#### 3. Doğrulama
+
+    python scripts/production_preflight.py --env-file .env --nginx-config /etc/nginx/sites-enabled/arelbot.conf
+    docker compose --profile prod config --quiet
+
+Preflight `mongodb_credentials_missing` ve `redis_credentials_missing` hata
+kodlarıyla anonim bağlantıyı reddeder; parola değerini hiçbir zaman
+yazdırmaz. `docker compose config` eksik parolada `required variable ...
+is missing a value` hatası verir.
+
+#### 4. Parola rotasyonu
+
+Parola rotasyonu iki ayrı işlem gerektirir:
+
+1. Yeni parolalar üretilir ve secret store'a yazılır.
+2. `MONGO_ROOT_PASSWORD`, `MONGO_APP_PASSWORD`, `MONGO_TEST_PASSWORD` ve
+   `REDIS_PASSWORD` değerleri güncellenir; `docker compose --profile prod up -d`
+   ile servisler yeniden başlatılır.
+
+MongoDB parolaları `admin.system.users` içinde saklandığı için sadece
+environment değişikliğiyle değişmez; her hesabın parolası
+`changeUserPassword` ile **ayrı ayrı** döndürülmelidir. Yeni parola **ortam
+değişkeni** olarak konteynere verilir, parolayı `mongosh` **TTY üzerinden
+kendisi** sorar; parola bu yüzden ne komut satırına ne de `argv` listesine
+girer.
+
+**Sıra önemlidir.** Üç komut aşağıdaki sırayla çalıştırılır:
+
+| # | Döndürülen parola | Yönetici oturumu bu parolayla açılır |
+|---|---|---|
+| 1 | `areladmin` | **ESKİ** `areladmin` parolası |
+| 2 | `arel_app` | **YENİ** `areladmin` parolası |
+| 3 | `arel_test` | **YENİ** `areladmin` parolası |
+
+İlk komut `areladmin` parolasını değiştirdiği için ikinci ve üçüncü komutlar
+artık **yeni** `areladmin` parolasıyla oturum açar; eski parola
+`Authentication failed.` ile reddedilir. Uygulama ve test hesaplarının
+kendi parolaları değiştirilirken oturum yine `areladmin` ile açılır, çünkü
+`areladmin` `admin` veritabanında `root` rolüne sahiptir.
+
+Yeni parolaları **kabuk geçmişine yazmadan** ortama alın. `read -rs` değeri
+ekrana basmadan okur:
+
+    read -rs -p 'Yeni idari parola: ' NEW_MONGO_ROOT_PASSWORD; echo
+    read -rs -p 'Yeni uygulama parolası: ' NEW_MONGO_APP_PASSWORD; echo
+    read -rs -p 'Yeni test parolası: ' NEW_MONGO_TEST_PASSWORD; echo
+    export NEW_MONGO_ROOT_PASSWORD NEW_MONGO_APP_PASSWORD NEW_MONGO_TEST_PASSWORD
+
+Alternatif olarak değerler doğrudan secret store'dan okunup ortam
+değişkenine atanabilir. Her iki yolda da parola yalnızca **ortam
+değişkeninde** bulunur, komut satırına ve kabuk geçmişine yazılmaz.
+
+Şimdi üç MongoDB hesabının parolasını döndürün. `areladmin` `admin`
+veritabanında, `arel_app` `arel_bot` veritabanında, `arel_test`
+`arel_bot_test` veritabanında yaşar:
+
+    docker compose exec -e NEW_MONGO_ROOT_PASSWORD mongo mongosh --quiet --username areladmin --authenticationDatabase admin --eval 'db.getSiblingDB("admin").changeUserPassword("areladmin", process.env.NEW_MONGO_ROOT_PASSWORD)'
+    docker compose exec -e NEW_MONGO_APP_PASSWORD mongo mongosh --quiet --username areladmin --authenticationDatabase admin --eval 'db.getSiblingDB("arel_bot").changeUserPassword("arel_app", process.env.NEW_MONGO_APP_PASSWORD)'
+    docker compose exec -e NEW_MONGO_TEST_PASSWORD mongo mongosh --quiet --username areladmin --authenticationDatabase admin --eval 'db.getSiblingDB("arel_bot_test").changeUserPassword("arel_test", process.env.NEW_MONGO_TEST_PASSWORD)'
+
+Kanalın çalışma nedeni şudur:
+
+* `docker compose exec -e AD` **değeri host ortamından miras alır**; parola
+  `--eval` ifadesinde `process.env` üzerinden okunur, bu yüzden `argv`
+  listesinde görünmez.
+* `--password` bayrağı **verilmez**. `mongosh` oturum açarken o an geçerli
+  olan parolayı kendi interaktif isteminde sorar, bu yüzden komut TTY'ye
+  bağlı çalıştırılmalıdır (`-T` bayrağı kullanılmaz).
+* `prompt()` mongosh'ta **bulunmaz** (`mongosh` yalnızca `process`,
+  `process.env` ve kabuk yardımcılarını sunar); bu yüzden yeni parola
+  `process.env` üzerinden verilir.
+* `areladmin` `admin` veritabanında `root` rolüne sahip olduğu için diğer
+  veritabanlarındaki kullanıcıların parolasını da değiştirebilir.
+
+Redis parolası `redis-server`'a `--requirepass` ile verildiği için dosyada
+saklanır: `REDIS_PASSWORD` değerini secret store'da güncelleyip servisleri
+yeniden başlatmak yeterlidir.
+
+Döndürme bittikten sonra dışa aktarılan değişkenleri temizleyin:
+
+    unset NEW_MONGO_ROOT_PASSWORD NEW_MONGO_APP_PASSWORD NEW_MONGO_TEST_PASSWORD
+
+Ardından secret store ve `.env` değerleri güncellenip servisler yeniden
+başlatılır. Volume sıfırlama rotasyonda gerekli değildir; init script'i
+yalnızca ilk kurulumda çalışır.
+
+#### 5. Backup ve restore
+
+`scripts/backup.py` ve `scripts/restore.py` MongoDB ve Redis parolasını
+komut satırına yazmaz. `mongodump`/`mongorestore` bağlantı dizisini 0600
+izinli, geçici bir YAML yapılandırma dosyasından okur ve dosya komut
+bittikten sonra silinir; `redis-cli` parolayı `REDISCLI_AUTH` environment
+değişkeninden alır. Böylece `ps` çıktısında parola görünmez. `MONGODB_URI`
+environment değişkeni de aynı değeri taşır.
+
+#### 6. Staging ve live-VDS probları
+
+Üç operatör probu kimlikli servislere karşı çalışır ve parolayı hiçbir
+zaman komut satırına yazmaz:
+
+* `scripts/persistence_staging_smoke.py` — Compose yığınına karşı. MongoDB
+  yarısı idari kimliği çalışan konteynerin yapılandırmasından okur ve
+  `mongosh` için kimlik betiğini, veritabanı araçları için YAML yapılandırma
+  dosyasını **standard input** üzerinden konteynere yazar. Redis yarısı
+  konteynerin `REDISCLI_AUTH` ortam değişkenini kullanır.
+* `scripts/vds_backup_restore_remote.py` — VDS üzerinde. Aynı kanalları
+  kullanır; kimlik betiği ve YAML dosyası konteynerin **içinde** yazılır, bu
+  yüzden parola VDS'yi terk etmez.
+* `scripts/vds_migration_rollback_remote.py` — VDS üzerinde. Kimlik betiği
+  konteynerin içinde yazılır ve bağlantı dizisi worker'a **ortam
+  değişkeni** olarak (`MONGODB_URI`) verilir; `argv` temiz kalır.
+
+Bu probların ürettiği kanıtlar `deploy/evidence/persistence-staging.json`,
+`deploy/evidence/vds-backup-restore.json` ve
+`deploy/evidence/vds-migration-rollback.json` dosyalarıdır.
 
 
 ## Satranç oyun operasyonu
@@ -745,3 +1093,20 @@ HTTPS endpoint, Telegram `initData` doğrulaması, chat/user scope kontrolü,
 nonce-expiry denetimi ve staging replay kanıtı tamamlanmalıdır. `MINIAPP_URL`
 yalnızca doğrulanmış endpoint'e işaret ettiğinde ayarlanır; boş bırakılırsa
 UNO Telegram butonlarıyla tam çalışır ve Mini App düğmesi gösterilmez.
+
+## Inline buton görünümü
+
+`TELEGRAM_CUSTOM_BUTTON_EMOJI=auto` varsayılan olarak doğrulanmış yerel özel simge kataloğunu kullanır. `off`, Unicode simgeleri ve buton renklerini koruyup özel simgeleri kapatır. Ortam değişikliğinden sonra bot ve işçi aynı yapılandırmayla yeniden oluşturulmalıdır. Açık bir özel emoji HTTP400 reddi tek bir Unicode tekrarına ve ilgili istemcide kullanımın kapanmasına yol açar; yeniden başlatmada `auto` tekrar denenir. Ağ hatası veya 429/5xx nedeniyle bu sunum katmanı mesajı yeniden göndermez. Yalnız ikon metadata kimlikleri yereldedir; emoji dosyası indirilmez. Uygunluk, güncel Bot API koşulları ve canlı istemci kabul sınırları docs/TELEGRAM_BUTTONS_UPDATE_2026-10-22.md içinde tutulur.
+
+2026-10-22 games-14: 45 oyun etkin. Yedek: /opt/arel/backups/games-20261022-games45-product. Şema20, bağımlılıklar aynı. Bot/worker/Mongo/Redis sağlıklı. Mevcut veriler korundu; Mongo yedek dosya bütünlüğü doğrulandı, bu dalgada ayrı restore denemesi yapılmadı. Kanıt: deploy/evidence/games45-deployment-20261022.json.
+## Codex CLI hesabı
+
+Üretimde `OPENAI_CHATGPT_ENABLED=true` ve `OPENAI_CHATGPT_MODE=cli` kullanılır.
+Host üzerinde `codex login status` ile hesabın durumunu kontrol edin. Giriş
+yoksa bot kapanmaz; OpenAI rotası `cli_auth_required` durumuyla açılır ve EVREN
+ile diğer provider'lara failover yapar. Bot ve worker aynı `codex` CLI sürümünü
+imajdan kullanır; `OPENAI_CHATGPT_CODEX_HOST_DIR` yalnızca Codex home olarak
+`/run/arel-openai/codex` yoluna bağlanır ve CLI metadata yazabilsin diye
+yazılabilirdir. Auth dosyası, prompt ve tam CLI çıktısı loglanmaz. Hesabı
+yenilemek için hostta `codex login` çalıştırıp bot ve worker konteynırlarını
+yeniden oluşturun.

@@ -1,0 +1,199 @@
+{
+  "schema_version": 1,
+  "source": "Telegram Bot API getForumTopicIconStickers",
+  "source_url": "https://core.telegram.org/bots/api#getforumtopiciconstickers",
+  "set_name": "Topics",
+  "verified_on": "2026-10-22",
+  "icons": [
+    {
+      "emoji": "📰",
+      "custom_emoji_id": "5434144690511290129",
+      "set_name": "Topics"
+    },
+    {
+      "emoji": "💡",
+      "custom_emoji_id": "5312536423851630001",
+      "set_name": "Topics"
+    },
+    {
+      "emoji": "⚡️",
+      "custom_emoji_id": "5312016608254762256",
+      "set_name": "Topics"
+    },
+    {
+      "emoji": "🎙",
+      "custom_emoji_id": "5377544228505134960",
+      "set_name": "Topics"
+    },
+    {
+      "emoji": "🗣",
+      "custom_emoji_id": "5370870893004203704",
+      "set_name": "Topics"
+    },
+    {
+      "emoji": "📝",
+      "custom_emoji_id": "5373251851074415873",
+      "set_name": "Topics"
+    },
+    {
+      "emoji": "📆",
+      "custom_emoji_id": "5433614043006903194",
+      "set_name": "Topics"
+    },
+    {
+      "emoji": "📁",
+      "custom_emoji_id": "5357315181649076022",
+      "set_name": "Topics"
+    },
+    {
+      "emoji": "🔎",
+      "custom_emoji_id": "5309965701241379366",
+      "set_name": "Topics"
+    },
+    {
+      "emoji": "📣",
+      "custom_emoji_id": "5309984423003823246",
+      "set_name": "Topics"
+    },
+    {
+      "emoji": "🔥",
+      "custom_emoji_id": "5312241539987020022",
+      "set_name": "Topics"
+    },
+    {
+      "emoji": "❓",
+      "custom_emoji_id": "5377316857231450742",
+      "set_name": "Topics"
+    },
+    {
+      "emoji": "📈",
+      "custom_emoji_id": "5350305691942788490",
+      "set_name": "Topics"
+    },
+    {
+      "emoji": "💰",
+      "custom_emoji_id": "5350452584119279096",
+      "set_name": "Topics"
+    },
+    {
+      "emoji": "🪙",
+      "custom_emoji_id": "5377690785674175481",
+      "set_name": "Topics"
+    },
+    {
+      "emoji": "🎮",
+      "custom_emoji_id": "5309950797704865693",
+      "set_name": "Topics"
+    },
+    {
+      "emoji": "💻",
+      "custom_emoji_id": "5350554349074391003",
+      "set_name": "Topics"
+    },
+    {
+      "emoji": "📱",
+      "custom_emoji_id": "5409357944619802453",
+      "set_name": "Topics"
+    },
+    {
+      "emoji": "🏠",
+      "custom_emoji_id": "5312486108309757006",
+      "set_name": "Topics"
+    },
+    {
+      "emoji": "🎉",
+      "custom_emoji_id": "5310228579009699834",
+      "set_name": "Topics"
+    },
+    {
+      "emoji": "🏆",
+      "custom_emoji_id": "5312315739842026755",
+      "set_name": "Topics"
+    },
+    {
+      "emoji": "🏁",
+      "custom_emoji_id": "5408906741125490282",
+      "set_name": "Topics"
+    },
+    {
+      "emoji": "🎵",
+      "custom_emoji_id": "5310045076531978942",
+      "set_name": "Topics"
+    },
+    {
+      "emoji": "📚",
+      "custom_emoji_id": "5350481781306958339",
+      "set_name": "Topics"
+    },
+    {
+      "emoji": "👑",
+      "custom_emoji_id": "5357107601584693888",
+      "set_name": "Topics"
+    },
+    {
+      "emoji": "⚽️",
+      "custom_emoji_id": "5375159220280762629",
+      "set_name": "Topics"
+    },
+    {
+      "emoji": "🏀",
+      "custom_emoji_id": "5384327463629233871",
+      "set_name": "Topics"
+    },
+    {
+      "emoji": "🎤",
+      "custom_emoji_id": "5382003830487523366",
+      "set_name": "Topics"
+    },
+    {
+      "emoji": "🧪",
+      "custom_emoji_id": "5411138633765757782",
+      "set_name": "Topics"
+    },
+    {
+      "emoji": "🧮",
+      "custom_emoji_id": "5355127101970194557",
+      "set_name": "Topics"
+    },
+    {
+      "emoji": "🎨",
+      "custom_emoji_id": "5310039132297242441",
+      "set_name": "Topics"
+    },
+    {
+      "emoji": "🎭",
+      "custom_emoji_id": "5350658016700013471",
+      "set_name": "Topics"
+    },
+    {
+      "emoji": "🎩",
+      "custom_emoji_id": "5357504778685392027",
+      "set_name": "Topics"
+    },
+    {
+      "emoji": "🔮",
+      "custom_emoji_id": "5350367161514732241",
+      "set_name": "Topics"
+    },
+    {
+      "emoji": "🎂",
+      "custom_emoji_id": "5310132165583840589",
+      "set_name": "Topics"
+    },
+    {
+      "emoji": "💬",
+      "custom_emoji_id": "5417915203100613993",
+      "set_name": "Topics"
+    },
+    {
+      "emoji": "✅",
+      "custom_emoji_id": "5237699328843200968",
+      "set_name": "Topics"
+    },
+    {
+      "emoji": "🧠",
+      "custom_emoji_id": "5237889595894414384",
+      "set_name": "Topics"
+    }
+  ]
+}

@@ -115,6 +115,9 @@ async def test_blackjack_callback_action_is_idempotent_and_settlement_is_persist
 
     finished = await service.action(chat_id=-10, user_id=7, action="stand", action_id="callback-2")
     assert finished["terminal"] is True
+    assert database.states[(-10, "blackjack:7")]["terminal_panel_pending"]
+    assert await service.acknowledge_terminal_panel(chat_id=-10, user_id=7,
+        event_id=finished["state"]["event_id"], message_id=91)
     assert (-10, "blackjack:7") not in database.states
     assert economy.balance_value == 1100  # 100 stake + 200 payout returned
     assert leaderboard.scores[0]["event_id"] == "score:start-2"

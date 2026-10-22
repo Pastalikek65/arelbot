@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -36,7 +37,45 @@ def test_release_gate_keeps_live_external_e2e_out_of_deterministic_commands():
         "media_replay_matrix",
         "media_queue_load",
         "evidence_audit",
+        "phase_audit",
     ]
+
+
+def test_release_gate_includes_phase_audit():
+    """The phase contract has to be part of the gate, not a separate command.
+
+    A phase whose deterministic check or artifact is missing is a real
+    contract violation.  When the audit only ran as a separate command, the
+    gate could stay green while a phase was broken.
+    """
+
+    names = [name for name, _argv in commands(include_docker=False, requests=2, concurrency=1)]
+    assert "phase_audit" in names
+
+    check = dict(commands(include_docker=False, requests=2, concurrency=1))["phase_audit"]
+    assert check[-1] == "scripts/phase_audit.py"
+
+
+def test_release_gate_keeps_provider_approval_out_of_the_code_gate():
+    """The provider approval flag belongs to the deployment preflight.
+
+    ``scripts/provider_governance.py --require-approved`` fails for every
+    feature whose source governance is still ``pending``; more than ten
+    features are legitimately pending, so the flag would keep the release gate
+    red for a documented reason.  It stays in ``scripts/production_preflight.py
+    --require-provider-approval``.  The remaining hole -- a new provider that
+    arrives with pending governance -- is still open and will be closed once
+    the license registry check of the release-gate hardening lands.
+    """
+
+    checks = dict(commands(include_docker=False, requests=2, concurrency=1))
+    assert "--require-approved" not in checks["provider_governance"]
+    assert checks["provider_governance"][-1] == "scripts/provider_governance.py"
+
+
+def test_release_gate_architecture_check_is_strict():
+    checks = dict(commands(include_docker=False, requests=2, concurrency=1))
+    assert "--strict" in checks["architecture"]
 
 
 def test_docker_release_gate_validates_monitoring_config():
@@ -50,9 +89,40 @@ def test_docker_release_gate_validates_monitoring_config():
 def test_docker_release_gate_validates_all_compose_profiles():
     command = dict(commands(include_docker=True, requests=20, concurrency=10))["compose_profiles"]
 
-    assert command[:4] == ["docker", "compose", "--profile", "dev"]
+    assert command[:2] == ["docker", "compose"]
     assert command.count("--profile") == 3
     assert command[-2:] == ["config", "--quiet"]
+
+
+def test_docker_gate_isolates_its_project_and_interpolates_every_profile_from_test_env():
+    checks = dict(commands(include_docker=True, requests=8, concurrency=2))
+    for name, command in checks.items():
+        if command[:2] != ["docker", "compose"]:
+            continue
+        assert command[command.index("--env-file") + 1] == ".env.test", name
+        assert command[command.index("--project-name") + 1] == "arelbot-gate", name
+
+
+def test_phase_check_consumes_the_current_run_instead_of_previous_failure(tmp_path, monkeypatch):
+    from scripts import release_gate
+    previous = tmp_path / "deploy/evidence/release-gate.json"
+    previous.parent.mkdir(parents=True)
+    previous.write_text(json.dumps({"checks": [{"name": "architecture", "ok": False}]}))
+    monkeypatch.setattr(release_gate, "PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr(sys, "argv", ["release_gate.py"])
+    monkeypatch.setattr(release_gate, "commands", lambda **kwargs: [
+        ("architecture", ["check"]), ("phase_audit", ["phase"]),
+    ])
+
+    def execute(name, command, **kwargs):
+        if name == "phase_audit":
+            assert "--gate" in command
+            current = json.loads(Path(command[command.index("--gate") + 1]).read_text())
+            assert next(row for row in current["checks"] if row["name"] == "architecture")["ok"] is True
+        return release_gate.CheckResult(name, True, 0, 1.0, "ok")
+
+    monkeypatch.setattr(release_gate, "run_check", execute)
+    assert release_gate.main() == 0
 
 
 def test_evidence_audit_validates_deterministic_invariants_and_keeps_live_optional(tmp_path):

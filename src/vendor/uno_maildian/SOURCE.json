@@ -1,0 +1,45 @@
+{
+  "upstream": "https://github.com/maildian/uno-telegram-bot",
+  "commit": "01640d1df9e3b06f81727aff38ea02990f3c8d83",
+  "license": "AGPL-3.0-or-later",
+  "copyright": "2016 Jannes Hoke and contributors; original headers retained",
+  "changes": [
+    "relative imports and current Telegram symbols",
+    "durable JSON adapter for source mechanics",
+    "native inline result transport adaptation",
+    "private card logging removed",
+    "private deterministic shuffle state and exhaustion handling"
+  ],
+  "files": {
+    "card.py": {
+      "upstream_sha256": "63d4897f72ebce0e2fac670b772ba30cf39bc6534517c01204233b9503cbb0b0",
+      "fork_path": "src/vendor/uno_maildian/card.py",
+      "fork_sha256": "2b634c3aba289eace5aed61e7dd23d7bd4b0cd285e0ee6c8ddc8a75c63545b80"
+    },
+    "deck.py": {
+      "upstream_sha256": "137c30838cdf934ebeb18dd330a2cd1bc1f0a459d919cee7c9361d5ead24b682",
+      "fork_path": "src/vendor/uno_maildian/deck.py",
+      "fork_sha256": "b35f3c6081a26e58a0dbf2f011d3c77280302f542c92bcf7c8f3bf3884d86cf4"
+    },
+    "game.py": {
+      "upstream_sha256": "57938dc3dd9b65b56b1c9777ff1c9f4b0ac74748e0ac55f24121f135044c1277",
+      "fork_path": "src/vendor/uno_maildian/game.py",
+      "fork_sha256": "3d712c5d8dc900f3f5bb8ecbc15ba543e2333cc0b399ca012a4bcebfbaf32277"
+    },
+    "player.py": {
+      "upstream_sha256": "7d05f4252907ff290ffef78742b57e0c41c2215baaae4470e691400614001797",
+      "fork_path": "src/vendor/uno_maildian/player.py",
+      "fork_sha256": "b64825fabacdc1092b8bddbdc27d8451362497f4db203e52ff7f044866f84362"
+    },
+    "errors.py": {
+      "upstream_sha256": "b2b69a388fe86bbcfad891bbeafa3e35d7bf25f3f3f55b07b2c8473bdb6878ee",
+      "fork_path": "src/vendor/uno_maildian/errors.py",
+      "fork_sha256": "68cad99043c7d3856dcd22779e0a2b74e21ae1675691d87e2d2ad4b7f7a643b8"
+    },
+    "results.py": {
+      "upstream_sha256": "8b72d9f035999123cb3ce388e8e9ab6b34b7ff64407ba6bbd0761d6efd7794cc",
+      "fork_path": "src/vendor/uno_maildian/inline_results.py",
+      "fork_sha256": "1070b3b1b5e2901fa8eb002765f7510cf896c54b392dbc4b0c661d8abc3dfb9b"
+    }
+  }
+}

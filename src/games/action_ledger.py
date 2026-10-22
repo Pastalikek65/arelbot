@@ -12,10 +12,15 @@ from __future__ import annotations
 import asyncio
 import inspect
 import json
+import secrets
 import time
 from collections import OrderedDict
+from contextlib import asynccontextmanager, suppress
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Any, Awaitable, Callable, Generic, Mapping, TypeVar
+
+from src.storage.production import is_production_database
 
 
 T = TypeVar("T")
@@ -44,6 +49,9 @@ class GameActionLedger:
     MAX_PAYLOAD_BYTES = 4096
     MEMORY_CLAIM_TTL_SECONDS = 3600
     MAX_MEMORY_CLAIMS = 20_000
+    LEASE_SECONDS = 60
+    LEASE_HEARTBEAT_SECONDS = 20
+    LEASE_OPERATION_SECONDS = 45
 
     def __init__(
         self,
@@ -59,8 +67,8 @@ class GameActionLedger:
         )
         wrapped = getattr(database, "_repository", None)
         production_database = (
-            type(database).__module__ == "src.database"
-            or type(wrapped).__module__ == "src.database"
+            is_production_database(database)
+            or is_production_database(wrapped)
         )
         self.allow_memory_fallback = (
             database is None
@@ -75,7 +83,118 @@ class GameActionLedger:
         except (TypeError, ValueError, OverflowError):
             self.memory_claim_ttl_seconds = self.MEMORY_CLAIM_TTL_SECONDS
         self._claimed: OrderedDict[str, float] = OrderedDict()
+        self._leases: dict[str, tuple[str, float]] = {}
         self._lock = asyncio.Lock()
+
+    def _lease_methods(self) -> tuple[Any | None, Any | None, Any | None]:
+        names = ("claim_game_lease", "renew_game_lease", "release_game_lease")
+        methods = []
+        supported = []
+        supports = getattr(self.database, "supports", None)
+        for name in names:
+            method = getattr(self.database, name, None)
+            methods.append(method)
+            try:
+                supported.append(bool(supports(name)) if callable(supports) else callable(method))
+            except Exception as exc:
+                raise RuntimeError("game_persistence_capability_error") from exc
+        if all(supported) and getattr(self.database, "available", True) is not False:
+            return tuple(methods)
+        # A partially upgraded repository must never use process-local locks
+        # while another worker holds the durable lease.
+        if any(supported) or not self.allow_memory_fallback:
+            raise RuntimeError("game_persistence_unavailable")
+        return None, None, None
+
+    async def _memory_lease_claim(self, key: str, token: str) -> bool:
+        async with self._lock:
+            now = time.monotonic()
+            prior = self._leases.get(key)
+            if prior and prior[1] > now:
+                return False
+            self._leases[key] = (token, now + self.LEASE_SECONDS)
+            return True
+
+    async def _memory_lease_renew(self, key: str, token: str) -> bool:
+        async with self._lock:
+            now = time.monotonic()
+            prior = self._leases.get(key)
+            if not prior or prior[0] != token or prior[1] <= now:
+                return False
+            self._leases[key] = (token, now + self.LEASE_SECONDS)
+            return True
+
+    async def _memory_lease_release(self, key: str, token: str) -> None:
+        async with self._lock:
+            if self._leases.get(key, (None,))[0] == token:
+                self._leases.pop(key, None)
+
+    @asynccontextmanager
+    async def lease(self, chat_id: int, game_type: str, action_id: str, *,
+                    user_id: int | None = None):
+        """Hold a renewable owner-scoped lock without changing callback receipts.
+
+        The lease expires after a process crash. A renewal failure cancels the
+        operation before another owner may acquire it; repository writes should
+        still use idempotent financial event ids for uncertain network results.
+        """
+        key = self._key(chat_id, game_type, action_id)
+        if user_id is not None and (isinstance(user_id, bool) or not isinstance(user_id, int) or user_id <= 0):
+            raise ValueError("invalid_game_user_id")
+        token = secrets.token_hex(16)
+        claim, renew, release = self._lease_methods()
+        if claim is None:
+            acquired = await self._memory_lease_claim(key, token)
+        else:
+            acquired = bool(await claim(key, token, self.LEASE_SECONDS, datetime.now(timezone.utc)))
+        if not acquired:
+            raise ValueError("game_busy")
+
+        owner = asyncio.current_task()
+        lost = asyncio.Event()
+
+        async def heartbeat() -> None:
+            while True:
+                await asyncio.sleep(self.LEASE_HEARTBEAT_SECONDS)
+                try:
+                    if renew is None:
+                        alive = await self._memory_lease_renew(key, token)
+                    else:
+                        alive = bool(await renew(key, token, self.LEASE_SECONDS, datetime.now(timezone.utc)))
+                except Exception:
+                    alive = False
+                if not alive:
+                    lost.set()
+                    if owner is not None:
+                        owner.cancel()
+                    return
+
+        task = asyncio.create_task(heartbeat())
+        try:
+            try:
+                async with asyncio.timeout(self.LEASE_OPERATION_SECONDS):
+                    yield
+                if lost.is_set():
+                    raise RuntimeError("game_lease_lost")
+            except asyncio.CancelledError:
+                if lost.is_set():
+                    raise RuntimeError("game_lease_lost") from None
+                raise
+            except TimeoutError:
+                raise TimeoutError("game_lease_timeout") from None
+        finally:
+            task.cancel()
+            # A driver call may ignore cancellation; do not let cleanup hold
+            # the owner indefinitely. Token-matched release fences a late
+            # renewal from reviving a lease after this scope ends.
+            done, _ = await asyncio.wait({task}, timeout=1)
+            for finished in done:
+                with suppress(asyncio.CancelledError):
+                    finished.result()
+            if release is None:
+                await self._memory_lease_release(key, token)
+            else:
+                await release(key, token)
 
     @staticmethod
     def _key(chat_id: int, game_type: str, action_id: str) -> str:
@@ -226,3 +345,4 @@ class GameActionLedger:
     async def close(self) -> None:
         async with self._lock:
             self._claimed.clear()
+            self._leases.clear()

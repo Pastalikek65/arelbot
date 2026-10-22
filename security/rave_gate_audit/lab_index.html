@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="tr"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Rave App</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head><body>
+<div class="box">
+  <div id="wait"><p>Dogrulaniyor...</p></div>
+  <div id="deny" class="hide">
+    <h1>Telegram uzerinden acin</h1>
+    <a class="btn" id="open" href="https://t.me/RaveAppBot/raveapp">Telegram'da ac</a>
+  </div>
+</div>
+<script>
+(function () {
+  var deny = function () {
+    document.getElementById('wait').className = 'hide';
+    document.getElementById('deny').className = '';
+  };
+  var tried = sessionStorage.getItem('pf_gate') === '1';
+  var initData = (window.Telegram && window.Telegram.WebApp
+                  && window.Telegram.WebApp.initData) || '';
+  if (!initData || tried) { deny(); return; }
+  sessionStorage.setItem('pf_gate', '1');
+  fetch('/api/connect', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'same-origin',
+    body: JSON.stringify({ init_data: initData, gate: true })
+  }).then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (d) {
+      if (d && d.verified) { sessionStorage.removeItem('pf_gate'); location.reload(); }
+      else deny();
+    })
+    .catch(deny);
+})();
+</script></body></html>

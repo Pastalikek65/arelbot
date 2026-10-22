@@ -13,7 +13,7 @@ from src.ai.providers.cloudflare_image import (
     ImageProviderError,
 )
 from src.image_router import ImageRouter
-from src.key_manager import ServiceType
+from src.key_manager import ServiceType, ServiceCircuitOpenError
 
 
 class FakeKeys:
@@ -129,3 +129,41 @@ async def test_image_router_keeps_prompt_parser_outside_transport():
     assert (request.width, request.height, request.num_steps) == (640, 480, 20)
     assert request.negative_prompt == "blur"
     assert request.max_output_bytes == 2048
+
+
+@pytest.mark.asyncio
+async def test_flux2_uses_multipart_without_changing_legacy_json_models():
+    seen = []
+
+    def handle(request):
+        seen.append(request)
+        return httpx.Response(200, headers={'content-type':'image/png'}, content=b'fixture')
+
+    async with make_client(handle) as client:
+        provider = CloudflareImageProvider(FakeKeys(['account:token']), client=client)
+        path = await provider.generate(ImageGenerationRequest(prompt='çaydanlık', negative_prompt='text'))
+        Path(path).unlink()
+        assert seen[0].headers['content-type'].startswith('multipart/form-data; boundary=')
+        assert b'name="prompt"' in seen[0].content
+        assert b'name="width"' in seen[0].content
+        assert b'num_steps' not in seen[0].content
+        assert b'Avoid: text' in seen[0].content
+        path = await provider.generate(ImageGenerationRequest(prompt='test', model='@cf/black-forest-labs/flux-1-schnell'))
+        Path(path).unlink()
+        assert seen[1].headers['content-type'] == 'application/json'
+        assert json.loads(seen[1].content)['num_steps'] == 4
+
+
+@pytest.mark.asyncio
+async def test_exhausted_image_attempt_reports_real_failure_not_missing_configuration():
+    class Keys(FakeKeys):
+        def get_key(self, service):
+            if self.errors:
+                raise ServiceCircuitOpenError(service, 30)
+            return super().get_key(service)
+
+    async with make_client(lambda _: httpx.Response(429, json={'error':'quota'})) as client:
+        provider = CloudflareImageProvider(Keys(['account:token']), client=client, max_attempts=2)
+        with pytest.raises(ImageProviderError) as error:
+            await provider.generate(ImageGenerationRequest(prompt='test'))
+        assert error.value.code == 'image_provider_quota'

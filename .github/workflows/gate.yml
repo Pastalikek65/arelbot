@@ -1,0 +1,106 @@
+# Arelbot release gate.
+#
+# The workflow runs the repository's release gate instead of a hand-written
+# copy of its checks.  `scripts/release_gate.py` is the single aggregator for
+# the deterministic checks, so the workflow and a local release run cannot
+# drift apart: a check added to the gate is a check CI runs.  Every check
+# reads committed artifacts (for example `deploy/evidence/release-gate.json`),
+# so no job needs a repository credential.  The workflow therefore stays on
+# the plain pull-request trigger, which grants a fork pull request no
+# elevated permission and no access to repository credentials.
+name: gate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Read-only token for the whole workflow.  No job reads a repository secret.
+permissions:
+  contents: read
+
+# One run per ref.  A newer push to the same branch cancels the older run
+# instead of queueing behind it, so the reported check always belongs to the
+# newest commit.
+concurrency:
+  group: "${{ github.workflow }}-${{ github.ref }}"
+  cancel-in-progress: true
+
+jobs:
+  offline-gate:
+    name: offline gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -c constraints.txt -r requirements.txt
+
+      # The Compose file interpolates the mandatory credentials of the
+      # MongoDB and Redis services from the project `.env`, and `.env` is
+      # git-ignored, so a fresh clone has no environment file.  The values
+      # below are synthetic placeholders for the container network; no real
+      # credential is stored in the repository.  The file is created before
+      # the gate runs so the same entry point stays safe for the Compose
+      # scope.  The MongoDB and Redis services require authentication, so
+      # the file also carries the synthetic credentials the Compose file
+      # interpolates into the connection strings.
+      - name: Create synthetic env for compose
+        run: |
+          printf 'TELEGRAM_TOKEN=123456:TESTtestTokenabcdefghijklmnop\nMONGODB_URI=mongodb://arel_test:ci-mongo-test-pass@mongo:27017/arel_bot_test?authSource=arel_bot_test\nREDIS_URL=redis://:ci-redis-pass@redis:6379/1\nMONGO_ROOT_USERNAME=areladmin\nMONGO_ROOT_PASSWORD=ci-mongo-pass\nMONGO_APP_USERNAME=arel_app\nMONGO_APP_PASSWORD=ci-mongo-app-pass\nMONGO_TEST_USERNAME=arel_test\nMONGO_TEST_PASSWORD=ci-mongo-test-pass\nREDIS_PASSWORD=ci-redis-pass\nAPP_ROLE=combined\nAPP_ENV=test\n' > .env
+
+      # The release gate owns the check list: architecture boundary, feature
+      # catalog parity, provider matrix, provider governance, byte compile,
+      # the test suite, the security/media/monitoring replays, the committed
+      # evidence audit and the phase contract audit.  Re-listing those
+      # commands here is what let CI be a strict subset of the gate.
+      - name: Offline release gate
+        run: python scripts/release_gate.py --requests 8 --concurrency 2
+
+  docker-gate:
+    name: docker gate
+    needs: offline-gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    # Host Python is installed because the gate itself is a Python entry
+    # point; it drives the Compose checks instead of repeating them here.
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -c constraints.txt -r requirements.txt
+
+      # Every job gets its own runner and therefore its own environment file.
+      - name: Create synthetic env for compose
+        run: |
+          printf 'TELEGRAM_TOKEN=123456:TESTtestTokenabcdefghijklmnop\nMONGODB_URI=mongodb://arel_test:ci-mongo-test-pass@mongo:27017/arel_bot_test?authSource=arel_bot_test\nREDIS_URL=redis://:ci-redis-pass@redis:6379/1\nMONGO_ROOT_USERNAME=areladmin\nMONGO_ROOT_PASSWORD=ci-mongo-pass\nMONGO_APP_USERNAME=arel_app\nMONGO_APP_PASSWORD=ci-mongo-app-pass\nMONGO_TEST_USERNAME=arel_test\nMONGO_TEST_PASSWORD=ci-mongo-test-pass\nREDIS_PASSWORD=ci-redis-pass\nAPP_ROLE=combined\nAPP_ENV=test\n' > .env
+
+      # The Compose `test` profile reads `.env.test` through `env_file`, and
+      # that file is git-ignored, so the container environment has to exist
+      # before the gate runs.  The committed example is the single source of
+      # truth for the synthetic values, so the workflow copies it instead of
+      # writing the same values a second time.
+      - name: Create synthetic test env for compose
+        run: cp .env.test.example .env.test
+
+      # The same aggregator with the Compose scope enabled: the image build,
+      # the container test suite, the health check, the MongoDB migration,
+      # ledger and sticker smoke checks, the provider matrix inside the
+      # container and the Prometheus configuration and alert replay.  The gate
+      # owns this list, so a new Compose check cannot be missing from CI, and
+      # the job proves the complete gate instead of a hand-picked subset.
+      - name: Docker release gate
+        run: python scripts/release_gate.py --docker --requests 8 --concurrency 2

@@ -8,7 +8,6 @@ from src.features.providers.public_data import (
     BimDealsProvider,
     CurrencyProvider,
     FuelProvider,
-    NewsProvider,
     PharmacyProvider,
     PrayerTimesProvider,
 )
@@ -164,26 +163,6 @@ async def test_currency_provider_normalizes_turkish_numeric_values():
         result = await CurrencyProvider(client=client).fetch(ProviderRequest(operation="currency"))
 
     assert result.data["rates"][0]["numeric_value"] == 41.25
-
-
-@pytest.mark.asyncio
-async def test_news_provider_deduplicates_titles():
-    async def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(
-            200,
-            text="""
-            <a class='group'><h2>İlk başlık &amp; ayrıntı</h2></a>
-            <a class='group'><h2>İlk başlık &amp; ayrıntı</h2></a>
-            <a class='group'><h2>İkinci başlık</h2></a>
-            """,
-            request=request,
-        )
-
-    async with _client(handler) as client:
-        result = await NewsProvider(client=client).fetch(ProviderRequest(operation="news"))
-
-    assert result.data["titles"] == ["İlk başlık & ayrıntı", "İkinci başlık"]
-    assert "İlk başlık &amp; ayrıntı" in result.data["content"]
 
 
 @pytest.mark.asyncio

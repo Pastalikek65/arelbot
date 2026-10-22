@@ -9,6 +9,25 @@ import pytest
 
 from scripts.backup import BackupError, create_backup
 from scripts.restore import RestoreError, restore_backup, verify_backup
+from src.security.tool_credentials import redis_tool_endpoint
+
+
+def _artifact_target(command: list[str], option: str) -> str:
+    """Return the path a database tool writes to."""
+
+    for part in command:
+        if part.startswith(f"{option}="):
+            return part.split("=", 1)[1]
+    return command[command.index(option) + 1]
+
+
+def _mongo_tool_config(command: list[str]) -> str | None:
+    """Return the MongoDB tool configuration the command points at."""
+
+    for part in command:
+        if part.startswith("--config="):
+            return Path(part.split("=", 1)[1]).read_text(encoding="utf-8")
+    return None
 
 
 def test_backup_creates_sha256_manifest_without_printing_secrets(tmp_path):
@@ -18,8 +37,11 @@ def test_backup_creates_sha256_manifest_without_printing_secrets(tmp_path):
     output = tmp_path / "backups"
 
     with patch("scripts.backup.run_quiet") as run:
-        def fake_run(command):
-            target = command[2].split("=", 1)[1] if command[0] == "mongodump" else command[4]
+        def fake_run(command, environment):
+            if command[0] == "mongodump":
+                target = _artifact_target(command, "--archive")
+            else:
+                target = _artifact_target(command, "--rdb")
             Path(target).write_bytes(b"mongo" if command[0] == "mongodump" else b"redis")
         run.side_effect = fake_run
         backup = create_backup(
@@ -40,6 +62,67 @@ def test_backup_creates_sha256_manifest_without_printing_secrets(tmp_path):
     # invoke a destructive database command.
     restored = restore_backup(backup, mongo_uri="mongodb://user:secret@localhost/arel_bot")
     assert restored["artifacts"] == manifest["artifacts"]
+
+
+def test_redis_tool_endpoint_keeps_the_password_out_of_the_command_line():
+    """``redis-cli`` only reads ``REDISCLI_AUTH`` without a password in the URL."""
+
+    target, secret = redis_tool_endpoint("redis://:secret@localhost:6379/0")
+
+    assert target == "redis://localhost:6379/0"
+    assert secret == "secret"
+
+
+def test_backup_removes_the_mongo_tool_configuration_after_the_command(tmp_path):
+    """The configuration file carries the connection string, so it must not survive."""
+
+    chroma = tmp_path / "chroma_db"
+    chroma.mkdir()
+    config_paths: list[Path] = []
+
+    def capture(command, environment):
+        if command[0] == "mongodump":
+            config_path = next(part for part in command if part.startswith("--config="))
+            config_paths.append(Path(config_path.split("=", 1)[1]))
+            Path(_artifact_target(command, "--archive")).write_bytes(b"mongo")
+        else:
+            Path(_artifact_target(command, "--rdb")).write_bytes(b"redis")
+
+    create_backup(
+        tmp_path / "backups",
+        mongo_uri="mongodb://user:secret@localhost/arel_bot",
+        redis_url="redis://:secret@localhost:6379/0",
+        chroma_dir=chroma,
+        command_runner=capture,
+    )
+
+    assert config_paths
+    assert not any(path.exists() for path in config_paths)
+
+
+def test_backup_removes_the_mongo_tool_configuration_when_the_command_fails(tmp_path):
+    """A failed command must not leave the connection string on the disk."""
+
+    chroma = tmp_path / "chroma_db"
+    chroma.mkdir()
+    config_paths: list[Path] = []
+
+    def capture(command, environment):
+        config_path = next(part for part in command if part.startswith("--config="))
+        config_paths.append(Path(config_path.split("=", 1)[1]))
+        raise BackupError("backup command failed: mongodump (exit 1)")
+
+    with pytest.raises(BackupError, match="backup command failed"):
+        create_backup(
+            tmp_path / "backups",
+            mongo_uri="mongodb://user:secret@localhost/arel_bot",
+            redis_url="redis://:secret@localhost:6379/0",
+            chroma_dir=chroma,
+            command_runner=capture,
+        )
+
+    assert config_paths
+    assert not any(path.exists() for path in config_paths)
 
 
 def test_restore_rejects_symlink_entries_in_chroma_archive(tmp_path):
@@ -93,6 +176,13 @@ def test_restore_can_remap_mongo_database_with_allowlisted_names(tmp_path):
         encoding="utf-8",
     )
     commands = []
+    configs = []
+
+    def capture(command, environment):
+        commands.append(list(command))
+        config = _mongo_tool_config(command)
+        if config is not None:
+            configs.append(config)
 
     restore_backup(
         backup,
@@ -100,13 +190,17 @@ def test_restore_can_remap_mongo_database_with_allowlisted_names(tmp_path):
         mongo_source_database="arel_bot",
         mongo_target_database="arel_bot_restore",
         confirm=True,
-        command_runner=commands.append,
+        command_runner=capture,
     )
 
     assert commands and commands[0][0] == "mongorestore"
+    # The connection string never reaches the command line, because every
+    # local process can read the argument vector of another process.
+    assert not any("mongodb://" in part for part in commands[0])
     # Namespace remapping must use a URI without a database path. A target
     # database in the URI filters the archive before --nsFrom can match it.
-    assert "--uri=mongodb://localhost" in commands[0]
+    assert "mongodb://localhost" in configs[0]
+    assert "arel_bot_restore" not in configs[0]
     assert "--nsFrom=arel_bot.*" in commands[0]
     assert "--nsTo=arel_bot_restore.*" in commands[0]
 
@@ -145,15 +239,24 @@ def test_restore_preserves_mongo_uri_query_options_when_remapping(tmp_path):
         encoding="utf-8",
     )
     commands = []
+    configs = []
+
+    def capture(command, environment):
+        commands.append(list(command))
+        config = _mongo_tool_config(command)
+        if config is not None:
+            configs.append(config)
+
     restore_backup(
         backup,
         mongo_uri="mongodb://user:secret@localhost/target?authSource=admin",
         mongo_source_database="source",
         mongo_target_database="target",
         confirm=True,
-        command_runner=commands.append,
+        command_runner=capture,
     )
-    assert "--uri=mongodb://user:secret@localhost?authSource=admin" in commands[0]
+    assert not any("secret" in part for part in commands[0])
+    assert "mongodb://user:secret@localhost?authSource=admin" in configs[0]
 
 
 def test_restore_rejects_symlinked_redis_target(tmp_path):

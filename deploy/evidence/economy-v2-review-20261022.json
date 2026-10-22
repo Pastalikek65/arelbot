@@ -1,0 +1,119 @@
+{
+  "scope": "economy_v2_and_game_payment_recovery",
+  "source_commit": "ca3301b",
+  "review_model": "gpt-6-sol",
+  "review_effort": "medium",
+  "live_player_ui_tests": "DEFERRED_BY_USER",
+  "github_updated": false,
+  "findings_fixed": [
+    {
+      "id": "ECON-01",
+      "issue": "Pruned visible history removed replay protection",
+      "resolution": "Durable payload-bound receipts retained separately; finite capacity fails closed"
+    },
+    {
+      "id": "ECON-02",
+      "issue": "Reward replay across midnight changed mutable policy fingerprint",
+      "resolution": "Identity excludes current reward day and budget"
+    },
+    {
+      "id": "BJ-01",
+      "issue": "Permanent owner claim survived crashes for 30 days",
+      "resolution": "Token-matched 60s renewable lease, 45s operation timeout and separate permanent callback receipts"
+    },
+    {
+      "id": "BJ-02",
+      "issue": "Paid hands and pending payments were subject to 24h TTL",
+      "resolution": "No expiry while financial obligations exist; migration21 preserves existing records"
+    },
+    {
+      "id": "BJ-03",
+      "issue": "Free hand could mint coins after economy attachment",
+      "resolution": "Explicit free hand never credits money/score; legacy requires debit receipt"
+    },
+    {
+      "id": "BJ-04",
+      "issue": "Interrupted double could draw or charge again",
+      "resolution": "Persist candidate hand and stable debit receipt before finishing"
+    },
+    {
+      "id": "BJ-05",
+      "issue": "Successful settlement deleted result before Telegram delivery",
+      "resolution": "Terminal panel outbox retained until matching event delivery ACK"
+    },
+    {
+      "id": "ROULETTE-01",
+      "issue": "Old panel could mutate next game",
+      "resolution": "Game UUID and canonical message binding for every callback"
+    },
+    {
+      "id": "ROULETTE-02",
+      "issue": "Terminal rewards/panel lost after transient failure",
+      "resolution": "Persistent settlement and panel retries with idempotent event IDs"
+    },
+    {
+      "id": "REWARD-01",
+      "issue": "Zero-score or early exit could award artificial winner credit",
+      "resolution": "Zero-score and spy-left rewards suppressed; earned completion rewards preserved"
+    },
+    {
+      "id": "BJ-06",
+      "issue": "Free hand double could debit newly attached economy",
+      "resolution": "Double uses the same funding evidence contract as final settlement"
+    }
+  ],
+  "independent_review": "No remaining definite money or actor blocker in reviewed scope",
+  "deployment_precondition": "Production schema is20; migration21 has never run there, verified by read-only query",
+  "limits": [
+    "Previously pruned historical receipts cannot be reconstructed",
+    "Account receipts bounded to12MiB; capacity error halts new transactions",
+    "Renewable leases use bounded cooperative async IO; financial retries additionally use idempotent receipts",
+    "Live multi-player UI acceptance deferred; game count is not a live quality verdict"
+  ],
+  "local_full_pytest": {
+    "passed": 2917,
+    "skipped": 19,
+    "warnings": 6
+  },
+  "additional_review": {
+    "patch": "ca3301b",
+    "result": "No new blocker",
+    "targeted_passed": 45,
+    "cases": [
+      "free-hand double after economy attachment",
+      "paid-hand missing backend resumes once",
+      "legacy debit receipt required"
+    ]
+  },
+  "release_gate": {
+    "passed": 25,
+    "total": 25,
+    "docker_pytest": {
+      "passed": 2930,
+      "skipped": 6
+    }
+  },
+  "real_mongo_acceptance": {
+    "ok": true,
+    "scope": "isolated_synthetic_mongo_collection",
+    "concurrent_purchase_single_charge": true,
+    "daily_single_claim": true,
+    "shared_game_budget": 150,
+    "post_prune_restart_replay_rejected": true,
+    "history_events": 505,
+    "migration21_balance_and_inventory_preserved": true,
+    "cross_group_scope_preserved": true,
+    "lease_contention_and_takeover": true,
+    "stale_lease_release_and_renew_rejected": true,
+    "financial_states_no_ttl": true
+  },
+  "due_query_acceptance": {
+    "ok": true,
+    "scope": "isolated_synthetic_mongo_collection",
+    "due_cases": 443,
+    "selected": 255,
+    "private_projection_safe": true,
+    "secret_routes": 12,
+    "batched_public_projection_safe": true
+  }
+}

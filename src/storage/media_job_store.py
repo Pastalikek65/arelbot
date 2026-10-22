@@ -105,7 +105,10 @@ class MediaJobStore:
             )
 
     async def recoverable(self, limit: int = 500) -> list[dict[str, Any]]:
-        statuses = {"queued", "probing", "downloading", "transcoding", "sending"}
+        # "sending" is deliberately absent: the send boundary belongs to the
+        # delivery ledger now. Re-queueing a row whose upload already started
+        # would deliver the same media to the user twice.
+        statuses = {"queued", "probing", "downloading", "transcoding"}
         if self.collection is None:
             return [copy.deepcopy(v) for v in self._memory.values() if v.get("status") in statuses][:limit]
         cursor = self.collection.find({"status": {"$in": list(statuses)}}).sort("created_at", 1).limit(limit)

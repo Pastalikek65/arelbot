@@ -35,10 +35,10 @@ def render_word_guess_text(state: dict, *, note: str | None = None) -> str:
     difficulty = escape(str(state.get("difficulty_label", state.get("difficulty", "Normal"))))
     note_text = f"\n\n{escape(str(note))}" if note else ""
     return (
-        "🗣️ <b>KELİME ANLATMACA</b>\n\n"
+        "🗣️ <b>Anlatmaca</b>\n\n"
         f"Kategori: <b>{category}</b> · Zorluk: <b>{difficulty}</b>\n"
         f"📝 <b>Tanım:</b>\n<i>{description}</i>\n\n"
         f"Deneme: <b>{attempts}</b> · İpucu: <b>{hints_used}/{hint_total}</b>\n"
-        "Cevabı mesaj olarak yaz; panelden ipucu alabilir, pas geçebilir veya turu kapatabilirsin."
+        "Tanımdaki kelimeyi mesaj olarak yaz. İpucu alabilir veya pas geçebilirsin."
         f"{note_text}"
     )

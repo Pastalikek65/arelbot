@@ -1,0 +1,117 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-21",
+  "scope": "social_games_deployment_and_bounded_telegram_delivery",
+  "release": "2026.10.21-games-8",
+  "runtime_source_commit": "30cde7a1badef349d9b3fbd8c68896ab663dcca7",
+  "server_activation": {
+    "healthy": true,
+    "schema_version": 20,
+    "backup_archive_integrity_verified": true,
+    "backup_restore_tested_for_this_update": false
+  },
+  "release_archive_sha256": "7f1fd221d487cf96064e4cc06358648ef026d43db28a270de12c6f522e8418df",
+  "release_gate": {
+    "passed": 25,
+    "total": 25,
+    "host_pytest": {
+      "passed": 2471,
+      "skipped": 19
+    },
+    "local_docker_pytest": {
+      "passed": 2484,
+      "skipped": 6
+    },
+    "server_candidate_pytest": {
+      "passed": 2484,
+      "skipped": 6
+    }
+  },
+  "isolated_real_mongo": {
+    "ok": true,
+    "due_cases": 13,
+    "selected": 5,
+    "private_projection_safe": true,
+    "production_collection_used": false
+  },
+  "human_telegram_web": {
+    "game_menu_command_message_id": 229,
+    "game_menu_panel_message_id": 230,
+    "social_category_visible": true,
+    "tabu_menu_clicked": true,
+    "tabu_panel_server_receipt": 231,
+    "tabu_panel_render_verified": false,
+    "subsequent_browser_calls": "BLOCKED_CONNECTION_TIMEOUT"
+  },
+  "real_telegram_adapter_canary": {
+    "ok": true,
+    "results": [
+      {
+        "game": "tabu",
+        "kind": "real_telegram_adapter_canary",
+        "panel_message_id": 231,
+        "players": 1,
+        "single_actor_start_rejected": true,
+        "rejection_code": "tabu_unbalanced_teams",
+        "phase": "cancelled",
+        "score_pending": false,
+        "real_human_callback": false
+      },
+      {
+        "game": "casus",
+        "kind": "real_telegram_adapter_canary",
+        "panel_message_id": 232,
+        "players": 1,
+        "single_actor_start_rejected": true,
+        "rejection_code": "spy_dm_not_ready",
+        "phase": "cancelled",
+        "score_pending": false,
+        "real_human_callback": false
+      },
+      {
+        "game": "vampir_koylu",
+        "kind": "real_telegram_adapter_canary",
+        "panel_message_id": 233,
+        "players": 1,
+        "single_actor_start_rejected": true,
+        "rejection_code": "vampire_player_count",
+        "phase": "cancelled",
+        "score_pending": false,
+        "real_human_callback": false
+      }
+    ],
+    "private_delivery_message_id": 1726,
+    "human_multiplayer": "NOT_RUN",
+    "human_private_readiness_callback": "BLOCKED_BROWSER_CONNECTION"
+  },
+  "acceptance": {
+    "outbound_group_and_private_delivery": "PASS",
+    "single_actor_start_rejection": "PASS",
+    "test_lobbies_closed_without_rewards": "PASS",
+    "human_join_and_private_readiness_buttons": "BLOCKED_BROWSER_CONNECTION",
+    "human_multiplayer_matches": "NOT_RUN - operator reports no volunteers",
+    "complete_human_live_acceptance": false
+  },
+  "boundaries": [
+    "Adapter canary used actual Telegram Bot API and one existing authorized account; no forged human callback queries or extra players.",
+    "Private message 1726 was a generic protected delivery notice, not a secret role or human readiness acknowledgement.",
+    "Full rules, delivery failures, concurrency and restart scenarios were automated; these do not establish real multiplayer acceptance.",
+    "Real user browser menu actions and outbound service canary are separate evidence classes."
+  ],
+  "github_updated": false,
+  "documentation_checks": {
+    "feature_catalog": "64/64 matched (features, not game count)",
+    "deterministic_evidence_audit": "PASS",
+    "phase_audit": {
+      "blocking_phases": [],
+      "awaiting_live_evidence": [
+        "9"
+      ],
+      "missing_live": [
+        "telegram-mutation-live.json",
+        "monitoring-alert-delivery.json"
+      ]
+    },
+    "git_diff_check": "PASS"
+  }
+}

@@ -1,3 +1,4 @@
+from copy import deepcopy
 from types import SimpleNamespace
 
 import pytest
@@ -16,16 +17,36 @@ class DataPort:
     reachable = True
 
     def __init__(self, state=None):
-        self.state = state
+        self.state = deepcopy(state)
         self.saved = []
 
     async def get_game_state(self, chat_id, game_type):
-        return self.state if game_type == "tictactoe" else None
+        return deepcopy(self.state) if game_type == "tictactoe" else None
 
     async def save_game_state(self, chat_id, game_type, state):
         if game_type == "tictactoe":
-            self.state = state
-            self.saved.append((chat_id, game_type, state.copy()))
+            self.state = deepcopy(state)
+            self.saved.append((chat_id, game_type, deepcopy(state)))
+
+    async def initialize_game_state_version_if_missing(self, chat_id, game_type):
+        if self.state is not None and "version" not in self.state:
+            self.state["version"] = 0
+            return True
+        return False
+
+    async def create_game_state_if_absent(self, chat_id, game_type, state):
+        if self.state is not None:
+            return False
+        self.state = deepcopy(state)
+        self.saved.append((chat_id, game_type, deepcopy(state)))
+        return True
+
+    async def compare_and_save_game_state(self, chat_id, game_type, state, *, expected_version):
+        if self.state is None or self.state.get("version") != expected_version:
+            return False
+        self.state = deepcopy(state)
+        self.saved.append((chat_id, game_type, deepcopy(state)))
+        return True
 
     async def delete_game_state(self, chat_id, game_type):
         if game_type == "tictactoe":
@@ -88,9 +109,9 @@ async def test_xox_command_presents_board_sizes_and_preserves_forum_thread():
 
     await handler.handle_tictactoe_command(update, context)
 
-    assert context.chat_data["tictactoe"]["thread_id"] == 42
-    assert context.chat_data["tictactoe"]["board_size"] == 6
-    assert len(context.chat_data["tictactoe"]["board"]) == 36
+    assert data_port.state["thread_id"] == 42
+    assert data_port.state["board_size"] == 6
+    assert len(data_port.state["board"]) == 36
     markup = update.effective_message.calls[0][1]["reply_markup"]
     callbacks = {
         button.callback_data
@@ -98,7 +119,7 @@ async def test_xox_command_presents_board_sizes_and_preserves_forum_thread():
         for button in row
         if button.callback_data
     }
-    round_id = context.chat_data["tictactoe"]["round_id"]
+    round_id = data_port.state["round_id"]
     assert {f"tictactoe:{round_id}:size:{size}" for size in (6, 7, 8)} <= callbacks
     assert update.effective_message.calls[0][1]["message_thread_id"] == 42
 
@@ -124,14 +145,14 @@ async def test_xox_size_callback_is_owner_only_and_round_scoped():
     await handler._handle_tictactoe_callback(
         callback_update(1), query, context, f"tictactoe:{round_id}:size:6"
     )
-    assert state["board_size"] == 6
+    assert data_port.state["board_size"] == 6
     assert query.edits
 
-    before = state["board_size"]
+    before = data_port.state["board_size"]
     await handler._handle_tictactoe_callback(
         callback_update(1), Query(), context, "tictactoe:stale-round:size:8"
     )
-    assert state["board_size"] == before
+    assert data_port.state["board_size"] == before
 
 
 @pytest.mark.asyncio
@@ -158,6 +179,7 @@ async def test_xox_size_callback_rejects_cross_topic_forum_click():
 @pytest.mark.asyncio
 async def test_xox_restart_button_starts_clean_round_for_owner():
     state = new_tictactoe_state(owner_id=1, owner_name="u1", chat_id=-100, prompt_message_id=700)
+    state["thread_id"] = 42
     state["status"] = "playing"
     state["players"].append({"id": 2, "name": "u2", "token": "O"})
     state["current_player_id"] = 1
@@ -176,7 +198,7 @@ async def test_xox_restart_button_starts_clean_round_for_owner():
         callback_update(1), query, context, f"tictactoe:{old_round_id}:restart"
     )
 
-    assert state["round_id"] != old_round_id
-    assert state["moves"] == 0
-    assert all(cell == 0 for cell in state["board"])
+    assert data_port.state["round_id"] != old_round_id
+    assert data_port.state["moves"] == 0
+    assert all(cell == 0 for cell in data_port.state["board"])
     assert query.edits

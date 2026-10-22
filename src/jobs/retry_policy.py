@@ -15,3 +15,7 @@ class RetryPolicy:
     def should_retry(self, error_code: str, attempt: int) -> bool:
         return error_code in self.transient_codes and attempt < self.max_attempts - 1
 
+    def backoff_seconds(self, attempt: int) -> int:
+        """Exponential backoff capped at five minutes."""
+        return min(300, (2 ** max(0, int(attempt))) * 5)
+

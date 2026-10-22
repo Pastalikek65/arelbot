@@ -7,15 +7,20 @@ Cloudflare transport lives in the typed AI provider adapter.
 from __future__ import annotations
 
 import re
+from dataclasses import replace
 
 from config import Config
 from src.ai.providers.cloudflare_image import CloudflareImageProvider, ImageGenerationRequest
-from src.key_manager import KeyManager
+from src.ai.providers.cloudflare_image import ImageProviderError
+from src.ai.providers.hrmn_image import HrmnImageProvider
+from src.key_manager import KeyManager, ServiceType
 
 
 class ImageRouter:
     def __init__(self, key_manager: KeyManager, provider: CloudflareImageProvider | None = None):
         self.provider = provider or CloudflareImageProvider(key_manager)
+        self.hrmn = (HrmnImageProvider(key_manager) if provider is None and
+                     getattr(key_manager, "keys", {}).get(ServiceType.HRMN) else None)
 
     def _parse_params(self, prompt: str) -> tuple[str, dict[str, object]]:
         params: dict[str, object] = {"width": 1024, "height": 1024, "num_steps": 4}
@@ -32,6 +37,16 @@ class ImageRouter:
         return prompt.strip(), params
 
     async def generate_image(self, prompt: str, *, max_output_bytes: int | None = None) -> str:
+        selected = re.search(r"(?:^|\s)--model\s+(\S+)", prompt)
+        models = list(Config.HRMN_IMAGE_MODELS)
+        if selected:
+            requested = selected.group(1)
+            aliases = {"prism": models[0], "flare": models[1]}
+            requested = aliases.get(requested, requested)
+            if requested not in models or self.hrmn is None:
+                raise ImageProviderError("image_model_invalid")
+            models = [requested]
+            prompt = prompt.replace(selected.group(0), " ")
         cleaned_prompt, params = self._parse_params(prompt)
         request = ImageGenerationRequest(
             prompt=cleaned_prompt,
@@ -42,10 +57,27 @@ class ImageRouter:
             model=Config.CLOUDFLARE_IMAGE_MODEL,
             max_output_bytes=max_output_bytes,
         )
+        if self.hrmn is not None:
+            for model in models:
+                try:
+                    return await self.hrmn.generate(replace(request, model=model))
+                except ImageProviderError as error:
+                    if selected:
+                        raise
+                    if error.code in {"image_prompt_invalid", "image_prompt_too_long",
+                                      "image_dimensions_invalid", "image_steps_invalid",
+                                      "image_output_limit_invalid", "image_policy_rejected"}:
+                        raise
         return await self.provider.generate(request)
 
     async def health_check(self) -> dict:
+        if self.hrmn is not None:
+            health = await self.hrmn.health_check()
+            if health.get("healthy"):
+                return health
         return await self.provider.health_check()
 
     async def close(self) -> None:
         await self.provider.close()
+        if self.hrmn is not None:
+            await self.hrmn.close()

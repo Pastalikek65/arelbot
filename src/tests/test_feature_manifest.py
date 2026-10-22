@@ -24,6 +24,27 @@ def test_runtime_local_surfaces_have_one_typed_manifest_entry_each():
             "akinator",
         "guess_age",
         "uno",
+        "kelime_zinciri",
+        "tabu",
+        "harf_maratonu",
+        "sozcuk_avi",
+        "yasak_harf",
+        "ortak_hikaye",
+        "bomba",
+        "kor_siralama",
+        "kronoloji",
+        "dogru_yanlis",
+        "dedektif",
+        "amiral_batti",
+        "iki_dogru_bir_yalan",
+        "kimim_ben",
+        "takim_bilgi_ligi",
+        "zehirli_kadeh",
+        "pisti", "papaz_kimde", "2048", "bes_ipucu", "emoji_bilmece",
+        "wordle_tr", "karsi_kelime", "anagram", "hafiza_eslestirme",
+        "mayin_tarlasi", "sudoku", "sayisal_tahmin", "hizli_buton",
+        "casus",
+        "vampir_koylu",
         "notification_dedup",
         "group_targeted_replies",
         "guardian_moderation_enforcement",
@@ -32,6 +53,8 @@ def test_runtime_local_surfaces_have_one_typed_manifest_entry_each():
     command_map = registry.command_map()
     assert command_map["ayar"] == "group_moderation_settings"
     assert command_map["indir"] == "media"
+    assert command_map["casus"] == command_map["spy"] == "casus"
+    assert command_map["vampir"] == command_map["vampirkoylu"] == "vampir_koylu"
 
     by_key = {definition.key: definition for definition in registry.definitions()}
     assert by_key["media"].async_mode is True

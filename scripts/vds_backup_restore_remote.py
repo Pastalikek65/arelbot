@@ -109,11 +109,14 @@ redis_probe=""
 target_db="arel_bot_restore_${nonce//[^0-9]/}"
 mongo_in="/tmp/arel-vds-mongo-${nonce}.archive.gz"
 redis_in="/tmp/arel-vds-redis-${nonce}.rdb"
+mongo_auth="/tmp/arel-vds-mongo-auth.js"
+mongo_config="/tmp/arel-vds-mongo-tool.yaml"
 result=''
 cleanup() {
   docker rm -f "${redis_probe}" >/dev/null 2>&1 || true
   [ -n "${mongo}" ] && docker exec "${mongo}" rm -f "${mongo_in}" >/dev/null 2>&1 || true
   [ -n "${mongo}" ] && docker exec "${mongo}" rm -f "/tmp/arel-vds-restore-${nonce}.archive.gz" >/dev/null 2>&1 || true
+  [ -n "${mongo}" ] && docker exec "${mongo}" rm -f "${mongo_auth}" "${mongo_config}" >/dev/null 2>&1 || true
   [ -n "${redis}" ] && docker exec "${redis}" rm -f "${redis_in}" >/dev/null 2>&1 || true
   rm -rf -- "${root}" >/dev/null 2>&1 || true
 }
@@ -122,7 +125,32 @@ trap cleanup EXIT
 mkdir -p -- "${root}/redis-restore" "${root}/chroma-restore"
 test -n "${mongo}" && test -n "${redis}" && test -n "${worker}"
 
-docker exec "${mongo}" mongodump --quiet --uri=mongodb://127.0.0.1:27017/arel_bot --archive="${mongo_in}" --gzip
+# The administrative credential is read from the configuration of the MongoDB
+# container and handed to the tools through their standard input, so it
+# never reaches a command line and never leaves the VDS.
+mongo_env="$(docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "${mongo}")"
+mongo_user="$(printf '%s\n' "${mongo_env}" | sed -n 's/^MONGO_INITDB_ROOT_USERNAME=//p')"
+mongo_credential="$(printf '%s\n' "${mongo_env}" | sed -n 's/^MONGO_INITDB_ROOT_PASSWORD=//p')"
+test -n "${mongo_user}" && test -n "${mongo_credential}"
+# The password ends up in a connection string that is not escaped here, so
+# the documented character set is enforced instead of assumed.  The user name
+# lands in the same string and in the authentication script.
+case "${mongo_user}" in
+  *[!A-Za-z0-9._~-]*) printf 'mongo user contains an unsupported character\n' >&2; exit 1 ;;
+esac
+case "${mongo_credential}" in
+  *[!A-Za-z0-9._~-]*) printf 'mongo credential contains an unsupported character\n' >&2; exit 1 ;;
+esac
+mongo_credentials="${mongo_user}:${mongo_credential}"
+mongo_uri="mongodb://${mongo_credentials}@127.0.0.1:27017/?authSource=admin"
+docker exec -i "${mongo}" sh -c "cat > ${mongo_auth}" <<EOF
+db.getSiblingDB("admin").auth("${mongo_user}", "${mongo_credential}");
+EOF
+docker exec -i "${mongo}" sh -c "cat > ${mongo_config}" <<EOF
+uri: ${mongo_uri}
+EOF
+
+docker exec "${mongo}" mongodump --quiet --config="${mongo_config}" --db=arel_bot --archive="${mongo_in}" --gzip
 docker cp "${mongo}:${mongo_in}" "${root}/mongo.archive.gz" >/dev/null
 docker exec "${redis}" redis-cli --rdb "${redis_in}" >/dev/null
 docker cp "${redis}:${redis_in}" "${root}/redis.rdb" >/dev/null
@@ -138,11 +166,11 @@ printf '%s  %s\n' "$(sha256sum "${root}/chroma_db.tar.gz" | awk '{print $1}')" c
 archive_sha256="$(cat "${root}/manifest.sha256" | sha256sum | awk '{print $1}')"
 
 docker cp "${root}/mongo.archive.gz" "${mongo}:/tmp/arel-vds-restore-${nonce}.archive.gz" >/dev/null
-docker exec "${mongo}" mongorestore --quiet --uri=mongodb://127.0.0.1:27017 --archive="/tmp/arel-vds-restore-${nonce}.archive.gz" --gzip --drop --nsFrom='arel_bot.*' --nsTo="${target_db}.*"
-mongo_ok="$(docker exec "${mongo}" mongosh --quiet --eval "db.getSiblingDB('${target_db}').getCollectionNames().length > 0" | tr -d '\r\n')"
+docker exec "${mongo}" mongorestore --quiet --config="${mongo_config}" --archive="/tmp/arel-vds-restore-${nonce}.archive.gz" --gzip --drop --nsFrom='arel_bot.*' --nsTo="${target_db}.*"
+mongo_ok="$(docker exec "${mongo}" mongosh --quiet --eval "load('${mongo_auth}'); db.getSiblingDB('${target_db}').getCollectionNames().length > 0" | tr -d '\r\n')"
 test "${mongo_ok}" = true
-docker exec "${mongo}" mongosh --quiet --eval "db.getSiblingDB('${target_db}').dropDatabase()" >/dev/null
-mongo_cleanup="$(docker exec "${mongo}" mongosh --quiet --eval "db.getSiblingDB('${target_db}').getCollectionNames().length == 0" | tr -d '\r\n')"
+docker exec "${mongo}" mongosh --quiet --eval "load('${mongo_auth}'); db.getSiblingDB('${target_db}').dropDatabase()" >/dev/null
+mongo_cleanup="$(docker exec "${mongo}" mongosh --quiet --eval "load('${mongo_auth}'); db.getSiblingDB('${target_db}').getCollectionNames().length == 0" | tr -d '\r\n')"
 test "${mongo_cleanup}" = true
 
 cp -- "${root}/redis.rdb" "${root}/redis-restore/dump.rdb"

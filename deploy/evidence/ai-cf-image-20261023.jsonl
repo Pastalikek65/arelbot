@@ -1,0 +1,2 @@
+{"kind": "cloudflare_image_transport", "mode": "json", "status": 400, "errors": [{"code": 5006, "multipart_required": true, "quota": false}], "seconds": 0.42}
+{"kind": "cloudflare_image_transport", "mode": "multipart", "status": 200, "errors": [], "seconds": 11.83, "bytes": 505104, "dimensions": [1024, 1024], "format": "JPEG"}

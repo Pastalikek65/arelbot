@@ -6,6 +6,7 @@ import logging
 import asyncio
 import functools
 import time
+from uuid import uuid4
 from typing import Any
 
 from src.games.action_ledger import GameActionLedger
@@ -39,9 +40,14 @@ class BatakService:
         self.economy = economy_service
         self.actions = action_ledger or GameActionLedger(database)
         self._locks: dict[int, asyncio.Lock] = {}
+        self._presentation_locks: dict[int, asyncio.Lock] = {}
 
     def _lock_for(self, chat_id: int) -> asyncio.Lock:
         return self._locks.setdefault(int(chat_id), asyncio.Lock())
+
+    def presentation_lock(self, chat_id: int) -> asyncio.Lock:
+        """Serialize a saved move through its canonical Telegram panel edit."""
+        return self._presentation_locks.setdefault(int(chat_id), asyncio.Lock())
 
     async def _load(self, chat_id: int) -> dict[str, Any] | None:
         getter = getattr(self.database, "get_game_state", None)
@@ -54,6 +60,46 @@ class BatakService:
         except Exception:
             raise RuntimeError("game_persistence_unavailable") from None
         return state if isinstance(state, dict) else None
+
+    @_serialized
+    async def snapshot(self, chat_id: int) -> dict[str, Any] | None:
+        """Read the round and give a legacy lobby a recoverable callback id."""
+        state = await self._load(chat_id)
+        if state and state.get("phase") == "lobby" and not state.get("lobby_id"):
+            state["lobby_id"] = uuid4().hex[:12]
+            await self._save(chat_id, state)
+        return state
+
+    @_serialized
+    async def bind_panel(self, *, chat_id: int, message_id: int,
+                         expected_lobby_id: str | None = None,
+                         expected_game_id: str | None = None) -> dict[str, Any]:
+        """Bind the latest canonical group panel to the same saved round."""
+        state = await self._load(chat_id)
+        if not state:
+            raise ValueError("game_expired")
+        if expected_lobby_id is not None and (state.get("phase") != "lobby" or
+                                               state.get("lobby_id") != expected_lobby_id):
+            raise ValueError("stale_lobby")
+        if expected_game_id is not None and (state.get("phase") != "playing" or
+                                              state.get("game_id") != expected_game_id):
+            raise ValueError("stale_turn")
+        if int(message_id) <= 0:
+            raise ValueError("invalid_panel")
+        state["prompt_message_id"] = int(message_id)
+        state["panel_dirty"] = False
+        await self._save(chat_id, state)
+        return state
+
+    @_serialized
+    async def defer_panel(self, *, chat_id: int, expected_game_id: str) -> bool:
+        """Remember a failed inline panel edit for /batak recovery."""
+        state = await self._load(chat_id)
+        if not state or state.get("phase") != "playing" or state.get("game_id") != expected_game_id:
+            return False
+        state["panel_dirty"] = True
+        await self._save(chat_id, state)
+        return True
 
     async def _save(self, chat_id: int, state: dict[str, Any]) -> None:
         saver = getattr(self.database, "save_game_state", None)
@@ -96,14 +142,22 @@ class BatakService:
         return {"state": state, "text": BatakRound.render(state, owner_id), "status": "created"}
 
     @_serialized
-    async def join(self, *, chat_id: int, user_id: int, user_name: str, action_id: str) -> dict[str, Any]:
+    async def join(self, *, chat_id: int, user_id: int, user_name: str, action_id: str,
+                   expected_lobby_id: str | None = None,
+                   expected_panel_message_id: int | None = None) -> dict[str, Any]:
+        state = await self._load(chat_id)
+        if not state:
+            raise ValueError("game_expired")
+        if expected_lobby_id is not None and (state.get("phase") != "lobby" or
+                                               state.get("lobby_id") != expected_lobby_id):
+            raise ValueError("stale_lobby")
+        if (expected_panel_message_id is not None and state.get("prompt_message_id") and
+                int(state["prompt_message_id"]) != int(expected_panel_message_id)):
+            raise ValueError("stale_panel")
         claimed = await self.actions.claim(chat_id, self.GAME_TYPE, action_id, user_id=user_id, payload={"action": "join"})
         if not claimed:
             raise ValueError("duplicate_action")
         try:
-            state = await self._load(chat_id)
-            if not state:
-                raise ValueError("game_expired")
             result = BatakRound.join(state, user_id, user_name)
             await self._save(chat_id, state)
             return {"state": state, "status": result, "text": BatakRound.render(state, user_id)}
@@ -112,14 +166,22 @@ class BatakService:
             raise
 
     @_serialized
-    async def start(self, *, chat_id: int, user_id: int, action_id: str) -> dict[str, Any]:
+    async def start(self, *, chat_id: int, user_id: int, action_id: str,
+                    expected_lobby_id: str | None = None,
+                    expected_panel_message_id: int | None = None) -> dict[str, Any]:
+        state = await self._load(chat_id)
+        if not state:
+            raise ValueError("game_expired")
+        if expected_lobby_id is not None and (state.get("phase") != "lobby" or
+                                               state.get("lobby_id") != expected_lobby_id):
+            raise ValueError("stale_lobby")
+        if (expected_panel_message_id is not None and state.get("prompt_message_id") and
+                int(state["prompt_message_id"]) != int(expected_panel_message_id)):
+            raise ValueError("stale_panel")
         claimed = await self.actions.claim(chat_id, self.GAME_TYPE, action_id, user_id=user_id, payload={"action": "start"})
         if not claimed:
             raise ValueError("duplicate_action")
         try:
-            state = await self._load(chat_id)
-            if not state:
-                raise ValueError("game_expired")
             if int(state.get("owner_id", 0)) != int(user_id):
                 raise ValueError("not_owner")
             BatakRound.start(state)
@@ -131,7 +193,9 @@ class BatakService:
             raise
 
     @_serialized
-    async def play(self, *, chat_id: int, user_id: int, card_index: int, action_id: str) -> dict[str, Any]:
+    async def play(self, *, chat_id: int, user_id: int, card_index: int, action_id: str,
+                   expected_turn_token: str | None = None,
+                   expected_panel_message_id: int | None = None) -> dict[str, Any]:
         claimed = await self.actions.claim(chat_id, self.GAME_TYPE, action_id, user_id=user_id, payload={"action": "play", "card_index": card_index})
         if not claimed:
             raise ValueError("duplicate_action")
@@ -139,6 +203,11 @@ class BatakService:
             state = await self._load(chat_id)
             if not state:
                 raise ValueError("game_expired")
+            if expected_turn_token is not None and BatakRound.turn_token(state) != expected_turn_token:
+                raise ValueError("stale_turn")
+            if (expected_panel_message_id is not None and state.get("prompt_message_id") and
+                    int(state["prompt_message_id"]) != int(expected_panel_message_id)):
+                raise ValueError("stale_panel")
             try:
                 deadline = state.get("turn_expires_at")
                 if deadline is not None and time.time() >= float(deadline):

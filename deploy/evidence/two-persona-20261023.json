@@ -1,0 +1,18 @@
+{
+  "scope": "Normal and Roast selectable; retired preferences resolve to Normal",
+  "protected_policy_sha256": "419365b6b7ced982d0640fed4a179e1098d15ceca6f8d36fa4143ab4717d276a",
+  "protected_policy_unchanged": true,
+  "focused_tests_passed": 125,
+  "feature_catalog": "91/91",
+  "telegram_human_ui": "NOT_RUN",
+  "github_updated": false,
+  "deployment": "PENDING",
+  "local_full_suite": {
+    "passed": 3223,
+    "skipped": 19,
+    "dotenv_disabled": true
+  },
+  "phase_audit": "preexisting live Telegram mutation and alert-delivery evidence absent",
+  "normal_card_uses_legacy_turn_guidance": false,
+  "group_planner_and_fallback_receive_selected_persona": true
+}

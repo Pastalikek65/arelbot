@@ -11,6 +11,7 @@ import copy
 import asyncio
 import functools
 import html
+import logging
 import time
 import uuid
 from datetime import datetime, timezone
@@ -19,6 +20,8 @@ from typing import Any
 from src.games.action_ledger import GameActionLedger
 from src.games.roulette import RouletteGame
 from src.games.state_store import memory_fallback_allowed
+
+logger = logging.getLogger(__name__)
 
 
 def _serialized(method):
@@ -129,6 +132,32 @@ class RouletteService:
             raise ValueError("invalid_game_action_id")
         return value
 
+    @staticmethod
+    def _check_callback_panel(state: dict[str, Any], game_id: str | None,
+                              panel_message_id: int | None) -> None:
+        """Bind callbacks to the current game and its canonical group panel."""
+        canonical = state.get("panel_message_id")
+        if canonical is None:
+            # Direct legacy service callers have no Telegram panel. Once the
+            # first panel is acknowledged, both bindings become mandatory.
+            if game_id is not None and str(game_id) != str(state.get("game_id")):
+                raise ValueError("stale_game")
+            return
+        if (str(game_id or "") != str(state.get("game_id")) or
+                panel_message_id is None or int(panel_message_id) != int(canonical)):
+            raise ValueError("stale_game")
+
+    @_serialized
+    async def acknowledge_panel(self, chat_id: int, game_id: str,
+                                message_id: int) -> bool:
+        state = await self._load(chat_id)
+        if (not state or state.get("phase") not in {"lobby", "playing"}
+                or str(state.get("game_id")) != str(game_id)):
+            return False
+        state["panel_message_id"] = int(message_id)
+        await self._save(chat_id, state)
+        return True
+
     async def _claim(self, chat_id: int, user_id: int, action_id: str, action: str) -> bool:
         return await self.actions.claim(
             int(chat_id),
@@ -161,6 +190,8 @@ class RouletteService:
             body = "Lobi açık. Oyuncular katılsın, sonra sahibi başlatsın."
         elif state.get("phase") == "expired":
             body = "Sıra süresi dolduğu için masa kapandı. Yeni bir tur açılabilir."
+        elif state.get("phase") == "finished":
+            body = "Maç tamamlandı."
         else:
             body = "Sıra işaretli oyuncuda. Her callback tek kez uygulanır."
         text = f"{header}\n\n{body}\n\n<b>Oyuncular</b>\n" + ("\n".join(names) or "• Henüz oyuncu yok")
@@ -168,11 +199,110 @@ class RouletteService:
             text += f"\n\n{result}"
         return text
 
+    @staticmethod
+    def result_text(state: dict[str, Any]) -> str:
+        """Return the immutable terminal result for a delivery retry."""
+        return str(state.get("result_text") or "Rulet sonucu kaydedildi.")
+
+    @classmethod
+    def _expire_state(cls, state: dict[str, Any]) -> dict[str, Any]:
+        state.update(phase="expired", turn_expires_at=None,
+                     panel_dirty=True, panel_retry_at=0)
+        state["result_text"] = cls._render(
+            state, result="Sıra süresi doldu; masa kapandı."
+        )
+        return state
+
+    @_serialized
+    async def expire(self, *, chat_id: int, now: float | None = None) -> dict[str, Any] | None:
+        """Close an abandoned turn even when nobody presses its old button."""
+        moment = time.time() if now is None else float(now)
+        state = await self._load(chat_id)
+        if not state or state.get("phase") != "playing":
+            return None
+        deadline = state.get("turn_expires_at")
+        if deadline is None:
+            return None
+        try:
+            if moment < float(deadline):
+                return None
+        except (TypeError, ValueError, OverflowError):
+            raise ValueError("invalid_state") from None
+        self._expire_state(state)
+        await self._save(chat_id, state)
+        return {"status": "expired", "terminal": True, "state": state,
+                "text": self.result_text(state)}
+
+    async def _settle_finished(self, chat_id: int, state: dict[str, Any]) -> dict[str, Any]:
+        if state.get("phase") != "finished" or not state.get("score_pending"):
+            return state
+        if ((state.get("leaderboard_required") and self.leaderboard is None) or
+                (state.get("economy_required") and self.economy is None)):
+            raise RuntimeError("game_reward_store_unavailable")
+        winner_id = state.get("winner_id")
+        if winner_id is not None:
+            winner_id = int(winner_id)
+            event_base = f"roulette:{int(chat_id)}:{state['game_id']}:{winner_id}"
+            if self.leaderboard is not None:
+                await self.leaderboard.record_score(
+                    user_id=winner_id, chat_id=int(chat_id), game_type=self.GAME_TYPE,
+                    score=25, user_name=self._player_name(state, winner_id),
+                    event_id=f"score:{event_base}",
+                )
+            if self.economy is not None:
+                await self.economy.credit(
+                    winner_id, int(chat_id), amount=25,
+                    reason="roulette_reward", event_id=f"coin:{event_base}",
+                )
+        settled = dict(state, score_pending=False)
+        await self._save(chat_id, settled)
+        return settled
+
+    @_serialized
+    async def settle_pending(self, *, chat_id: int) -> dict[str, Any] | None:
+        """Retry the persisted result after a process restart or sink outage."""
+        state = await self._load(chat_id)
+        if state is None:
+            return None
+        return await self._settle_finished(chat_id, state)
+
+    @_serialized
+    async def claim_result_panel(self, *, chat_id: int, now: float | None = None) -> dict[str, Any] | None:
+        moment = time.time() if now is None else float(now)
+        state = await self._load(chat_id)
+        if (not state or state.get("phase") not in {"finished", "expired"} or not state.get("panel_dirty")
+                or float(state.get("panel_retry_at") or 0) > moment):
+            return None
+        state["panel_retry_at"] = moment + 30
+        await self._save(chat_id, state)
+        return state
+
+    @_serialized
+    async def acknowledge_result_panel(self, *, chat_id: int, game_id: str,
+                                       message_id: int) -> bool:
+        state = await self._load(chat_id)
+        if not state or state.get("phase") not in {"finished", "expired"} or state.get("game_id") != game_id:
+            return False
+        state.update(panel_dirty=False, panel_retry_at=0, panel_message_id=int(message_id))
+        await self._save(chat_id, state)
+        return True
+
     @_serialized
     async def create_lobby(self, *, chat_id: int, owner_id: int, owner_name: str) -> dict[str, Any]:
         existing = await self._load(chat_id)
         if existing and existing.get("phase") in {"lobby", "playing"}:
             raise ValueError("active_game")
+        if existing and existing.get("phase") == "expired" and existing.get("panel_dirty"):
+            raise ValueError("result_pending")
+        if existing and existing.get("phase") == "finished":
+            if existing.get("score_pending"):
+                try:
+                    existing = await self._settle_finished(chat_id, existing)
+                except Exception as exc:
+                    logger.warning("Roulette reward deferred: %s", type(exc).__name__)
+                    raise ValueError("reward_pending") from None
+            if existing.get("panel_dirty"):
+                raise ValueError("result_pending")
         game = RouletteGame()
         state = game.create_game(int(chat_id))
         state.update(
@@ -188,19 +318,27 @@ class RouletteService:
                 "turn_expires_at": None,
                 "game_id": uuid.uuid4().hex,
                 "created_at": datetime.now(timezone.utc),
+                "score_pending": False,
+                "leaderboard_required": False,
+                "economy_required": False,
+                "panel_dirty": False,
+                "panel_retry_at": 0,
+                "panel_message_id": None,
             }
         )
         await self._save(chat_id, state)
         return {"status": "created", "state": state, "text": self._render(state)}
 
     @_serialized
-    async def join(self, *, chat_id: int, user_id: int, user_name: str, action_id: str) -> dict[str, Any]:
+    async def join(self, *, chat_id: int, user_id: int, user_name: str, action_id: str,
+                   game_id: str | None = None, panel_message_id: int | None = None) -> dict[str, Any]:
         if not await self._claim(chat_id, user_id, action_id, "join"):
             return {"status": "duplicate_action"}
         try:
             state = await self._load(chat_id)
             if not state or state.get("phase") != "lobby":
                 raise ValueError("game_not_lobby")
+            self._check_callback_panel(state, game_id, panel_message_id)
             if int(user_id) in [int(item) for item in state.get("players", [])]:
                 return {"status": "already_joined", "state": state, "text": self._render(state)}
             if len(state.get("players", [])) >= self.MAX_PLAYERS:
@@ -215,13 +353,15 @@ class RouletteService:
             raise
 
     @_serialized
-    async def start(self, *, chat_id: int, user_id: int, action_id: str) -> dict[str, Any]:
+    async def start(self, *, chat_id: int, user_id: int, action_id: str,
+                    game_id: str | None = None, panel_message_id: int | None = None) -> dict[str, Any]:
         if not await self._claim(chat_id, user_id, action_id, "start"):
             return {"status": "duplicate_action"}
         try:
             state = await self._load(chat_id)
             if not state or state.get("phase") != "lobby":
                 raise ValueError("game_not_lobby")
+            self._check_callback_panel(state, game_id, panel_message_id)
             if int(state.get("owner_id", 0)) != int(user_id):
                 raise ValueError("not_owner")
             if len(state.get("players", [])) < 2:
@@ -237,29 +377,30 @@ class RouletteService:
             raise
 
     @_serialized
-    async def pull(self, *, chat_id: int, user_id: int, action_id: str) -> dict[str, Any]:
+    async def pull(self, *, chat_id: int, user_id: int, action_id: str,
+                   panel_message_id: int | None = None, game_id: str | None = None) -> dict[str, Any]:
         if not await self._claim(chat_id, user_id, action_id, "pull"):
             return {"status": "duplicate_action"}
         try:
             state = await self._load(chat_id)
             if not state or state.get("phase") != "playing":
                 raise ValueError("game_not_playing")
+            self._check_callback_panel(state, game_id, panel_message_id)
             try:
                 if state.get("turn_expires_at") is not None and time.time() >= float(state["turn_expires_at"]):
-                    state["phase"] = "expired"
-                    state["turn_expires_at"] = None
+                    self._expire_state(state)
                     await self._save(chat_id, state)
                     return {
                         "status": "expired",
                         "terminal": True,
                         "state": state,
-                        "text": self._render(state, result="Sıra süresi doldu; masa kapandı."),
+                        "text": self.result_text(state),
                     }
             except (TypeError, ValueError, OverflowError):
                 raise ValueError("invalid_state") from None
             if int(state.get("current_player_id", 0)) != int(user_id):
                 raise ValueError("not_turn")
-            player_name = self._player_name(state, user_id)
+            player_name = html.escape(self._player_name(state, user_id))
             result = RouletteGame().pull_trigger(state, player_name)
             alive = [int(item) for item in state.get("alive", [])]
             if result.get("hit"):
@@ -267,39 +408,27 @@ class RouletteService:
                 state["alive"] = alive
                 if len(alive) <= 1:
                     winner_id = alive[0] if alive else None
-                    await self._delete(chat_id)
                     winner_name = self._player_name(state, winner_id) if winner_id else "kimse"
-                    if winner_id is not None:
-                        event_base = f"roulette:{int(chat_id)}:{state.get('game_id', 'unknown')}:{int(winner_id)}"
-                        if self.leaderboard is not None:
-                            try:
-                                await self.leaderboard.record_score(
-                                    user_id=int(winner_id),
-                                    chat_id=int(chat_id),
-                                    game_type=self.GAME_TYPE,
-                                    score=25,
-                                    user_name=winner_name,
-                                    event_id=f"score:{event_base}",
-                                )
-                            except Exception:
-                                pass
-                        if self.economy is not None:
-                            try:
-                                await self.economy.credit(
-                                    int(winner_id),
-                                    int(chat_id),
-                                    amount=25,
-                                    reason="roulette_reward",
-                                    event_id=f"coin:{event_base}",
-                                )
-                            except Exception:
-                                pass
+                    state.update(phase="finished", winner_id=winner_id,
+                                 turn_expires_at=None,
+                                 leaderboard_required=winner_id is not None and self.leaderboard is not None,
+                                 economy_required=winner_id is not None and self.economy is not None,
+                                 score_pending=winner_id is not None and
+                                 (self.leaderboard is not None or self.economy is not None),
+                                 panel_dirty=True, panel_retry_at=0,
+                                 panel_message_id=int(panel_message_id) if panel_message_id else state.get("panel_message_id"),
+                                 result_text=f"{result.get('message', '')}\n\n🏆 Kazanan: <b>{html.escape(winner_name)}</b>")
+                    await self._save(chat_id, state)
+                    try:
+                        state = await self._settle_finished(chat_id, state)
+                    except Exception as exc:
+                        logger.warning("Roulette reward deferred: %s", type(exc).__name__)
                     return {
                         "status": "finished",
                         "terminal": True,
                         "winner_id": winner_id,
                         "state": state,
-                        "text": f"{result.get('message', '')}\n\n🏆 Kazanan: <b>{html.escape(winner_name)}</b>",
+                        "text": self.result_text(state),
                     }
                 state["current_player_idx"] = state["current_player_idx"] % len(alive)
             else:
@@ -321,11 +450,16 @@ class RouletteService:
             raise
 
     @_serialized
-    async def cancel(self, *, chat_id: int, user_id: int, moderator: bool = False) -> dict[str, Any]:
+    async def cancel(self, *, chat_id: int, user_id: int, moderator: bool = False,
+                     game_id: str | None = None, panel_message_id: int | None = None) -> dict[str, Any]:
         state = await self._load(chat_id)
         if not state:
             raise ValueError("game_expired")
+        if game_id is not None or panel_message_id is not None:
+            self._check_callback_panel(state, game_id, panel_message_id)
         if not moderator and int(state.get("owner_id", 0)) != int(user_id):
             raise ValueError("not_owner")
+        if state.get("phase") == "finished":
+            raise ValueError("game_not_playing")
         await self._delete(chat_id)
         return {"status": "cancelled", "terminal": True}

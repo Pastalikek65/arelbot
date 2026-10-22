@@ -121,8 +121,8 @@ def tictactoe_keyboard(state: dict) -> InlineKeyboardMarkup:
     if status == "lobby":
         rows = [[InlineKeyboardButton("➕ Katıl", callback_data=f"tictactoe:{rid}:join")]]
         if len(_players(state)) == 2:
-            rows[0].append(InlineKeyboardButton("▶️ Başlat", callback_data=f"tictactoe:{rid}:start"))
-        rows.append([InlineKeyboardButton("🛑 Lobiyi kapat", callback_data=f"tictactoe:{rid}:stop")])
+            rows[0].append(InlineKeyboardButton("Maçı başlat", callback_data=f"tictactoe:{rid}:start"))
+        rows.append([InlineKeyboardButton("Oyunu bitir", callback_data=f"tictactoe:{rid}:stop")])
         return InlineKeyboardMarkup(rows)
     if status not in {"playing"}:
         return InlineKeyboardMarkup([[InlineKeyboardButton("🎮 Yeni oyun", callback_data="game_start_tictactoe")]])
@@ -158,7 +158,7 @@ def render_tictactoe_text(state: dict, *, note: str | None = None) -> str:
     board_size = dimensions[0] if dimensions else DEFAULT_BOARD_SIZE
     status = str(state.get("status") or "lobby")
     if status == "lobby":
-        turn = "İkinci oyuncu katılsın; sonra başlat düğmesine basılır."
+        turn = "İkinci oyuncu katıldığında Maçı başlat düğmesine bas."
     elif status == "playing":
         current = next((item for item in players if str(item.get("id")) == str(state.get("current_player_id"))), None)
         turn = f"Sıra: <b>{escape(str((current or {}).get('name') or 'oyuncu'))}</b>"
@@ -167,6 +167,8 @@ def render_tictactoe_text(state: dict, *, note: str | None = None) -> str:
         turn = f"🏆 Kazanan: <b>{escape(str((winner or {}).get('name') or 'oyuncu'))}</b>"
     elif status == "expired":
         turn = "⌛ Süre doldu; bu tur kapandı."
+    elif status == "cancelled":
+        turn = "Oyun iptal edildi."
     else:
         turn = "🤝 Berabere."
     note_text = f"\n\n{escape(str(note))}" if note else ""

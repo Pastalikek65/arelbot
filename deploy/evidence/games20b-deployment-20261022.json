@@ -1,0 +1,26 @@
+{
+  "ok": true,
+  "release": "2026.10.22-games-20.1",
+  "schema_version": 22,
+  "archive_integrity_verified": true,
+  "services_healthy": true,
+  "github_updated": false,
+  "llm_primary_completion_verified": false,
+  "llm_fallback_available": true,
+  "runtime_source_commit": "e4c9b5c16779c9804b755bfcb73419748bfd0ac8",
+  "core_services_healthy": true,
+  "human_multiplayer": "NOT_RUN",
+  "local_tests": {
+    "passed": 3108,
+    "skipped": 19
+  },
+  "isolated_docker_tests": {
+    "passed": 3121,
+    "skipped": 6
+  },
+  "native_stickers": 219,
+  "styles_local_release_runtime_sha256_match": true,
+  "protected_roast_content_read": false,
+  "d2api_primary": "NOT_VERIFIED - HTTP 401 observed; fallback completion verified",
+  "previous_failed_attempt": "deploy/evidence/games20-failed-attempt-20261022.json"
+}

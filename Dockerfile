@@ -23,6 +23,20 @@ ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
 # RE-DEPLOY TRIGGER: 2026-01-24-1358
 WORKDIR /app
 
+# Codex CLI is the non-interactive provider bridge for Arel. Pinning the
+# version keeps rebuilds reproducible and verifies the binary during image
+# construction rather than discovering a missing provider at runtime.
+ARG CODEX_CLI_VERSION=0.147.0
+ENV CODEX_CLI_VERSION=${CODEX_CLI_VERSION} \
+    CODEX_HOME=/root/.codex
+RUN npm install -g --no-audit --no-fund \
+      "@openai/codex@${CODEX_CLI_VERSION}" \
+    && npm cache clean --force \
+    && rm -rf /root/.npm \
+    && mkdir -p "${CODEX_HOME}" \
+    && codex --version \
+    && codex exec --help >/dev/null
+
 # Copy requirements and install
 COPY requirements.txt constraints.txt .
 # Windows/Docker Desktop development can opt into trusted PyPI hosts when a

@@ -1,0 +1,139 @@
+{
+  "schema_version": 1,
+  "scope": "fourteen_distinct_persistent_arcade_games",
+  "release": "2026.10.22-games-11",
+  "runtime_source_commit": "a5fa94cdaff111fc79798e90e3793f91a4b7229c",
+  "tested_implementation_commit": "607fe1f",
+  "games": [
+    "harf_maratonu",
+    "sozcuk_avi",
+    "yasak_harf",
+    "ortak_hikaye",
+    "bomba",
+    "kor_siralama",
+    "kronoloji",
+    "dogru_yanlis",
+    "dedektif",
+    "amiral_batti",
+    "iki_dogru_bir_yalan",
+    "kimim_ben",
+    "takim_bilgi_ligi",
+    "zehirli_kadeh"
+  ],
+  "distinct_catalog_entries": 40,
+  "target_minimum_games": 40,
+  "remaining_catalog_gap": 0,
+  "human_acceptance_is_not_catalog_count": true,
+  "release_archive_sha256": "471f50d50b7dfbf4e5db063a8a21596068ceece60203e5e5f32850a56a01188e",
+  "delta_sha256": "f04e1937a37f5a67dfab54957d9b31e2c4247c238257d4aa997065639608a02a",
+  "release_gate": {
+    "passed": 25,
+    "total": 25,
+    "host_pytest": {
+      "passed": 2713,
+      "skipped": 19
+    },
+    "local_docker_pytest": {
+      "passed": 2726,
+      "skipped": 6
+    }
+  },
+  "targeted_game_integration_turkish_tests": 121,
+  "isolated_mongo": {
+    "ok": true,
+    "scope": "isolated_synthetic_mongo_collection",
+    "due_cases": 246,
+    "selected": 115,
+    "private_projection_safe": true,
+    "secret_routes": 10,
+    "batched_public_projection_safe": true
+  },
+  "server_candidate": {
+    "ok": true,
+    "stage": "ready",
+    "build_mode": "offline_overlay_on_running_games10_images",
+    "dependency_files_identical": true,
+    "test_summary": "2726 passed, 6 skipped, 5 warnings in 76.52s (0:01:16)"
+  },
+  "server_activation": {
+    "ok": true,
+    "release": "2026.10.22-games-11",
+    "schema_version": 20,
+    "archive_integrity_verified": true,
+    "services_healthy": true,
+    "github_updated": false,
+    "backup_restore_tested_for_this_update": false
+  },
+  "health": {
+    "release": "2026.10.22-games-11",
+    "source": {
+      "version": "2026.10.22-games-11",
+      "commit": "a5fa94cdaff111fc79798e90e3793f91a4b7229c"
+    },
+    "services": {
+      "bot": {
+        "status": "running",
+        "health": "healthy",
+        "restarts": 0,
+        "image": "sha256:5a518a465fbf71e2d07a5102e0d72fc4f325c5735e1022089f877ad0229539a4",
+        "recent_tracebacks": 0
+      },
+      "worker": {
+        "status": "running",
+        "health": "healthy",
+        "restarts": 0,
+        "image": "sha256:3bbf22361713c517594b2689126ecb426e53504581db3457071bc156eedeb724",
+        "recent_tracebacks": 0
+      },
+      "mongo": {
+        "status": "running",
+        "health": "healthy",
+        "restarts": 0,
+        "image": "sha256:d0d926f94df099bff534b7ee5b5986458131a22489dfff8664509af0c1e2ca9c"
+      },
+      "redis": {
+        "status": "running",
+        "health": "healthy",
+        "restarts": 0,
+        "image": "sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499"
+      }
+    },
+    "telegram_read_only_probe_exit": 0,
+    "telegram": {
+      "ok": true,
+      "bot_username": "ArelChat_Bot",
+      "catalog_games": 40,
+      "webhook_configured": false,
+      "pending_update_count": 0
+    }
+  },
+  "live_telegram_ui": "NOT_RUN - explicitly deferred by operator",
+  "real_human_matches": "NOT_RUN - explicitly deferred by operator",
+  "read_only_telegram_probe": "getMe and getWebhookInfo only; no group/private messages sent",
+  "independent_reviews": {
+    "implementation_and_full_match": "passed after RED/GREEN fixes",
+    "word_variety_and_bomb_fuse": "passed",
+    "reasoning_leave_and_unique_solutions": "passed",
+    "private_revision_and_idle_reward": "passed",
+    "shared_integration": "passed",
+    "final_error_message_rename": "passed"
+  },
+  "build_recovery": {
+    "strategy": "offline source overlay on exact running games10 image IDs",
+    "dependency_files_identical": [
+      "Dockerfile",
+      "requirements.txt",
+      "requirements-optional.txt",
+      "constraints.txt",
+      "entrypoint.sh",
+      ".dockerignore"
+    ],
+    "network_during_candidate_tests": "none",
+    "transfer_integrity_guard": "incomplete initial transfer rejected before backup/candidate mutation; completed upload verified and staged"
+  },
+  "github_updated": false,
+  "documentation_checks": {
+    "feature_catalog": "86/86 matched; feature count is separate from game count",
+    "phase_audit": "no blocking phases; unrelated phase9 human/live evidence remains pending"
+  }
+}

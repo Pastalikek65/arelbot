@@ -1,10 +1,10 @@
 """Versioned UNO Telegram controls over the durable service."""
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.error import BadRequest
+from telegram.error import BadRequest, TelegramError
 
 from src.services.uno_service import UnoError
-from src.services.uno_ui import render_uno_text, render_uno_hand_alert, uno_keyboard
+from src.services.uno_ui import CARD_POSITION_PAGE_SIZE, render_uno_text, render_uno_hand_alert, uno_keyboard
 
 
 async def handle_uno_callback(handler, update, query, context, data):
@@ -37,7 +37,10 @@ async def _handle_uno_callback(handler, update, query, context, data):
             return
         revision, action = int(parts[2]), parts[3]
         if action == "rules":
-            await answer(query, "Aynı renk veya değeri oyna. Elim düğmesi kartlarını yalnız sana gösterir. Tek kartta UNO de. +2/+4 cezaları uygulanır; üst üste eklenmez. 500 puana ulaşan maçı kazanır.", show_alert=True)
+            text = ("Kartlarımı aç: renkli kartı seç. +2 birikir; +4 blöfüne itiraz edilebilir. Son kart joker/+4 olamaz. Tek kartta UNO de. 500 puan maçı kazandırır."
+                    if state.get("engine") == "maildian" else
+                    "Aynı renk veya değeri oyna. Elim düğmesi kartlarını yalnız sana gösterir. Tek kartta UNO de. +2/+4 cezaları uygulanır; üst üste eklenmez. 500 puana ulaşan maçı kazanır.")
+            await answer(query, text, show_alert=True)
             return
         if action == "hand" and len(parts) == 5:
             page = int(parts[4]) if parts[4].isdigit() else -1
@@ -49,6 +52,27 @@ async def _handle_uno_callback(handler, update, query, context, data):
             return
         if revision != int(state.get("revision", 0)):
             await answer(query, "Masa değişti. Güncel düğmeleri kullan.", show_alert=True)
+            return
+        if action == "cardpage":
+            if len(parts) != 5 or not parts[4].isdigit():
+                await answer(query, "Geçersiz kart sayfası.", show_alert=True)
+                return
+            current_id = int(state.get("current_player_id", 0) or 0)
+            if current_id != int(user.id):
+                await answer(query, "Kart sayfasını sıradaki oyuncu değiştirebilir.", show_alert=True)
+                return
+            current = next((p for p in state.get("players", []) if int(p.get("user_id", 0)) == current_id), None)
+            pages = max(1, (len((current or {}).get("hand", [])) + CARD_POSITION_PAGE_SIZE - 1) // CARD_POSITION_PAGE_SIZE)
+            page = int(parts[4])
+            if page >= pages:
+                await answer(query, "Bu kart sayfası yok. Güncel düğmeleri kullan.", show_alert=True)
+                return
+            try:
+                await query.edit_message_text(render_uno_text(state), reply_markup=uno_keyboard(state, card_page=page), parse_mode="HTML")
+            except BadRequest as error:
+                if "not modified" not in str(error).casefold():
+                    raise
+            await answer(query)
             return
         common = {"chat_id": int(chat.id), "user_id": int(user.id), "expected_revision": revision}
         action_id = handler._game_action_id(query, int(user.id), data)
@@ -97,3 +121,7 @@ async def _handle_uno_callback(handler, update, query, context, data):
             "UNO_STORAGE_UNAVAILABLE": "Oyun kaydedilemedi. Biraz sonra tekrar dene.",
         }
         await answer(query, messages.get(error.code, "İşlem uygulanamadı. Güncel masayı /uno ile açabilirsin."), show_alert=True)
+    except TelegramError:
+        # A page edit may fail without changing state; a move may already be
+        # persisted. Recover through the canonical panel in either case.
+        await answer(query, "Panel güncellenemedi. Güncel masayı /uno ile açabilirsin.", show_alert=True)

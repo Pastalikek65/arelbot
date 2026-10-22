@@ -1,0 +1,147 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-21",
+  "scope": "age_gameplay_quiet_input_and_private_sources_single_account",
+  "release": "2026.10.21-games-7",
+  "runtime_source_commit": "0b455465cefd7b9f9c94fed78c5152cce839182c",
+  "server_activation": {
+    "healthy": true,
+    "schema_version": 20,
+    "backup_archive_integrity_verified": true,
+    "backup_restore_tested_for_this_update": false
+  },
+  "release_gate": {
+    "passed": 25,
+    "total": 25,
+    "host_pytest": {
+      "passed": 2358,
+      "skipped": 19
+    },
+    "local_docker_pytest": {
+      "passed": 2371,
+      "skipped": 6
+    },
+    "server_candidate_pytest": {
+      "passed": 2371,
+      "skipped": 6
+    }
+  },
+  "catalog_surface_scan": {
+    "entries": 300,
+    "group_caption_url_count": 0,
+    "largest_active_caption_chars": 496,
+    "largest_private_source_page_chars": 1062
+  },
+  "telegram": {
+    "client": "Telegram Web authenticated human session",
+    "test_chat_id": -1004323938202,
+    "human_test_accounts": 1,
+    "checks": [
+      {
+        "path": "New match, normal 35 input",
+        "messages": [
+          211,
+          212
+        ],
+        "observed": "Existing photo changed to one guess, no new acknowledgement message; no source links or preview",
+        "result": "pass"
+      },
+      {
+        "path": "Round one close",
+        "messages": [
+          211,
+          213
+        ],
+        "observed": "26 age answer, guess35, score55; closed photo and result have no source links or preview",
+        "result": "pass"
+      },
+      {
+        "path": "Optional button picker, 41-60 then50",
+        "messages": [
+          214,
+          215,
+          216,
+          217
+        ],
+        "observed": "Picker messages replaced/removed; count one; no success acknowledgement text; score0 at close",
+        "result": "pass"
+      },
+      {
+        "path": "Five-round match",
+        "messages": [
+          211,
+          213,
+          214,
+          217,
+          218,
+          219,
+          220,
+          221,
+          222,
+          223,
+          224,
+          225,
+          226,
+          227
+        ],
+        "observed": "All five rounds answered; final one player, five rounds,130 points",
+        "result": "pass"
+      },
+      {
+        "path": "Private /yas kaynaklar then next page",
+        "messages": [
+          422666,
+          422667
+        ],
+        "observed": "Sources and licenses in private chat; same message changes from page1/100 to2/100; no previews",
+        "result": "pass"
+      }
+    ]
+  },
+  "finished_match_backend": {
+    "status": "finished",
+    "history_count": 5,
+    "pending_scores": 0,
+    "rounds": [
+      {
+        "round": 1,
+        "guess": 35,
+        "target": 26,
+        "score": 55
+      },
+      {
+        "round": 2,
+        "guess": 50,
+        "target": 27,
+        "score": 0
+      },
+      {
+        "round": 3,
+        "guess": 40,
+        "target": 28,
+        "score": 40
+      },
+      {
+        "round": 4,
+        "guess": 45,
+        "target": 75,
+        "score": 0
+      },
+      {
+        "round": 5,
+        "guess": 50,
+        "target": 63,
+        "score": 35
+      }
+    ],
+    "independently_summed_score": 130
+  },
+  "limitations": [
+    "Single account does not establish full multiplayer acceptance.",
+    "Historical group messages were not bulk deleted.",
+    "Catalog capture-date semantic accuracy was not independently audited in this check.",
+    "Forty-game target remains in progress.",
+    "No exact-once outbound Telegram delivery guarantee."
+  ],
+  "github_updated": false
+}

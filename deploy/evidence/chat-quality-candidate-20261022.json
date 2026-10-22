@@ -1,0 +1,98 @@
+{
+  "status": "server_staged_offline_verified_activation_blocked",
+  "candidate_dir": "/opt/arel/candidates/chat-quality-20261022-4d89e366eb33",
+  "revision": 2,
+  "tested_manifest_sha256": "4608c49f128cab9d7f4360dbedef9237c48b2a3a04ea5cc32a9268ffe7940a66",
+  "runtime_python_source_digest": "3a3100cfce5efdf865464e91ed2261159d2015faedfb6a81e6955d0cef40f55a",
+  "runtime_source_matches_local": true,
+  "local_isolated_pytest": {
+    "tests": 3200,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 22,
+    "passed": 3178
+  },
+  "server_isolated_pytest": {
+    "passed": 3194,
+    "skipped": 6,
+    "exit": 0,
+    "summary": "3194 passed, 6 skipped, 15 warnings in 109.93s (0:01:49)",
+    "network": "none",
+    "production_environment_passed": false
+  },
+  "server_health_after_tests": {
+    "arelbot-prod-bot-1": {
+      "health": "healthy",
+      "restarts": 0
+    },
+    "arelbot-prod-worker-1": {
+      "health": "healthy",
+      "restarts": 0
+    },
+    "arelbot-prod-mongo-1": {
+      "health": "healthy",
+      "restarts": 0
+    },
+    "arelbot-prod-redis-1": {
+      "health": "healthy",
+      "restarts": 0
+    },
+    "arelbot-prod-flaresolverr-1": {
+      "health": "healthy",
+      "restarts": 0
+    }
+  },
+  "telegram_read_only": {
+    "ok": true,
+    "username": "ArelChat_Bot",
+    "scope": "getMe_read_only_no_messages_sent"
+  },
+  "current_live_release": "/opt/arel/releases/2026.10.22-games-24",
+  "activated": false,
+  "openai_application_credentials_present": false,
+  "live_luna_inference_test": "NOT_RUN_APPLICATION_GRANT_MISSING",
+  "new_end_to_end_latency_seconds": null,
+  "model_order": [
+    "gpt-5.6-luna",
+    "gpt-6-luna"
+  ],
+  "other_text_models_allowed": false,
+  "roast_source_unchanged": true,
+  "prompt_size_measurements": [
+    {
+      "mode": "normal",
+      "before_chars": 5144,
+      "after_chars": 3626,
+      "reduction_percent": 29.5
+    },
+    {
+      "mode": "serious",
+      "before_chars": 4734,
+      "after_chars": 1324,
+      "reduction_percent": 72.0
+    },
+    {
+      "mode": "balanced",
+      "before_chars": 5144,
+      "after_chars": 1701,
+      "reduction_percent": 66.9
+    },
+    {
+      "mode": "needle",
+      "before_chars": 5163,
+      "after_chars": 1826,
+      "reduction_percent": 64.6
+    },
+    {
+      "mode": "roast",
+      "before_chars": 4153,
+      "after_chars": 4411,
+      "reduction_percent": -6.2
+    }
+  ],
+  "old_contaminated_answers_detected_in_replay": [
+    "roast_technical",
+    "normal_third"
+  ],
+  "github_updated": false
+}

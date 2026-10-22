@@ -1,0 +1,28 @@
+{
+  "status": "deployed_automated_verified",
+  "models_verified": [
+    "deepseek-v4.1-flash-1017",
+    "gpt-image-2.5-prism",
+    "gpt-image-2.5-flare"
+  ],
+  "chat_live_probe": "Initial cold attempt timed out; subsequent request returned nonempty content in 2.64 seconds",
+  "image_live_probe": {
+    "gpt-image-2.5-prism": "Valid downloaded image, 737773 bytes, 23.66 seconds",
+    "gpt-image-2.5-flare": "Valid downloaded image, 749080 bytes, 24.33 seconds"
+  },
+  "focused_tests": "112 passed",
+  "feature_catalog": "91 runtime / 91 documented; audit passed",
+  "deployment": "active; bot and worker healthy; restart count 0",
+  "other_provider_settings": "Source changes limited to adding HRMN and requested routing insertion",
+  "github": "untouched",
+  "candidate_release": "2026.10.22-hrmn-3",
+  "existing_config_assignments_unchanged": 182,
+  "existing_service_configurations_unchanged": 12,
+  "baseline_stale_tests": "The same four routing fixtures failed on unchanged codex-cli3 and HRMN candidate; current local HEAD fixtures are included in the final candidate",
+  "release": "2026.10.22-hrmn-3",
+  "server_full_suite": "3176 passed, 6 skipped",
+  "actual_server_chat_probe_seconds": 2.28,
+  "effective_release_env": "HRMN_API_KEY added to the per-release env file; all other entries match codex-cli3",
+  "live_evidence": "deploy/evidence/hrmn-provider-live-20261022.json",
+  "codex_cli": "0.147.0; cli mode and compose unchanged"
+}

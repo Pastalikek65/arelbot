@@ -18,8 +18,9 @@ SCHEMA_VERSION = 1
 GAME_KEY = "guess_age"
 MIN_AGE = 1
 MAX_AGE = 120
+MAX_PLAYERS = 100
 DEFAULT_ROUNDS = 5
-DEFAULT_ROUND_SECONDS = 60
+DEFAULT_ROUND_SECONDS = 30
 
 
 @dataclass(frozen=True, slots=True)
@@ -85,7 +86,7 @@ def round_expired(value: Mapping[str, Any], *, now: datetime | None = None) -> b
 
     if str(value.get("status") or "") != "playing":
         return False
-    if value.get("delivery_pending"):
+    if value.get("delivery_pending") or value.get("initial_delivery_pending"):
         return False
     try:
         started = datetime.fromisoformat(str(value.get("round_started_at")))
@@ -132,7 +133,8 @@ def new_guess_age_state(
         "rounds": rounds,
         "round_seconds": round_seconds,
         "round_started_at": _utc_now(),
-        "round_deadline": datetime.now(timezone.utc).timestamp() + round_seconds,
+        "round_deadline": None,
+        "initial_delivery_pending": True,
         "asset_key": chosen.key,
         "asset_filename": chosen.filename,
         "target_age": int(chosen.target_age),
@@ -140,11 +142,13 @@ def new_guess_age_state(
         "photo_date": chosen.photo_date,
         "asset_source_url": chosen.source_url,
         "asset_credit": chosen.credit,
+        "asset_license_url": chosen.license_url,
         "answers": {},
         "players": {},
         "history": [],
         "prompt_message_id": 0,
         "revision": 0,
+        "version": 0,
         "last_action": None,
         "error_code": None,
     }
@@ -188,7 +192,7 @@ def score_guess(target_age: int, guess: int) -> int:
 def submit_guess(state: dict[str, Any], *, user_id: int, display_name: str, guess: object) -> GuessOutcome:
     if not validate_guess_age_state(state) or state.get("status") != "playing":
         return GuessOutcome(False, "guess_age_inactive")
-    if state.get("delivery_pending"):
+    if state.get("delivery_pending") or state.get("initial_delivery_pending"):
         return GuessOutcome(False, "GUESS_AGE_ROUND_PREPARING")
     if round_expired(state):
         return GuessOutcome(False, "guess_age_round_expired")
@@ -199,6 +203,9 @@ def submit_guess(state: dict[str, Any], *, user_id: int, display_name: str, gues
     answers = state.setdefault("answers", {})
     if key in answers:
         return GuessOutcome(False, "guess_age_already_answered")
+    players = state.setdefault("players", {})
+    if key not in players and len(players) >= MAX_PLAYERS:
+        return GuessOutcome(False, "guess_age_full")
     try:
         candidate = normalize_age(guess)
     except ValueError as exc:
@@ -209,9 +216,9 @@ def submit_guess(state: dict[str, Any], *, user_id: int, display_name: str, gues
         "score": points,
         "display_name": str(display_name or "oyuncu")[:80],
     }
-    state.setdefault("players", {}).setdefault(key, {"display_name": str(display_name or "oyuncu")[:80], "score": 0})
-    state["players"][key]["display_name"] = str(display_name or "oyuncu")[:80]
-    state["players"][key]["score"] = int(state["players"][key].get("score", 0) or 0) + points
+    players.setdefault(key, {"display_name": str(display_name or "oyuncu")[:80], "score": 0})
+    players[key]["display_name"] = str(display_name or "oyuncu")[:80]
+    players[key]["score"] = int(players[key].get("score", 0) or 0) + points
     state["revision"] = int(state.get("revision", 0)) + 1
     state["last_action"] = f"guess:{user_id}:{candidate}"
     # A round closes on its timer, just like the reference game.  Accepting a
@@ -241,7 +248,9 @@ def finish_round(state: dict[str, Any], *, next_asset: AgeAsset | None = None) -
             "photo_date": str(state.get("photo_date") or ""),
             "asset_source_url": str(state.get("asset_source_url") or ""),
             "asset_credit": str(state.get("asset_credit") or ""),
-            "ranked": ranked[:20],
+            "asset_license_url": str(state.get("asset_license_url") or ""),
+            "asset_filename": str(state.get("asset_filename") or ""),
+            "ranked": ranked,
         }
     )
     if int(state["round"]) >= int(state["rounds"]):
@@ -261,6 +270,7 @@ def finish_round(state: dict[str, Any], *, next_asset: AgeAsset | None = None) -
     state["photo_date"] = next_asset.photo_date
     state["asset_source_url"] = next_asset.source_url
     state["asset_credit"] = next_asset.credit
+    state["asset_license_url"] = next_asset.license_url
     state["revision"] = int(state.get("revision", 0)) + 1
     state["last_action"] = "round_advanced"
     return state
@@ -273,4 +283,4 @@ def final_ranking(state: Mapping[str, Any]) -> list[dict[str, Any]]:
         for user_id, value in players.items()
         if isinstance(value, Mapping)
     ]
-    return sorted(rows, key=lambda row: (-int(row.get("score", 0)), str(row.get("display_name", ""))))[:50]
+    return sorted(rows, key=lambda row: (-int(row.get("score", 0)), str(row.get("display_name", ""))))[:MAX_PLAYERS]

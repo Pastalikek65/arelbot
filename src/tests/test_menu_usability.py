@@ -34,3 +34,24 @@ def test_typed_result_does_not_discard_later_display_sections():
     assert "Bugün: 20 °C" in rendered
     assert "Yarın: yağışlı" in rendered
     assert rendered.count("Kaynak:") == 1
+
+
+def test_game_categories_keep_every_existing_game_reachable_with_a_short_home():
+    menu = MenuService()
+    _, home = menu.games_menu()
+    home_buttons = [b for row in home.inline_keyboard for b in row]
+    assert len(home_buttons) <= 11
+    categories = [b.callback_data.split(":", 1)[1] for b in home_buttons if b.callback_data.startswith("menu_games:")]
+    assert len(categories) == 5
+    actions = set()
+    for category in categories:
+        _, markup = menu.games_menu(category=category)
+        callbacks = [b.callback_data for row in markup.inline_keyboard for b in row]
+        assert "menu_games" in callbacks
+        assert len(callbacks) == len(set(callbacks))
+        actions.update(callbacks)
+    assert {"game_start_anlat", "game_hangman_difficulty", "game_word_categories", "game_start_quiz",
+            "game_start_sise", "game_start_batak", "game_start_uno", "game_start_blackjack",
+            "game_start_connect4", "game_start_tictactoe", "game_start_gomoku", "game_start_chess",
+            "game_start_akinator", "game_start_guess_age", "game_start_chain", "game_start_tabu",
+            "game_start_rusruleti", "game_start_duello"} <= actions

@@ -1,0 +1,22 @@
+{
+  "release": "2026.10.22-games-26",
+  "base_release": "2026.10.22-codex-install",
+  "scope": [
+    "Pisti draw settlement and transparent score breakdown",
+    "Age Guess personal picker reuse and range navigation",
+    "Legacy public age-band callback preserves the photo panel"
+  ],
+  "verification": {
+    "focused_local": "68 passed",
+    "server_candidate_full_non_integration": "3161 passed, 6 skipped",
+    "release_manifest": "1565 files verified",
+    "source_offer": "3 parts verified",
+    "bot": "healthy, restart count 0, candidate image matched",
+    "worker": "healthy, restart count 0, candidate image matched",
+    "codex_cli": "0.147.0 in running bot; codex_home volume preserved",
+    "telegram_human_ui": "NOT_RUN: previously deferred by operator",
+    "real_multiplayer_match": "NOT_RUN"
+  },
+  "deployment": "active on server",
+  "github": "untouched"
+}

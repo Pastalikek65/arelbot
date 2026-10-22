@@ -1,3 +1,4 @@
+from copy import deepcopy
 from types import SimpleNamespace
 
 import pytest
@@ -16,13 +17,31 @@ class DataPort:
     reachable = True
 
     def __init__(self, state):
-        self.state = state
+        self.state = deepcopy(state)
 
     async def get_game_state(self, chat_id, game_type):
-        return self.state if game_type == "connect4" else None
+        return deepcopy(self.state) if game_type == "connect4" else None
 
     async def save_game_state(self, chat_id, game_type, state):
-        self.state = state
+        self.state = deepcopy(state)
+
+    async def initialize_game_state_version_if_missing(self, chat_id, game_type):
+        if self.state is not None and "version" not in self.state:
+            self.state["version"] = 0
+            return True
+        return False
+
+    async def create_game_state_if_absent(self, chat_id, game_type, state):
+        if self.state is not None:
+            return False
+        self.state = deepcopy(state)
+        return True
+
+    async def compare_and_save_game_state(self, chat_id, game_type, state, *, expected_version):
+        if self.state is None or self.state.get("version") != expected_version:
+            return False
+        self.state = deepcopy(state)
+        return True
 
     async def delete_game_state(self, chat_id, game_type):
         self.state = None
@@ -60,12 +79,12 @@ async def test_connect4_callback_scopes_round_and_tracks_each_actor():
 
     query = Query()
     await handler._handle_connect4_callback(_update(2), query, context, f"connect4:{state['round_id']}:join")
-    assert len(state["players"]) == 2
+    assert len(data_port.state["players"]) == 2
     await handler._handle_connect4_callback(_update(1), query, context, f"connect4:{state['round_id']}:start")
-    assert state["status"] == "playing"
+    assert data_port.state["status"] == "playing"
     await handler._handle_connect4_callback(_update(1), query, context, f"connect4:{state['round_id']}:col:0")
-    assert state["board"][-1][0] == 1
-    assert state["last_actor_id"] == 1
+    assert data_port.state["board"][-1][0] == 1
+    assert data_port.state["last_actor_id"] == 1
     assert query.edits
 
 
@@ -77,7 +96,7 @@ async def test_connect4_callback_rejects_old_panel_without_mutating():
     context = SimpleNamespace(chat_data={"connect4": state})
     query = Query(message_id=100)
     await handler._handle_connect4_callback(_update(2), query, context, f"connect4:{state['round_id']}:join")
-    assert len(state["players"]) == 1
+    assert len(data_port.state["players"]) == 1
     assert query.answers
 
 
@@ -89,7 +108,7 @@ async def test_connect4_callback_rejects_cross_topic_forum_click():
     context = SimpleNamespace(chat_data={"connect4": state})
     query = Query(thread_id=99)
     await handler._handle_connect4_callback(_update(2, thread_id=99), query, context, f"connect4:{state['round_id']}:join")
-    assert len(state["players"]) == 1
+    assert len(data_port.state["players"]) == 1
     assert query.answers
 
 
@@ -113,5 +132,23 @@ async def test_connect4_command_resumes_durable_round_after_restart():
     context = SimpleNamespace(chat_data={}, args=[])
     handler = CommandHandler(SimpleNamespace(), SimpleNamespace(), None, None, data_port=data_port)
     await handler.handle_connect4_command(update, context)
-    assert context.chat_data["connect4"]["round_id"] == state["round_id"]
-    assert len(context.chat_data["connect4"]["players"]) == 1
+    assert data_port.state["round_id"] == state["round_id"]
+    assert len(data_port.state["players"]) == 1
+
+
+@pytest.mark.asyncio
+async def test_pending_panel_retry_does_not_consume_new_move():
+    import time
+    state = new_connect4_state(owner_id=1, owner_name="u1", chat_id=-100, prompt_message_id=99)
+    state.update(board_panel_dirty=True, board_panel_retry_at=time.time() + 120)
+    data_port = DataPort(state)
+    handler = CallbackHandler(SimpleNamespace(), SimpleNamespace(owner_id=999), None,
+        data_port=data_port, game_action_ledger=Ledger())
+    context = SimpleNamespace(chat_data={"connect4": state})
+    query = Query()
+    await handler._handle_connect4_callback(_update(2), query, context,
+        f"connect4:{state['round_id']}:join")
+    assert len(data_port.state["players"]) == 1
+    assert data_port.state["board_panel_dirty"]
+    assert not query.edits
+    assert query.answers

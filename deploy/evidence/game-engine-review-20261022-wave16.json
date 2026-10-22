@@ -1,0 +1,322 @@
+{
+  "date": "2026-10-22",
+  "scope": "45 catalog games listed; source review in this wave covered eight service families (25 games). Remaining 20 games were not reviewed in this wave. No live human match was run.",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "high",
+      "affected": "8 reviewed service families",
+      "issue": "A restart without an injected leaderboard or economy could clear durable score_pending and lose an earned score or coin obligation.",
+      "resolution": "Each new match persists leaderboard_required and economy_required. Settlement checks required sinks before side effects; legacy absent markers fail closed when a sink is missing. Explicit false prevents later service injection from minting rewards. Existing event IDs remain idempotent.",
+      "evidence": "src/tests/test_engine_wave16.py; 8 family restart cases plus legacy, unfunded, and missing-leaderboard cases"
+    }
+  ],
+  "verification": {
+    "targeted_tests": "73 passed",
+    "live_multiplayer": "NOT_RUN",
+    "server_smoke": "NOT_RUN"
+  },
+  "games": [
+    {
+      "game": "word_game",
+      "family": "other",
+      "wave16": "not_reviewed"
+    },
+    {
+      "game": "word_guess",
+      "family": "other",
+      "wave16": "not_reviewed"
+    },
+    {
+      "game": "hangman",
+      "family": "other",
+      "wave16": "not_reviewed"
+    },
+    {
+      "game": "connect4",
+      "family": "other",
+      "wave16": "not_reviewed"
+    },
+    {
+      "game": "gomoku",
+      "family": "other",
+      "wave16": "not_reviewed"
+    },
+    {
+      "game": "chess",
+      "family": "other",
+      "wave16": "not_reviewed"
+    },
+    {
+      "game": "akinator",
+      "family": "other",
+      "wave16": "not_reviewed"
+    },
+    {
+      "game": "guess_age",
+      "family": "other",
+      "wave16": "not_reviewed"
+    },
+    {
+      "game": "uno",
+      "family": "other",
+      "wave16": "not_reviewed"
+    },
+    {
+      "game": "kelime_zinciri",
+      "family": "other",
+      "wave16": "not_reviewed"
+    },
+    {
+      "game": "tabu",
+      "family": "other",
+      "wave16": "not_reviewed"
+    },
+    {
+      "game": "casus",
+      "family": "other",
+      "wave16": "not_reviewed"
+    },
+    {
+      "game": "vampir_koylu",
+      "family": "other",
+      "wave16": "not_reviewed"
+    },
+    {
+      "game": "tictactoe",
+      "family": "other",
+      "wave16": "not_reviewed"
+    },
+    {
+      "game": "quiz",
+      "family": "other",
+      "wave16": "not_reviewed"
+    },
+    {
+      "game": "wordle_tr",
+      "family": "word",
+      "wave16": "reviewed_family",
+      "finding_ids": [
+        "R1"
+      ]
+    },
+    {
+      "game": "batak",
+      "family": "other",
+      "wave16": "not_reviewed"
+    },
+    {
+      "game": "blackjack",
+      "family": "other",
+      "wave16": "not_reviewed"
+    },
+    {
+      "game": "bottle",
+      "family": "other",
+      "wave16": "not_reviewed"
+    },
+    {
+      "game": "karsi_kelime",
+      "family": "word",
+      "wave16": "reviewed_family",
+      "finding_ids": [
+        "R1"
+      ]
+    },
+    {
+      "game": "anagram",
+      "family": "word",
+      "wave16": "reviewed_family",
+      "finding_ids": [
+        "R1"
+      ]
+    },
+    {
+      "game": "hafiza_eslestirme",
+      "family": "grid",
+      "wave16": "reviewed_family",
+      "finding_ids": [
+        "R1"
+      ]
+    },
+    {
+      "game": "mayin_tarlasi",
+      "family": "grid",
+      "wave16": "reviewed_family",
+      "finding_ids": [
+        "R1"
+      ]
+    },
+    {
+      "game": "sudoku",
+      "family": "logic",
+      "wave16": "reviewed_family",
+      "finding_ids": [
+        "R1"
+      ]
+    },
+    {
+      "game": "sayisal_tahmin",
+      "family": "logic",
+      "wave16": "reviewed_family",
+      "finding_ids": [
+        "R1"
+      ]
+    },
+    {
+      "game": "hizli_buton",
+      "family": "logic",
+      "wave16": "reviewed_family",
+      "finding_ids": [
+        "R1"
+      ]
+    },
+    {
+      "game": "harf_maratonu",
+      "family": "word_arcade",
+      "wave16": "reviewed_family",
+      "finding_ids": [
+        "R1"
+      ]
+    },
+    {
+      "game": "sozcuk_avi",
+      "family": "word_arcade",
+      "wave16": "reviewed_family",
+      "finding_ids": [
+        "R1"
+      ]
+    },
+    {
+      "game": "yasak_harf",
+      "family": "word_arcade",
+      "wave16": "reviewed_family",
+      "finding_ids": [
+        "R1"
+      ]
+    },
+    {
+      "game": "ortak_hikaye",
+      "family": "word_arcade",
+      "wave16": "reviewed_family",
+      "finding_ids": [
+        "R1"
+      ]
+    },
+    {
+      "game": "bomba",
+      "family": "word_arcade",
+      "wave16": "reviewed_family",
+      "finding_ids": [
+        "R1"
+      ]
+    },
+    {
+      "game": "kor_siralama",
+      "family": "reasoning_arcade",
+      "wave16": "reviewed_family",
+      "finding_ids": [
+        "R1"
+      ]
+    },
+    {
+      "game": "kronoloji",
+      "family": "reasoning_arcade",
+      "wave16": "reviewed_family",
+      "finding_ids": [
+        "R1"
+      ]
+    },
+    {
+      "game": "dogru_yanlis",
+      "family": "reasoning_arcade",
+      "wave16": "reviewed_family",
+      "finding_ids": [
+        "R1"
+      ]
+    },
+    {
+      "game": "dedektif",
+      "family": "reasoning_arcade",
+      "wave16": "reviewed_family",
+      "finding_ids": [
+        "R1"
+      ]
+    },
+    {
+      "game": "amiral_batti",
+      "family": "social_arcade",
+      "wave16": "reviewed_family",
+      "finding_ids": [
+        "R1"
+      ]
+    },
+    {
+      "game": "iki_dogru_bir_yalan",
+      "family": "social_arcade",
+      "wave16": "reviewed_family",
+      "finding_ids": [
+        "R1"
+      ]
+    },
+    {
+      "game": "kimim_ben",
+      "family": "social_arcade",
+      "wave16": "reviewed_family",
+      "finding_ids": [
+        "R1"
+      ]
+    },
+    {
+      "game": "takim_bilgi_ligi",
+      "family": "social_arcade",
+      "wave16": "reviewed_family",
+      "finding_ids": [
+        "R1"
+      ]
+    },
+    {
+      "game": "zehirli_kadeh",
+      "family": "social_arcade",
+      "wave16": "reviewed_family",
+      "finding_ids": [
+        "R1"
+      ]
+    },
+    {
+      "game": "pisti",
+      "family": "card_table",
+      "wave16": "not_reviewed"
+    },
+    {
+      "game": "papaz_kimde",
+      "family": "card_table",
+      "wave16": "not_reviewed"
+    },
+    {
+      "game": "2048",
+      "family": "tile2048",
+      "wave16": "reviewed_family",
+      "finding_ids": [
+        "R1"
+      ]
+    },
+    {
+      "game": "bes_ipucu",
+      "family": "clue_arcade",
+      "wave16": "reviewed_family",
+      "finding_ids": [
+        "R1"
+      ]
+    },
+    {
+      "game": "emoji_bilmece",
+      "family": "clue_arcade",
+      "wave16": "reviewed_family",
+      "finding_ids": [
+        "R1"
+      ]
+    }
+  ],
+  "timestamp_constraint": "Telegram message.date has one-second resolution. Text is accepted when its integer second is not before panel ACK and its message_id exceeds the canonical panel message_id; fractional ordering within that second is not provable from Telegram timestamps. This is a known precision limit, not a separately verified vulnerability fix."
+}

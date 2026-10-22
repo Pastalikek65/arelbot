@@ -1,0 +1,185 @@
+{
+  "release": "2026.10.22-games-18",
+  "runtime_source_commit": "13947c0f0ebe8c0843d9c00dfadbeefff33470d2",
+  "accepted_implementation_commit": "76439c120ad8b15f183097195b105b054d7be681",
+  "schema_version": 22,
+  "activation": {
+    "ok": true,
+    "release": "2026.10.22-games-18",
+    "schema_version": 22,
+    "archive_integrity_verified": true,
+    "services_healthy": true,
+    "github_updated": false
+  },
+  "stage": {
+    "ok": true,
+    "stage": "ready",
+    "build_mode": "offline_overlay_on_running_games17_images",
+    "accepted_full_docker_gate_source": "76439c120ad8b15f183097195b105b054d7be681",
+    "tested_runtime_bytes_identical": true,
+    "dependency_files_identical": true,
+    "test_summary": "83 passed, 10 warnings in 5.98s"
+  },
+  "health": {
+    "release": "2026.10.22-games-18",
+    "source": {
+      "version": "2026.10.22-games-18",
+      "commit": "13947c0f0ebe8c0843d9c00dfadbeefff33470d2"
+    },
+    "services": {
+      "bot": {
+        "status": "running",
+        "health": "healthy",
+        "restarts": 0,
+        "image": "sha256:6f5520f4840156d3138b9e28351076ca4148df4475ab79dcf9e991422939b2ac",
+        "recent_tracebacks": 0
+      },
+      "worker": {
+        "status": "running",
+        "health": "healthy",
+        "restarts": 0,
+        "image": "sha256:dafcf1fe432201645a801cbb5d9d17adc734ddf6104308d97ffdc141053c94ed",
+        "recent_tracebacks": 0
+      },
+      "mongo": {
+        "status": "running",
+        "health": "healthy",
+        "restarts": 0,
+        "image": "sha256:d0d926f94df099bff534b7ee5b5986458131a22489dfff8664509af0c1e2ca9c"
+      },
+      "redis": {
+        "status": "running",
+        "health": "healthy",
+        "restarts": 0,
+        "image": "sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499"
+      }
+    },
+    "telegram_read_only_probe_exit": 0,
+    "telegram": {
+      "ok": true,
+      "bot_username": "ArelChat_Bot",
+      "catalog_games": 45,
+      "webhook_configured": false,
+      "pending_update_count": 0,
+      "custom_emoji_verified": 38,
+      "animated_icons": 38,
+      "transport_class": "ThemedHTTPXRequest",
+      "premium_buttons_enabled": true
+    }
+  },
+  "chess_presentation_probe": {
+    "ok": true,
+    "native_tiles_verified": 26,
+    "static_tiles": 26,
+    "board_cells": 64,
+    "both_orientations_verified": true,
+    "fallback_verified": true,
+    "telegram_mutation": false,
+    "real_client_visual_test": "NOT_RUN - deferred by operator"
+  },
+  "commands": {
+    "ok": true,
+    "scopes": {
+      "default": {
+        "commands": 83,
+        "unique": 83,
+        "missing_games": [],
+        "help_visible": true,
+        "cancel_visible": true
+      },
+      "private": {
+        "commands": 83,
+        "unique": 83,
+        "missing_games": [],
+        "help_visible": true,
+        "cancel_visible": true
+      },
+      "administrator": {
+        "commands": 85,
+        "unique": 85,
+        "missing_games": [],
+        "help_visible": true,
+        "cancel_visible": true
+      },
+      "owner": {
+        "commands": 95,
+        "unique": 95,
+        "missing_games": [],
+        "help_visible": true,
+        "cancel_visible": true
+      }
+    },
+    "daily_rewards": [
+      25,
+      30,
+      35,
+      40,
+      45,
+      50
+    ],
+    "game_daily_limit": 150,
+    "cosmetic_count": 10
+  },
+  "restore": {
+    "ok": true,
+    "scope": "isolated_restore_namespace_on_server",
+    "production_database_modified": false,
+    "restore": {
+      "collections": 46,
+      "documents": 42348
+    },
+    "temporary_database_removed": true,
+    "temporary_archive_removed": true
+  },
+  "backup_directory": "/opt/arel/backups/games-20261022-chess-presentation",
+  "acceptance": "deploy/evidence/games18-review-20261022.json",
+  "real_client_visual_test": "NOT_RUN - deferred by operator",
+  "github_updated": false,
+  "health_after_restore": {
+    "release": "2026.10.22-games-18",
+    "source": {
+      "version": "2026.10.22-games-18",
+      "commit": "13947c0f0ebe8c0843d9c00dfadbeefff33470d2"
+    },
+    "services": {
+      "bot": {
+        "status": "running",
+        "health": "healthy",
+        "restarts": 0,
+        "image": "sha256:6f5520f4840156d3138b9e28351076ca4148df4475ab79dcf9e991422939b2ac",
+        "recent_tracebacks": 0
+      },
+      "worker": {
+        "status": "running",
+        "health": "healthy",
+        "restarts": 0,
+        "image": "sha256:dafcf1fe432201645a801cbb5d9d17adc734ddf6104308d97ffdc141053c94ed",
+        "recent_tracebacks": 0
+      },
+      "mongo": {
+        "status": "running",
+        "health": "healthy",
+        "restarts": 0,
+        "image": "sha256:d0d926f94df099bff534b7ee5b5986458131a22489dfff8664509af0c1e2ca9c"
+      },
+      "redis": {
+        "status": "running",
+        "health": "healthy",
+        "restarts": 0,
+        "image": "sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499"
+      }
+    },
+    "telegram_read_only_probe_exit": 0,
+    "telegram": {
+      "ok": true,
+      "bot_username": "ArelChat_Bot",
+      "catalog_games": 45,
+      "webhook_configured": false,
+      "pending_update_count": 0,
+      "custom_emoji_verified": 38,
+      "animated_icons": 38,
+      "transport_class": "ThemedHTTPXRequest",
+      "premium_buttons_enabled": true
+    }
+  }
+}

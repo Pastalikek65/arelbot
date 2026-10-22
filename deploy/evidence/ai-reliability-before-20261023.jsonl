@@ -1,0 +1,12 @@
+{"kind": "configuration", "route": ["openai", "hrmn", "cloudflare", "evren", "nvidia"], "router_fast": 8, "router_chat": 40.0, "provider_cap": 12.0, "openai_mode": "cli", "cli_model": null, "provider_timeouts": {"openai": {"normal": 40.0, "fast": 12.0}, "freemodel": {"normal": 10.0, "fast": 8.0}, "groq": {"normal": 20.0, "fast": 8.0}, "gemini": {"normal": 20.0, "fast": 8.0}, "cerebras": {"normal": 10.0, "fast": 8.0}, "iamhc": {"normal": 30.0, "fast": 8.0}, "evren": {"normal": 20.0, "fast": 8.0}, "nvidia": {"normal": 20.0, "fast": 8.0}, "cloudflare": {"normal": 12.0, "fast": 8.0}, "ninerouter": {"normal": 30.0, "fast": 8.0}, "hrmn": {"normal": 10.0, "fast": 8.0}}, "fast_max_tokens": 256}
+{"kind": "attempt", "provider": "openai", "status": "outer_cancel", "seconds": 1.603}
+{"kind": "attempt", "provider": "hrmn", "status": "outer_cancel", "seconds": 1.6}
+{"kind": "attempt", "provider": "cloudflare", "status": "outer_cancel", "seconds": 1.6}
+{"kind": "attempt", "provider": "evren", "status": "outer_cancel", "seconds": 1.599}
+{"kind": "attempt", "provider": "nvidia", "status": "ok", "seconds": 0.636}
+{"kind": "fast_route", "provider": "nvidia", "reply": "Hazır."}
+{"kind": "direct_existing", "provider": "openai", "status": "ok", "model": "codex-cli-default", "reply": "Hazır", "seconds": 17.546}
+{"kind": "direct_existing", "provider": "hrmn", "status": "ok", "model": "deepseek-v4.1-flash-1017", "reply": "Hazır.", "seconds": 2.947}
+{"kind": "direct_new_key", "status": "ok", "model": "deepseek-v4.1-flash-1017", "reply": "Hazır.", "seconds": 1.556}
+{"kind": "image_new_key", "model": "gpt-image-2.5-prism", "status": "image_provider_upstream", "seconds": 3.76}
+{"kind": "image_new_key", "model": "gpt-image-2.5-flare", "status": "image_provider_upstream", "seconds": 2.185}

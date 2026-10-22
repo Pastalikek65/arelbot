@@ -1,3 +1,4 @@
+from copy import deepcopy
 from types import SimpleNamespace
 
 import pytest
@@ -17,16 +18,36 @@ class DataPort:
     reachable = True
 
     def __init__(self, state=None):
-        self.state = state
+        self.state = deepcopy(state)
         self.saved = []
 
     async def get_game_state(self, chat_id, game_type):
-        return self.state if game_type == "chess" else None
+        return deepcopy(self.state) if game_type == "chess" else None
 
     async def save_game_state(self, chat_id, game_type, state):
         if game_type == "chess":
-            self.state = state
-            self.saved.append(state.copy())
+            self.state = deepcopy(state)
+            self.saved.append(deepcopy(state))
+
+    async def initialize_game_state_version_if_missing(self, chat_id, game_type):
+        if self.state is not None and "version" not in self.state:
+            self.state["version"] = 0
+            return True
+        return False
+
+    async def create_game_state_if_absent(self, chat_id, game_type, state):
+        if self.state is not None:
+            return False
+        self.state = deepcopy(state)
+        self.saved.append(deepcopy(state))
+        return True
+
+    async def compare_and_save_game_state(self, chat_id, game_type, state, *, expected_version):
+        if self.state is None or self.state.get("version") != expected_version:
+            return False
+        self.state = deepcopy(state)
+        self.saved.append(deepcopy(state))
+        return True
 
     async def delete_game_state(self, chat_id, game_type):
         if game_type == "chess":
@@ -76,13 +97,13 @@ async def test_chess_command_persists_and_binds_forum_topic():
     context = SimpleNamespace(chat_data={}, args=[])
     command_update = update(1)
     await handler.handle_chess_command(command_update, context)
-    state = context.chat_data["chess"]
+    state = port.state
     assert state["thread_id"] == 42
     assert port.saved
     assert command_update.effective_message.calls
     assert command_update.effective_message.calls[0][1]["message_thread_id"] == 42
     assert command_update.effective_message.calls[0][1]["reply_markup"] is not None
-    markup = context.chat_data["chess"]
+    markup = port.state
     callbacks = {
         button.callback_data
         for row in chess_keyboard(markup).inline_keyboard
@@ -90,7 +111,7 @@ async def test_chess_command_persists_and_binds_forum_topic():
         if button.callback_data
     }
     assert f"chess:{state['round_id']}:join" in callbacks
-    assert "AREL SATRANÇ" in render_chess_text(state)
+    assert "<b>Satranç</b>" in render_chess_text(state)
 
 
 @pytest.mark.asyncio
@@ -106,9 +127,9 @@ async def test_chess_callback_selects_and_moves_with_round_scope():
     query = Query()
     await handler._handle_chess_callback(update(1), query, context, f"chess:{rid}:sq:e2")
     await handler._handle_chess_callback(update(1), query, context, f"chess:{rid}:sq:e4")
-    assert state["moves"] == ["e4"]
-    assert state["turn"] == "black"
-    assert chess_keyboard(state).inline_keyboard[7][0].callback_data.endswith(":sq:h8")
+    assert port.state["moves"] == ["e4"]
+    assert port.state["turn"] == "black"
+    assert chess_keyboard(port.state).inline_keyboard[7][0].callback_data.endswith(":sq:h8")
     assert query.edits
     assert all("chess:" in str(button.callback_data) for row in query.edits[-1][1]["reply_markup"].inline_keyboard for button in row if button.callback_data)
 
@@ -137,8 +158,8 @@ def test_chess_board_keeps_active_player_at_bottom_and_identifies_piece_owners()
     white = chess_keyboard(state).inline_keyboard
     assert white[0][0].callback_data.endswith(":sq:a8")
     assert white[7][0].callback_data.endswith(":sq:a1")
-    assert white[0][0].text.startswith("●")
-    assert white[7][0].text.startswith("○")
+    assert white[0][0].text == "♜\ufe0e"
+    assert white[7][0].text == "♖\ufe0e"
     white_text = render_chess_text(state)
     assert "Beyaz altta" in white_text
     assert "a → h" in white_text
@@ -147,8 +168,8 @@ def test_chess_board_keeps_active_player_at_bottom_and_identifies_piece_owners()
     black = chess_keyboard(state).inline_keyboard
     assert black[0][0].callback_data.endswith(":sq:h1")
     assert black[7][0].callback_data.endswith(":sq:h8")
-    assert black[0][0].text.startswith("○")
-    assert black[7][0].text.startswith("●")
+    assert black[0][0].text == "♖\ufe0e"
+    assert black[7][0].text == "♜\ufe0e"
     black_text = render_chess_text(state)
     assert "Siyah altta" in black_text
     assert "h → a" in black_text
@@ -159,5 +180,6 @@ def test_chess_capture_target_keeps_opponent_piece_visible():
     state.update({"status": "playing", "fen": "", "uci_moves": ["e2e4", "d7d5"],
                   "turn": "white", "selected_square": "e4", "legal_targets": ["d5"]})
     rows = chess_keyboard(state).inline_keyboard
-    capture = next(button.text for row in rows for button in row if button.callback_data.endswith(":sq:d5"))
-    assert "♟" in capture and "×" in capture
+    capture = next(button for row in rows for button in row if button.callback_data.endswith(":sq:d5"))
+    assert capture.text == "♟\ufe0e"
+    assert capture.to_dict()["style"] == "danger"

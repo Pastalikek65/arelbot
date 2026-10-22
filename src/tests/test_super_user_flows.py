@@ -713,7 +713,7 @@ async def test_daily_brief_callback_updates_personal_preference_panel():
     )
     await handler.handle_callback_query(update, SimpleNamespace(chat_data={}))
     assert (await store.get(42))["daily_brief_enabled"] is True
-    assert edits and "GÜNLÜK" in edits[0]
+    assert edits and "Günlük özet" in edits[0]
 
 
 @pytest.mark.asyncio

@@ -74,7 +74,9 @@ async def test_roulette_hit_finishes_round_and_cleans_state(monkeypatch):
 
     assert result["status"] == "finished"
     assert result["winner_id"] == 2
-    assert await database.get_game_state(-100, "roulette") is None
+    terminal = await database.get_game_state(-100, "roulette")
+    assert terminal['phase'] == 'finished' and terminal['score_pending'] is False
+    assert terminal['panel_dirty'] and terminal['result_text']
 
 
 @pytest.mark.asyncio

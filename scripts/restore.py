@@ -3,6 +3,9 @@
 
 Database restoration is destructive by design and therefore requires the
 explicit ``--confirm`` flag.  Verification never changes the target system.
+The MongoDB connection string never reaches the command line: the tools
+read it from a private configuration file, because every process on the host
+can read the argument vector of another process.
 """
 
 from __future__ import annotations
@@ -18,11 +21,17 @@ import tarfile
 import tempfile
 from pathlib import Path
 from pathlib import PurePosixPath
-from typing import Callable
+from typing import Callable, Mapping
 from urllib.parse import urlsplit, urlunsplit
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
-CommandRunner = Callable[[list[str]], None]
+from src.security.tool_credentials import mongo_tool_config, mongo_tool_environment
+
+
+CommandRunner = Callable[[list[str], dict[str, str]], None]
 
 
 class RestoreError(RuntimeError):
@@ -170,15 +179,16 @@ def restore_backup(backup_dir: Path, *, mongo_uri: str, redis_rdb_target: Path |
             if mongo_source_database and mongo_target_database
             else mongo_uri
         )
-        command = ["mongorestore", f"--uri={restore_uri}", f"--archive={mongo}", "--gzip", "--drop"]
-        if mongo_source_database and mongo_target_database:
-            command.extend(
-                [
-                    f"--nsFrom={mongo_source_database}.*",
-                    f"--nsTo={mongo_target_database}.*",
-                ]
-            )
-        run_command(command)
+        with mongo_tool_config(restore_uri) as mongo_config:
+            command = ["mongorestore", f"--config={mongo_config}", f"--archive={mongo}", "--gzip", "--drop"]
+            if mongo_source_database and mongo_target_database:
+                command.extend(
+                    [
+                        f"--nsFrom={mongo_source_database}.*",
+                        f"--nsTo={mongo_target_database}.*",
+                    ]
+                )
+            run_command(command, mongo_tool_environment(restore_uri))
     if redis_rdb_target is not None and "redis.rdb" in artifacts:
         redis_rdb_target = _safe_target_path(redis_rdb_target)
         if redis_rdb_target.exists() and not redis_rdb_target.is_file():
@@ -199,13 +209,14 @@ def restore_backup(backup_dir: Path, *, mongo_uri: str, redis_rdb_target: Path |
     return manifest
 
 
-def _run_quiet(command: list[str]) -> None:
+def _run_quiet(command: list[str], environment: Mapping[str, str]) -> None:
     try:
         result = subprocess.run(
             command,
             check=False,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
+            env=dict(environment),
         )
     except FileNotFoundError as exc:
         raise RestoreError(f"required command is missing: {command[0]}") from exc

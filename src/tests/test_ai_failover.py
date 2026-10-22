@@ -23,6 +23,7 @@ def build_key_manager(monkeypatch, **env):
 
 def test_default_provider_priority_keeps_freemodel_primary():
     assert ChatEngine.SERVICE_PRIORITY == [
+        ServiceType.OPENAI,
         ServiceType.FREEMODEL,
         ServiceType.GROQ,
     ]
@@ -137,6 +138,10 @@ async def test_chat_engine_returns_none_when_all_providers_fail(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_primary_timeout_falls_back_to_groq(monkeypatch):
+    monkeypatch.setattr(
+        "config.Config.AI_PROVIDER_ROUTES",
+        {"chat": ["freemodel", "groq"]},
+    )
     manager = build_key_manager(monkeypatch, groq=["groq-key"])
     engine = ChatEngine.__new__(ChatEngine)
     engine.key_manager = manager

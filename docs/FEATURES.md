@@ -1,6 +1,6 @@
 # Arel — özellikler ve komut rehberi
 
-Bu rehber, 18 Ekim 2026 tarihli güncel kaynakta bulunan kullanıcı ve yönetici yüzeylerini açıklar. Daha önce ayrı sürümlerde bulunan ekler de artık bu depoda yer alır. Komut adları kayıt, handler ve servis tanımlarına dayanır.
+Bu rehber, 23 Ekim 2026 tarihli güncel kaynakta bulunan kullanıcı ve yönetici yüzeylerini açıklar. Daha önce ayrı sürümlerde bulunan ekler de artık bu depoda yer alır. Komut adları kayıt, handler ve servis tanımlarına dayanır.
 
 > **Doğrulama kapsamı:** Bu rehber kaynakta bulunan komutları ve koşullarını belgeler. Otomatik yönlendirme testleri ile gerçek Telegram kabulü ayrı değerlendirilir; sonuçlar ve açık sınırlar [güvenilirlik kaydında](RELIABILITY-2026-10-18.md) tutulur.
 
@@ -15,7 +15,7 @@ Komutlar Telegram'da `/komut@bot_kullanıcı_adı` biçiminde de kullanılabilir
 | Başlangıç ve menü | `/start`, `/menu`, `/help` | Karşılama, kategori menüleri, yardım ve başlangıç bağlantıları |
 | Bağlamlı sohbet | Özel mesaj, grupta mention veya bot mesajına yanıt | AI yanıtı, sohbet bağlamı ve araç yönlendirmesi; AI gerekir |
 | Hedefli grup yanıtları | Mention/yanıt akışı | Yakın dönem mesajlarını kullanıcı ve konu kapsamında seçip ayrı yanıtlar oluşturabilen yönlendirme; özellik bayrağı ve AI gerekir |
-| Kişisel üslup | `/persona`, `/uslup` | Özel sohbette üslup tercihi; ciddi/dengeli/iğneleyici ve onaylı roast seçimi |
+| Kişisel üslup | `/persona`, `/uslup` | Özel sohbette üslup tercihi; Normal ve açık seçimli Roast |
 | Grup üslubu | `/ayar kişilik ...` | Yönetici kontrollü üslup; roast için açık onay ve hassas konularda ayrı politika |
 | Gözlem modu | `/obs on`, `/obs off`, `/sohbet` | Yönetici/sudo kapsamındaki sohbet gözlem ayarı |
 | Arayüz dili | `/lang` | Dil seçimi; bütün metinlerin aynı dilde olması ayrıca doğrulanmalıdır |
@@ -31,7 +31,7 @@ Kaynaklar: [`main.py`](../main.py), [`orchestrator.py`](../src/orchestrator.py),
 | Web sayfası okuma | AI araç akışı | Herkese açık sayfadan sınırlı içerik okuma; URL, özel IP, yönlendirme ve boyut kontrolleri; bağımsız `/oku URL` komutu değildir |
 | Çeviri | `/cevir İngilizce Merhaba` veya mesaja yanıt | Hedef dile AI çevirisi; `oku` seçeneğiyle seslendirme kuyruğu |
 | Hikâye üretimi | `/hikaye` | İstek ayrıştırma ve AI üretimi |
-| Görsel üretimi | `/image açıklama` | Görsel adaptörü üzerinden iş kuyruğu; uygun hesap/anahtar ve worker gerekir |
+| Görsel üretimi | `/image açıklama` | Prism/Flare ve mevcut yedek adaptör üzerinden iş kuyruğu; `--model prism` / `--model flare` açık seçimdir ve başka modele düşmez; uygun hesap/anahtar ve worker gerekir |
 | Görsel analizi ve metin okuma | Fotoğraf açıklaması/yanıtı ve işlem butonları | Açık kullanıcı niyeti sonrası analiz, OCR veya sticker seçimi; görsel modeli ve worker gerekir |
 | Sesli mesaj işleme | Telegram sesli mesajı | Ses çözümleme ve yanıt; transkripsiyon modeli, ek dosya kuyruğu ve worker gerekir |
 | Metin seslendirme | `/oku metin`, `/seslendir metin`; mesaja yanıt | Sınırlı metni sese çevirip gönderme; TTS servisi ve worker gerekir |
@@ -177,6 +177,8 @@ Kaynaklar: [`quote_handler.py`](../src/handlers/quote_handler.py), [`command_han
 
 ## 10. Oyunlar, puan ve sanal ekonomi
 
+**45 oyun için tam liste:** [Oyun rehberi](GAMES.md) — her oyunun komutu, oyuncu sayısı ve mekaniği. Aşağıdaki tablo ortak giriş ve ekonomi yüzeylerini özetler.
+
 | Oyun/özellik | Komut | Davranış |
 |---|---|---|
 | Oyun salonu | `/oyun` | Oyun, kategori ve zorluk seçimi |
@@ -196,6 +198,7 @@ Kaynaklar: [`quote_handler.py`](../src/handlers/quote_handler.py), [`command_han
 | Profil | `/profile`, `/profil` | Oyuncu istatistikleri ve profil kartı |
 | Başarımlar/sezon | `/basarimlar`, `/achievements`, `/sezon`, `/season` | Oyun olaylarından başarımlar ve dönemlik sıralama |
 | Sanal bakiye | `/ekonomi`, `/bakiye` | Sohbet kapsamındaki coin hesabı |
+| Mağaza ve envanter | `/magaza`, `/envanter` | Sanal coin ile kozmetik edinme ve sahip olunan öğeleri görüntüleme |
 | Günlük ödül | `/gunluk`, `/daily` | Tekilleştirilmiş günlük coin talebi |
 
 Kelime oyunları kolay, normal, zor ve uzman profilleri kullanır. Puanlama hız, uzunluk, ipucu ve deneme gibi oyuna özgü ölçütlere bağlıdır. Oyunların kalıcılığı eşit varsayılmaz; yeniden başlatma toparlanması ve eşzamanlı callback davranışı oyun başına doğrulanmalıdır. Coin'ler oyun içi sanal kayıtlardır; ödeme/çekim entegrasyonu bu yüzeyde bulunmaz.
@@ -292,8 +295,8 @@ Yeni özellik eklerken komut kaydını, gerçek handler/servis akışını ve ya
 | XOX | `/xox`, `/tictactoe` | İki oyunculu lobi; mevcut komut başlangıcında 6×6 tahta ve dört taşlık kazanım; durum ve eski panel kimliği kontrolleri |
 | Gomoku | `/gomoku`, `/besli` | İki oyunculu lobi; varsayılan 10×10 tahta, beş taşlık kazanım; 6/7/8/10/12/15 boyut seçimi ve forum konusu kapsamı |
 | Akinatör | `/akinator` | Türkçe karakter soruları, geri alma, tahmin onayı ve soru sürümü kontrolü; dış Akinator servisi erişimi gerekir |
-| Yaş tahmini | `/yas`, `/yastahmin 27` | Commons fotoğraflarıyla beş turlu grup oyunu; fotoğraf tarihindeki doğrulanmış yaş, tam sayı seçimi, tur sonunda puan ve kaynak gösterimi |
-| UNO | `/uno`, `/kartuno` | 2–8 oyuncu, 108 kart, renk/sayı/aksiyon kartları, +2/+4 cezası, renk seçimi, UNO çağrısı; kart yüzleri grup panelinde gizli, oyuncuya özel el uyarısı ve kalıcı state |
+| Yaş tahmini | `/yas`, `/yastahmin 27` | Commons fotoğraflarıyla beş turlu grup oyunu; fotoğraf tarihindeki doğrulanmış yaş, tam sayı seçimi, tur sonunda puan; atıflar özel bilgi/kaynak yüzeyinde |
+| UNO | `/uno`, `/kartuno` | 2–8 oyuncu, inline sticker el seçimi, 108 kart, renk/sayı/aksiyon kartları, +2/+4 cezası, renk seçimi, UNO çağrısı; kart yüzleri grup panelinde gizli, oyuncuya özel el uyarısı ve kalıcı state |
 | Ek oyun adları | `/trivia`, `/dogruluk`, `/cesaret` | Mevcut quiz ve doğruluk/cesaret handler'larına açık eşleme |
 | Toplu oyun bitirme adları | `/oyunbitir`, `/oyundur`, `/oyunlardur` | Kayıtlı oyun sonlandırma yüzeyine eşleme; oyuncu/yönetici koşulları ilgili handler'dadır |
 | Ortak kart motoru | Dahili `card_engine.py` | Kart/deck değer nesneleri, seed'li karıştırma, snapshot serileştirme, blackjack el değeri ve action-ID tekilleştirme |

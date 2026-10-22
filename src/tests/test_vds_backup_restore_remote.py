@@ -55,3 +55,35 @@ def test_remote_script_has_disposable_namespace_and_no_production_restore():
     assert "docker stop" not in script
     assert "docker compose down" not in script
     assert "redis_restore" in script
+
+
+def test_remote_script_never_puts_the_mongo_credential_on_a_command_line():
+    """The drill authenticates like the deployment does.
+
+    The connection string reaches the database tools through their
+    configuration file and the shell through its authentication script, so
+    no argument vector of the drill contains a credential.
+    """
+
+    script = remote._remote_script()
+    assert "--uri=mongodb://" not in script
+    assert "mongodump --quiet --config=" in script
+    assert "mongorestore --quiet --config=" in script
+    assert "load('${mongo_auth}')" in script
+    # The credential is read from the container configuration on the VDS.
+    assert "MONGO_INITDB_ROOT_PASSWORD" in script
+
+
+def test_remote_script_validates_the_credential_character_set():
+    """The drill builds the connection string by hand, so it checks the set.
+
+    The password ends up in a URI that nothing escapes, so a reserved
+    character would silently produce a broken connection string.  The user
+    name lands in the same string and in the authentication script.
+    """
+
+    script = remote._remote_script()
+    assert "*[!A-Za-z0-9._~-]*)" in script
+    assert "mongo credential contains an unsupported character" in script
+    assert "mongo user contains an unsupported character" in script
+

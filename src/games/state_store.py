@@ -6,6 +6,8 @@ import asyncio
 from collections.abc import Mapping, Sequence
 from typing import Any, Protocol
 
+from src.storage.production import is_production_database
+
 from .catalog import GameSession
 
 GAME_KEYS = {
@@ -31,9 +33,9 @@ def memory_fallback_allowed(database: Any | None) -> bool:
 
     Production Mongo access must fail closed.  A process-local game state is
     useful for unit tests and explicit local/degraded adapters, but silently
-    using it behind the real database would make a restart lose the round.
-    ``HandlerDataPort`` is treated as a test adapter only when its wrapped
-    object has no production availability marker.
+    using it behind the production database would make a restart lose the
+    round.  ``HandlerDataPort`` is treated as a test adapter only when its
+    wrapped object has no production availability marker.
     """
 
     if database is None or not hasattr(database, "available"):
@@ -44,8 +46,8 @@ def memory_fallback_allowed(database: Any | None) -> bool:
         and not hasattr(wrapped, "available")
     )
     production_database = (
-        type(database).__module__ == "src.database"
-        or type(wrapped).__module__ == "src.database"
+        is_production_database(database)
+        or is_production_database(wrapped)
     )
     return bool(
         test_port_fallback

@@ -1,0 +1,70 @@
+{
+  "release": "2026.10.23-persona-5",
+  "hashes": {
+    "src/ai/personality.py": "94394b36789027416df3ef18af6341e9393af666238416af03975b7e57967d4b",
+    "src/ai/conversation_style.py": "b296a8b6332728e78eb4579113e003b836a7cecb84794a557a99a5e8b980c068",
+    "src/chat_engine.py": "d82567f5624464e5d463bd8113408be8cc607be13d25c9339f2a81984ecc6920",
+    "src/handlers/command_handler.py": "4204452eecef6c9839298a6644a0f92a866d31b2e1f61c191d026d7625911daa",
+    "src/handlers/callback_handler.py": "535173de3d08bbbf4b4c362d275ad01c4a3201f100bdcac6d4e8d3da3c6e5957",
+    "src/services/menu_service.py": "3253f10637edb95485b77f8d5abb2e4259ef83958b76b97da2adb04b47c3d0c2",
+    "src/handlers/message_handler.py": "bd938a27ab9ff926603216b3612519a9d68540931022738ececb24fafbc5ad95"
+  },
+  "callbacks": [
+    "persona_user:normal",
+    "persona_user:roast"
+  ],
+  "route": [
+    "openai",
+    "hrmn",
+    "cloudflare",
+    "evren",
+    "nvidia"
+  ],
+  "openai_mode": "cli",
+  "source_offer_parts": 3,
+  "normal_live_probes": [
+    {
+      "input": "selam naber",
+      "reply": "Selam! Ben Arel, Telegram asistanıyım. Sen nasılsın, ne yapıyorsun? Kısa bir sohbet ister misin?",
+      "provider": "nvidia",
+      "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "seconds": 7.62
+    },
+    {
+      "input": "çayı demledim sonra aklımdan çıkmış buz gibi olmuş",
+      "reply": "buradayım ya, bağlantı bi an tökezledi 😅",
+      "seconds": 8.0
+    },
+    {
+      "input": "bir bölüm izleyecektim sabah olmuş",
+      "reply": "soğuk kahve içme soğuk kalma uykusuz kalma mı istedin galiba hadi inceleyelim; bölümün adı neydi?",
+      "provider": "nvidia",
+      "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "seconds": 7.84
+    }
+  ],
+  "probe_scope": "production get_response; isolated synthetic history; persistence disabled",
+  "configuration_verification": "provider_settings_env_compose_and_manifest_verified",
+  "codex_cli": "codex-cli 0.147.0",
+  "containers": [
+    {
+      "role": "bot",
+      "health": "healthy",
+      "restarts": 0
+    },
+    {
+      "role": "worker",
+      "health": "healthy",
+      "restarts": 0
+    }
+  ],
+  "server_full_tests": "3223 passed, 6 skipped, 15 warnings in 110.88s (0:01:50)",
+  "github_updated": false,
+  "telegram_human_ui": "NOT_RUN",
+  "protected_policy_unchanged": true,
+  "runtime_matches_local_source": true,
+  "normal_style_live_quality": "HOLD",
+  "quality_observation": "Latest production-path synthetic probes returned two NVIDIA answers with inconsistent style and one application connection fallback. Desired friend-style quality is not accepted.",
+  "backend_reply_count": 2,
+  "application_fallback_count": 1
+}

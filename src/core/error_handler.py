@@ -32,7 +32,7 @@ class ArelError(Exception):
         self.message = message
         self.code = code
         self.details = details or {}
-        self.user_message = user_message or "Bir hata oluştu. Lütfen tekrar deneyin."
+        self.user_message = user_message or "İşlem tamamlanamadı. Biraz sonra tekrar dene."
         self.timestamp = datetime.now(timezone.utc)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -53,10 +53,7 @@ class AIApiError(ArelError):
         status_code: Optional[int] = None,
         details: Optional[Dict[str, Any]] = None
     ):
-        user_msg = (
-            f"😔 {service} servisi şu an yanıt vermiyor. "
-            f"Diğer servislere yönlendiriyorum..."
-        )
+        user_msg = "Yanıt alınamadı. Biraz sonra tekrar dene."
         super().__init__(
             message=message,
             code="AI_API_ERROR",
@@ -76,8 +73,8 @@ class RateLimitError(ArelError):
         retry_after: Optional[int] = None,
         details: Optional[Dict[str, Any]] = None
     ):
-        retry_msg = f" {retry_after} saniye sonra tekrar dene." if retry_after else ""
-        user_msg = f"⏳ {service} servisi şu an yoğun.{retry_msg}"
+        retry_msg = f" {retry_after} saniye sonra tekrar dene." if isinstance(retry_after, int) and retry_after > 0 else " Biraz sonra tekrar dene."
+        user_msg = f"Şu anda yeni istek alınamıyor.{retry_msg}"
         super().__init__(
             message=message,
             code="RATE_LIMIT",
@@ -101,7 +98,7 @@ class ToolExecutionError(ArelError):
             message=message,
             code="TOOL_EXECUTION_ERROR",
             details={"tool": tool_name, "args": args, **(details or {})},
-            user_message=f"🔧 '{tool_name}' çalışırken bir sorun çıktı. Lütfen tekrar dene."
+            user_message="İşlem tamamlanamadı. Biraz sonra tekrar dene."
         )
         self.tool_name = tool_name
 
@@ -119,7 +116,7 @@ class DatabaseError(ArelError):
             message=message,
             code="DATABASE_ERROR",
             details={"db": db_name, "operation": operation, **(details or {})},
-            user_message=f"🗄️ Veritabanı işlemi sırasında bir sorun oluştu. Lütfen tekrar dene."
+            user_message="İşlem tamamlanamadı. Biraz sonra tekrar dene."
         )
         self.db_name = db_name
         self.operation = operation
@@ -137,7 +134,7 @@ class InputValidationError(ArelError):
             message=message,
             code="INPUT_VALIDATION_ERROR",
             details={"field": field, **(details or {})},
-            user_message=f"⚠️ Geçersiz girdi: {message}"
+            user_message="Gönderdiğin bilgi kabul edilmedi. Biçimini kontrol edip tekrar dene."
         )
         self.field = field
 
@@ -153,7 +150,7 @@ class ConfigurationError(ArelError):
             message=message,
             code="CONFIG_ERROR",
             details={"missing_keys": missing_keys or []},
-            user_message="⚙️ Bot yapılandırmasında bir sorun var. Lütfen yöneticiye başvurun."
+            user_message="Bu işlem şu anda kullanılamıyor. Bot yöneticisine bildirebilirsin."
         )
         self.missing_keys = missing_keys or []
 
@@ -215,7 +212,7 @@ class ErrorHandler:
             log_msg = f"[{code}] {error_type}"
         else:
             code = "UNHANDLED"
-            user_msg = "Beklenmedik bir hata oluştu. Lütfen tekrar deneyin."
+            user_msg = "İşlem tamamlanamadı. Biraz sonra tekrar dene."
             log_msg = f"[UNHANDLED] {error_type}"
 
         logger.error("%s (%s)", log_msg, summarize_exception(error, label="handled_error"))

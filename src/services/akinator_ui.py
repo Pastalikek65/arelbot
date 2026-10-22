@@ -43,14 +43,14 @@ def akinator_keyboard(state: dict) -> InlineKeyboardMarkup:
     elif status == "proposition":
         rows.append(
             [
-                InlineKeyboardButton("✅ Bildin", callback_data=f"{prefix}:guess:yes"),
-                InlineKeyboardButton("❌ Değil", callback_data=f"{prefix}:guess:no"),
+                InlineKeyboardButton("Evet, doğru", callback_data=f"{prefix}:guess:yes"),
+                InlineKeyboardButton("Hayır, bu değil", callback_data=f"{prefix}:guess:no"),
             ]
         )
     if status not in {"finished", "failed"}:
-        rows.append([InlineKeyboardButton("🛑 Oyunu bırak", callback_data=f"{prefix}:stop")])
+        rows.append([InlineKeyboardButton("Oyunu bitir", callback_data=f"{prefix}:stop")])
     else:
-        rows.append([InlineKeyboardButton("🔄 Yeni tur", callback_data="game_start_akinator")])
+        rows.append([InlineKeyboardButton("Yeni oyun", callback_data="game_start_akinator")])
     return InlineKeyboardMarkup(rows)
 
 
@@ -62,13 +62,13 @@ def render_akinator_text(state: dict) -> str:
     description = html.escape(str(state.get("proposition_description") or ""))
     owner = html.escape(str(state.get("owner_name") or "Oyuncu"))
     if status == "pending":
-        body = "sorular hazırlanıyor…"
+        body = "Bir kişi düşün. Sorular hazırlanıyor…"
     elif status == "proposition":
-        body = f"aklımdaki kişi: <b>{proposition}</b>\n{description}\n\nbildim mi?"
+        body = f"Tahminim: <b>{proposition}</b>\n{description}\n\nAklındaki kişi bu mu?"
     elif status == "finished":
-        body = f"tur tamamlandı · tahminim: <b>{proposition}</b>"
+        body = f"Oyun tamamlandı.\nSon tahminim: <b>{proposition}</b>"
     elif status == "failed":
-        body = "Oturum kesildi veya servis yanıt vermedi. Yeni tur başlatabilirsin."
+        body = "Bu oyuna devam edilemiyor. Yeni oyun düğmesiyle tekrar başlayabilirsin."
     else:
-        body = f"<b>{question}</b>\n\nSoru {int(state.get('questions', 0) or 0) + 1} · ilerleme <code>{progress:.0f}%</code>"
+        body = f"<b>{question}</b>\n\nSoru {int(state.get('questions', 0) or 0) + 1} · İlerleme <code>{progress:.0f}%</code>"
     return f"🧞 <b>Akinatör</b> · {owner}\n\n{body}"

@@ -1,0 +1,110 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-21",
+  "scope": "turkish_ui_copy_selected_live_paths",
+  "release": "2026.10.21-games-5",
+  "runtime_source_commit": "5853ba8de8f13f735fa648303f73707eb6ca94c0",
+  "server_activation": {
+    "healthy": true,
+    "schema_version": 20,
+    "archive_integrity_verified": true,
+    "backup_archive_integrity_verified": true,
+    "backup_restore_tested_for_this_update": false
+  },
+  "release_gate": {
+    "passed": 25,
+    "total": 25,
+    "host_pytest": {
+      "passed": 2329,
+      "skipped": 19
+    },
+    "local_docker_pytest": {
+      "passed": 2342,
+      "skipped": 6
+    },
+    "server_candidate_pytest": {
+      "passed": 2342,
+      "skipped": 6
+    }
+  },
+  "impeccable": {
+    "workflow": [
+      "context",
+      "clarify",
+      "craft-floor",
+      "polish"
+    ],
+    "mechanical_detect_result": [],
+    "detector_limit": "Python Telegram copy; empty detector output is not visual acceptance"
+  },
+  "telegram": {
+    "chat_id": -1004323938202,
+    "client": "Telegram Web via authenticated user session",
+    "checks": [
+      {
+        "path": "/menu then Oyunlar",
+        "messages": [
+          162,
+          163
+        ],
+        "observed_release": "2026.10.21-games-4",
+        "result": "pass"
+      },
+      {
+        "path": "help category then Batak detail",
+        "messages": [
+          166,
+          167
+        ],
+        "observed_release": "2026.10.21-games-4",
+        "result": "pass"
+      },
+      {
+        "path": "/zincir lobby and duplicate join alert",
+        "messages": [
+          168,
+          169
+        ],
+        "observed_release": "2026.10.21-games-4",
+        "result": "pass",
+        "alert": "Bu oyuna zaten katıldın."
+      },
+      {
+        "path": "/tabu lobby",
+        "messages": [
+          170,
+          171
+        ],
+        "observed_release": "2026.10.21-games-4",
+        "result": "pass"
+      },
+      {
+        "path": "/yas caption, photo source and own test cancellation",
+        "messages": [
+          172,
+          173
+        ],
+        "observed_release": "2026.10.21-games-4",
+        "result": "pass"
+      },
+      {
+        "path": "/help command entry after follow-up fix",
+        "messages": [
+          174,
+          175
+        ],
+        "observed_release": "2026.10.21-games-5",
+        "result": "pass",
+        "heading": "Arel yardım"
+      }
+    ],
+    "visual_observation": "Native CUA screenshots of narrow Telegram menu and help layouts; no standalone screenshot file is claimed"
+  },
+  "not_claimed": [
+    "all commands live tested",
+    "full two-player WordChain match and reward acceptance",
+    "full four-player Tabu match acceptance",
+    "40 games complete"
+  ],
+  "github_updated": false
+}

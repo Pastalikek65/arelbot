@@ -5,6 +5,8 @@ __pycache__/
 .env.backup
 .env.*
 !.env.example
+!.env.test.example
+/secrets/
 .venv
 env/
 venv/
@@ -20,6 +22,8 @@ data/media_settings.json
 
 # Generated/runtime artifacts
 .pytest_cache/
+.coverage
+.coverage.*
 dist/
 deploy/releases/
 temp/
@@ -69,3 +73,6 @@ test.json
 .docker/*.crt
 .docker/*.cer
 assets/guess_age/.import-cache/
+
+# Local agent tooling directory
+.serena/

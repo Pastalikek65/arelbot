@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-19",
+  "updated": "2026-10-22",
   "scope": [
     "guess_age",
     "uno",
@@ -45,5 +45,113 @@
     "offline_release_gate": "13/13 passed",
     "feature_catalog": "60/60 matched"
   },
-  "source_governance": "Existing explicit deployment exception retained; no source approvals fabricated"
+  "source_governance": "Existing explicit deployment exception retained; no source approvals fabricated",
+  "social_games": {
+    "status": "deployed_partial_live_verification",
+    "games": [
+      "tabu",
+      "casus",
+      "vampir_koylu"
+    ],
+    "review": "docs/SOCIAL_GAMES_PRODUCT_REVIEW_2026-10-21.md",
+    "plan": "docs/superpowers/plans/2026-10-21-social-games.md",
+    "targeted_integrated_tests": "594 passed; superseded by final full gate",
+    "server_deployment": "2026.10.21-games-8 healthy; schema 20",
+    "live_telegram_lobby_and_private_readiness": "PARTIAL - real menu and outbound canary passed; human join/private readiness BLOCKED_BROWSER_CONNECTION",
+    "real_multiplayer_matches": "NOT_RUN - operator reports no volunteers",
+    "github_publication": "not_authorized",
+    "full_release_gate": "25/25 passed; host 2471 passed/19 skipped; Docker and server candidate 2484 passed/6 skipped",
+    "evidence": "deploy/evidence/social-games-live-20261021.json",
+    "complete_human_live_acceptance": false
+  },
+  "puzzle_wave": {
+    "status": "deployed_automated_verified_human_ui_deferred",
+    "games": [
+      "wordle_tr",
+      "karsi_kelime",
+      "anagram",
+      "hafiza_eslestirme",
+      "mayin_tarlasi",
+      "sudoku",
+      "sayisal_tahmin",
+      "hizli_buton"
+    ],
+    "catalog_after_candidate": 26,
+    "target": 40,
+    "count_note": "26 definitions includes candidates; count is not human live acceptance, feature count is separate",
+    "live_telegram_ui": "NOT_RUN - operator explicitly deferred",
+    "server_deployment": "2026.10.21-games-10 healthy; schema 20",
+    "github_publication": "not_authorized",
+    "plan": "docs/superpowers/plans/2026-10-21-puzzle-wave.md",
+    "release_gate": "25/25 passed; host2580/19 skipped; local Docker and server2593/6 skipped",
+    "isolated_mongo": "85 cases;37 correctly due; safe private projection",
+    "evidence": "deploy/evidence/puzzle-wave-deployment-20261021.json"
+  },
+  "verification_record_note": "Historical sections retain the source and results of their own wave; latest_release identifies the currently activated deployment.",
+  "arcade_wave_40": {
+    "status": "deployed_automated_verified_human_ui_deferred",
+    "games": [
+      "harf_maratonu",
+      "sozcuk_avi",
+      "yasak_harf",
+      "ortak_hikaye",
+      "bomba",
+      "kor_siralama",
+      "kronoloji",
+      "dogru_yanlis",
+      "dedektif",
+      "amiral_batti",
+      "iki_dogru_bir_yalan",
+      "kimim_ben",
+      "takim_bilgi_ligi",
+      "zehirli_kadeh"
+    ],
+    "catalog_games": 40,
+    "minimum_target": 40,
+    "server_deployment": "2026.10.22-games-11 healthy; schema20; source a5fa94c",
+    "release_gate": "25/25; host2713/19 skipped; local Docker and server2726/6 skipped",
+    "isolated_mongo": "246 cases;115 correctly due; safe private and public projections",
+    "review": "docs/GAMES40_PRODUCT_REVIEW_2026-10-22.md",
+    "evidence": "deploy/evidence/games40-deployment-20261022.json",
+    "human_multiplayer_and_ui": "NOT_RUN - explicitly deferred by operator",
+    "github_publication": "not_authorized"
+  },
+  "latest_release": {
+    "version": "2026.10.22-games-14",
+    "runtime_source_commit": "545fd0a370c2255c4bb18003623a1f6fcb4ca5fd",
+    "services": "healthy; restarts0; recent tracebacks0",
+    "evidence": "deploy/evidence/games45-deployment-20261022.json"
+  },
+  "button_theme": {
+    "scope": "40 game menu icons and shared inline controls",
+    "custom_animated_emojis": 38,
+    "component_tests": 34,
+    "full_gate": "25/25; host2747/19 SKIP; Docker and server2760/6 SKIP",
+    "visual_ui": "NOT_RUN - operator deferred",
+    "review": "docs/TELEGRAM_BUTTONS_UPDATE_2026-10-22.md"
+  },
+  "games45_wave": {
+    "status": "deployed_automated_verified_human_ui_deferred",
+    "games": [
+      "pisti",
+      "papaz_kimde",
+      "2048",
+      "bes_ipucu",
+      "emoji_bilmece"
+    ],
+    "catalog_games": 45,
+    "runtime_features": 91,
+    "focused_tests": "76 tests covered by final full gate",
+    "review": "docs/GAMES45_PRODUCT_REVIEW_2026-10-22.md",
+    "human_multiplayer_and_ui": "NOT_RUN - operator explicitly deferred",
+    "github_publication": "not_authorized",
+    "source": "original local engines and curated original Turkish clue bank; no new provider",
+    "release": "2026.10.22-games-14",
+    "runtime_source_commit": "545fd0a370c2255c4bb18003623a1f6fcb4ca5fd",
+    "automated_accepted": true,
+    "human_live_accepted": false,
+    "evidence": "deploy/evidence/games45-deployment-20261022.json",
+    "release_gate": "25/25; host2829/19 SKIP; Docker and server2842/6 SKIP",
+    "isolated_mongo": "433 cases;248 correctly due; safe private/public projections"
+  }
 }

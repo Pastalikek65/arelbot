@@ -1,0 +1,107 @@
+{
+  "release": "2026.10.23-ai-reliability-1",
+  "checks": [
+    {
+      "kind": "configuration",
+      "release": "2026.10.23-ai-reliability-1",
+      "mode": "cli",
+      "hashes": {
+        "src/chat_engine.py": "35115e355667946d7d85f7069b639f97020244fac229b9b6d825a338303de4a1",
+        "src/ai/chatgpt_plan.py": "395d60258523dc2d7976efa8ceeb7a4c34a0e7b1cea271e6190898823f2e7cbf",
+        "src/ai/router.py": "b6d1be7d1efb04eb62fd43efe500f1d83b22c40fea5c2e99b5bc29438f8ea4f4",
+        "src/ai/providers/cloudflare_image.py": "c5e58f8a60f6128a47c41069f49a43b794c13c541ccb8e26d2eef14d78e9f285"
+      },
+      "source_offer_parts": 3
+    },
+    {
+      "kind": "route",
+      "order": [
+        "openai",
+        "hrmn",
+        "cloudflare",
+        "evren",
+        "nvidia"
+      ],
+      "model": "gpt-5.6-luna"
+    },
+    {
+      "kind": "normal_chat",
+      "input": "selam naber",
+      "reply": "selam, iyiyim ya sen nasılsın?",
+      "provider": "openai",
+      "model": "gpt-5.6-luna",
+      "task": "chat",
+      "seconds": 17.47
+    },
+    {
+      "kind": "normal_chat",
+      "input": "çayı demledim sonra aklımdan çıkmış buz gibi olmuş",
+      "reply": "soğuk çay işine de farkında olmadan girmişsin djsjsj",
+      "provider": "openai",
+      "model": "gpt-5.6-luna",
+      "task": "chat",
+      "seconds": 10.52
+    },
+    {
+      "kind": "normal_chat",
+      "input": "bir bölüm izleyecektim sabah olmuş",
+      "reply": "bir bölüm diye açmışsın, dizi de geceyi komple rehin almış djsjsj",
+      "provider": "openai",
+      "model": "gpt-5.6-luna",
+      "task": "chat",
+      "seconds": 16.28
+    },
+    {
+      "kind": "normal_chat",
+      "input": "bugün moralim çok bozuk biraz konuşalım mı",
+      "reply": "tabii, buradayım. ne oldu, seni bu kadar düşüren şey ne?",
+      "provider": "openai",
+      "model": "gpt-5.6-luna",
+      "task": "chat",
+      "seconds": 11.85
+    },
+    {
+      "kind": "controlled_failover",
+      "fault_injected": true,
+      "reply": "kamerayı açana kadar mı fark etmedin yoksa biri mi söyledi djsjsj",
+      "provider": "hrmn",
+      "model": "deepseek-v4.1-flash-1017",
+      "task": "chat",
+      "seconds": 2.6
+    },
+    {
+      "kind": "image_router",
+      "status": "ok",
+      "attempts": [
+        {
+          "model": "gpt-image-2.5-prism",
+          "status": "image_provider_upstream"
+        },
+        {
+          "model": "gpt-image-2.5-flare",
+          "status": "image_provider_upstream"
+        }
+      ],
+      "bytes": 263142,
+      "format": "JPEG",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "sha256": "23539b876703851f824ec3933545d82d989f092ca73b87295aa0b01cd685b94a",
+      "fallback_used": true,
+      "seconds": 18.04
+    }
+  ],
+  "configuration_integrity": "other_provider_settings_bridge_and_personas_preserved_new_key_active_both_services_healthy_source_verified",
+  "server_full_tests": "3236 passed, 6 skipped, 15 warnings in 118.78s (0:01:58)",
+  "codex_cli": "codex-cli 0.147.0",
+  "local_full_tests": "3232 passed, 19 skipped",
+  "github_updated": false,
+  "telegram_human_ui": "NOT_RUN",
+  "normal_style_api_samples": "VERIFIED_4_OPENAI_SAMPLES",
+  "preferred_provider_routing": "VERIFIED",
+  "real_hrmn_controlled_failover": "VERIFIED",
+  "image_generation_with_fallback": "VERIFIED",
+  "hrmn_image_upstream": "KNOWN_EXTERNAL_HTTP_500"
+}

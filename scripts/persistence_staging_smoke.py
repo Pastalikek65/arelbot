@@ -4,6 +4,12 @@
 This is an explicit operator/staging check, not part of the default release
 gate. It writes only disposable, namespaced sentinel data and removes it in a
 ``finally`` block. No credentials or command output are printed.
+
+The MongoDB tools authenticate like the production deployment does: the
+administrative credential is read from the configuration of the running
+MongoDB container and handed to the tools through their standard input, so it
+never reaches a command line. The Redis half uses the ``REDISCLI_AUTH``
+environment variable of the Redis container.
 """
 
 from __future__ import annotations
@@ -13,11 +19,19 @@ import json
 import os
 import re
 import subprocess
+import sys
 import tempfile
 import time
 import uuid
 from pathlib import Path
 from typing import Any, Sequence
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from config import build_mongodb_uri
+from src.security.tool_credentials import mongo_tool_config_document, mongosh_auth_script
 
 
 class PersistenceSmokeError(RuntimeError):
@@ -26,8 +40,22 @@ class PersistenceSmokeError(RuntimeError):
 
 _NAME_RE = re.compile(r"^[a-z][a-z0-9_]{0,47}$")
 
+# Paths of the documents that carry the credential inside the MongoDB
+# container.  They are written on the standard input of the container
+# command and removed again when the smoke finishes.
+MONGO_AUTH_SCRIPT = "/tmp/arel-mongo-auth.js"
+MONGO_TOOL_CONFIG = "/tmp/arel-mongo-tool.yaml"
+MONGO_HOST = "127.0.0.1:27017"
+MONGO_AUTH_SOURCE = "admin"
 
-def _run(command: Sequence[str], *, timeout: int = 120, check: bool = True) -> subprocess.CompletedProcess[str]:
+
+def _run(
+    command: Sequence[str],
+    *,
+    timeout: int = 120,
+    check: bool = True,
+    input_text: str | None = None,
+) -> subprocess.CompletedProcess[str]:
     try:
         result = subprocess.run(
             list(command),
@@ -38,6 +66,7 @@ def _run(command: Sequence[str], *, timeout: int = 120, check: bool = True) -> s
             encoding="utf-8",
             errors="replace",
             timeout=timeout,
+            input=input_text if input_text is not None else None,
         )
     except (OSError, subprocess.TimeoutExpired) as exc:
         raise PersistenceSmokeError("persistence_command_failed") from exc
@@ -57,6 +86,52 @@ def _compose_prefix(compose_file: Path, project_name: str | None) -> list[str]:
 def _compose_exec(prefix: Sequence[str], service: str, *args: str, timeout: int = 120) -> str:
     result = _run([*prefix, "exec", "-T", service, *args], timeout=timeout)
     return result.stdout.strip()
+
+
+def _compose_exec_with_input(
+    prefix: Sequence[str],
+    service: str,
+    document: str,
+    *args: str,
+    timeout: int = 120,
+) -> str:
+    """Run a container command with a document delivered on standard input.
+
+    The document carries the database credential, so it must not become part
+    of the argument vector of the container command.
+    """
+
+    result = _run([*prefix, "exec", "-T", service, *args], timeout=timeout, input_text=document)
+    return result.stdout.strip()
+
+
+def _mongo_admin_credential(prefix: Sequence[str]) -> tuple[str, str]:
+    """Return the administrative MongoDB account of the running stack.
+
+    The credential is read from the configuration of the MongoDB container.
+    It never reaches a command line and it never has to be written to a file
+    on the host.
+    """
+
+    listing = _run([*prefix, "ps", "-q", "mongo"], timeout=30).stdout.strip().splitlines()
+    container = listing[0].strip() if listing else ""
+    if not container:
+        raise PersistenceSmokeError("mongo_container_missing")
+    environment = _run(
+        ["docker", "inspect", "-f", "{{range .Config.Env}}{{println .}}{{end}}", container],
+        timeout=30,
+    ).stdout
+    user = ""
+    secret = ""
+    for line in environment.splitlines():
+        name, _, value = line.partition("=")
+        if name == "MONGO_INITDB_ROOT_USERNAME":
+            user = value.strip()
+        elif name == "MONGO_INITDB_ROOT_PASSWORD":
+            secret = value.strip()
+    if not user or not secret:
+        raise PersistenceSmokeError("mongo_credential_missing")
+    return user, secret
 
 
 def _validate_name(value: str, label: str) -> str:
@@ -105,17 +180,49 @@ def run_smoke(*, compose_file: Path, project_name: str | None = None) -> dict[st
     redis_container_id = ""
 
     try:
+        mongo_user, mongo_secret = _mongo_admin_credential(prefix)
+        # The credential reaches the tools through their standard input: the
+        # shell authenticates the session with a script and the database
+        # tools read the connection string from a configuration file.
+        _compose_exec_with_input(
+            prefix,
+            "mongo",
+            mongosh_auth_script(mongo_user, mongo_secret, auth_source=MONGO_AUTH_SOURCE),
+            "sh",
+            "-c",
+            f"cat > {MONGO_AUTH_SCRIPT}",
+            timeout=60,
+        )
+        _compose_exec_with_input(
+            prefix,
+            "mongo",
+            mongo_tool_config_document(
+                build_mongodb_uri(mongo_user, mongo_secret, MONGO_HOST, "", auth_source=MONGO_AUTH_SOURCE)
+            ),
+            "sh",
+            "-c",
+            f"cat > {MONGO_TOOL_CONFIG}",
+            timeout=60,
+        )
         mongo_doc = (
             "const smokeDb=db.getSiblingDB(" + json.dumps(source_db) + ");"
             "smokeDb.smoke.insertOne({marker:" + json.dumps(marker) + "});"
         )
-        _compose_exec(prefix, "mongo", "mongosh", "--quiet", "--eval", mongo_doc)
+        _compose_exec(
+            prefix,
+            "mongo",
+            "mongosh",
+            "--quiet",
+            "--eval",
+            f"load('{MONGO_AUTH_SCRIPT}'); {mongo_doc}",
+        )
         _compose_exec(
             prefix,
             "mongo",
             "mongodump",
             "--quiet",
-            f"--uri=mongodb://127.0.0.1:27017/{source_db}",
+            f"--config={MONGO_TOOL_CONFIG}",
+            f"--db={source_db}",
             f"--archive={archive_path}",
             "--gzip",
         )
@@ -124,7 +231,7 @@ def run_smoke(*, compose_file: Path, project_name: str | None = None) -> dict[st
             "mongo",
             "mongorestore",
             "--quiet",
-            "--uri=mongodb://127.0.0.1:27017",
+            f"--config={MONGO_TOOL_CONFIG}",
             f"--archive={archive_path}",
             "--gzip",
             "--drop",
@@ -136,7 +243,17 @@ def run_smoke(*, compose_file: Path, project_name: str | None = None) -> dict[st
             ".smoke.findOne({marker:" + json.dumps(marker) + " });"
             "if (!doc) quit(2); print('ok');"
         )
-        if _compose_exec(prefix, "mongo", "mongosh", "--quiet", "--eval", verify_doc) != "ok":
+        if (
+            _compose_exec(
+                prefix,
+                "mongo",
+                "mongosh",
+                "--quiet",
+                "--eval",
+                f"load('{MONGO_AUTH_SCRIPT}'); {verify_doc}",
+            )
+            != "ok"
+        ):
             raise PersistenceSmokeError("mongo_restore_verification_failed")
         checks["mongo_dump_restore"] = True
 
@@ -190,10 +307,23 @@ def run_smoke(*, compose_file: Path, project_name: str | None = None) -> dict[st
                 "db.getSiblingDB(" + json.dumps(source_db) + ").dropDatabase();"
                 "db.getSiblingDB(" + json.dumps(target_db) + ").dropDatabase();"
             )
-            _compose_exec(prefix, "mongo", "mongosh", "--quiet", "--eval", cleanup, timeout=30)
+            _compose_exec(
+                prefix,
+                "mongo",
+                "mongosh",
+                "--quiet",
+                "--eval",
+                f"load('{MONGO_AUTH_SCRIPT}'); {cleanup}",
+                timeout=30,
+            )
             _compose_exec(prefix, "mongo", "rm", "-f", archive_path, timeout=30)
             _compose_exec(prefix, "redis", "redis-cli", "-n", "15", "DEL", redis_key, timeout=30)
             _compose_exec(prefix, "redis", "rm", "-f", redis_snapshot, timeout=30)
+        except PersistenceSmokeError:
+            cleanup_ok = False
+        # The credential documents never survive the smoke.
+        try:
+            _compose_exec(prefix, "mongo", "rm", "-f", MONGO_AUTH_SCRIPT, MONGO_TOOL_CONFIG, timeout=30)
         except PersistenceSmokeError:
             cleanup_ok = False
         checks["cleanup"] = cleanup_ok

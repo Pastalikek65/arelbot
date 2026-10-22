@@ -1,0 +1,151 @@
+{
+  "ok": true,
+  "release": "2026.10.22-games-19",
+  "runtime_source_commit": "2cc5b0d25883e2c0b59f6b3606378706089a7c67",
+  "accepted_implementation_commit": "a55f31549797d2b45e2a3efe93f719de617dab44",
+  "stage": {
+    "ok": true,
+    "stage": "ready",
+    "d2api_image": "sha256:fa5b7b930d6dad4b5e5956dc9c479febb7e039117af0a2907e782e83340bf25c",
+    "build_mode": "offline_overlay_on_running_games18_images",
+    "accepted_full_docker_gate_source": "a55f31549797d2b45e2a3efe93f719de617dab44",
+    "tested_runtime_bytes_identical": true,
+    "dependency_files_identical": true,
+    "test_summary": "108 passed, 3 skipped in 6.84s"
+  },
+  "activation": {
+    "ok": true,
+    "release": "2026.10.22-games-19",
+    "schema_version": 22,
+    "archive_integrity_verified": true,
+    "services_healthy": true,
+    "github_updated": false
+  },
+  "health": {
+    "release": "2026.10.22-games-19",
+    "source": {
+      "version": "2026.10.22-games-19",
+      "commit": "2cc5b0d25883e2c0b59f6b3606378706089a7c67"
+    },
+    "services": {
+      "bot": {
+        "status": "running",
+        "health": "healthy",
+        "restarts": 0,
+        "image": "sha256:2577c2b19d5eb53ef453187d21f3b6bc1da0f953c858da0bca5ab23a61919aaa",
+        "recent_tracebacks": 0,
+        "web_account_mounted": false
+      },
+      "worker": {
+        "status": "running",
+        "health": "healthy",
+        "restarts": 0,
+        "image": "sha256:5a7717288beadcf5c3b3818b97e485e5bd4d3473608fa84f8397aedc10de6e18",
+        "recent_tracebacks": 0,
+        "web_account_mounted": false
+      },
+      "mongo": {
+        "status": "running",
+        "health": "healthy",
+        "restarts": 0,
+        "image": "sha256:d0d926f94df099bff534b7ee5b5986458131a22489dfff8664509af0c1e2ca9c"
+      },
+      "redis": {
+        "status": "running",
+        "health": "healthy",
+        "restarts": 0,
+        "image": "sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499"
+      },
+      "d2api": {
+        "status": "running",
+        "health": "healthy",
+        "restarts": 0,
+        "image": "sha256:fa5b7b930d6dad4b5e5956dc9c479febb7e039117af0a2907e782e83340bf25c"
+      }
+    },
+    "telegram_read_only_probe_exit": 0,
+    "telegram": {
+      "ok": true,
+      "bot_username": "ArelChat_Bot",
+      "supports_inline_queries": true,
+      "catalog_games": 45,
+      "webhook_configured": false,
+      "pending_update_count": 0,
+      "custom_emoji_verified": 38,
+      "animated_icons": 38,
+      "transport_class": "ThemedHTTPXRequest",
+      "premium_buttons_enabled": true
+    },
+    "d2api_security": {
+      "published_ports": {},
+      "user": "node",
+      "read_only_rootfs": true
+    },
+    "router": {
+      "routes": {
+        "chat": [
+          "d2api",
+          "evren",
+          "nvidia"
+        ],
+        "fast": [
+          "d2api",
+          "evren",
+          "nvidia"
+        ],
+        "analysis": [
+          "d2api",
+          "evren",
+          "nvidia"
+        ],
+        "summary": [
+          "d2api",
+          "evren",
+          "nvidia"
+        ],
+        "vision": [
+          "evren",
+          "nvidia"
+        ],
+        "sticker_tagging": [
+          "evren",
+          "nvidia"
+        ],
+        "embedding": [
+          "evren",
+          "nvidia"
+        ],
+        "transcribe": [
+          "evren",
+          "nvidia"
+        ]
+      },
+      "provider": "d2api",
+      "completion_received": true,
+      "latency_seconds": 3.079,
+      "json_object_verified": true,
+      "ok": true
+    }
+  },
+  "restore_drill": {
+    "ok": true,
+    "scope": "isolated_restore_namespace_on_server",
+    "production_database_modified": false,
+    "restore": {
+      "collections": 46,
+      "documents": 42546
+    },
+    "temporary_database_removed": true,
+    "temporary_archive_removed": true
+  },
+  "tests": {
+    "gate": 25,
+    "local_passed": 3031,
+    "local_skipped": 19,
+    "isolated_docker_passed": 3044,
+    "isolated_docker_skipped": 6
+  },
+  "github_updated": false,
+  "human_telegram_ui": "NOT_RUN - operator deferred",
+  "next_wave": "maildian source engine + inline UNO requested while games19 activation completed"
+}

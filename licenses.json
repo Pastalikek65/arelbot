@@ -1,7 +1,32 @@
 {
   "sources": [
     {
+      "name": "HRMN Harmon API",
+      "host": "api.hrmn.tr",
+      "kind": "ai-provider",
+      "license": "Provider terms and underlying model terms apply; not independently reviewed",
+      "url": "https://api.hrmn.tr/v1",
+      "arel_use": "Operator-requested DeepSeek chat and Prism/Flare image generation gateway",
+      "source_governance": "pending",
+      "robots_policy": "not_applicable",
+      "terms_review": "review_required",
+      "production_signoff": "required"
+    },
+    {
+      "name": "ahmetaa/zemberek-nlp master dictionary",
+      "host": "github.com",
+      "kind": "bundled-lexicon",
+      "license": "Apache-2.0",
+      "url": "https://github.com/ahmetaa/zemberek-nlp/blob/037202c7e18b977c95181a76db05cb1e95846554/morphology/src/main/resources/tr/master-dictionary.dict",
+      "source_governance": "review_required",
+      "robots_policy": "not_applicable",
+      "terms_review": "review_required",
+      "production_signoff": "required",
+      "arel_use": "Pinned, filtered offline Turkish lemma snapshot for Kelime Zinciri; see assets/word_chain/source.json and LICENSE"
+    },
+    {
       "name": "guess-the-age-bot",
+      "host": "github.com",
       "kind": "behavior-reference",
       "license": "MIT (upstream package.json declaration); upstream photo dataset license not declared",
       "url": "https://github.com/mikhailsdv/guess-the-age-bot",
@@ -13,6 +38,7 @@
     },
     {
       "name": "Wikimedia Commons / Wikidata age-game database",
+      "host": "wikimedia.org",
       "kind": "bundled-photographs",
       "license": "Per-file CC BY and CC BY-SA; Wikidata CC0. See assets/guess_age/catalog.json and ATTRIBUTION.md",
       "url": "https://commons.wikimedia.org/",
@@ -24,6 +50,7 @@
     },
     {
       "name": "nmime/uno",
+      "host": "github.com",
       "kind": "behavior-reference",
       "license": "MIT (upstream package.json declaration)",
       "url": "https://github.com/nmime/uno",
@@ -35,12 +62,14 @@
     },
     {
       "name": "turkiye-data",
+      "host": "github.com",
       "kind": "data",
       "license": "MIT",
       "url": "https://github.com/mumeyyizbuyuk/turkiye-data"
     },
     {
       "name": "BTK National Numbering Plan",
+      "host": "btk.gov.tr",
       "kind": "official-data",
       "license": "public-official-source",
       "url": "https://www.btk.gov.tr/en/national-numbering-plan",
@@ -51,6 +80,7 @@
     },
     {
       "name": "python-chess",
+      "host": "github.com",
       "kind": "runtime-library",
       "license": "GPL-3.0-or-later",
       "url": "https://github.com/niklasf/python-chess",
@@ -62,6 +92,7 @@
     },
     {
       "name": "akipy",
+      "host": "github.com",
       "kind": "runtime-library",
       "license": "MIT (PyPI metadata)",
       "url": "https://github.com/advnpzn/akipy",
@@ -73,6 +104,7 @@
     },
     {
       "name": "Akinator-Bot",
+      "host": "github.com",
       "kind": "behavior-reference",
       "license": "Repository license not declared in checked-out metadata",
       "url": "https://github.com/advnpzn/Akinator-Bot",
@@ -83,6 +115,7 @@
     },
     {
       "name": "FlareSolverr",
+      "host": "ghcr.io",
       "kind": "private-runtime-service",
       "license": "GPL-3.0",
       "url": "https://github.com/FlareSolverr/FlareSolverr",
@@ -93,18 +126,21 @@
     },
     {
       "name": "KekikSpatula",
+      "host": "github.com",
       "kind": "reference",
       "license": "GPL-3.0-or-later",
       "url": "https://github.com/keyiflerolsun/KekikSpatula"
     },
     {
       "name": "TRSehirler",
+      "host": "github.com",
       "kind": "reference",
       "license": "GPL-3.0-or-later",
       "url": "https://github.com/keyiflerolsun/TRSehirler"
     },
     {
       "name": "CoinGecko API",
+      "host": "coingecko.com",
       "kind": "public-api",
       "license": "CoinGecko API terms and attribution requirements",
       "url": "https://docs.coingecko.com/reference/simple-price",
@@ -115,6 +151,7 @@
     },
     {
       "name": "Yahoo Finance market data",
+      "host": "yahoo.com",
       "kind": "public-market-data",
       "license": "Yahoo Finance terms; yfinance client terms apply",
       "url": "https://legal.yahoo.com/us/en/yahoo/terms/otos/index.html",
@@ -125,6 +162,7 @@
     },
     {
       "name": "TRT Haber RSS",
+      "host": "trthaber.com",
       "kind": "public-rss",
       "license": "Official public RSS feed; source attribution required",
       "url": "https://www.trthaber.com/sondakika_articles.rss",
@@ -135,6 +173,7 @@
     },
     {
       "name": "Anadolu Ajansı RSS",
+      "host": "aa.com.tr",
       "kind": "public-rss",
       "license": "Public RSS feed; source terms and attribution apply",
       "url": "https://www.aa.com.tr/tr/rss/default?cat=guncel",
@@ -145,6 +184,7 @@
     },
     {
       "name": "Open Library Search API",
+      "host": "openlibrary.org",
       "kind": "public-api",
       "license": "Open Library API usage guidelines and database licensing",
       "url": "https://openlibrary.org/developers/api",
@@ -155,6 +195,7 @@
     },
     {
       "name": "TVmaze Search API",
+      "host": "tvmaze.com",
       "kind": "public-api",
       "license": "CC BY-SA (TVmaze API data; attribution/share-alike)",
       "url": "https://www.tvmaze.com/api",
@@ -165,6 +206,7 @@
     },
     {
       "name": "Wikidata Action API",
+      "host": "wikidata.org",
       "kind": "public-api",
       "license": "CC0 structured data; Wikimedia API usage and User-Agent policies apply",
       "url": "https://www.wikidata.org/wiki/Wikidata:Data_access",
@@ -175,6 +217,7 @@
     },
     {
       "name": "Apple iTunes Search API",
+      "host": "itunes.apple.com",
       "kind": "public-api",
       "license": "Apple iTunes Search API terms (link-only metadata policy)",
       "url": "https://performance-partners.apple.com/search-api",
@@ -185,6 +228,7 @@
     },
     {
       "name": "Open-Meteo Air Quality API",
+      "host": "open-meteo.com",
       "kind": "public-api",
       "license": "Open-Meteo terms and attribution requirements",
       "url": "https://open-meteo.com/en/terms",
@@ -195,16 +239,28 @@
     },
     {
       "name": "Telegram Bot API",
+      "host": "core.telegram.org",
       "kind": "platform-api",
       "license": "Telegram Bot API terms; attribution and platform limits apply",
       "url": "https://core.telegram.org/bots/api",
       "production_signoff": "required",
       "source_governance": "pending",
       "robots_policy": "review_required",
-      "terms_review": "review_required"
+      "terms_review": "review_required",
+      "native_custom_emoji_sets": [
+        {
+          "name": "chessno",
+          "url": "https://t.me/addemoji/chessno",
+          "catalog": "assets/telegram/chess_icons.json",
+          "delivery": "Native Telegram custom emoji IDs; artwork not redistributed",
+          "artwork_license": "Separate artwork license not verified; not relicensed as MIT",
+          "verified_on": "2026-10-22"
+        }
+      ]
     },
     {
       "name": "AFAD Event Service",
+      "host": "afad.gov.tr",
       "kind": "official-data",
       "license": "Official public service; source attribution required",
       "url": "https://servisnet.afad.gov.tr/apigateway/deprem/apiv2/event/filter",
@@ -215,6 +271,7 @@
     },
     {
       "name": "wttr.in weather service",
+      "host": "wttr.in",
       "kind": "public-api",
       "license": "Public service; attribution and fair-use review recorded",
       "url": "https://wttr.in/",
@@ -225,6 +282,7 @@
     },
     {
       "name": "Nöbetçi Eczaneler public pages",
+      "host": "nobetcieczaneler.org",
       "kind": "public-web",
       "license": "Public web data; bounded access, source attribution and terms review recorded",
       "url": "https://www.nobetcieczaneler.org/",
@@ -235,6 +293,7 @@
     },
     {
       "name": "Döviz.com public pages",
+      "host": "doviz.com",
       "kind": "public-web",
       "license": "Public web data; bounded access, source attribution and terms review recorded",
       "url": "https://www.doviz.com/",
@@ -245,6 +304,7 @@
     },
     {
       "name": "TRT Haber + Anadolu Ajansı RSS",
+      "host": "trthaber.com",
       "kind": "public-rss",
       "license": "Public RSS feed; source terms and attribution review required",
       "url": "https://www.trthaber.com/sondakika_articles.rss",
@@ -255,6 +315,7 @@
     },
     {
       "name": "BİM official aktüel page",
+      "host": "bim.com.tr",
       "kind": "official-public-page",
       "license": "Official public page; bounded access and source attribution",
       "url": "https://www.bim.com.tr/Categories/100/aktuel-urunler.aspx",
@@ -265,6 +326,7 @@
     },
     {
       "name": "Habertürk prayer times page",
+      "host": "haberturk.com",
       "kind": "public-web",
       "license": "Source terms, robots and attribution review required",
       "url": "https://www.haberturk.com/namaz-vakitleri",
@@ -275,6 +337,7 @@
     },
     {
       "name": "Open-Meteo weather API",
+      "host": "open-meteo.com",
       "kind": "public-api",
       "license": "CC BY 4.0; free API limited to non-commercial use with attribution and request limits",
       "url": "https://open-meteo.com/en/terms",
@@ -285,6 +348,7 @@
     },
     {
       "name": "Prometheus Docker image",
+      "host": "docker.io",
       "kind": "monitoring",
       "license": "Apache-2.0",
       "url": "https://github.com/prometheus/prometheus",
@@ -292,6 +356,7 @@
     },
     {
       "name": "Prometheus Alertmanager Docker image",
+      "host": "docker.io",
       "kind": "monitoring",
       "license": "Apache-2.0",
       "url": "https://github.com/prometheus/alertmanager",
@@ -299,6 +364,7 @@
     },
     {
       "name": "Grafana OSS Docker image",
+      "host": "docker.io",
       "kind": "monitoring",
       "license": "AGPL-3.0-or-later",
       "url": "https://github.com/grafana/grafana",
@@ -306,6 +372,7 @@
     },
     {
       "name": "Cloudflare Workers AI",
+      "host": "cloudflare.com",
       "kind": "ai-provider",
       "license": "Cloudflare Workers AI terms; account authorization and policy restrictions apply",
       "url": "https://developers.cloudflare.com/workers-ai/",
@@ -316,6 +383,7 @@
     },
     {
       "name": "Tavily Search API",
+      "host": "tavily.com",
       "kind": "public-api",
       "license": "Tavily API terms and attribution requirements",
       "url": "https://docs.tavily.com/",
@@ -326,6 +394,7 @@
     },
     {
       "name": "Permitted lyrics public pages",
+      "host": "genius.com",
       "kind": "public-web",
       "license": "Source-specific terms; bounded excerpt and attribution review required",
       "url": "https://genius.com/",
@@ -335,7 +404,56 @@
       "production_signoff": "required"
     },
     {
+      "name": "Musixmatch lyrics pages",
+      "host": "musixmatch.com",
+      "kind": "public-web",
+      "license": "Musixmatch terms of use; bounded excerpt and attribution review required",
+      "url": "https://www.musixmatch.com/",
+      "arel_use": "Lyrics allowlist source for the bounded excerpt; the provider never returns a complete song",
+      "source_governance": "pending",
+      "robots_policy": "review_required",
+      "terms_review": "review_required",
+      "production_signoff": "required"
+    },
+    {
+      "name": "Lyrics.com lyrics pages",
+      "host": "lyrics.com",
+      "kind": "public-web",
+      "license": "Lyrics.com terms of use; bounded excerpt and attribution review required",
+      "url": "https://www.lyrics.com/",
+      "arel_use": "Lyrics allowlist source for the bounded excerpt; the provider never returns a complete song",
+      "source_governance": "pending",
+      "robots_policy": "review_required",
+      "terms_review": "review_required",
+      "production_signoff": "required"
+    },
+    {
+      "name": "AZLyrics lyrics pages",
+      "host": "azlyrics.com",
+      "kind": "public-web",
+      "license": "AZLyrics terms of use; bounded excerpt and attribution review required",
+      "url": "https://www.azlyrics.com/",
+      "arel_use": "Lyrics allowlist source for the bounded excerpt; the provider never returns a complete song",
+      "source_governance": "pending",
+      "robots_policy": "review_required",
+      "terms_review": "review_required",
+      "production_signoff": "required"
+    },
+    {
+      "name": "SongLyrics lyrics pages",
+      "host": "songlyrics.com",
+      "kind": "public-web",
+      "license": "SongLyrics terms of use; bounded excerpt and attribution review required",
+      "url": "https://www.songlyrics.com/",
+      "arel_use": "Lyrics allowlist source for the bounded excerpt; the provider never returns a complete song",
+      "source_governance": "pending",
+      "robots_policy": "review_required",
+      "terms_review": "review_required",
+      "production_signoff": "required"
+    },
+    {
       "name": "EVREN OpenAI-compatible API",
+      "host": "evren-llmapi.ssyz.org.tr",
       "kind": "ai-provider",
       "license": "EVREN provider terms, quota, retention and attribution requirements",
       "url": "https://evren-llmapi.ssyz.org.tr/v1",
@@ -347,6 +465,7 @@
     },
     {
       "name": "NVIDIA NIM OpenAI-compatible API",
+      "host": "integrate.api.nvidia.com",
       "kind": "ai-provider",
       "license": "NVIDIA API terms, model license, quota and attribution requirements",
       "url": "https://integrate.api.nvidia.com/v1",
@@ -358,6 +477,7 @@
     },
     {
       "name": "EPDK / G?ncel Akaryak?t Fiyatlar? JSON",
+      "host": "guncelakaryakitfiyatlari.com",
       "kind": "derived-public-data",
       "license": "EPDK public data; derived snapshot attribution required",
       "url": "https://guncelakaryakitfiyatlari.com/acik-veri/",
@@ -365,6 +485,162 @@
       "robots_policy": "allowed",
       "terms_review": "approved",
       "production_signoff": "approved"
+    },
+    {
+      "name": "DuckDuckGo Instant Answers",
+      "host": "duckduckgo.com",
+      "kind": "public-api",
+      "license": "DuckDuckGo Instant Answer API terms; source attribution required",
+      "url": "https://duckduckgo.com/",
+      "arel_use": "Web search fallback while the Tavily key circuit is unavailable; bounded answer and related-topic payloads only",
+      "source_governance": "pending",
+      "robots_policy": "review_required",
+      "terms_review": "review_required",
+      "production_signoff": "required"
+    },
+    {
+      "name": "Wikipedia Action API",
+      "host": "wikipedia.org",
+      "kind": "public-api",
+      "license": "CC BY-SA 4.0 article text via the MediaWiki API; Wikimedia API etiquette and User-Agent policy apply",
+      "url": "https://en.wikipedia.org/w/api.php",
+      "arel_use": "Offline age-catalog import only: category member lookup for portrait candidates; no runtime user query",
+      "source_governance": "pending",
+      "robots_policy": "review_required",
+      "terms_review": "review_required",
+      "production_signoff": "required"
+    },
+    {
+      "name": "Creative Commons license deeds",
+      "host": "creativecommons.org",
+      "kind": "public-web",
+      "license": "Creative Commons license deed pages; the attribution and share-alike conditions of each license apply",
+      "url": "https://creativecommons.org/",
+      "arel_use": "License URL validation for imported portraits; no media is served from this host",
+      "source_governance": "pending",
+      "robots_policy": "review_required",
+      "terms_review": "review_required",
+      "production_signoff": "required"
+    },
+    {
+      "name": "Google Flights and Google search links",
+      "host": "google.com",
+      "kind": "public-web",
+      "license": "Google Terms of Service; link-only search hand-off, no page scraping and no reservation",
+      "url": "https://www.google.com/travel/flights",
+      "arel_use": "Flight search link producer only: no request, no fare, no seat and no reservation",
+      "source_governance": "pending",
+      "robots_policy": "review_required",
+      "terms_review": "review_required",
+      "production_signoff": "required"
+    },
+    {
+      "name": "Bing search links",
+      "host": "bing.com",
+      "kind": "public-web",
+      "license": "Microsoft Bing Terms of Service; link-only search hand-off, no page scraping and no reservation",
+      "url": "https://www.bing.com/",
+      "arel_use": "Flight search link producer only: no request, no fare, no seat and no reservation",
+      "source_governance": "pending",
+      "robots_policy": "review_required",
+      "terms_review": "review_required",
+      "production_signoff": "required"
+    },
+    {
+      "name": "YouTube public media downloads",
+      "host": "youtube.com",
+      "kind": "public-web",
+      "license": "YouTube Terms of Service and the rights holder license of the requested media; attribution applies",
+      "url": "https://www.youtube.com/",
+      "arel_use": "yt-dlp extraction of a user-requested public platform link; bounded download, cached artifact and source link only; no credential is sent while the media cookie vault is closed",
+      "source_governance": "pending",
+      "robots_policy": "review_required",
+      "terms_review": "review_required",
+      "production_signoff": "required"
+    },
+    {
+      "name": "TikTok public media downloads",
+      "host": "tiktok.com",
+      "kind": "public-web",
+      "license": "TikTok Terms of Service and the rights holder license of the requested media; attribution applies",
+      "url": "https://www.tiktok.com/",
+      "arel_use": "yt-dlp extraction of a user-requested public platform link; bounded download, cached artifact and source link only; no credential is sent while the media cookie vault is closed",
+      "source_governance": "pending",
+      "robots_policy": "review_required",
+      "terms_review": "review_required",
+      "production_signoff": "required"
+    },
+    {
+      "name": "Instagram public media downloads",
+      "host": "instagram.com",
+      "kind": "public-web",
+      "license": "Instagram Terms of Use and the rights holder license of the requested media; attribution applies",
+      "url": "https://www.instagram.com/",
+      "arel_use": "yt-dlp extraction of a user-requested public platform link; bounded download, cached artifact and source link only; no credential is sent while the media cookie vault is closed",
+      "source_governance": "pending",
+      "robots_policy": "review_required",
+      "terms_review": "review_required",
+      "production_signoff": "required"
+    },
+    {
+      "name": "X (Twitter) public media downloads",
+      "host": "x.com",
+      "kind": "public-web",
+      "license": "X Terms of Service and the rights holder license of the requested media; attribution applies",
+      "url": "https://x.com/",
+      "arel_use": "yt-dlp extraction of a user-requested public platform link; bounded download, cached artifact and source link only; no credential is sent while the media cookie vault is closed",
+      "source_governance": "pending",
+      "robots_policy": "review_required",
+      "terms_review": "review_required",
+      "production_signoff": "required"
+    },
+    {
+      "name": "Facebook public media downloads",
+      "host": "facebook.com",
+      "kind": "public-web",
+      "license": "Facebook Terms of Service and the rights holder license of the requested media; attribution applies",
+      "url": "https://www.facebook.com/",
+      "arel_use": "yt-dlp extraction of a user-requested public platform link; bounded download, cached artifact and source link only; no credential is sent while the media cookie vault is closed",
+      "source_governance": "pending",
+      "robots_policy": "review_required",
+      "terms_review": "review_required",
+      "production_signoff": "required"
+    },
+    {
+      "name": "Reddit public media downloads",
+      "host": "reddit.com",
+      "kind": "public-web",
+      "license": "Reddit Terms of Service and the rights holder license of the requested media; attribution applies",
+      "url": "https://www.reddit.com/",
+      "arel_use": "yt-dlp extraction of a user-requested public platform link; bounded download, cached artifact and source link only; no credential is sent while the media cookie vault is closed",
+      "source_governance": "pending",
+      "robots_policy": "review_required",
+      "terms_review": "review_required",
+      "production_signoff": "required"
+    },
+    {
+      "name": "Operator-provided d2api / DeepSeek Web",
+      "host": "chat.deepseek.com",
+      "kind": "private-ai-proxy",
+      "license": "d2api package declares MIT; no standalone license file; Web service and private PoW asset rights UNKNOWN",
+      "url": "https://chat.deepseek.com/",
+      "source_governance": "review_required",
+      "robots_policy": "not_applicable",
+      "terms_review": "review_required",
+      "production_signoff": "required",
+      "arel_use": "Text-only primary provider; operator account explicitly authorized 2026-10-22; NOT a legal service permission. Source hashes vendor/d2api/SOURCE.json. Account and WASM excluded repository."
+    },
+    {
+      "name": "maildian/uno-telegram-bot",
+      "host": "github.com",
+      "kind": "bundled-source-and-cards",
+      "license": "AGPL-3.0-or-later; original SVG attribution CC0 1.0",
+      "url": "https://github.com/maildian/uno-telegram-bot/tree/01640d1df9e3b06f81727aff38ea02990f3c8d83",
+      "source_governance": "review_required",
+      "robots_policy": "not_applicable",
+      "terms_review": "review_required",
+      "production_signoff": "required",
+      "arel_use": "User explicitly requested direct source integration. Original core and inline renderer ported, headers/license retained; full running source available in private bot source offer. PNGs copied byte-for-byte with hashes."
     }
   ],
   "packages": [
@@ -428,6 +704,27 @@
       "name": "pytest-mock",
       "license": "MIT",
       "url": "https://github.com/pytest-dev/pytest-mock"
+    },
+    {
+      "name": "pytest-timeout",
+      "license": "MIT",
+      "url": "https://github.com/pytest-dev/pytest-timeout"
+    },
+    {
+      "name": "pytest-cov",
+      "license": "MIT",
+      "url": "https://github.com/pytest-dev/pytest-cov"
+    },
+    {
+      "name": "coverage",
+      "license": "Apache-2.0",
+      "url": "https://github.com/coveragepy/coveragepy"
+    },
+    {
+      "name": "pyyaml",
+      "license": "MIT",
+      "url": "https://github.com/yaml/pyyaml",
+      "version": "6.0.3"
     },
     {
       "name": "groq",

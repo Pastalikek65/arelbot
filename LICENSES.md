@@ -27,5 +27,14 @@ constraint entry. It is checked by `scripts/architecture_check.py --strict`;
 new dependencies must add their SPDX or project license before merge.
 
 
-- `guess-the-age-bot` (davranış referansı): MIT beyanı (`https://github.com/mikhailsdv/guess-the-age-bot/blob/master/package.json`). Upstream fotoğraf varlıkları dağıtıma dahil edilmez; Arelbot portre kartları özgün üretilmiştir.
-- `nmime/uno` (davranış ve Mini App mimari referansı): MIT beyanı (`https://github.com/nmime/uno/blob/main/package.json`). Upstream kaynak kodu, frontend ve asset'ler dağıtıma alınmaz; Arelbot UNO motoru bağımsızdır.
+- `guess-the-age-bot` (davranış referansı): MIT beyanı (`https://github.com/mikhailsdv/guess-the-age-bot/blob/master/package.json`). Upstream fotoğraf varlıkları dağıtıma dahil edilmez; güncel fotoğraf havuzu Wikimedia Commons dosya bazlı lisans/atıf kayıtlarıyla tutulur.
+- `nmime/uno` (davranış ve Mini App mimari referansı): MIT beyanı (`https://github.com/nmime/uno/blob/main/package.json`). Upstream kaynak kodu, frontend ve asset'ler dağıtıma alınmaz; Güncel motor için aşağıdaki maildian AGPL entegrasyonu esas alınır.
+
+## Kaynak UNO entegrasyonu
+
+`src/vendor/uno_maildian` ve bu koddan türetilen UNO entegrasyonu GNU AGPL-3.0-or-later koşullarıyla sunulur; özgün telif başlıkları korunur. Lisans metni `COPYING.AGPL-3.0` içindedir. Orijinal Arel dosyalarının MIT bildirimi korunur. Bu birleşik dağıtımın lisans envanteri tümüyle MIT olarak yorumlanmamalıdır. Çalışan sürümün tam Git kaynak arşivi, UNO panelindeki Kaynak kodu düğmesi veya botun özel sohbetinde `/uno kaynak` ile sağlanır; ortam ve hesap dosyaları Git arşivine girmez.
+
+Kart PNG dosyaları maildian/uno-telegram-bot commit `01640d1df9e3b06f81727aff38ea02990f3c8d83` içinden aynen alınmıştır. Upstream lisansı/atfı ve PNG hashleri `assets/uno_maildian` içinde tutulur; belirtilen özgün SVG kaynağı Dmitry Fomin, Wikimedia Commons CC0 1.0.
+# Standard playing-card artwork
+
+`assets/playing_cards/` contains Kenney's Board Game Pack artwork under CC0-1.0. Original PNGs, vector sheet, license, source URL and SHA-256 records are included. Sticker faces are raster crops of the official vector sheet; muted variants and the Blackjack table are local compositions. No AI-generated artwork is used.
