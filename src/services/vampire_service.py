@@ -302,7 +302,7 @@ class VampireService:
                     return updated
             raise RuntimeError("game_state_conflict")
 
-    async def request_panel_refresh(self, *, chat_id, thread_id=None, round_id):
+    async def request_panel_refresh(self, *, chat_id, thread_id=None, round_id, delay_seconds=0):
         """Restore the live panel after a temporary read-only group guide."""
         async with self._lock(chat_id, thread_id):
             for _ in range(8):
@@ -310,7 +310,7 @@ class VampireService:
                 if not state or state['round_id'] != round_id:
                     return False
                 updated = dict(state, version=int(state['version']) + 1,
-                               panel_dirty=True, panel_retry_at=0)
+                               panel_dirty=True, panel_retry_at=time.time() + max(0, delay_seconds))
                 if await self.repository.compare_and_save_game_state(
                     int(chat_id), self.key(thread_id), updated, expected_version=int(state['version'])):
                     return True

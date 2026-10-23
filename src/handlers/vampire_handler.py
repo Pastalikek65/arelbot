@@ -344,6 +344,7 @@ class VampireHandler:
         except BadRequest as exc:
             if 'message is not modified' not in str(exc).lower():
                 raise
-        await self.service.request_panel_refresh(chat_id=state['chat_id'],
-                                                 thread_id=state.get('thread_id'),
-                                                 round_id=state['round_id'])
+        if state['phase'] not in {'lobby', 'finished', 'cancelled'}:
+            await self.service.request_panel_refresh(chat_id=state['chat_id'],
+                                                     thread_id=state.get('thread_id'),
+                                                     round_id=state['round_id'], delay_seconds=20)

@@ -57,10 +57,22 @@ async def test_public_role_guide_is_read_only_and_never_shows_assigned_roles():
     update=event(8,-100,42,callback_data(state,'role_info',ROLES['seer'].source_id),topic=7)
     await handler.callback(update,SimpleNamespace(bot=bot))
     assert bot.edits and 'Kâhin' in bot.edits[-1]['text']
+    assert await service.current(-100,7)==state
+
+
+@pytest.mark.asyncio
+async def test_role_guide_during_active_phase_restores_live_panel_after_reading_time():
+    repo=Repository();service=VampireService(repo,ruleset='greywolf')
+    state=engine.activate(engine.advance(started(['wolf','seer','guardian_angel','villager','villager']),now=200),now=201)
+    state.update(panel_message_id=42,panel_dirty=False)
+    repo.rows[-100,service.key(7)]=state
+    handler=VampireHandler(service);bot=Bot()
+    before=time.time()
+    await handler._show_guide(bot,state,rules=True)
     refreshed=await service.current(-100,7)
-    assert refreshed['panel_dirty'] and refreshed['panel_retry_at']==0
-    assert refreshed['phase']==state['phase']
-    assert refreshed['players']==state['players']
+    assert bot.edits and refreshed['panel_dirty']
+    assert before+19 <= refreshed['panel_retry_at'] <= time.time()+21
+    assert refreshed['phase']==state['phase'] and refreshed['players']==state['players']
 
 
 def test_negative_base36_fails_fast_instead_of_looping():
