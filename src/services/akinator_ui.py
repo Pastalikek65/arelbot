@@ -68,7 +68,11 @@ def render_akinator_text(state: dict) -> str:
     elif status == "finished":
         body = f"Oyun tamamlandı.\nSon tahminim: <b>{proposition}</b>"
     elif status == "failed":
-        body = "Bu oyuna devam edilemiyor. Yeni oyun düğmesiyle tekrar başlayabilirsin."
+        body = ("Bu turda bir tahmin çıkaramadım. Yeni bir kişiyle tekrar deneyebilirsin."
+                if state.get("error_code") == "AKINATOR_NO_GUESS" else
+                "Akinatör servisi zamanında yanıt vermedi. Yeni oyunla tekrar deneyebilirsin."
+                if state.get("error_code") == "AKINATOR_TIMEOUT" else
+                "Bu oyuna devam edilemiyor. Yeni oyun düğmesiyle tekrar başlayabilirsin.")
     else:
         body = f"<b>{question}</b>\n\nSoru {int(state.get('questions', 0) or 0) + 1} · İlerleme <code>{progress:.0f}%</code>"
     return f"🧞 <b>Akinatör</b> · {owner}\n\n{body}"

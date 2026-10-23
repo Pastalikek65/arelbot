@@ -5622,25 +5622,14 @@ class CallbackHandler:
 
 
     async def _load_akinator_state(self, context, chat_id: int):
-
-        state = context.chat_data.get("akinator")
-
-        if state:
-
-            return state
-
+        state = None
         try:
-
             state = await self.data_port.get_game_state(chat_id, "akinator")
-
         except Exception:
-
-            state = None
-
+            pass
+        state = state or context.chat_data.get("akinator")
         if state:
-
             context.chat_data["akinator"] = state
-
         return state
 
 
@@ -5727,6 +5716,7 @@ class CallbackHandler:
             ):
                 await self._safe_query_answer(query, "Geçersiz tahmin düğmesi.", show_alert=True)
                 return
+            await self._safe_query_answer(query)
             try:
                 await query.edit_message_text(
                     "🧞 <b>Akinatör</b>\n\n⏳ Yanıt işleniyor…",
@@ -5771,23 +5761,15 @@ class CallbackHandler:
         if self.akinator_service is not None and state.get("status") in {"finished", "failed"}:
             await self.akinator_service.close(state)
 
+        state["panel_dirty"] = True
         await persist_game(self.data_port, update.effective_chat.id, "akinator", state)
 
         try:
-
-            await query.edit_message_text(
-
-                render_akinator_text(state),
-
-                reply_markup=akinator_keyboard(state),
-
-                parse_mode="HTML",
-
-            )
-
-        except Exception:
-
-            logger.debug("Akinator callback panel refresh failed", exc_info=True)
+            from src.services.akinator_delivery import publish_akinator_panel
+            await publish_akinator_panel(getattr(context, "bot", None), self.data_port,
+                                         state, query=query)
+        except Exception as exc:
+            logger.warning("Akinator result delivery deferred type=%s", type(exc).__name__)
 
 
     async def _handle_uno_callback(self, update, query, context, data: str) -> None:

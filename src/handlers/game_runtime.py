@@ -12,6 +12,7 @@ from src.security.output_sanitizer import sanitize_html
 from src.games.guess_age import round_expired
 from src.services.guess_age_ui import guess_age_keyboard, render_guess_age_text, render_guess_age_round_result, render_guess_age_photo_answer
 from src.services.uno_panel import publish_uno_panel
+from src.services.akinator_delivery import publish_akinator_panel
 from src.services.word_chain_service import WordChainService
 from src.services.word_chain_ui import render_word_chain, word_chain_keyboard
 
@@ -19,9 +20,10 @@ logger = logging.getLogger(__name__)
 
 
 class GameRuntime:
-    def __init__(self, repository, *, guess_age=None, uno=None, leaderboard=None, economy=None,
+    def __init__(self, repository, *, guess_age=None, uno=None, akinator=None, leaderboard=None, economy=None,
                  roulette=None, blackjack=None):
         self.repository, self.guess_age, self.uno = repository, guess_age, uno
+        self.akinator = akinator
         self.roulette, self.blackjack = roulette, blackjack
         self.word_chain = WordChainService(repository, leaderboard=leaderboard, economy=economy)
         self.tabu_handler = None
@@ -45,6 +47,8 @@ class GameRuntime:
     def _game_lock(self, game, chat_id):
         if game == "guess_age" and self.guess_age:
             return self.guess_age.presentation_lock(chat_id)
+        if game == "akinator" and self.akinator:
+            return self.akinator.presentation_lock(chat_id)
         return self._game_locks.setdefault((game, chat_id), asyncio.Lock())
 
     async def open_age(self, bot, *, chat_id, owner_id, owner_name, thread_id=None):
@@ -127,6 +131,10 @@ class GameRuntime:
                             event_id=pending['event_id'], message_id=message_id)
                 elif row["game_type"] == "guess_age" and self.guess_age:
                     await self._age(bot, chat_id)
+                elif row["game_type"] == "akinator" and self.akinator:
+                    state = await self.repository.get_game_state(chat_id, "akinator")
+                    if state and state.get("panel_dirty"):
+                        await publish_akinator_panel(bot, self.repository, state)
                 elif row["game_type"] == "uno" and self.uno:
                     state = await self.uno.current(chat_id)
                     if state and state.get("panel_dirty"):

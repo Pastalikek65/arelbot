@@ -607,6 +607,11 @@ typed servis, semaphore ve timeout ile sınırlandırılır. Callback payload'ı
 Türkçe akış karakter temasını kullanır; Akinator-Bot deposu kaynak kodu veya
 görselleri kopyalanmaz. Mongo state restart sonrasında kaydı korur, fakat
 upstream istemci süreç içi olduğundan yarım tur güvenli şekilde expire edilir.
+Semaphore beklemesi ve upstream isteği aynı 45 saniyelik sınırı paylaşır.
+Callback hemen yanıtlanır; panel düzenlemesi başarısızsa sonuç yeni mesajla
+gönderilir. İki Telegram teslimi de başarısız olursa `panel_dirty` kalıcı
+kaydı, kısa geri çekilmeyle `GameRuntime` tarafından yeniden denenir. Oyuncunun
+doğru tahmin onayı, upstream onay makbuzu kaybolsa da sonucu tamamlar.
 ### Yaş Tahmini oyun akışı
 
 `GuessAgeService` grup kapsamındaki `guess_age` kaydını data port üzerinden

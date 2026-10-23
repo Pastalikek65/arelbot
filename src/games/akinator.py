@@ -83,9 +83,14 @@ def sync_akinator_state(state: dict[str, Any], client: Any) -> dict[str, Any]:
         getattr(client, "description_proposition", "") or ""
     )[:1000]
     if bool(getattr(client, "finished", False)):
-        state["status"] = "finished"
+        state["status"] = "finished" if bool(getattr(client, "win", False)) and state["proposition"] else "failed"
+        if state["status"] == "failed":
+            state["proposition"] = None
+            state["error_code"] = "AKINATOR_NO_GUESS"
     elif bool(getattr(client, "win", False)):
-        state["status"] = "proposition"
+        state["status"] = "proposition" if state["proposition"] else "failed"
+        if not state["proposition"]:
+            state["error_code"] = "AKINATOR_NO_GUESS"
     else:
         state["status"] = "playing"
     return state

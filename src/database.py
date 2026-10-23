@@ -1942,6 +1942,7 @@ class Database:
                 {"state.status": {"$in": ["lobby", "playing"]}, "state.last_activity_at": {"$lte": now - 900}},
                 {"state.panel_dirty": True}, {"state.score_pending": True},
             ]},
+            {"game_type": "akinator", "state.panel_dirty": True},
             {"game_type": "guess_age", "$or": [
                 {"state.delivery_pending": True}, {"state.pending_scores.0": {"$exists": True}},
                 {"state.status": {"$in": ["playing", "expired"]}, "$or": [

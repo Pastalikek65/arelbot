@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from collections.abc import Callable
 from typing import Any
 
 from src.games.akinator import ANSWER_CHOICES, sync_akinator_state
+
+logger = logging.getLogger(__name__)
 
 try:  # pragma: no cover - import availability is covered by deployment checks
     from akipy.async_akinator import Akinator
@@ -69,11 +72,12 @@ class AkinatorService:
         return Akinator(**kwargs)
 
     async def _call(self, method, *args, **kwargs):
-        try:
+        async def bounded_request():
             async with self._semaphore:
-                return await asyncio.wait_for(
-                    method(*args, **kwargs), timeout=self.timeout_seconds
-                )
+                return await method(*args, **kwargs)
+
+        try:
+            return await asyncio.wait_for(bounded_request(), timeout=self.timeout_seconds)
         except asyncio.TimeoutError as exc:
             raise AkinatorServiceError("AKINATOR_TIMEOUT") from exc
         except AkinatorServiceError:
@@ -124,11 +128,28 @@ class AkinatorService:
         async with self._lock_for(state):
             client = self._client(state)
             self._check_revision(state, expected_revision)
-            await self._call(client.choose if yes else client.exclude)
+            if state.get("status") != "proposition":
+                raise AkinatorServiceError("AKINATOR_STALE_ACTION")
+            try:
+                await self._call(client.choose if yes else client.exclude)
+            except AkinatorServiceError as exc:
+                if not yes or not state.get("proposition"):
+                    raise
+                # The player's confirmation is the terminal outcome; a lost
+                # upstream acknowledgement must not hide the named guess.
+                logger.warning("Akinator choice receipt failed: %s", exc.code)
             state["revision"] = int(state.get("revision", 0)) + 1
             self._revisions[str(state["round_id"])] = int(state["revision"])
             state["last_action"] = "guess_yes" if yes else "guess_no"
-            return sync_akinator_state(state, client)
+            sync_akinator_state(state, client)
+            if yes:
+                state["status"] = "finished"
+            elif state["status"] == "finished":
+                # A rejected final proposal is not a successful last guess.
+                state["proposition"] = None
+                state["status"] = "failed"
+                state["error_code"] = "AKINATOR_NO_GUESS"
+            return state
 
     async def close(self, state: dict[str, Any]) -> None:
         async with self._lock_for(state):
@@ -142,7 +163,7 @@ class AkinatorService:
         try:
             close = getattr(client, "close", None)
             if close is not None:
-                await close()
+                await asyncio.wait_for(close(), timeout=3)
         except Exception:
             return
 

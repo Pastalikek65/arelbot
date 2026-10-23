@@ -158,6 +158,7 @@ class CommandHandler:
         self.word_chain_service = WordChainService(self.data_port, leaderboard=leaderboard_service, economy=economy_service)
         from src.handlers.game_runtime import GameRuntime
         self.game_runtime = GameRuntime(self.data_port, guess_age=guess_age_service, uno=uno_service,
+                                        akinator=akinator_service,
                                         roulette=roulette_service, blackjack=blackjack_service,
                                         leaderboard=leaderboard_service, economy=economy_service)
         # Injected by Orchestrator after the Telegram Application is built.
@@ -2163,7 +2164,11 @@ class CommandHandler:
         existing = context.chat_data.get("akinator")
         if (existing and str(existing.get("status")) in {"pending", "playing", "proposition"}
                 and self.akinator_service is not None and self.akinator_service.has_session(existing)):
-            await message.reply_text(render_akinator_text(existing), reply_markup=akinator_keyboard(existing), parse_mode="HTML")
+            prompt = await message.reply_text(render_akinator_text(existing),
+                                              reply_markup=akinator_keyboard(existing), parse_mode="HTML")
+            existing["prompt_message_id"] = int(getattr(prompt, "message_id", 0) or 0)
+            existing["panel_dirty"] = False
+            await persist_game(self.data_port, chat.id, "akinator", existing)
             return
         state = new_akinator_state(
             owner_id=int(user.id),
@@ -2191,9 +2196,11 @@ class CommandHandler:
         await persist_game(self.data_port, chat.id, "akinator", state)
         try:
             await prompt.edit_text(render_akinator_text(state), reply_markup=akinator_keyboard(state), parse_mode="HTML")
-        except Exception:
-            # The initial message is still a valid, restart-safe game record.
-            logger.debug("Akinator panel refresh failed", exc_info=True)
+        except Exception as exc:
+            state["panel_dirty"] = True
+            state["delivery_retry_at"] = 0
+            await persist_game(self.data_port, chat.id, "akinator", state)
+            logger.warning("Akinator start panel delivery deferred type=%s", type(exc).__name__)
 
     async def handle_uno_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         if self.uno_service is None or update.effective_chat is None:
