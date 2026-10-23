@@ -451,7 +451,7 @@ GAME_DEFINITIONS: dict[str, GameDefinition] = {
     "kelime_zinciri": GameDefinition("kelime_zinciri", "Kelime Zinciri", category="word", min_players=2, max_players=20, turn_timeout_seconds=30, schema_version=2, state_key="kelime_zinciri"),
     "tabu": GameDefinition("tabu", "Takım Tabu", category="party", min_players=4, max_players=20, turn_timeout_seconds=60, supports_difficulty=False, supports_hints=False, state_key="tabu"),
     "casus": GameDefinition("casus", "Casus", category="party", min_players=4, max_players=16, turn_timeout_seconds=90, supports_difficulty=False, supports_hints=False, state_key="casus"),
-    "vampir_koylu": GameDefinition("vampir_koylu", "Vampir Köylü", category="party", min_players=7, max_players=20, turn_timeout_seconds=60, supports_difficulty=False, supports_hints=False, state_key="vampir_koylu"),
+    "vampir_koylu": GameDefinition("vampir_koylu", "Vampir Köylü / Kurt Adam", category="party", min_players=5, max_players=35, turn_timeout_seconds=60, supports_difficulty=False, supports_hints=False, schema_version=2, state_key="vampir_koylu"),
     # New rounds use a selectable 6x6, 7x7 or 8x8 board and four-in-a-row.
     # The UI domain still reads legacy 3x3 snapshots for restart compatibility.
     "tictactoe": GameDefinition("tictactoe", "XOX", category="board", min_players=2, max_players=2, turn_timeout_seconds=180, schema_version=1, state_key="tictactoe", board_size=(6, 6), connect_length=4),

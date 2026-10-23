@@ -406,7 +406,8 @@ class Orchestrator:
         for name, service_class, handler_class in (("spy_handler", SpyService, SpyHandler),
                                                     ("vampire_handler", VampireService, VampireHandler)):
             adapter = handler_class(
-                service_class(self.data_port, leaderboard=self.leaderboard_service, economy=self.economy_service),
+                service_class(self.data_port, leaderboard=self.leaderboard_service, economy=self.economy_service,
+                              **({'ruleset': 'greywolf'} if service_class is VampireService else {})),
                 sudo_manager=self.sudo_manager, authorization=getattr(self, "telegram_authorization", None),
             )
             setattr(self, name, adapter)

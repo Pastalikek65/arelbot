@@ -114,7 +114,7 @@ class MenuService:
             [InlineKeyboardButton("🎂 Yaş Tahmini", callback_data="game_start_guess_age")],
             [InlineKeyboardButton("🔗 Kelime zinciri", callback_data="game_start_chain")],
             [InlineKeyboardButton("🎭 Takım Tabu · 4–20 kişi", callback_data="game_start_tabu")],
-            [InlineKeyboardButton("Casus · 4–16 kişi", callback_data="game_start_casus"), InlineKeyboardButton("Vampir Köylü · 7–20 kişi", callback_data="game_start_vampire")],
+            [InlineKeyboardButton("Casus · 4–16 kişi", callback_data="game_start_casus"), InlineKeyboardButton("Kurt Adam · 5–35 kişi", callback_data="game_start_vampire")],
             [InlineKeyboardButton("🔫 Rulet", callback_data="game_start_rusruleti"), InlineKeyboardButton("⚔️ Düello", callback_data="game_start_duello")],
             [InlineKeyboardButton("🏆 Liderlik", callback_data="menu_leaderboard"), InlineKeyboardButton("🛑 Oyunu bitir", callback_data="game_stop_all")],
             [InlineKeyboardButton("🏠 Ana menü", callback_data="menu_main")],
@@ -128,7 +128,7 @@ class MenuService:
                        {"game_start_connect4", "game_start_tictactoe", "game_start_gomoku", "game_start_chess"}),
             "guess": ("Tahmin ve bilgi", "Beş İpucu'nda erken bil, Emoji Bilmece'de çağrışımı çöz. Fotoğraf, bilgi ve mantık oyunlarını da burada bulabilirsin.",
                       {"game_start_guess_age", "game_start_akinator", "game_start_quiz"}),
-            "social": ("Grup oyunları", "Tabu ve Casus 4, Vampir Köylü 7 kişiyle başlar. Gizli kart ve roller botun özel sohbetine gönderilir.",
+            "social": ("Grup oyunları", "Tabu ve Casus 4, Kurt Adam 5 kişiyle başlar. Gizli kart ve roller botun özel sohbetine gönderilir.",
                        {"game_start_tabu", "game_start_casus", "game_start_vampire", "game_start_sise", "game_start_duello", "game_start_rusruleti"}),
         }
         from src.games.puzzle_catalog import PUZZLES

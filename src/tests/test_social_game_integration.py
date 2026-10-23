@@ -34,7 +34,7 @@ def test_role_games_are_reachable_from_the_group_game_category():
     text, keyboard = MenuService().games_menu(category="social")
     actions = {button.callback_data for row in keyboard.inline_keyboard for button in row}
     assert {"game_start_tabu", "game_start_casus", "game_start_vampire"} <= actions
-    assert "7" in text and "4" in text
+    assert "5" in text and "4" in text
 
 
 @pytest.mark.parametrize("prefix,game", [("sp:", "spy"), ("vp:", "vampire")])

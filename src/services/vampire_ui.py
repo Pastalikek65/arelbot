@@ -14,6 +14,9 @@ ROLES = {"vampire": "Vampir", "villager": "Köylü", "seer": "Kâhin", "healer":
 ACTION_CODES = {"join": "j", "ready": "r", "start": "s", "refresh": "f",
                 "leave": "l", "stop": "x", "ack": "a", "night": "n", "vote": "v",
                 "repeat_protection": "p", "self_heal": "h", "reveal_on_death": "d"}
+ACTION_CODES.update({'day': 'y', 'hunter': 'u', 'ignite': 'i', 'chaos': 'c',
+                     'full_thief': 't', 'burning_overkill': 'o', 'rules': 'q',
+                     'roles_page': 'g', 'role_info': 'k', 'disable_role': 'b'})
 
 
 def callback_data(state, action, target=None):
@@ -25,6 +28,9 @@ def callback_data(state, action, target=None):
 
 
 def render_vampire(state, *, now=None):
+    if state.get('ruleset') == 'greywolf':
+        from src.services.werewolf_ui import render_werewolf
+        return render_werewolf(state, now=now)
     view = public_state(state)
     phase = view["phase"]
     lines = ["🧛 <b>Vampir Köylü</b>", ""]
@@ -82,6 +88,9 @@ def render_vampire(state, *, now=None):
 
 
 def group_keyboard(state):
+    if state.get('ruleset') == 'greywolf':
+        from src.services.werewolf_ui import group_controls
+        return group_controls(state)
     def button(title, action):
         return InlineKeyboardButton(title, callback_data=callback_data(state, action))
     phase = state["phase"]
@@ -106,6 +115,9 @@ def group_keyboard(state):
 
 
 def private_text(state, user_id):
+    if state.get('ruleset') == 'greywolf':
+        from src.services.werewolf_ui import private_card
+        return private_card(state, user_id)
     person = next(p for p in state["players"] if p["id"] == int(user_id))
     phase = state["phase"]
     if phase == "role_delivery":
@@ -119,6 +131,9 @@ def private_text(state, user_id):
 
 
 def private_keyboard(state, user_id):
+    if state.get('ruleset') == 'greywolf':
+        from src.services.werewolf_ui import private_controls
+        return private_controls(state, user_id)
     person = next(p for p in state["players"] if p["id"] == int(user_id))
     if state["phase"] == "role_delivery":
         return InlineKeyboardMarkup([[InlineKeyboardButton("Rolümü onaylıyorum", callback_data=callback_data(state, "ack"))]])
@@ -143,10 +158,13 @@ def private_keyboard(state, user_id):
 
 
 def error_text(code):
+    if str(code).startswith('werewolf_'):
+        from src.services.werewolf_ui import ERRORS
+        return ERRORS.get(str(code), 'Bu Kurt Adam işlemi şu anda kullanılamıyor.')
     return {
         "vampire_player_count": "Maç için 7–20 oyuncu gerekir.",
         "vampire_not_ready": "Herkes önce özel sohbetini hazırlamalı.",
-        "vampire_not_owner": "Bu işlemi kurucu veya grup yöneticisi yapabilir.",
+        "vampire_not_owner": "Lobi ayarlarını ve başlangıcı kurucu yapar; oyun bitirmeyi grup yöneticisi de yapabilir.",
         "vampire_not_player": "Bu oyunda etkin oyuncu değilsin.",
         "vampire_stale_round": "Bu düğme eski maça ait.",
         "vampire_stale_phase": "Bu aşama kapandı. Güncel düğmeleri kullan.",

@@ -64,7 +64,7 @@ Oyun salonu: `/oyun`. Oyuna göre lobi, zorluk ve kategori seçilir. Gizli roll�
 |---|---|---|---|
 | Takım Tabu | `/tabu` | 4–20 | Takımlar, özel kart, yasak kelimeler, süre, pas ve hakem kontrolü. |
 | Casus | `/casus` | 4–16 | Gizli roller, konum, tartışma, oylama ve casusun konum tahmini. |
-| Vampir Köylü | `/vampir` | 7–20 | Özel roller, gece eylemleri, gündüz oylaması ve taraf kazanımı. |
+| Vampir Köylü / Kurt Adam | `/kurtadam`, `/vampir` | 5–35 | GreyWolf uyarlaması: 45 rol, Normal/Kaos, özel rol kartları, gece/gündüz yetenekleri, dönüşümler, âşıklar, farklı taraf kazanımları. `/vampir klasik` eski 7–20 kişilik dört rollü varyanttır. |
 | Refleks | `/refleks` | 2–30 | Ortak lobi, başlangıç işareti ve tepki süresi yarışı. |
 | Ortak Hikâye | `/ortakhikaye` | 3–10 | Sırayla katkı verilen ortak anlatı. |
 | Bomba | `/bomba` | 2–12 | Süre baskısı altında kelime üretme ve oyuncu eleme. |

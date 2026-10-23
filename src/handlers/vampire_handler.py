@@ -51,22 +51,33 @@ class VampireHandler:
 
     async def deliver_private(self, bot, *, chat_id, thread_id=None):
         state = await self.service.current(chat_id, thread_id)
-        if not state or state["phase"] not in {"role_delivery", "night", "vote", "runoff"}:
+        phases = {'role_delivery', 'night', 'vote', 'runoff'}
+        if state and state.get('ruleset') == 'greywolf':
+            phases |= {'discussion', 'hunter'}
+        if not state or state["phase"] not in phases:
             return
         if state["phase"] != "role_delivery" and not state.get("panel_ready"):
             return
-        if state["phase"] == "role_delivery":
+        if state.get('ruleset') == 'greywolf':
+            recipients = vampire.private_recipients(state)
+        elif state["phase"] == "role_delivery":
             recipients = [p for p in state["players"] if p["active"]]
         elif state["phase"] == "night":
             recipients = [p for p in vampire.living(state) if p["role"] != "villager"]
         else:
             recipients = vampire.living(state)
+        # A 35-player role delivery can exceed Telegram's per-bot send rate
+        # when several groups start together. The durable worker resumes the
+        # remaining recipients on its next tick; CAS receipts avoid repeats.
+        claims = 0
         for person in recipients:
             user_id = person["id"]
             claimed = await self.service.claim_delivery(chat_id=chat_id, thread_id=thread_id,
                                                         kind="private", user_id=user_id)
             if not claimed:
                 continue
+            if state.get('ruleset') == 'greywolf':
+                claims += 1
             # A prior send may have advanced the phase. The claim's generation binds the message.
             try:
                 sent = await bot.send_message(chat_id=user_id, text=private_text(claimed, user_id),
@@ -77,6 +88,8 @@ class VampireHandler:
             await self.service.acknowledge_private(chat_id=chat_id, thread_id=thread_id,
                 round_id=claimed["round_id"], phase_seq=claimed["phase_seq"],
                 user_id=user_id, message_id=sent.message_id)
+            if state.get('ruleset') == 'greywolf' and claims >= 8:
+                break
 
     async def deliver_findings(self, bot, *, chat_id, thread_id=None):
         state = await self.service.current(chat_id, thread_id)
@@ -92,9 +105,10 @@ class VampireHandler:
             finding = claimed["seer_findings"][finding_id]
             target = next(p for p in claimed["players"] if p["id"] == finding["target_id"])
             try:
-                await bot.send_message(chat_id=finding["user_id"], protect_content=True,
-                    text=f"🔐 Kâhin sonucu: {escape(target['name'])} " +
-                         ("vampir." if finding["is_vampire"] else "vampir değil."))
+                text = ('🔐 ' + escape(str(finding['text'])) if claimed.get('ruleset') == 'greywolf'
+                        else f"🔐 Kâhin sonucu: {escape(target['name'])} " +
+                        ("vampir." if finding["is_vampire"] else "vampir değil."))
+                await bot.send_message(chat_id=finding["user_id"], protect_content=True, text=text)
             except Forbidden:
                 self.service.metrics.inc("game_private_delivery_failure_total")
                 continue
@@ -117,27 +131,51 @@ class VampireHandler:
     async def _flush(self, context, chat_id, thread_id):
         state = await self.service.current(chat_id, thread_id)
         if state:
-            await self.process(context.bot, {"chat_id": chat_id, "state": state})
+            if state.get('ruleset') == 'greywolf':
+                # The 5-second game runtime owns bounded private batches,
+                # delayed findings, score settlement and retry recovery.
+                await self.publish(context.bot, chat_id=chat_id, thread_id=thread_id)
+            else:
+                await self.process(context.bot, {"chat_id": chat_id, "state": state})
 
     async def command(self, update, context):
         chat, user, message = update.effective_chat, update.effective_user, update.effective_message
         if not chat or not user or not message:
             return
         if chat.type not in {"group", "supergroup"}:
-            await message.reply_text("Vampir Köylü 7–20 kişiyle bir grupta oynanır. Grupta /vampir yaz.")
+            advanced = getattr(self.service, 'ruleset', 'legacy') == 'greywolf'
+            await message.reply_text('Kurt Adam 5–35 kişiyle bir grupta oynanır. Grupta /kurtadam veya /vampir yaz.' if advanced
+                                     else "Vampir Köylü 7–20 kişiyle bir grupta oynanır. Grupta /vampir yaz.")
             return
         thread_id = forum_thread_id(message)
         args = list(getattr(context, "args", None) or [])
         operation = args[0].lower() if args else "open"
+        open_mode = {'normal': 'normal', 'kaos': 'chaos', 'chaos': 'chaos', 'klasik': 'classic', 'classic': 'classic'}.get(operation)
+        if open_mode:
+            operation = 'open'
+        command_name = str(getattr(message, 'text', '') or '').split(' ', 1)[0].split('@', 1)[0].casefold()
+        if command_name in {'/kurtadam', '/werewolf'} and open_mode is None:
+            open_mode = 'normal'
         try:
+            if operation in {'roller', 'roles', 'kurallar', 'rules'}:
+                state = await self.service.current(chat.id, thread_id)
+                if state and state.get('ruleset') == 'greywolf' and state.get('panel_message_id'):
+                    await self._show_guide(context.bot, state, rules=operation in {'kurallar', 'rules'})
+                else:
+                    from src.games.werewolf.roles import ROLES
+                    await message.reply_text('🐺 Kurt Adam · 45 rol\n\n' + '\n'.join(f"{r.emoji} {r.name}" for r in ROLES.values()) +
+                                             '\n\nGrupta /kurtadam ile lobi aç. Kartlar ve ayrıntılı kurallar lobi düğmelerinde.')
+                return
             if operation in {"open", "durum"}:
                 if operation == "durum":
                     state = await self.service.current(chat.id, thread_id)
                     if not state:
                         raise ValueError("vampire_not_found")
                 else:
-                    _, state = await self.service.open(chat_id=chat.id, thread_id=thread_id,
-                                                      user_id=user.id, user_name=user.first_name)
+                    kwargs = dict(chat_id=chat.id, thread_id=thread_id, user_id=user.id, user_name=user.first_name)
+                    if open_mode is not None:
+                        kwargs['mode'] = open_mode
+                    _, state = await self.service.open(**kwargs)
                 if state.get("panel_message_id"):
                     await self.publish(context.bot, chat_id=chat.id, thread_id=thread_id, force=True)
                 else:
@@ -150,7 +188,12 @@ class VampireHandler:
                            "ayril": "leave", "ayrıl": "leave", "bitir": "stop"}
                 action = actions.get(operation)
                 if action is None:
-                    await message.reply_text("/vampir · /vampir katil · /vampir basla · /vampir durum · /vampir ayar tekrar_koruma|kendini_iyilestirme|olumde_rol acik|kapali · /vampir ayril · /vampir bitir")
+                    state = await self.service.current(chat.id, thread_id)
+                    if ((state and state.get('ruleset') == 'greywolf') or
+                            (not state and getattr(self.service, 'ruleset', 'legacy') == 'greywolf')):
+                        await message.reply_text('/kurtadam · /vampir normal|kaos|klasik · /vampir roller|kurallar · /vampir katil · /vampir basla · /vampir durum · /vampir ayril · /vampir bitir\n\nModu ve 45 rolü lobi düğmelerinden düzenleyebilirsin.')
+                    else:
+                        await message.reply_text("/vampir · /vampir katil · /vampir basla · /vampir durum · /vampir ayar tekrar_koruma|kendini_iyilestirme|olumde_rol acik|kapali · /vampir ayril · /vampir bitir")
                     return
                 option = None
                 enabled = None
@@ -208,8 +251,10 @@ class VampireHandler:
             if int(state["phase_seq"]) != phase_seq:
                 raise ValueError("vampire_stale_phase")
             user = update.effective_user
+            advanced = state.get('ruleset') == 'greywolf'
             if private:
-                if update.effective_chat.id != user.id or action not in {"ack", "night", "vote"}:
+                allowed = {'ack', 'night', 'vote'} | ({'day', 'hunter', 'ignite'} if advanced else set())
+                if update.effective_chat.id != user.id or action not in allowed:
                     raise ValueError("vampire_invalid_action")
                 delivered = state.get("private_delivery", {}).get(str(user.id))
                 if not delivered or int(delivered) != int(query.message.message_id):
@@ -219,14 +264,28 @@ class VampireHandler:
                     raise ValueError("vampire_stale_phase")
                 if operation == "vote" and state["phase"] not in {"vote", "runoff"}:
                     raise ValueError("vampire_stale_phase")
+                if operation in {'day', 'hunter', 'ignite'} and state['phase'] != {'day': 'discussion', 'hunter': 'hunter', 'ignite': 'night'}[operation]:
+                    raise ValueError('vampire_stale_phase')
             else:
+                advanced_actions = {'chaos', 'full_thief', 'burning_overkill', 'rules', 'roles_page', 'role_info', 'disable_role'} if advanced else set()
                 if (update.effective_chat.id != chat_id or
                     forum_thread_id(query.message) != thread_id or
                     int(state.get("panel_message_id") or 0) != int(query.message.message_id) or
                     action not in {"join", "ready", "start", "refresh", "leave", "stop",
-                                   "repeat_protection", "self_heal", "reveal_on_death"}):
+                                   "repeat_protection", "self_heal", "reveal_on_death"} | advanced_actions):
                     raise ValueError("vampire_stale_phase")
-                operation = "configure" if action in {"repeat_protection", "self_heal", "reveal_on_death"} else action
+                operation = "configure" if action in {"repeat_protection", "self_heal", "reveal_on_death", 'chaos', 'full_thief', 'burning_overkill'} else action
+            if not private and action in {'rules', 'roles_page', 'role_info'}:
+                from src.games.werewolf.roles import ROLES
+                role_key = next((r.key for r in ROLES.values() if r.source_id == target_id), None)
+                if action == 'role_info' and role_key is None:
+                    raise ValueError('werewolf_invalid_role')
+                await query.answer()
+                answered = True
+                await self._show_guide(context.bot, state, page=target_id or 0,
+                                       role_key=role_key if action == 'role_info' else None,
+                                       rules=action == 'rules')
+                return
             if action == "ready":
                 payload = await self.service.mint_invite(chat_id=chat_id, thread_id=thread_id,
                     user_id=user.id, round_id=round_id, request_id=f"cb:{query.id}")
@@ -240,6 +299,11 @@ class VampireHandler:
                 enabled = target_id == 1 if operation == "configure" else None
                 if operation == "configure" and (target_id not in {1, 2} or state["settings"][option] == enabled):
                     raise ValueError("vampire_stale_phase")
+                if operation == 'disable_role':
+                    from src.games.werewolf.roles import ROLES
+                    option = next((r.key for r in ROLES.values() if r.source_id == target_id), None)
+                    if option is None:
+                        raise ValueError('werewolf_invalid_role')
                 await self.service.act(chat_id=chat_id, thread_id=thread_id,
                     user_id=user.id, user_name=user.first_name, action_id=f"cb:{query.id}",
                     action=operation, round_id=round_id, phase_seq=phase_seq,
@@ -248,6 +312,20 @@ class VampireHandler:
             if not answered:
                 await query.answer()
             await self._flush(context, chat_id, thread_id)
+            if advanced and private and action in {'night', 'day', 'vote', 'hunter', 'ignite'}:
+                current = await self.service.current(chat_id, thread_id)
+                same_phase = current and current['phase_seq'] == phase_seq
+                try:
+                    await context.bot.edit_message_text(chat_id=user.id, message_id=query.message.message_id,
+                        text=private_text(current, user.id) if same_phase else '✅ Bu aşamadaki hamlen tamamlandı.',
+                        parse_mode='HTML', reply_markup=private_keyboard(current, user.id) if same_phase else None)
+                except BadRequest as exc:
+                    if 'message is not modified' not in str(exc).lower():
+                        logger.warning('Kurt Adam özel kontrolü yenilenemedi: %s', type(exc).__name__)
+            if advanced and action == 'disable_role':
+                current = await self.service.current(chat_id, thread_id)
+                if current:
+                    await self._show_guide(context.bot, current, role_key=option)
         except (ValueError, TypeError, StopIteration) as exc:
             await query.answer(error_text(str(exc)), show_alert=True)
         except Exception as exc:
@@ -256,3 +334,16 @@ class VampireHandler:
                 await query.answer("İşlem tamamlanamadı. Güncel paneli kontrol et.", show_alert=True)
             except Exception:
                 pass
+
+    async def _show_guide(self, bot, state, *, page=0, role_key=None, rules=False):
+        from src.services.werewolf_ui import guide
+        text, markup = guide(state, page=page, role_key=role_key, rules=rules)
+        try:
+            await bot.edit_message_text(chat_id=state['chat_id'], message_id=state['panel_message_id'],
+                                       text=text, reply_markup=markup, parse_mode='HTML')
+        except BadRequest as exc:
+            if 'message is not modified' not in str(exc).lower():
+                raise
+        await self.service.request_panel_refresh(chat_id=state['chat_id'],
+                                                 thread_id=state.get('thread_id'),
+                                                 round_id=state['round_id'])

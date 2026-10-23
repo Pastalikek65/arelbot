@@ -34,10 +34,10 @@ Arel, özel sohbetler ve Telegram grupları için geliştirilen açık kaynak bi
 | **Tahta ve bulmaca** | Connect Four, Gomoku / Beşli, Satranç, XOX, Hafıza Eşleştirme, Mayın Tarlası, Sudoku, Amiral Battı, 2048 |
 | **Bilgi ve tahmin** | Akinatör, Yaş Tahmini, Bilgi Yarışması, Sayı Tahmini, Kör Sıralama, Kronoloji, Doğru–Yanlış, Dedektif, Beş İpucu, Emoji Bilmece |
 | **Kart** | UNO, Batak, Blackjack, Pişti, Papaz Kimde |
-| **Grup oyunları** | Takım Tabu, Casus, Vampir Köylü, Refleks, Ortak Hikâye, Bomba, İki Doğru Bir Yalan, Kimim Ben, Takım Bilgi Ligi, Zehirli Kadeh |
+| **Grup oyunları** | Takım Tabu, Casus, Vampir Köylü / Kurt Adam (45 rol), Refleks, Ortak Hikâye, Bomba, İki Doğru Bir Yalan, Kimim Ben, Takım Bilgi Ligi, Zehirli Kadeh |
 | **Sosyal** | Şişe Çevirme |
 
-`/oyun` salonu açar. [Oyun rehberi](docs/GAMES.md) her oyunun komutunu, oyuncu sayısını ve mekaniğini açıklar. Zar, yazı-tura ve doğruluk/cesaret gibi ek mini etkileşimler de bulunur.
+`/oyun` salonu açar. [Kurt Adam rehberi](docs/WEREWOLF_GAME_GUIDE.md) ve [oyun rehberi](docs/GAMES.md) her oyunun komutunu, oyuncu sayısını ve mekaniğini açıklar. Zar, yazı-tura ve doğruluk/cesaret gibi ek mini etkileşimler de bulunur.
 
 ## Hızlı kullanım
 

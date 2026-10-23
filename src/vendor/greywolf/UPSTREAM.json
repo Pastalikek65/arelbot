@@ -1,0 +1,39 @@
+{
+  "repository": "https://github.com/GreyWolfDev/Werewolf",
+  "commit": "bac172a29f8b394ebbb4822c6f244d769fac21ac",
+  "license": "GPL-3.0-only",
+  "files": {
+    "LICENSE.md": {
+      "upstream_path": "LICENSE.md",
+      "sha256": "53927bd0b739d38c87a0a82236fd9b070c2dfff11c0c119be50372005d5047ad"
+    },
+    "Roles.cs": {
+      "upstream_path": "Werewolf for Telegram/Shared/Roles.cs",
+      "sha256": "d06457471b4dc78fd85a393e672603d3a30bc5f8050fe3a99ec34cff042bd160"
+    },
+    "GameBalancing.cs": {
+      "upstream_path": "Werewolf for Telegram/Shared/GameBalancing.cs",
+      "sha256": "00ae5f942088fdfe8f136d5fe733f74fa913734619943a1a86fe2ffea81da940"
+    },
+    "GameMode.cs": {
+      "upstream_path": "Werewolf for Telegram/Shared/GameMode.cs",
+      "sha256": "1995387a3214aa3108cd62a85a657c63b5cfb53f9aacb6232040a441a70baf72"
+    },
+    "Werewolf.cs": {
+      "upstream_path": "Werewolf for Telegram/Werewolf Node/Werewolf.cs",
+      "sha256": "6e3469d76eb1de4830b46fff17529ea03ab23c94b79b640e73b9d0a4583fd292"
+    },
+    "IPlayer.cs": {
+      "upstream_path": "Werewolf for Telegram/Werewolf Node/Models/IPlayer.cs",
+      "sha256": "62637ba4b65b3fb051696d08bd26f7769b51a8c3ee1a287d8a88a0c06b48fb62"
+    },
+    "TurkishSFW.xml": {
+      "upstream_path": "Werewolf for Telegram/Languages/TurkishSFW.xml",
+      "sha256": "83d60fd8a1e27b6d9b12d18403f0bcec6fb62eb05cfac479fdfdfc4eb0235fd0"
+    },
+    "English.xml": {
+      "upstream_path": "Werewolf for Telegram/Languages/English.xml",
+      "sha256": "b85428ea37c5776b31d854563a99c26c1257cb5fee76df66a6298709ef76e326"
+    }
+  }
+}

@@ -49,7 +49,7 @@ MENU_ALIAS_COMMANDS = frozenset(
         "hatirlat", "bildirimayar", "bakiye", "bildirimler", "takipler",
         "filmoneri", "dizioneri", "kitaponeri", "sarkioneri", "soz", "sarki",
         "lyrics", "search", "gunlukplan", "haftalikplan", "daily_brief",
-        "spy", "vampirkoylu",
+        "spy", "vampirkoylu", "werewolf",
     }
 )
 
@@ -424,8 +424,10 @@ async def register_bot_commands(application):
         ("refleks", "Hedef düğmesini yakala"),
         ("casus", "Gizli mekân ve casus oyunu"),
         ("spy", "Casus oyunu"),
-        ("vampir", "Vampir Köylü lobisi kur"),
+        ("vampir", "Kurt Adam ve klasik Vampir Köylü"),
         ("vampirkoylu", "Vampir Köylü lobisi kur"),
+        ("kurtadam", "45 rollü Kurt Adam lobisi kur"),
+        ("werewolf", "Kurt Adam lobisi kur"),
         ("kelimezinciri", "Kelime zinciri kur"),
         ("yastahmin", "Yaş tahminini gönder"),
         ("rusruleti", "Rus ruleti"),
@@ -652,7 +654,7 @@ def register_handlers(application, orchestrator):
     add_handler(CommandHandler("tabu", orchestrator.handle_tabu_command))
     add_handler(CommandHandler(["pisti", "papazkimde", "2048", "besipucu", "emojibilmece", "harfmaraton", "sozcukavi", "yasakharf", "ortakhikaye", "bomba", "korsiralama", "kronoloji", "dogruyanlis", "dedektif", "amiral", "ikidogru", "kimimben", "takimligi", "kadeh", "wordle", "karsikelime", "anagram", "eslestirme", "mayin", "sudoku", "sayitahmin", "refleks"], orchestrator.handle_puzzle_command))
     add_handler(CommandHandler(["casus", "spy"], orchestrator.handle_spy_command))
-    add_handler(CommandHandler(["vampir", "vampirkoylu"], orchestrator.handle_vampire_command))
+    add_handler(CommandHandler(["vampir", "vampirkoylu", "kurtadam", "werewolf"], orchestrator.handle_vampire_command))
     add_handler(CommandHandler("batak", orchestrator.handle_batak_command))
     add_handler(CommandHandler("blackjack", orchestrator.handle_blackjack_command))
     add_handler(CommandHandler("anlat", orchestrator.handle_anlat_command))

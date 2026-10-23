@@ -49,6 +49,9 @@ def role_counts(count):
 
 def new_lobby(*, chat_id, thread_id, owner_id, owner_name, round_id,
               now=None, settings=None):
+    if (settings or {}).get('ruleset') == 'greywolf':
+        from src.games.werewolf import engine
+        return engine.new_lobby(chat_id=chat_id, thread_id=thread_id, owner_id=owner_id, owner_name=owner_name, round_id=round_id, now=now, settings={k:v for k,v in settings.items() if k != 'ruleset'})
     moment = _time(now)
     options = {"repeat_protection": False, "self_heal": True, "reveal_on_death": False}
     options.update(settings or {})
@@ -70,6 +73,9 @@ def new_lobby(*, chat_id, thread_id, owner_id, owner_name, round_id,
 
 
 def join(state, *, user_id, user_name, now=None):
+    if state.get('ruleset') == 'greywolf':
+        from src.games.werewolf import engine
+        return engine.join(state, user_id=user_id, user_name=user_name, now=now)
     if state["phase"] != "lobby":
         raise ValueError("vampire_lobby_closed")
     if _time(now) >= state["last_activity_at"] + LOBBY_SECONDS:
@@ -87,6 +93,9 @@ def join(state, *, user_id, user_name, now=None):
 
 
 def ready(state, *, user_id, now=None):
+    if state.get('ruleset') == 'greywolf':
+        from src.games.werewolf import engine
+        return engine.ready(state, user_id=user_id, now=now)
     if state["phase"] != "lobby":
         raise ValueError("vampire_lobby_closed")
     if _time(now) >= state["last_activity_at"] + LOBBY_SECONDS:
@@ -99,6 +108,9 @@ def ready(state, *, user_id, now=None):
 
 
 def configure(state, *, user_id, option, enabled, now=None):
+    if state.get('ruleset') == 'greywolf':
+        from src.games.werewolf import engine
+        return engine.configure(state, user_id=user_id, option=option, enabled=enabled, now=now)
     if state["phase"] != "lobby" or int(user_id) != state["owner_id"]:
         raise ValueError("vampire_not_owner")
     if _time(now) >= state["last_activity_at"] + LOBBY_SECONDS:
@@ -112,6 +124,9 @@ def configure(state, *, user_id, option, enabled, now=None):
 
 
 def start(state, *, user_id, roles=None, now=None):
+    if state.get('ruleset') == 'greywolf':
+        from src.games.werewolf import engine
+        return engine.start(state, user_id=user_id, roles=roles, now=now)
     if state["phase"] != "lobby" or int(user_id) != state["owner_id"]:
         raise ValueError("vampire_not_owner")
     if _time(now) >= state["last_activity_at"] + LOBBY_SECONDS:
@@ -136,6 +151,9 @@ def start(state, *, user_id, roles=None, now=None):
 
 
 def role_ack(state, *, user_id, now=None):
+    if state.get('ruleset') == 'greywolf':
+        from src.games.werewolf import engine
+        return engine.role_ack(state, user_id=user_id, now=now)
     if state["phase"] != "role_delivery":
         raise ValueError("vampire_stale_phase")
     if _time(now) >= state["last_activity_at"] + DELIVERY_SECONDS:
@@ -161,6 +179,9 @@ def _next_phase(state, phase, *, now=None):
 
 
 def activate(state, *, now=None):
+    if state.get('ruleset') == 'greywolf':
+        from src.games.werewolf import engine
+        return engine.activate(state, now=now)
     if state["phase"] not in {"night", "discussion", "vote", "runoff"}:
         return state
     if state["phase_ready"]:
@@ -198,6 +219,9 @@ def _check_win(state):
 
 
 def night_action(state, *, user_id, target_id=None, now=None):
+    if state.get('ruleset') == 'greywolf':
+        from src.games.werewolf import engine
+        return engine.night_action(state, user_id=user_id, target_id=target_id, now=now)
     moment = _time(now)
     if state["phase"] != "night" or not state["phase_ready"] or moment >= state["deadline"]:
         raise ValueError("vampire_stale_phase")
@@ -262,6 +286,9 @@ def _night_result(result, *, now):
 
 
 def vote(state, *, user_id, target_id=None, now=None):
+    if state.get('ruleset') == 'greywolf':
+        from src.games.werewolf import engine
+        return engine.vote(state, user_id=user_id, target_id=target_id, now=now)
     moment = _time(now)
     if state["phase"] not in {"vote", "runoff"} or not state["phase_ready"] or moment >= state["deadline"]:
         raise ValueError("vampire_stale_phase")
@@ -317,6 +344,9 @@ def _vote_result(result, *, now):
 
 
 def advance(state, *, now=None):
+    if state.get('ruleset') == 'greywolf':
+        from src.games.werewolf import engine
+        return engine.advance(state, now=now)
     moment = _time(now)
     phase = state["phase"]
     if phase == "lobby" and moment >= state["last_activity_at"] + LOBBY_SECONDS:
@@ -340,6 +370,9 @@ def advance(state, *, now=None):
 
 
 def leave(state, *, user_id, now=None):
+    if state.get('ruleset') == 'greywolf':
+        from src.games.werewolf import engine
+        return engine.leave(state, user_id=user_id, now=now)
     if state["phase"] in TERMINAL:
         raise ValueError("vampire_closed")
     if state["phase_ready"] and state["deadline"] is not None and _time(now) >= state["deadline"]:
@@ -364,6 +397,9 @@ def leave(state, *, user_id, now=None):
 
 
 def cancel(state, *, reason="moderator", user_id=None, moderator=False):
+    if state.get('ruleset') == 'greywolf':
+        from src.games.werewolf import engine
+        return engine.cancel(state, reason=reason, user_id=user_id, moderator=moderator)
     if user_id is not None and not moderator and int(user_id) != state["owner_id"]:
         raise ValueError("vampire_not_owner")
     if state["phase"] in TERMINAL:
@@ -379,6 +415,9 @@ def cancel(state, *, reason="moderator", user_id=None, moderator=False):
 
 
 def public_state(state):
+    if state.get('ruleset') == 'greywolf':
+        from src.games.werewolf import engine
+        return engine.public_state(state)
     result = {key: deepcopy(state.get(key)) for key in (
         "round_id", "chat_id", "thread_id", "owner_id", "phase", "phase_seq",
         "version", "day", "deadline", "phase_ready", "panel_ready", "last_deaths", "last_event",
@@ -392,3 +431,16 @@ def public_state(state):
             view["role"] = player["role"]
     result["ballots_cast"] = len(state.get("votes", {}))
     return result
+
+
+def private_recipients(state):
+    if state.get('ruleset') == 'greywolf':
+        from src.games.werewolf.choices import private_recipients as recipients
+        return recipients(state)
+    if state['phase'] == 'role_delivery':
+        return [p for p in state['players'] if p['active']]
+    if state['phase'] == 'night':
+        return [p for p in living(state) if p['role'] != 'villager']
+    if state['phase'] in {'vote','runoff'}:
+        return living(state)
+    return []

@@ -1,6 +1,18 @@
 {
   "sources": [
     {
+      "name": "GreyWolfDev/Werewolf",
+      "host": "github.com",
+      "kind": "bundled-source-and-rules-port",
+      "license": "GPL-3.0-only",
+      "url": "https://github.com/GreyWolfDev/Werewolf/tree/bac172a29f8b394ebbb4822c6f244d769fac21ac",
+      "source_governance": "review_required",
+      "robots_policy": "not_applicable",
+      "terms_review": "license_recorded",
+      "production_signoff": "not_required",
+      "arel_use": "Operator-requested direct integration. Pinned original role/balance/core/locale sources and license preserved in src/vendor/greywolf; Python rules adaptation and Turkish role UI. Full corresponding deployed source remains available through the bot source offer. No upstream Windows binaries, SQL Server setup, credentials or polling process are executed."
+    },
+    {
       "name": "HRMN Harmon API",
       "host": "api.hrmn.tr",
       "kind": "ai-provider",

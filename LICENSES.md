@@ -38,3 +38,7 @@ Kart PNG dosyaları maildian/uno-telegram-bot commit `01640d1df9e3b06f81727aff38
 # Standard playing-card artwork
 
 `assets/playing_cards/` contains Kenney's Board Game Pack artwork under CC0-1.0. Original PNGs, vector sheet, license, source URL and SHA-256 records are included. Sticker faces are raster crops of the official vector sheet; muted variants and the Blackjack table are local compositions. No AI-generated artwork is used.
+
+## GreyWolf Werewolf entegrasyonu
+
+`src/vendor/greywolf` sabitlenmiş `bac172a29f8b394ebbb4822c6f244d769fac21ac` kaynağını ve GPL-3.0 metnini korur. `src/games/werewolf`, `src/services/werewolf_ui.py` ve türetilmiş Türkçe rol verisi GPL-3.0-only uyarlamadır. Özgün C# uygulaması Windows/SQL Server gerektirir; Arel oyun kurallarını mevcut Python/MongoDB taşımaya uyarlar. Snapshot dosya hashleri `UPSTREAM.json` içindedir. Birleşik dağıtım tümüyle MIT değildir; önceki AGPL UNO bildirimi ve tam çalışan kaynak sunumu korunur.

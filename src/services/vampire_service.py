@@ -14,6 +14,8 @@ from src.observability.metrics import MetricsRegistry
 
 def base36(value):
     value = int(value)
+    if value < 0:
+        raise ValueError('vampire_invalid_action')
     digits = "0123456789abcdefghijklmnopqrstuvwxyz"
     result = ""
     while value:
@@ -23,6 +25,10 @@ def base36(value):
 
 
 def _controls_pending(state):
+    if state.get('ruleset') == 'greywolf':
+        recipients = (vampire.private_recipients(state) if state['phase'] == 'role_delivery'
+                      or state.get('panel_ready') else [])
+        return any(str(p['id']) not in state.get('private_delivery', {}) for p in recipients)
     phase = state["phase"]
     if phase == "role_delivery":
         recipients = [p for p in state["players"] if p["active"]]
@@ -43,7 +49,10 @@ def _private_pending(state):
 class VampireService:
     GAME_TYPE = "vampir_koylu"
 
-    def __init__(self, repository, leaderboard=None, economy=None, metrics=None):
+    def __init__(self, repository, leaderboard=None, economy=None, metrics=None, *, ruleset='legacy'):
+        if ruleset not in {'legacy', 'greywolf'}:
+            raise ValueError('werewolf_invalid_ruleset')
+        self.ruleset = ruleset
         self.repository = repository
         self.leaderboard = leaderboard
         self.economy = economy
@@ -100,7 +109,9 @@ class VampireService:
                     return "applied", result
             raise RuntimeError("game_state_conflict")
 
-    async def open(self, *, chat_id, thread_id=None, user_id, user_name):
+    async def open(self, *, chat_id, thread_id=None, user_id, user_name, mode=None):
+        if mode not in {None, 'classic', 'normal', 'chaos'}:
+            raise ValueError('werewolf_invalid_ruleset')
         async with self._lock(chat_id, thread_id):
             for _ in range(8):
                 old = await self.current(chat_id, thread_id)
@@ -108,9 +119,22 @@ class VampireService:
                     return "existing", old
                 if old and old.get("score_pending"):
                     raise ValueError("vampire_rewards_pending")
+                previous_mode = (old or {}).get('ruleset') if old else None
+                advanced = (mode in {'normal', 'chaos'} or
+                            mode is None and (previous_mode == 'greywolf' or
+                                              old is None and self.ruleset == 'greywolf'))
+                options = None
+                if advanced:
+                    previous_settings = (old or {}).get('settings') or {}
+                    kept = ('repeat_protection', 'self_heal', 'reveal_on_death', 'full_thief',
+                            'burning_overkill', 'disabled_roles', 'max_days')
+                    options = {'ruleset': 'greywolf', **{key: previous_settings[key] for key in kept
+                                                         if previous_mode == 'greywolf' and key in previous_settings},
+                               'chaos': mode == 'chaos' if mode is not None else
+                                        bool(previous_settings.get('chaos', False))}
                 fresh = vampire.new_lobby(chat_id=chat_id, thread_id=thread_id,
                                           owner_id=user_id, owner_name=user_name,
-                                          round_id=secrets.token_hex(6))
+                                          round_id=secrets.token_hex(6), settings=options)
                 fresh["panel_dirty"] = True
                 if old is None:
                     saved = await self.repository.create_game_state_if_absent(
@@ -132,6 +156,16 @@ class VampireService:
         def transition(state):
             if submitted_at is not None and float(submitted_at) < float(state["created_at"]):
                 raise ValueError("vampire_stale_round")
+            if state.get('ruleset') == 'greywolf':
+                from src.games.werewolf import engine
+                if action == 'day':
+                    return engine.day_action(state, user_id=user_id, target_id=target_id, now=clock)
+                if action == 'ignite':
+                    return engine.ignite(state, user_id=user_id, now=clock)
+                if action == 'hunter':
+                    return engine.hunter_action(state, user_id=user_id, target_id=target_id, now=clock)
+                if action == 'disable_role':
+                    return engine.disable_role(state, user_id=user_id, role_key=option, now=clock)
             if action == "join":
                 return vampire.join(state, user_id=user_id, user_name=user_name, now=clock)
             if action == "start":
@@ -240,6 +274,9 @@ class VampireService:
                                 (state["phase"] == "role_delivery" or
                                  (state["phase"] == "night" and state.get("panel_ready") and person["alive"] and person["role"] != "villager") or
                                  (state["phase"] in {"vote", "runoff"} and state.get("panel_ready") and person["alive"])))
+                    if state.get('ruleset') == 'greywolf':
+                        eligible = (state['phase'] == 'role_delivery' or state.get('panel_ready')) and any(
+                            p['id'] == int(user_id or 0) for p in vampire.private_recipients(state))
                     eligible = eligible and not state.get("private_delivery", {}).get(str(user_id))
                     eligible = eligible and float(state.get("private_retry", {}).get(str(user_id), 0)) <= clock
                     retry = None
@@ -265,6 +302,20 @@ class VampireService:
                     return updated
             raise RuntimeError("game_state_conflict")
 
+    async def request_panel_refresh(self, *, chat_id, thread_id=None, round_id):
+        """Restore the live panel after a temporary read-only group guide."""
+        async with self._lock(chat_id, thread_id):
+            for _ in range(8):
+                state = await self.current(chat_id, thread_id)
+                if not state or state['round_id'] != round_id:
+                    return False
+                updated = dict(state, version=int(state['version']) + 1,
+                               panel_dirty=True, panel_retry_at=0)
+                if await self.repository.compare_and_save_game_state(
+                    int(chat_id), self.key(thread_id), updated, expected_version=int(state['version'])):
+                    return True
+            raise RuntimeError('game_state_conflict')
+
     async def acknowledge_panel(self, *, chat_id, thread_id=None, round_id, expected_version, message_id, now=None):
         clock = time.time() if now is None else float(now)
         async with self._lock(chat_id, thread_id):
@@ -276,11 +327,13 @@ class VampireService:
                                panel_message_id=int(message_id))
                 if state["version"] == expected_version:
                     updated["panel_dirty"] = False
-                    if (state["phase"] in {"night", "discussion", "vote", "runoff"}
+                    if (state["phase"] in {"night", "discussion", "vote", "runoff", "hunter"}
                             and not state["phase_ready"]
                             and clock < float(state.get("panel_wait_until") or 0)):
                         updated["panel_ready"] = True
-                        if state["phase"] == "discussion":
+                        can_activate = (not _private_pending(updated) if state.get('ruleset') == 'greywolf'
+                                        else state['phase'] == 'discussion')
+                        if can_activate:
                             activated = vampire.activate(state, now=clock)
                             updated.update({"phase_ready": activated["phase_ready"],
                                             "deadline": activated["deadline"],
@@ -298,7 +351,10 @@ class VampireService:
                                   phase_seq, user_id, message_id=None, now=None):
         clock = time.time() if now is None else float(now)
         def transform(state):
-            if state["phase"] not in {"role_delivery", "night", "vote", "runoff"}:
+            allowed_phases = {'role_delivery', 'night', 'vote', 'runoff'}
+            if state.get('ruleset') == 'greywolf':
+                allowed_phases |= {'discussion', 'hunter'}
+            if state["phase"] not in allowed_phases:
                 raise ValueError("vampire_stale_phase")
             if (state["phase"] != "role_delivery" and
                     (not state.get("panel_ready") or clock >= float(state.get("panel_wait_until") or 0))
@@ -307,8 +363,9 @@ class VampireService:
             vampire._player(state, user_id)
             result = vampire._copy(state)
             result.setdefault("private_delivery", {})[str(user_id)] = int(message_id) if message_id else True
-            if (state["phase"] in {"night", "vote", "runoff"} and
-                    state.get("panel_ready") and not _controls_pending(result) and not state["phase_ready"]):
+            pending = _private_pending(result) if state.get('ruleset') == 'greywolf' else _controls_pending(result)
+            if (state["phase"] != 'role_delivery' and
+                    state.get("panel_ready") and not pending and not state["phase_ready"]):
                 activated = vampire.activate(result, now=clock)
                 result.update({"phase_ready": activated["phase_ready"],
                                "deadline": activated["deadline"],
@@ -319,13 +376,19 @@ class VampireService:
         return await self._apply(chat_id, thread_id, f"private:{phase_seq}:{user_id}",
                                  transform, round_id=round_id, phase_seq=phase_seq)
 
-    async def acknowledge_finding(self, *, chat_id, thread_id=None, round_id, finding_id, user_id):
+    async def acknowledge_finding(self, *, chat_id, thread_id=None, round_id, finding_id, user_id, now=None):
+        clock = time.time() if now is None else float(now)
         def transform(state):
             item = state.get("seer_findings", {}).get(finding_id)
             if not item or item["user_id"] != int(user_id):
                 raise ValueError("vampire_stale_phase")
             result = vampire._copy(state)
             result["seer_findings"][finding_id]["delivered"] = True
+            if (state.get('ruleset') == 'greywolf' and state.get('panel_ready') and
+                    state['phase'] != 'role_delivery' and not state['phase_ready'] and
+                    clock < float(state.get('panel_wait_until') or 0) and not _private_pending(result)):
+                activated = vampire.activate(result, now=clock)
+                result.update({key: activated[key] for key in ('phase_ready', 'deadline', 'panel_wait_until')})
             result["private_dirty"] = _private_pending(result)
             result["private_retry_at"] = 0 if result["private_dirty"] else None
             return result
@@ -343,7 +406,8 @@ class VampireService:
                 for person in state["players"]:
                     if not person["active"]:
                         continue
-                    won = (state["winner"] == "vampires") == (person["role"] == "vampire")
+                    won = (person['id'] in state.get('winner_ids', []) if state.get('ruleset') == 'greywolf'
+                           else (state["winner"] == "vampires") == (person["role"] == "vampire"))
                     score = 10 if won else 0
                     event = f"vampir_koylu:{chat_id}:{state['round_id']}:{person['id']}"
                     await self.leaderboard.record_score(user_id=person["id"], chat_id=int(chat_id),

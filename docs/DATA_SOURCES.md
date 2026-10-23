@@ -449,3 +449,7 @@ verified. Provider/model terms remain independently unreviewed. Secrets and
 generated URLs are not logged. See `HRMN_PROVIDER_2026-10-22.md`.
 
 Image model availability was tested per exact model without cross-provider fallback; see `HRMN_IMAGE_MODELS_2026-10-23.md`. Upstream model names do not independently establish licensing or permanent availability.
+
+## GreyWolfDev/Werewolf
+
+Operatörün isteğiyle `bac172a29f8b394ebbb4822c6f244d769fac21ac` commit’i GPL-3.0-only lisansıyla kaynak/kural uyarlaması olarak entegre edilir. Özgün Roles.cs, GameBalancing.cs, Werewolf.cs, IPlayer.cs, GameMode.cs ve İngilizce/TürkçeSFW XML dosyaları lisansla birlikte `src/vendor/greywolf` altında byte hashleriyle korunur. Runtime Windows/SQL Server/registry bağımlılıklarını veya ayrı Telegram polling sürecini çalıştırmaz. Normal/Kaos dengelemesi ve rol etkileşimleri saf Python durum motorundadır; eski Arel maçları eski motorlarında kalır. Kaynak bağımlılıkları ve doğrulama kapsamı `WEREWOLF_INTEGRATION_PLAN.md` içinde izlenir.

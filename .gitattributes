@@ -19,3 +19,8 @@ entrypoint.sh text eol=lf
 assets/playing_cards/LICENSE.txt -text
 assets/uno_maildian/LICENSE -text
 assets/uno_maildian/source.txt -text
+
+# Preserve GPL upstream snapshot bytes for provenance hashes.
+src/vendor/greywolf/*.cs -text whitespace=-trailing-space
+src/vendor/greywolf/*.xml -text whitespace=-trailing-space
+src/vendor/greywolf/LICENSE.md -text whitespace=-trailing-space
