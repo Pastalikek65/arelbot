@@ -31,7 +31,7 @@ Kaynaklar: [`main.py`](../main.py), [`orchestrator.py`](../src/orchestrator.py),
 | Web sayfası okuma | AI araç akışı | Herkese açık sayfadan sınırlı içerik okuma; URL, özel IP, yönlendirme ve boyut kontrolleri; bağımsız `/oku URL` komutu değildir |
 | Çeviri | `/cevir İngilizce Merhaba` veya mesaja yanıt | Hedef dile AI çevirisi; `oku` seçeneğiyle seslendirme kuyruğu |
 | Hikâye üretimi | `/hikaye` | İstek ayrıştırma ve AI üretimi |
-| Görsel üretimi | `/image açıklama` | Prism/Flare ve mevcut yedek adaptör üzerinden iş kuyruğu; `--model prism` / `--model flare` açık seçimdir ve başka modele düşmez; uygun hesap/anahtar ve worker gerekir |
+| Görsel üretimi | `/image açıklama` veya “Arel bana bir T-rex görseli oluştur” | Prism/Flare ve mevcut yedek adaptör üzerinden iş kuyruğu; `--model prism` / `--model flare` açık seçimdir ve başka modele düşmez; uygun hesap/anahtar ve worker gerekir |
 | Görsel analizi ve metin okuma | Fotoğraf açıklaması/yanıtı ve işlem butonları | Açık kullanıcı niyeti sonrası analiz, OCR veya sticker seçimi; görsel modeli ve worker gerekir |
 | Sesli mesaj işleme | Telegram sesli mesajı | Ses çözümleme ve yanıt; transkripsiyon modeli, ek dosya kuyruğu ve worker gerekir |
 | Metin seslendirme | `/oku metin`, `/seslendir metin`; mesaja yanıt | Sınırlı metni sese çevirip gönderme; TTS servisi ve worker gerekir |

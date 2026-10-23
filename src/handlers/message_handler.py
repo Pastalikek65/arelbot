@@ -45,6 +45,7 @@ from src.storage.game_scope import forum_thread_id
 from src.features.chat_feature_policy import is_chat_feature_enabled
 from src.ai.personality import PersonalityPolicy
 from src.ai.conversation_style import NORMAL_MODE, is_normal_mode
+from src.image_generation.intent import explicit_image_prompt
 from src.group_replies import GroupMessageRef, GroupReplyPlan, GroupReplyRouter, GroupTurnContext, ReplySegment
 from src.storage.group_reply_store import RecentMessageIndex, ReplyDeliveryLedger
 from src.services.group_reply_delivery import GroupReplyDeliveryService
@@ -1537,6 +1538,10 @@ class MessageHandler:
         image_path: str = None,
         turn_id: str | None = None,
     ):
+        image_prompt = explicit_image_prompt(text) if image_path is None else None
+        if image_prompt is not None:
+            await self.process_image_request(update, image_prompt, context)
+            return
         attempt = 0
         max_retries = 10
 

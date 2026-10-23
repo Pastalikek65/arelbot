@@ -60,7 +60,7 @@ Normal kişilik samimi ve esprili Türkçe kullanır; ciddi konularda üslubunu 
 
 **Prism ve Flare için açık dış sorun:** 23 Ekim’de iki model HRMN tarafından listelenmesine rağmen yerelden ve sunucudan `HTTP 500 / no provider responded` döndürdü. Model seçilmemiş istekler mevcut yedeğe geçer; açık model seçimi başka modelmiş gibi başarılı gösterilmez. [Tanı ve yeniden test](docs/HRMN_IMAGE_DIAGNOSIS_2026-10-23.md).
 
-Güncel yerel kontrollerde **3.235 test geçti, 19 atlandı**; önceki dağıtımda canlı sohbet ve yedek görsel üretimi API üzerinden doğrulandı. Bunlar tüm oyunların gerçek oyuncularla Telegram kabulü değildir. Güncel kapsam: [dağıtım kanıtı](docs/IMAGE_DEPLOYMENT_2026-10-23.md), [faz kaydı](docs/PHASE_STATUS.json).
+Güncel yerel kontrollerde **3.256 test geçti, 19 atlandı**; önceki dağıtımda canlı sohbet ve yedek görsel üretimi API üzerinden doğrulandı. Bunlar tüm oyunların gerçek oyuncularla Telegram kabulü değildir. Güncel kapsam: [dağıtım kanıtı](docs/IMAGE_DEPLOYMENT_2026-10-23.md), [faz kaydı](docs/PHASE_STATUS.json).
 
 ## Kurulum
 

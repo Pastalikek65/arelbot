@@ -76,6 +76,9 @@ def ensure_test_env_file() -> Path:
 def run_check(name: str, command: list[str], *, timeout: int = 300) -> CheckResult:
     started = time.perf_counter()
     environment = os.environ.copy()
+    # Compose reads its explicit env files itself. Python checks must never
+    # import a workstation/CI .env back into a deliberately isolated fixture.
+    environment["PYTHON_DOTENV_DISABLED"] = "1"
     environment.setdefault("PYTHONIOENCODING", "utf-8")
     environment.setdefault("PYTHONUTF8", "1")
     try:
@@ -299,14 +302,13 @@ def main() -> int:
     args = parser.parse_args()
     if args.requests < 1 or args.concurrency < 1:
         parser.error("--requests and --concurrency must be positive")
-    if args.docker:
-        # The Compose test profile needs its synthetic environment file
-        # before the first Compose command runs.
-        try:
-            ensure_test_env_file()
-        except OSError as exc:
-            print(f"the synthetic test environment file is unavailable ({type(exc).__name__})")
-            return 1
+    # Offline pytest also resolves the Compose test profile when Docker is
+    # installed, so it needs this file before any checks start.
+    try:
+        ensure_test_env_file()
+    except OSError as exc:
+        print(f"the synthetic test environment file is unavailable ({type(exc).__name__})")
+        return 1
 
     planned = commands(include_docker=args.docker, requests=args.requests, concurrency=args.concurrency)
     results = [

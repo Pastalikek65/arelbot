@@ -236,3 +236,27 @@ def test_release_gate_report_is_atomic_and_rejects_symlink_target(tmp_path):
         pytest.skip("symlink capability unavailable")
     with pytest.raises(OSError, match="symlink"):
         write_report(link, {"ok": True})
+
+
+def test_gate_subprocess_cannot_reload_live_dotenv(monkeypatch):
+    monkeypatch.setenv("PYTHON_DOTENV_DISABLED", "0")
+    result = run_check("fixture", [sys.executable, "-c",
+        "import os; assert os.environ['PYTHON_DOTENV_DISABLED'] == '1'"])
+    assert result.ok
+
+
+def test_offline_gate_prepares_compose_test_env_before_checks(tmp_path, monkeypatch):
+    from scripts import release_gate
+    monkeypatch.setattr(sys, "argv", ["release_gate.py"])
+    monkeypatch.setattr(release_gate, "PROJECT_ROOT", tmp_path)
+    example = tmp_path / ".env.test.example"
+    target = tmp_path / ".env.test"
+    example.write_text("APP_ENV=test\n", encoding="utf-8")
+    monkeypatch.setattr(release_gate, "TEST_ENV_EXAMPLE", example)
+    monkeypatch.setattr(release_gate, "TEST_ENV_FILE", target)
+    monkeypatch.setattr(release_gate, "commands", lambda **kwargs: [("fixture", ["check"])])
+    def execute(name, command, **kwargs):
+        assert target.read_bytes() == example.read_bytes()
+        return release_gate.CheckResult(name, True, 0, 1.0, "ok")
+    monkeypatch.setattr(release_gate, "run_check", execute)
+    assert release_gate.main() == 0
