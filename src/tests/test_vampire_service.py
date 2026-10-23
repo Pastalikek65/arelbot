@@ -57,12 +57,17 @@ async def test_two_instances_open_and_join_once():
 
 
 @pytest.mark.asyncio
-async def test_invite_is_user_bound_hashed_and_role_ack_needs_delivery():
+async def test_invite_is_user_bound_hashed_and_role_ack_needs_delivery(monkeypatch):
+    # URL-safe invite tokens may contain underscores; the first four
+    # separators belong to the routing prefix, not the random token.
+    token = "Abc_defGhi_jklMN"
+    monkeypatch.setattr("src.services.vampire_service.secrets.token_urlsafe", lambda _: token)
     service = VampireService(Repository())
     _, state = await service.open(chat_id=-100, user_id=1, user_name="Bir")
     payload = await service.mint_invite(chat_id=-100, user_id=1, round_id=state["round_id"])
     assert len(payload) <= 64
-    assert payload.rsplit("_", 1)[-1] not in str(await service.current(-100))
+    assert payload.split("_", 4)[4] == token
+    assert token not in str(await service.current(-100))
     with pytest.raises(ValueError, match="invalid_invite"):
         await service.accept_invite(payload, user_id=2)
     await service.accept_invite(payload, user_id=1)
