@@ -72,3 +72,19 @@ def test_uno_source_stays_available_outside_the_game_panel():
     buttons = [button for row in uno_keyboard(game).inline_keyboard for button in row]
     assert all("Kaynak kodu" not in button.text for button in buttons)
     assert game["source_url"].endswith("uno_source")
+
+
+def test_rules_only_in_lobby_and_no_navigation_or_close_controls():
+    game = state()
+    for status in ("playing", "lobby", "finished"):
+        game["status"] = status
+        labels = [button.text for row in uno_keyboard(game).inline_keyboard for button in row]
+        assert "🎮 Oyun salonu" not in labels
+        assert not any("Masayı kapat" in label or "Maçı bitir" in label or
+                       label == "Oyunu bitir" for label in labels)
+        assert ("📖 Nasıl oynanır?" in labels) == (status == "lobby")
+    game["status"] = "playing"
+    game.pop("inline_query")
+    labels = [button.text for row in uno_keyboard(game).inline_keyboard for button in row]
+    assert labels[0] == "🃏 Kartları gör"
+    assert "📖 Nasıl oynanır?" not in labels

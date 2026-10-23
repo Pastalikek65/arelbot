@@ -2219,7 +2219,8 @@ class CommandHandler:
         username = getattr(bot, "username", None)
         if isinstance(username, str) and username:
             self.uno_service.bot_username = username
-        if (getattr(context, "args", None) or [""])[0].casefold() in {"kaynak", "source"}:
+        action = (getattr(context, "args", None) or [""])[0].casefold()
+        if action in {"kaynak", "source"}:
             if getattr(chat, "type", None) == "private":
                 from src.handlers.uno_source import deliver_source
                 await deliver_source(update, context)
@@ -2235,6 +2236,15 @@ class CommandHandler:
             state = await self.uno_service.current(int(chat.id))
             if state and state.get("status") in {"lobby", "playing", "finished"} and state.get("thread_id") != getattr(message, "message_thread_id", None):
                 await message.reply_text("UNO masası başka bir konuda açık. Oyunun kurulduğu konuda /uno yazarak masaya dönebilirsin.")
+                return
+            if action in {"bitir", "kapat", "stop"}:
+                if not state or state.get("status") not in {"lobby", "playing", "finished"}:
+                    await message.reply_text("Açık UNO masası yok.")
+                    return
+                moderator = (int(state.get("owner_id", 0)) != int(user.id)
+                             and await self._is_group_admin(update, context))
+                await self.uno_service.cancel(chat_id=int(chat.id), user_id=int(user.id), moderator=moderator)
+                await message.reply_text("🛑 UNO masası kapatıldı.")
                 return
             if state and (state.get("status") in {"lobby", "playing"} or state.get("status") == "finished" and not state.get("match_complete")):
                 prompt = await message.reply_text(
@@ -2264,6 +2274,7 @@ class CommandHandler:
             messages = {
                 "UNO_ACTIVE": "bu grupta zaten açık bir UNO masası var",
                 "UNO_STORAGE_UNAVAILABLE": "UNO masası kaydedilemedi; veri deposu hazır değil",
+                "UNO_OWNER_ONLY": "UNO masasını kurucu veya grup yöneticisi kapatabilir.",
             }
             await message.reply_text(messages.get(exc.code, "UNO masası açılamadı; biraz sonra tekrar dene."))
 

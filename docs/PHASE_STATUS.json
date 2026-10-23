@@ -382,12 +382,19 @@
     "release_gate": "local 3468 passed/19 skipped; isolated server 3472 passed/6 skipped; GitHub offline and Docker gates passed"
   },
   "uno_compact_turn_20261023": {
-    "status": "deployed_automated_verified_live_turn_pending",
+    "status": "deployed_automated_and_live_turn_verified",
     "scope": "short UNO turn text and first-row Kartları gör control for inline and fallback tables",
     "local_tests": "3468 passed/19 skipped with provider env isolated",
     "server_tests": "3472 passed/6 skipped",
     "server_deployment": "2026.10.23-uno-compact-1; bot and worker healthy; runtime source d313848b02f68863e8f8db1e5bd7e2a2f8e12329",
-    "telegram_live": "UNO lobi opened and closed in test group; active turn NOT_RUN - second player unavailable",
+    "telegram_live": "Two-player match in test group: Denizx and Pastalikek turns, inline hand gallery, playable card selection and compact panel handoff verified",
     "github_publication": "main 99f34ef9902c4f434e21628ecab71bf99b66ecf9; CI offline and Docker gates passed: https://github.com/Pastalikek65/arelbot/actions/runs/39988256123"
+  },
+  "uno_minimal_controls_20261023": {
+    "status": "local_targeted_tests_verified_deployment_pending",
+    "scope": "hide group navigation and stop buttons; show rules only in lobby; retain owner/admin close via /uno bitir; explain drawn-card-only play after a draw",
+    "telegram_live": "NOT_RUN for this control layout",
+    "server_deployment": "PENDING",
+    "github_publication": "PENDING"
   }
 }

@@ -38,9 +38,9 @@ async def _handle_uno_callback(handler, update, query, context, data):
             return
         revision, action = int(parts[2]), parts[3]
         if action == "rules":
-            text = ("Kartları gör: renkli kartı seç. +2 birikir; +4 blöfüne itiraz edilebilir. Son kart joker/+4 olamaz. Tek kartta UNO de. 500 puan maçı kazandırır."
+            text = ("Kartları gör: renkli kartı seç. +2 birikir; +4 blöfüne itiraz edilebilir. Son kart joker/+4 olamaz. Tek kartta UNO de. /uno bitir ile masayı kapat."
                     if state.get("engine") == "maildian" else
-                    "Aynı renk veya değeri oyna. Kartları gör düğmesi elini yalnız sana gösterir. Tek kartta UNO de. +2/+4 cezaları uygulanır; üst üste eklenmez. 500 puana ulaşan maçı kazanır.")
+                    "Aynı renk veya değeri oyna. Kartları gör düğmesi elini yalnız sana gösterir. Tek kartta UNO de. +2/+4 cezaları uygulanır. /uno bitir ile masayı kapat.")
             await answer(query, text, show_alert=True)
             return
         if action == "hand" and len(parts) == 5:

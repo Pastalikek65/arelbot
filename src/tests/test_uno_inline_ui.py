@@ -107,6 +107,23 @@ def test_drawn_card_color_choice_and_bluff_options_follow_real_state():
     assert "bluff:-" in ids and "draw:-" in ids
 
 
+def test_blue_cards_after_draw_explain_why_only_new_card_is_unlocked():
+    state = _state()
+    state["discard"] = [{"id": "top-blue", "color": "blue", "kind": "8"}]
+    state["current_color"] = "blue"
+    state["players"][0]["hand"].append(
+        {"id": "new-blue", "color": "blue", "kind": "5"})
+    before = {item.id for item in build_inline_results(state, actor_id=1,
+              file_ids=_file_ids(), encode_action=_encode)[0]}
+    assert {"play:mine-blue", "play:new-blue"} <= before
+
+    state["players"][0]["drawn_card_id"] = "new-blue"
+    after = {item.id for item in build_inline_results(state, actor_id=1,
+             file_ids=_file_ids(), encode_action=_encode)[0]}
+    assert "noop:mine-blue" in after and "play:new-blue" in after
+    assert "Yalnız yeni çekilen kart" in render_uno_text(state)
+
+
 def test_game_info_shows_chosen_color_after_wild():
     state = _state()
     state["discard"] = [{"id": "wild", "color": "black", "kind": "wild"}]

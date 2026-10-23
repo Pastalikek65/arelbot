@@ -47,7 +47,7 @@ def render_uno_text(state: dict[str, Any], *, user_id: int | None = None, note: 
         if state.get("awaiting_color"):
             lines.append("🎨 Renk seç")
         elif (current or {}).get("drawn_card_id"):
-            lines.append("🃏 Çekilen kartı oyna veya pas geç")
+            lines.append("🔒 Yalnız yeni çekilen kartı oyna veya pas geç")
         elif (current or {}).get("draw_attempted"):
             lines.append("⏭️ Pas geç")
         pending = int(state.get("pending_draw", 0) or 0)
@@ -101,7 +101,7 @@ def render_uno_hand_alert(state: dict[str, Any], *, user_id: int, page: int = 0)
     if state.get("awaiting_color") and current_turn:
         lines.append("Önce renk seç.")
     elif drawn_id and current_turn:
-        lines.append("Yeni çekilen kartı oyna veya pas geç.")
+        lines.append("Yalnız yeni çekilen kartı oyna veya pas geç.")
     elif player.get("draw_attempted") and current_turn:
         lines.append("Kart çekişi tamamlandı; pas geç.")
     elif current_turn:
@@ -131,7 +131,6 @@ def uno_keyboard(state: dict[str, Any], *, user_id: int | None = None, miniapp_u
     if status == "lobby":
         rows.append([InlineKeyboardButton("➕ Katıl", callback_data=f"{prefix}:join")])
         rows.append([InlineKeyboardButton("▶️ Maçı başlat", callback_data=f"{prefix}:start")])
-        rows.append([InlineKeyboardButton("Oyunu bitir", callback_data=f"{prefix}:stop")])
     elif status == "playing" and state.get("inline_query"):
         rows.append([InlineKeyboardButton("🃏 Kartları gör", switch_inline_query_current_chat=state["inline_query"])])
         rows.append([InlineKeyboardButton("📣 UNO de", callback_data=f"{prefix}:call")])
@@ -139,7 +138,6 @@ def uno_keyboard(state: dict[str, Any], *, user_id: int | None = None, miniapp_u
             rows.append([InlineKeyboardButton(
                 f"⚠️ {str(vulnerable.get('name') or 'oyuncu')[:18]} UNO demedi",
                 callback_data=f"{prefix}:challenge:{int(vulnerable['user_id'])}")])
-        rows.append([InlineKeyboardButton("🛑 Masayı kapat", callback_data=f"{prefix}:stop")])
     elif status == "playing":
         current_id = int(state.get("current_player_id", 0) or 0)
         rows.append([InlineKeyboardButton("🃏 Kartları gör", callback_data=f"{prefix}:hand:0")])
@@ -185,19 +183,17 @@ def uno_keyboard(state: dict[str, Any], *, user_id: int | None = None, miniapp_u
             rows.append([InlineKeyboardButton(
                 f"⚠️ {str(vulnerable.get('name') or 'oyuncu')[:18]} UNO demedi",
                 callback_data=f"{prefix}:challenge:{int(vulnerable['user_id'])}")])
-        rows.append([InlineKeyboardButton("Oyunu bitir", callback_data=f"{prefix}:stop")])
     elif status == "finished" and not state.get("match_complete"):
         rows.append([InlineKeyboardButton("▶️ Sonraki tur", callback_data=f"{prefix}:next")])
-        rows.append([InlineKeyboardButton("🛑 Maçı bitir", callback_data=f"{prefix}:stop")])
     else:
         rows.append([InlineKeyboardButton("🃏 Yeni UNO", callback_data="game_start_uno")])
-    rows.append([InlineKeyboardButton("📖 Nasıl oynanır?", callback_data=f"{prefix}:rules")])
+    if status == "lobby":
+        rows.append([InlineKeyboardButton("📖 Nasıl oynanır?", callback_data=f"{prefix}:rules")])
     if miniapp_url:
         if chat_type == "private":
             rows.append([InlineKeyboardButton("🌐 Mini App'te aç", web_app=WebAppInfo(url=str(miniapp_url)))])
         else:
             rows.append([InlineKeyboardButton("🌐 Mini App'te aç", url=str(miniapp_url))])
-    rows.append([InlineKeyboardButton("🎮 Oyun salonu", callback_data="menu_games")])
     return InlineKeyboardMarkup(rows)
 
 

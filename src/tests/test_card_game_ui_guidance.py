@@ -34,7 +34,7 @@ def test_uno_drawn_card_is_marked_only_in_private_alert():
     alert = render_uno_hand_alert(state, user_id=1)
     assert "1. Kırmızı 7 ✓" not in alert
     assert "2. Kırmızı 8 ✓ (yeni çekilen)" in alert
-    assert "Çekilen kartı oyna veya pas geç" in render_uno_text(state)
+    assert "Yalnız yeni çekilen kartı oyna veya pas geç" in render_uno_text(state)
 
 
 def test_uno_public_positions_do_not_reveal_matching_color():

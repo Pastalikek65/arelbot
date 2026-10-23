@@ -320,6 +320,47 @@ async def test_opening_uno_in_another_forum_topic_does_not_replace_its_panel():
 
 
 @pytest.mark.asyncio
+async def test_owner_closes_active_uno_with_bitir_command():
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock
+    from src.handlers.command_handler import CommandHandler
+
+    db = MemoryGameDb()
+    service = UnoService(db, ruleset="legacy")
+    await service.start(chat_id=-100, owner_id=1, owner_name="Bir")
+    message = SimpleNamespace(message_thread_id=None, reply_text=AsyncMock())
+    update = SimpleNamespace(effective_chat=SimpleNamespace(id=-100, type="supergroup"),
+                             effective_user=SimpleNamespace(id=1, first_name="Bir"),
+                             effective_message=message, message=message)
+    handler = CommandHandler(SimpleNamespace(), SimpleNamespace(), None, None,
+                             data_port=db, uno_service=service)
+    await handler.handle_uno_command(update, SimpleNamespace(args=["bitir"]))
+    assert await service.current(-100) is None
+    message.reply_text.assert_awaited_once_with("🛑 UNO masası kapatıldı.")
+
+
+@pytest.mark.asyncio
+async def test_other_player_cannot_close_uno_with_bitir_command():
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock
+    from src.handlers.command_handler import CommandHandler
+
+    db = MemoryGameDb()
+    service = UnoService(db, ruleset="legacy")
+    await service.start(chat_id=-100, owner_id=1, owner_name="Bir")
+    message = SimpleNamespace(message_thread_id=None, reply_text=AsyncMock())
+    update = SimpleNamespace(effective_chat=SimpleNamespace(id=-100, type="supergroup"),
+                             effective_user=SimpleNamespace(id=2, first_name="İki"),
+                             effective_message=message, message=message)
+    handler = CommandHandler(SimpleNamespace(), SimpleNamespace(), None, None,
+                             data_port=db, uno_service=service)
+    handler._is_group_admin = AsyncMock(return_value=False)
+    await handler.handle_uno_command(update, SimpleNamespace(args=["bitir"]))
+    assert (await service.current(-100))["status"] == "lobby"
+    message.reply_text.assert_awaited_once_with("UNO masasını kurucu veya grup yöneticisi kapatabilir.")
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("delivery_error", [None, "bad_request", "timeout"])
 async def test_uno_card_page_callback_changes_only_markup_and_rejects_stale_revision(delivery_error):
     from types import SimpleNamespace
