@@ -6,7 +6,7 @@ from src.ai.conversation_style import (
     style_mode_label,
 )
 from src.ai.personality import PersonalityPolicy
-from src.ai.roast_repertoire import ROAST_PHRASES, roast_repertoire_instruction
+from src.ai.roast_repertoire import ROAST_PHRASES, roast_needs_repair, roast_repertoire_instruction
 
 
 def test_normal_chat_style_is_compact_and_conversational():
@@ -54,3 +54,12 @@ def test_roast_repertoire_is_diverse_and_varies_without_leaking_into_normal():
         PersonalityPolicy().for_mode("roast"), "roast", "yine son güne bıraktım", 0)
     assert "ROAST REPERTUVARI" not in chat_style_instruction(
         PersonalityPolicy().for_mode("normal"), "normal", "yine son güne bıraktım", 0)
+
+
+def test_roast_quality_gate_catches_tone_capitulation_without_rejecting_mode_hint():
+    objection = "Böyle konuşma lan, yine son güne bıraktım"
+    assert roast_needs_repair(objection, "Anladım, daha sakin bir şekilde yanıtlayayım. Plan yap.")
+    assert roast_needs_repair(objection, "İşi parçalara bölerek başla.")
+    assert not roast_needs_repair(objection,
+        "Roast açık; değiştirmek istersen /persona normal seç. Bu boktan erteleme artık yeter.")
+    assert not roast_needs_repair("bugün ne yapayım", "Önce en kritik işi seç.")

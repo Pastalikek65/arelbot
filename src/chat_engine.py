@@ -70,6 +70,7 @@ from src.ai.personality import (
 )
 from src.ai.conversation_style import chat_style_instruction, normalize_normal_response
 from src.ai.response_language import LANGUAGE_FAILURE_RESPONSE, has_unexpected_script
+from src.ai.roast_repertoire import roast_needs_repair
 from src.ai.provider_base import AudioInput, CompletionRequest, VisionRequest
 from src.ai.embedding_service import EmbeddingService
 from src.ai.openai_compatible import OpenAICompatibleProvider
@@ -1281,7 +1282,21 @@ class ChatEngine:
             return None
         message = response.get("message") if isinstance(response, dict) else None
         content = message.get("content") if isinstance(message, dict) else None
-        return str(content).strip() if content else None
+        value = str(content).strip() if content else None
+        if value and selected_policy.sarcasm_level >= 3:
+            try:
+                rows = json.loads(value).get("replies", [])
+            except (ValueError, TypeError, AttributeError):
+                rows = []
+            if not isinstance(rows, list):
+                rows = []
+            if any(isinstance(row, dict) and
+                   str(row.get("target_message_id")) == str(turn_context.current_message.message_id) and
+                   roast_needs_repair(turn_context.current_message.text, str(row.get("text") or ""))
+                   for row in rows):
+                logger.warning("Group reply quality code=roast_capitulation")
+                return None
+        return value
 
     @staticmethod
     def _should_attach_tools(
@@ -1486,6 +1501,48 @@ class ChatEngine:
             f"Source: {source}\nSource URL: {source_url}\nFetched at: {fetched_at}"
         )
 
+    async def _repair_roast_reply(
+        self, text: str, user_text: str, instruction: str,
+    ) -> str:
+        """Give a softened Roast turn one bounded rewrite on existing providers."""
+        if ("Bu tur hassas" in instruction or not roast_needs_repair(user_text, text)):
+            return text
+        router = getattr(self, "ai_router", None)
+        names = [name for name in ("evren", "cloudflare", "nvidia")
+                 if name in getattr(router, "providers", {})]
+        if not names:
+            return text
+        metrics = getattr(router, "metrics", None)
+        if metrics is not None:
+            metrics.inc("ai_roast_tone_repairs_total")
+        logger.warning("AI reply quality code=roast_capitulation")
+        request = CompletionRequest(
+            messages=[
+                {"role": "system", "content": instruction + "\nYANIT ONARIMI: Önceki yanıt seçili Roast "
+                 "modundan yanlışlıkla Normal'e döndü. Bilgisel içeriği değiştirmeden cevabı kısa, yaratıcı "
+                 "ve bağlama uygun küfürlü taşlamayla yeniden yaz. 'Daha sakin konuşayım' deme. "
+                 "Gerçek kriz, tehdit veya hedefli taciz üretme. Yalnız son yanıtı yaz."},
+                {"role": "user", "content": json.dumps(
+                    {"mesaj": user_text, "onarilacak_yanit": text}, ensure_ascii=False)},
+            ],
+            task="chat", max_tokens=getattr(Config, "AI_TOOL_MAX_TOKENS", 384),
+            reasoning_effort="none", thinking_enabled=False,
+        )
+        try:
+            result = await asyncio.wait_for(
+                router.complete(request, provider_names=names), timeout=18.0)
+        except Exception as exc:
+            logger.warning("AI reply quality code=roast_repair_failed type=%s", type(exc).__name__)
+            return text
+        candidate = str(result.content or "").strip()
+        if (not candidate or roast_needs_repair(user_text, candidate) or
+                has_unexpected_script(candidate, user_text, text)):
+            logger.warning("AI reply quality code=roast_repair_invalid")
+            return text
+        if metrics is not None:
+            metrics.inc("ai_roast_tone_repair_success_total")
+        return candidate
+
     async def _ensure_reply_language(
         self, text: str, user_text: str, instruction: str, model: str,
         provider: str | None, source_text: str = "",
@@ -1681,6 +1738,9 @@ class ChatEngine:
                             provider_result.get("provider") or getattr(service, "value", None),
                             context or "",
                         )
+                        if not normal_mode_active:
+                            final_text = await self._repair_roast_reply(
+                                final_text, message_text, dynamic_sys_instruction)
                         if normal_mode_active:
                             final_text = normalize_normal_response(final_text)
                         final_text = enforce_arel_identity(message_text, final_text)
@@ -1757,6 +1817,9 @@ class ChatEngine:
                                     if item.get("role") == "tool"
                                 ),
                             )
+                            if not normal_mode_active:
+                                final_text = await self._repair_roast_reply(
+                                    final_text, message_text, dynamic_sys_instruction)
                             if normal_mode_active:
                                 final_text = normalize_normal_response(final_text)
                             final_text = enforce_arel_identity(message_text, final_text)

@@ -9,3 +9,5 @@ Repertuvar 30 özgün küfürlü ifade ve sekiz atasözü uyarlaması içerir. H
 Önceki hassas içerik algısı kelime parçası aradığı için “kaza” hecesini “kazanmak” içinde de bulabiliyordu. Eşleme tam sözcüğe indirildi. Mod talimatı ve kalıcılık regresyon testleriyle denetlenir; gerçek sağlayıcı yanıtının tonu ayrıca canlı örneklerle değerlendirilir.
 
 Canlı örnekte Cloudflare ilk taşlamayı üretse de “böyle konuşma” turunda Normal üsluba döndü; NVIDIA da aynı turda yumuşadı. Evren aynı girdide Roast tonunu korudu. Bu nedenle yalnız açıkça seçilmiş Roast turunda mevcut OpenAI → HRMN önceliğinin ardından Evren, Cloudflare'den önce denenir. Sağlayıcılar, hesap anahtarları, CLI modeli ve Normal sohbet rotası değiştirilmez.
+
+Evren bazen ilk isteğin kalan süresine sığmayabilir. Seçili Roast turunda model açıkça “daha sakin konuşayım” diye geri çekilirse veya üslup itirazı sonrası taşlamayı tamamen bırakırsa bot araç işlemini yeniden çalıştırmadan yanıtı bir kez, en fazla 18 saniye içinde mevcut Evren/diğer yedeklerle yeniden yazdırır. Gerçek kriz turunda bu onarım uygulanmaz. Grup planındaki aynı yumuşama, mevcut tek mesajlık Roast yanıt yoluna bırakılır.

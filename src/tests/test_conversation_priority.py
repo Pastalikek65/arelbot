@@ -47,6 +47,28 @@ async def test_roast_response_uses_scoped_fallback_order():
 
 
 @pytest.mark.asyncio
+async def test_roast_capitulation_is_repaired_by_existing_turkish_provider_once():
+    router = SimpleNamespace(
+        routes={'chat':['openai','hrmn','evren','cloudflare','nvidia']},
+        providers={'evren':object(),'cloudflare':object()},
+        complete=AsyncMock(return_value=CompletionResponse(
+            'Bu sikindirik erteleme planı yine boka battı.', 'evren', 'fixture')),
+    )
+    app = engine(router)
+    app._request_with_failover = AsyncMock(return_value={
+        'provider':'cloudflare', 'service':None, 'key':None, 'url':None,
+        'model':'fixture', 'timeout':1,
+        'message':{'content':'Anladım, daha sakin bir şekilde yanıtlayayım. İşleri parçalara böl.'},
+    })
+    app._ensure_reply_language = AsyncMock(side_effect=lambda text,*_args:text)
+    reply = await app.get_response(42,'Böyle konuşma, yine son güne bıraktım',
+                                   persona_mode='roast',persist_conversation=False)
+    assert 'sikindirik' in reply
+    router.complete.assert_awaited_once()
+    assert router.complete.await_args.kwargs['provider_names'][0] == 'evren'
+
+
+@pytest.mark.asyncio
 async def test_tool_follow_up_uses_other_providers_when_first_completion_provider_times_out():
     calls = []
 

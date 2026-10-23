@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import random
+import re
 
 ROAST_PHRASES = (
     "sikindirik plan", "sikik bahane", "siktir et", "boktan fikir",
@@ -26,6 +27,28 @@ ROAST_SAYINGS = (
     "eğri oturup doğru konuşalım, bu hesap bok gibi",
     "sakla samanı gelir zamanı, sakla bahaneyi gelir sıçış anı",
 )
+
+_STYLE_OBJECTION = re.compile(
+    r"\b(?:böyle\s+konuşma|küfür\s+etme|normal\s+konuş|daha\s+sakin\s+konuş|roast\s+yapma)\b",
+    re.IGNORECASE,
+)
+_CAPITULATION = re.compile(
+    r"^\s*(?:anladım|tamam|haklısın|özür\s+dilerim|kusura\s+bakma)[,!. ]*"
+    r"(?:daha\s+sakin|normal\s+konuş|küfür\s+etmeyeceğim|böyle\s+konuşmayacağım|"
+    r"saygılı\s+bir\s+dille)",
+    re.IGNORECASE,
+)
+_PROFANITY = re.compile(r"\b(?:sik\w*|bok\w*|göt\w*|sıç\w*|yarra\w*|amk)\b", re.IGNORECASE)
+
+
+def roast_needs_repair(user_text: str, response: str) -> bool:
+    """Detect an explicit surrender of the selected Roast tone, not all mild turns."""
+
+    value = str(response or "").strip()
+    if not value:
+        return False
+    return bool(_CAPITULATION.search(value) or
+                _STYLE_OBJECTION.search(str(user_text or "")) and not _PROFANITY.search(value))
 
 
 def roast_repertoire_instruction(user_text: str, recent_turns: int = 0) -> str:

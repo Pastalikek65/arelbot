@@ -1,14 +1,13 @@
-from datetime import datetime, timezone
 import json
-from types import SimpleNamespace
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock
 
 import pytest
 
-from src.chat_engine import ChatEngine
-from src.ai.router import AIProviderRouter
-from src.ai.personality import PersonalityPolicy
 from src.ai.conversation_style import chat_style_instruction
+from src.ai.personality import PersonalityPolicy
+from src.ai.router import AIProviderRouter
+from src.chat_engine import ChatEngine
 from src.group_replies import GroupMessageRef, GroupTurnContext
 
 
@@ -20,7 +19,7 @@ def ref(message_id: int, user_id: int, text: str) -> GroupMessageRef:
         user_id=user_id,
         display_name=f"U{user_id}",
         text=text,
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
     )
 
 
@@ -78,3 +77,13 @@ async def test_group_roast_plan_uses_scoped_fallback_order():
                                       persona_mode='roast')
     assert engine._request_with_failover.await_args.kwargs['provider_names'] == [
         'openai', 'hrmn', 'evren', 'cloudflare', 'nvidia']
+
+
+@pytest.mark.asyncio
+async def test_group_roast_plan_rejects_a_softened_reply_for_private_fallback():
+    engine = ChatEngine.__new__(ChatEngine)
+    engine._request_with_failover = AsyncMock(return_value={
+        'message': {'content': '{"replies":[{"target_message_id":202,"text":"Anladım, daha sakin konuşayım."}]}'}})
+    current = ref(202, 2, 'böyle konuşma, yine son güne bıraktım')
+    assert await engine.get_group_reply_plan(
+        GroupTurnContext(current, (current,), 'mention'), persona_mode='roast') is None
