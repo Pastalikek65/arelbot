@@ -38,7 +38,9 @@ async def test_new_match_inline_choice_uses_source_engine_and_old_match_remains_
     controller = UnoInlineService(service, secret=b"x" * 32, file_ids={})
     assert controller.create_query(state) == state["inline_query"]
     result_id = controller._encode_choice(state, actor, "draw", None)
-    bot = SimpleNamespace(edit_message_text=AsyncMock())
+    bot = SimpleNamespace(edit_message_text=AsyncMock(),
+                          send_message=AsyncMock(return_value=SimpleNamespace(message_id=8)),
+                          delete_message=AsyncMock())
     await service.set_prompt_message(chat_id=-100, message_id=7)
     choice = SimpleNamespace(result_id=result_id, from_user=SimpleNamespace(id=actor), query=state["inline_query"])
     await controller.chosen_result(SimpleNamespace(chosen_inline_result=choice), SimpleNamespace(bot=bot))
@@ -47,7 +49,14 @@ async def test_new_match_inline_choice_uses_source_engine_and_old_match_remains_
     assert uno_upstream.validate_state(changed)
     await controller.chosen_result(SimpleNamespace(chosen_inline_result=choice), SimpleNamespace(bot=bot))
     assert (await service.current(-100))["revision"] == changed["revision"]
-    assert bot.edit_message_text.await_count == 1
+    if changed["status"] == "playing" and changed["current_player_id"] != actor:
+        assert bot.send_message.await_count == 1
+        assert bot.edit_message_text.await_count == 0
+        assert bot.delete_message.await_count == 1
+        assert changed["prompt_message_id"] == 8
+    else:
+        assert bot.edit_message_text.await_count == 1
+        assert bot.send_message.await_count == 0
 
     legacy_db = Database()
     legacy = UnoService(legacy_db, ruleset="legacy")
