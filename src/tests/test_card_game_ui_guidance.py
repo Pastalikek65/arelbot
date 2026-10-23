@@ -34,7 +34,7 @@ def test_uno_drawn_card_is_marked_only_in_private_alert():
     alert = render_uno_hand_alert(state, user_id=1)
     assert "1. Kırmızı 7 ✓" not in alert
     assert "2. Kırmızı 8 ✓ (yeni çekilen)" in alert
-    assert "yeni çektiği kartı" in render_uno_text(state)
+    assert "Çekilen kartı oyna veya pas geç" in render_uno_text(state)
 
 
 def test_uno_public_positions_do_not_reveal_matching_color():
@@ -52,8 +52,10 @@ def test_uno_color_choice_blocks_play_and_explains_pending_draw():
     state.update(awaiting_color=True, pending_draw=4, current_color=None,
                  discard=[{"id": "wild", "color": "black", "kind": "draw4"}])
     text = render_uno_text(state)
-    assert "renk seçmeli" in text
-    assert "+4 kart çekecek" in text
+    assert "Renk seç" in text
+    assert "+4 ceza" in text
+    assert "itiraz et" not in text
+    assert "Renk: <b>—</b>" not in text
     assert "🃏 #1" not in _labels(state)
     assert "Kırmızı" in _labels(state)
 

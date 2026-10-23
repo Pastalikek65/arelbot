@@ -380,5 +380,13 @@
     "github_publication": "main 54f66fa1a1a9471ef59b45908b151de53c261423; CI offline and Docker gates passed: https://github.com/Pastalikek65/arelbot/actions/runs/39977404949",
     "server_deployment": "2026.10.23-games-48-1; bot and worker healthy; runtime source 516566d19780e42405d92085755cf7da7558e89d",
     "release_gate": "local 3468 passed/19 skipped; isolated server 3472 passed/6 skipped; GitHub offline and Docker gates passed"
+  },
+  "uno_compact_turn_20261023": {
+    "status": "local_automated_verified_deployment_pending",
+    "scope": "short UNO turn text and first-row Kartları gör control for inline and fallback tables",
+    "local_tests": "3468 passed/19 skipped with provider env isolated",
+    "server_deployment": "PENDING",
+    "telegram_live": "NOT_RUN",
+    "github_publication": "PENDING"
   }
 }

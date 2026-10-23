@@ -54,7 +54,7 @@ Oyun salonu: `/oyun`. Oyuna göre lobi, zorluk ve kategori seçilir. Gizli roll�
 
 | Oyun | Komut | Oyuncu | Oynanış |
 |---|---|---|---|
-| UNO | `/uno` | 2–8 | 108 kart, inline sticker el seçimi, renk seçme, ceza kartları ve UNO çağrısı. |
+| UNO | `/uno` | 2–8 | 108 kart, kısa sıra paneli, ilk sırada Kartları gör düğmesi, inline sticker el seçimi, renk seçme, ceza kartları ve UNO çağrısı. |
 | Batak | `/batak` | 2–4 | İhale, koz, el takibi ve oyuncuya özel inline kart seçimi. |
 | Blackjack | `/blackjack` | 1 | Çek, dur, ikiye katla ve ilk hamlede yarım iadeli pes; sanal bahis. |
 | Pişti | `/pisti` | 2–4 | Özel kart eli, yerdeki kartlar, pişti ve el sonu puanları. |

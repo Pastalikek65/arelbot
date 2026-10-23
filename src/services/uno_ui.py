@@ -34,42 +34,38 @@ def card_label(card: dict[str, Any]) -> str:
 def render_uno_text(state: dict[str, Any], *, user_id: int | None = None, note: str | None = None) -> str:
     status = str(state.get("status") or "lobby")
     players = state.get("players") or []
+    if status == "playing":
+        current = next((p for p in players if int(p.get("user_id", 0)) == int(state.get("current_player_id", 0) or 0)), None)
+        top = state.get("discard", [])[-1] if state.get("discard") else {}
+        current_color = str(state.get("current_color") or top.get("color"))
+        lines = [f"🃏 <b>UNO</b> · Tur {max(1, int(state.get('round_number', 1)))}",
+                 f"▶️ Sıra: <b>{_display_name(current)}</b> · {int(state.get('turn_seconds', 60))} sn"]
+        table = f"Masada: <b>{escape(card_label(top))}</b>"
+        if not state.get("awaiting_color") and current_color != str(top.get("color")):
+            table += f" · Renk: <b>{escape(COLOR_LABELS.get(current_color, '—'))}</b>"
+        lines.append(table)
+        if state.get("awaiting_color"):
+            lines.append("🎨 Renk seç")
+        elif (current or {}).get("drawn_card_id"):
+            lines.append("🃏 Çekilen kartı oyna veya pas geç")
+        elif (current or {}).get("draw_attempted"):
+            lines.append("⏭️ Pas geç")
+        pending = int(state.get("pending_draw", 0) or 0)
+        if pending:
+            if state.get("awaiting_color"):
+                lines.append(f"⚠️ +{pending} ceza bekliyor")
+            elif state.get("engine") == "maildian" and top.get("kind") == "draw4":
+                lines.append(f"⚠️ +{pending}: itiraz et veya çek")
+            elif state.get("engine") == "maildian":
+                lines.append(f"⚠️ +{pending}: ekle veya çek")
+            else:
+                lines.append(f"⚠️ +{pending} ceza uygulanacak")
+        if note:
+            lines.append(escape(str(note)))
+        return "\n".join(lines)
     lines = ["🃏 <b>UNO</b>", f"Tur {max(1, int(state.get('round_number', 1)))} · Maç hedefi {int(state.get('match_target', 500))} puan", ""]
     if status == "lobby":
         lines.append("<b>Oyuncular bekleniyor</b> · 2–8 kişi\nKatıl düğmesine bas. En az iki kişi olduğunda oyunu kuran kişi maçı başlatabilir.")
-    elif status == "playing":
-        current = next((p for p in players if int(p.get("user_id", 0)) == int(state.get("current_player_id", 0) or 0)), None)
-        current_name = _display_name(current)
-        top = state.get("discard", [])[-1] if state.get("discard") else {}
-        color = COLOR_LABELS.get(str(state.get("current_color") or top.get("color")), "—")
-        lines.append(f"▶️ Sıradaki oyuncu: <b>{current_name}</b> · Yön: {'ileri' if int(state.get('direction', 1)) == 1 else 'geri'}")
-        lines.append(f"Üst kart: <b>{escape(card_label(top))}</b> · Aktif renk: <b>{escape(color)}</b>")
-        lines.append(f"Hamle süresi: {int(state.get('turn_seconds', 60))} sn")
-        if state.get("awaiting_color"):
-            lines.append(f"<b>{current_name} renk seçmeli.</b> Seçimden sonra oyun ilerler.")
-        elif (current or {}).get("drawn_card_id"):
-            lines.append(f"<b>{current_name}</b> yeni çektiği kartı oynayabilir veya pas geçebilir.")
-        elif (current or {}).get("draw_attempted"):
-            lines.append(f"<b>{current_name}</b> kart çekmeyi denedi; pas geçebilir.")
-        else:
-            lines.append(f"<b>{current_name}</b> uygun kartını oynamalı veya kart çekmeli.")
-        if int(state.get("pending_draw", 0) or 0):
-            count = int(state["pending_draw"])
-            if state.get("engine") == "maildian":
-                lines.append(f"Bekleyen ceza: +{count}. " + (
-                    "Sıradaki oyuncu +4 için blöf itirazı yapabilir veya cezayı çekebilir."
-                    if top.get("kind") == "draw4" else
-                    "Sıradaki oyuncu +2 ekleyebilir veya cezayı çekip sırasını geçebilir."
-                ))
-            else:
-                lines.append(f"Renk seçiminden sonra sıradaki oyuncu +{count} kart çekecek ve sırası geçecek.")
-        penalty = state.get("last_penalty") or {}
-        if penalty:
-            target = next((p for p in players if int(p.get("user_id", 0)) == int(penalty.get("user_id", 0))), None)
-            lines.append(f"{_display_name(target)} +{int(penalty.get('cards', 0))} kart çekti ve turu geçti")
-        if state.get("last_timeout_user_id"):
-            timed_out = next((p for p in players if int(p.get("user_id", 0)) == int(state["last_timeout_user_id"])), None)
-            lines.append(f"⏱ {_display_name(timed_out)} için süre doldu; sıra ilerledi")
     elif status == "finished":
         winner = next((p for p in players if int(p.get("user_id", 0)) == int(state.get("winner_id", 0) or 0)), None)
         title = "Maçın kazananı" if state.get("match_complete") else "Turun kazananı"
@@ -87,12 +83,6 @@ def render_uno_text(state: dict[str, Any], *, user_id: int | None = None, note: 
         marker = " ▶️" if int(player.get("user_id", 0)) == int(state.get("current_player_id", 0) or 0) else ""
         ready = " ✅" if player.get("ready") else ""
         lines.append(f"• {_display_name(player)}{marker}{ready} · {len(player.get('hand', []))} kart · {int(player.get('score', 0))} puan")
-    if status == "playing":
-        lines.extend(["", (
-            "<b>Kartlarımı aç</b> ile elini gör. Renkli kartlar oynanabilir; soluk kartlar bu sırada oynanamaz."
-            if state.get("inline_query") else
-            "<b>Elim</b> düğmesinden kartlarını gör. Açılan kart listesi yalnız sana gösterilir."
-        )])
     if note:
         lines.extend(["", escape(str(note))])
     return "\n".join(lines)
@@ -143,9 +133,7 @@ def uno_keyboard(state: dict[str, Any], *, user_id: int | None = None, miniapp_u
         rows.append([InlineKeyboardButton("▶️ Maçı başlat", callback_data=f"{prefix}:start")])
         rows.append([InlineKeyboardButton("Oyunu bitir", callback_data=f"{prefix}:stop")])
     elif status == "playing" and state.get("inline_query"):
-        current = next((p for p in state.get("players", []) if int(p.get("user_id", 0)) == int(state.get("current_player_id", 0) or 0)), None)
-        rows.append([InlineKeyboardButton(f"▶️ Sıradaki: {str((current or {}).get('name') or 'Oyuncu')[:20]}", callback_data=f"{prefix}:turn")])
-        rows.append([InlineKeyboardButton("🃏 Kartlarımı aç", switch_inline_query_current_chat=state["inline_query"])])
+        rows.append([InlineKeyboardButton("🃏 Kartları gör", switch_inline_query_current_chat=state["inline_query"])])
         rows.append([InlineKeyboardButton("📣 UNO de", callback_data=f"{prefix}:call")])
         if vulnerable:
             rows.append([InlineKeyboardButton(
@@ -154,13 +142,13 @@ def uno_keyboard(state: dict[str, Any], *, user_id: int | None = None, miniapp_u
         rows.append([InlineKeyboardButton("🛑 Masayı kapat", callback_data=f"{prefix}:stop")])
     elif status == "playing":
         current_id = int(state.get("current_player_id", 0) or 0)
-        current = next((p for p in state.get("players", []) if int(p.get("user_id", 0)) == current_id), None)
-        rows.append([InlineKeyboardButton(f"▶️ Sıradaki: {str((current or {}).get('name') or 'Oyuncu')[:20]}", callback_data=f"{prefix}:turn")])
+        rows.append([InlineKeyboardButton("🃏 Kartları gör", callback_data=f"{prefix}:hand:0")])
         max_hand = max((len(p.get("hand", [])) for p in state.get("players", [])), default=0)
-        for start in range(0, max(1, (max_hand + HAND_PAGE_SIZE - 1) // HAND_PAGE_SIZE), 4):
+        page_count = max(1, (max_hand + HAND_PAGE_SIZE - 1) // HAND_PAGE_SIZE)
+        for start in range(1, page_count, 4):
             rows.append([
-                InlineKeyboardButton(f"👁 Elim {page + 1}", callback_data=f"{prefix}:hand:{page}")
-                for page in range(start, min(start + 4, max(1, (max_hand + HAND_PAGE_SIZE - 1) // HAND_PAGE_SIZE)))
+                InlineKeyboardButton(f"👁 {page + 1}. sayfa", callback_data=f"{prefix}:hand:{page}")
+                for page in range(start, min(start + 4, page_count))
             ])
         me = next((p for p in state.get("players", []) if int(p.get("user_id", 0)) == current_id), None)
         if me is not None:

@@ -176,7 +176,7 @@ def test_real_adapter_exhausted_draw_shows_pass_for_actor_only():
                                       file_ids=_file_ids(), encode_action=_encode)
     ids = [item.id for item in results]
     assert "pass:-" in ids and "draw:-" not in ids
-    assert "pas geçebilir" in render_uno_text(state)
+    assert "Pas geç" in render_uno_text(state)
     assert "pas geç" in render_uno_hand_alert(state, user_id=actor)
     buttons = [button for row in uno_keyboard(state).inline_keyboard for button in row]
     assert any(button.text == "⏭️ Pas geç" for button in buttons)
@@ -202,7 +202,7 @@ def test_inline_group_panel_keeps_one_current_uno_challenge():
     assert len(challenge) == 1
     assert challenge[0].callback_data.endswith(f":challenge:{victim['user_id']}")
     assert any(button.text == "📣 UNO de" for button in buttons)
-    assert any(button.text == "🃏 Kartlarımı aç" for button in buttons)
+    assert any(button.text == "🃏 Kartları gör" for button in buttons)
     assert uno_upstream.challenge_uno(state, user_id=state["current_player_id"],
                                       target_id=victim["user_id"], action_id="challenge")
     victim["uno_called"] = True
