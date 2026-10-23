@@ -6,6 +6,7 @@ Cloudflare transport lives in the typed AI provider adapter.
 
 from __future__ import annotations
 
+import asyncio
 import re
 from dataclasses import replace
 
@@ -41,9 +42,9 @@ class ImageRouter:
         models = list(Config.HRMN_IMAGE_MODELS)
         if selected:
             requested = selected.group(1)
-            aliases = {"prism": models[0], "flare": models[1]}
+            aliases = {"prism": "gpt-image-2.5-prism", "flare": "gpt-image-2.5-flare"}
             requested = aliases.get(requested, requested)
-            if requested not in models or self.hrmn is None:
+            if requested not in (*models, *Config.HRMN_IMAGE_LEGACY_MODELS) or self.hrmn is None:
                 raise ImageProviderError("image_model_invalid")
             models = [requested]
             prompt = prompt.replace(selected.group(0), " ")
@@ -58,16 +59,22 @@ class ImageRouter:
             max_output_bytes=max_output_bytes,
         )
         if self.hrmn is not None:
-            for model in models:
-                try:
-                    return await self.hrmn.generate(replace(request, model=model))
-                except ImageProviderError as error:
-                    if selected:
-                        raise
-                    if error.code in {"image_prompt_invalid", "image_prompt_too_long",
-                                      "image_dimensions_invalid", "image_steps_invalid",
-                                      "image_output_limit_invalid", "image_policy_rejected"}:
-                        raise
+            if selected:
+                return await self.hrmn.generate(replace(request, model=models[0]))
+            # Five slow HRMN models must not exhaust the worker's entire job
+            # deadline before the existing Cloudflare backup gets a chance.
+            try:
+                async with asyncio.timeout(max(0.01, Config.IMAGE_JOB_TIMEOUT_SECONDS * 0.6)):
+                    for model in models:
+                        try:
+                            return await self.hrmn.generate(replace(request, model=model))
+                        except ImageProviderError as error:
+                            if error.code in {"image_prompt_invalid", "image_prompt_too_long",
+                                              "image_dimensions_invalid", "image_steps_invalid",
+                                              "image_output_limit_invalid", "image_policy_rejected"}:
+                                raise
+            except TimeoutError:
+                pass
         return await self.provider.generate(request)
 
     async def health_check(self) -> dict:

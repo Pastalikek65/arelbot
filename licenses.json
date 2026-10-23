@@ -6,7 +6,7 @@
       "kind": "ai-provider",
       "license": "Provider terms and underlying model terms apply; not independently reviewed",
       "url": "https://api.hrmn.tr/v1",
-      "arel_use": "Operator-requested DeepSeek chat and Prism/Flare image generation gateway",
+      "arel_use": "Operator-requested DeepSeek chat and image5/image4_ultra/image4/image3_fast/image3 image gateway; Prism/Flare kept for explicit diagnostics",
       "source_governance": "pending",
       "robots_policy": "not_applicable",
       "terms_review": "review_required",

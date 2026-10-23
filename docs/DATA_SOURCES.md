@@ -444,6 +444,8 @@ Official account API: https://developers.cloudflare.com/workers-ai/configuration
 ## HRMN Harmon API
 
 Operator-requested chat and image gateway at https://api.hrmn.tr/v1.
-DeepSeek chat and Prism/Flare images use `/chat/completions`; `/models` was
+DeepSeek chat and image5/image4_ultra/image4/image3_fast/image3 images use `/chat/completions`; Prism/Flare remain explicit diagnostic options. `/models` was
 verified. Provider/model terms remain independently unreviewed. Secrets and
 generated URLs are not logged. See `HRMN_PROVIDER_2026-10-22.md`.
+
+Image model availability was tested per exact model without cross-provider fallback; see `HRMN_IMAGE_MODELS_2026-10-23.md`. Upstream model names do not independently establish licensing or permanent availability.

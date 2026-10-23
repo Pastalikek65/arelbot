@@ -156,7 +156,9 @@ class Config:
     HRMN_API_KEY = os.getenv("HRMN_API_KEY", "").strip()
     HRMN_URL = os.getenv("HRMN_URL", "https://api.hrmn.tr/v1").rstrip("/")
     HRMN_CHAT_MODEL = "deepseek-v4.1-flash-1017"
-    HRMN_IMAGE_MODELS = ("gpt-image-2.5-prism", "gpt-image-2.5-flare")
+    HRMN_IMAGE_MODELS = ("image5", "image4_ultra", "image4", "image3_fast", "image3")
+    # Kept for explicit selection/diagnostics; never consume automatic fallback time.
+    HRMN_IMAGE_LEGACY_MODELS = ("gpt-image-2.5-prism", "gpt-image-2.5-flare")
     HRMN_CHAT_TIMEOUT_SECONDS = 10.0
     HRMN_IMAGE_TIMEOUT_SECONDS = 35.0
     # ChatGPT plan OAuth is deliberately separate from API-key storage.

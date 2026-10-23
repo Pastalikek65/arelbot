@@ -92,7 +92,7 @@ class HrmnImageProvider(CloudflareImageProvider):
     async def generate(self, request: ImageGenerationRequest) -> str:
         self._validate_request(request)
         model = request.model or Config.HRMN_IMAGE_MODELS[0]
-        if model not in Config.HRMN_IMAGE_MODELS:
+        if model not in (*Config.HRMN_IMAGE_MODELS, *Config.HRMN_IMAGE_LEGACY_MODELS):
             raise ImageProviderError("image_model_invalid")
         if self._cooldowns.get(model, 0) > time.monotonic():
             raise ImageProviderError("image_provider_unavailable", retryable=True)

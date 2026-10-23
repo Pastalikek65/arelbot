@@ -1,0 +1,225 @@
+{
+  "date": "2026-10-23",
+  "source": "https://api.hrmn.tr/v1/models",
+  "inventory_count": 180,
+  "image_models_tested": 21,
+  "generated": 5,
+  "failed": 16,
+  "fallback_used": false,
+  "prompt": "A blue ceramic teapot on a cream background, no text.",
+  "protocol": "POST /v1/chat/completions, size=1024x1024, stream=false; bounded public HTTPS download; Pillow image verification",
+  "interpretation": "Model-specific availability: all image IDs advertise firefly; five native image models generated successfully, while other sixteen IDs returned no_provider_responded. Internal provider cause remains unverified.",
+  "production_changes": "Five working models integrated; deployment verified separately.",
+  "results": [
+    {
+      "model": "flux2-pro",
+      "fallback": false,
+      "status": "failed",
+      "http_status": 500,
+      "error": "image_provider_upstream",
+      "reason": "no_provider_responded",
+      "request_id": "req_8774fa8041caf14ceb273245",
+      "seconds": 2.44
+    },
+    {
+      "model": "nano-banana-2.1",
+      "fallback": false,
+      "status": "failed",
+      "http_status": 500,
+      "error": "image_provider_upstream",
+      "reason": "no_provider_responded",
+      "request_id": "req_f0af048a60560515c2033057",
+      "seconds": 2.53
+    },
+    {
+      "model": "gpt-image-2",
+      "fallback": false,
+      "status": "failed",
+      "http_status": 500,
+      "error": "image_provider_upstream",
+      "reason": "no_provider_responded",
+      "request_id": "req_9126b5513bcda72b7480b016",
+      "seconds": 1.88
+    },
+    {
+      "model": "imagen4",
+      "fallback": false,
+      "status": "failed",
+      "http_status": 500,
+      "error": "image_provider_upstream",
+      "reason": "no_provider_responded",
+      "request_id": "req_ccb9e355c19c96d26dce898d",
+      "seconds": 1.91
+    },
+    {
+      "model": "ideogram3",
+      "fallback": false,
+      "status": "failed",
+      "http_status": 500,
+      "error": "image_provider_upstream",
+      "reason": "no_provider_responded",
+      "request_id": "req_a175f34706106597ad16a17f",
+      "seconds": 2.01
+    },
+    {
+      "model": "image5",
+      "fallback": false,
+      "status": "generated",
+      "width": 1024,
+      "height": 1024,
+      "format": "JPEG",
+      "bytes": 263832,
+      "seconds": 16.33
+    },
+    {
+      "model": "flux-kontext-pro",
+      "fallback": false,
+      "status": "failed",
+      "http_status": 500,
+      "error": "image_provider_upstream",
+      "reason": "no_provider_responded",
+      "request_id": "req_f79aefd0d0df062a8c5ce883",
+      "seconds": 2.23
+    },
+    {
+      "model": "flux-kontext-max",
+      "fallback": false,
+      "status": "failed",
+      "http_status": 500,
+      "error": "image_provider_upstream",
+      "reason": "no_provider_responded",
+      "request_id": "req_d3e10528f5ac1c4ac07b178b",
+      "seconds": 2.7
+    },
+    {
+      "model": "flux-pro",
+      "fallback": false,
+      "status": "failed",
+      "http_status": 500,
+      "error": "image_provider_upstream",
+      "reason": "no_provider_responded",
+      "request_id": "req_45fc51f9ad172c6ba274967f",
+      "seconds": 2.72
+    },
+    {
+      "model": "flux-ultra",
+      "fallback": false,
+      "status": "failed",
+      "http_status": 500,
+      "error": "image_provider_upstream",
+      "reason": "no_provider_responded",
+      "request_id": "req_d9a2ea34e0afab363f3b57d8",
+      "seconds": 4.03
+    },
+    {
+      "model": "flux-ultra-raw",
+      "fallback": false,
+      "status": "failed",
+      "http_status": 500,
+      "error": "image_provider_upstream",
+      "reason": "no_provider_responded",
+      "request_id": "req_0fd967d35d110ded571a200e",
+      "seconds": 7.67
+    },
+    {
+      "model": "gpt-image-1.5",
+      "fallback": false,
+      "status": "failed",
+      "http_status": 500,
+      "error": "image_provider_upstream",
+      "reason": "no_provider_responded",
+      "request_id": "req_c8c5878f6ab094bf0ea976eb",
+      "seconds": 7.44
+    },
+    {
+      "model": "gpt-image-2.5-flare",
+      "fallback": false,
+      "status": "failed",
+      "http_status": 500,
+      "error": "image_provider_upstream",
+      "reason": "no_provider_responded",
+      "request_id": "req_fa31040f3294a86bd2c8e9f4",
+      "seconds": 3.22
+    },
+    {
+      "model": "gpt-image-2.5-prism",
+      "fallback": false,
+      "status": "failed",
+      "http_status": 500,
+      "error": "image_provider_upstream",
+      "reason": "no_provider_responded",
+      "request_id": "req_bb3d6eaf4e782fea794617c6",
+      "seconds": 3.98
+    },
+    {
+      "model": "image3",
+      "fallback": false,
+      "status": "generated",
+      "width": 1024,
+      "height": 1024,
+      "format": "JPEG",
+      "bytes": 320689,
+      "seconds": 17.75
+    },
+    {
+      "model": "image3_fast",
+      "fallback": false,
+      "status": "generated",
+      "width": 1024,
+      "height": 1024,
+      "format": "JPEG",
+      "bytes": 293148,
+      "seconds": 17.59
+    },
+    {
+      "model": "image4",
+      "fallback": false,
+      "status": "generated",
+      "width": 1024,
+      "height": 1024,
+      "format": "JPEG",
+      "bytes": 364706,
+      "seconds": 16.99
+    },
+    {
+      "model": "image4_ultra",
+      "fallback": false,
+      "status": "generated",
+      "width": 1024,
+      "height": 1024,
+      "format": "JPEG",
+      "bytes": 353155,
+      "seconds": 16.78
+    },
+    {
+      "model": "imagen3",
+      "fallback": false,
+      "status": "failed",
+      "http_status": 500,
+      "error": "image_provider_upstream",
+      "reason": "no_provider_responded",
+      "request_id": "req_36d055e2f6791e24f791671d",
+      "seconds": 1.98
+    },
+    {
+      "model": "nano-banana-pro",
+      "fallback": false,
+      "status": "failed",
+      "http_status": 500,
+      "error": "image_provider_upstream",
+      "reason": "no_provider_responded",
+      "request_id": "req_12db7bdc86f48e4f853500f0",
+      "seconds": 1.83
+    },
+    {
+      "model": "nano-banana-2",
+      "fallback": false,
+      "status": "failed",
+      "http_status": 500,
+      "error": "image_provider_upstream",
+      "reason": "no_provider_responded",
+      "request_id": "req_51b7311d89e3e54f3264317e",
+      "seconds": 2.19
+    }
+  ]
+}

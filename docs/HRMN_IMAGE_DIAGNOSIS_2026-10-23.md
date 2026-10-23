@@ -38,7 +38,7 @@ Sunucu istek kimlikleri (sağlayıcı desteği için):
 ## Yeniden doğrulama
 
 ```text
-python scripts/check_hrmn_images.py
+python scripts/check_hrmn_images.py --models prism flare
 python scripts/check_hrmn_images.py --models prism
 python scripts/check_hrmn_images.py --models flare
 ```

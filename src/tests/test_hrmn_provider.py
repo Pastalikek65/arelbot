@@ -147,7 +147,7 @@ async def test_explicit_image_model_never_silently_uses_another_model():
     router.hrmn = SimpleNamespace(generate=AsyncMock(side_effect=ImageProviderError('image_provider_upstream')))
     with pytest.raises(ImageProviderError, match='image_provider_upstream'):
         await router.generate_image('Mavi çaydanlık --model flare')
-    assert [call.args[0].model for call in router.hrmn.generate.await_args_list] == [Config.HRMN_IMAGE_MODELS[1]]
+    assert [call.args[0].model for call in router.hrmn.generate.await_args_list] == ['gpt-image-2.5-flare']
     router.provider.generate.assert_not_awaited()
 
 
@@ -163,3 +163,41 @@ async def test_hrmn_http_error_has_only_safe_diagnostic_metadata(request_id, exp
     assert raised.value.request_id == expected
     assert raised.value.upstream_reason == 'no_provider_responded'
     assert str(raised.value) == 'image_provider_upstream'
+
+
+def test_working_image_models_have_verified_primary_and_fallback_order():
+    assert Config.HRMN_IMAGE_MODELS == ('image5', 'image4_ultra', 'image4', 'image3_fast', 'image3')
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('model', ['image5', 'image4_ultra', 'image4', 'image3_fast', 'image3'])
+async def test_each_working_model_is_allowed_and_sent_without_substitution(model):
+    import json
+    def handle(request):
+        assert json.loads(request.content)['model'] == model
+        return httpx.Response(200, json={'data': [{'b64_json': base64.b64encode(png()).decode()}]})
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as client:
+        provider = HrmnImageProvider(keys(), client=client)
+        output = await provider.generate(ImageGenerationRequest('Kare', model=model))
+        Path(output).unlink()
+
+
+@pytest.mark.asyncio
+async def test_default_image_request_uses_image5_first():
+    router = ImageRouter(None, provider=SimpleNamespace(generate=AsyncMock()))
+    router.hrmn = SimpleNamespace(generate=AsyncMock(return_value='image5.png'))
+    assert await router.generate_image('Kare') == 'image5.png'
+    assert router.hrmn.generate.await_args.args[0].model == 'image5'
+    router.provider.generate.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_hrmn_deadline_leaves_time_for_existing_cloudflare(monkeypatch):
+    import asyncio
+    monkeypatch.setattr(Config, 'IMAGE_JOB_TIMEOUT_SECONDS', 0.1)
+    async def slow(request):
+        await asyncio.sleep(1)
+    router = ImageRouter(None, provider=SimpleNamespace(generate=AsyncMock(return_value='fallback.png')))
+    router.hrmn = SimpleNamespace(generate=slow)
+    assert await asyncio.wait_for(router.generate_image('Kare'), timeout=0.3) == 'fallback.png'
+    router.provider.generate.assert_awaited_once()

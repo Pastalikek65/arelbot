@@ -20,7 +20,7 @@
 | `web_reader` | AI tool | AI | Typed public web provider | Active - SSRF/private-host/redirect policy, bounded body and untrusted-context metadata; source sign-off pending |
 | `web_search` | `/ara`, `/search`, `@bot ara ...`, AI tool | AI | Typed Tavily provider | Active - key rotation, bounded results, cache/health/circuit, source attribution and automatic live-search routing for current/date/exam questions; terms sign-off pending |
 | `lyrics` | `/soz`, `/sarki`, `/lyrics`, `@bot soz ...`, AI tool | AI | Typed search + public page provider | Active - permitted-domain allowlist, bounded excerpt and source attribution; terms sign-off pending |
-| `image_generation` | `/image`, AI tool | AI | HRMN Prism/Flare + Cloudflare yedeği + image worker | Aktif — sınırlandırılmış üretim/indirme, açık model seçimi, kuyruk ve geçici dosya temizliği; HRMN görsel hattı 23 Ekim’de HTTP 500: ayrıntı HRMN_IMAGE_DIAGNOSIS_2026-10-23.md |
+| `image_generation` | `/image`, AI tool | AI | HRMN image5 + dört görsel model yedeği + Cloudflare + image worker | Aktif — sınırlandırılmış üretim/indirme, açık model seçimi, kuyruk ve geçici dosya temizliği; çalışan beş model ve süre bütçesi: HRMN_IMAGE_MODELS_2026-10-23.md; Prism/Flare yalnız açık seçimde |
 | `notes` | `/not`, `/notlar` | Kişisel | MongoDB/bellek | Aktif |
 | `tasks` | `/gorev`, `/gorevler` | Kişisel | MongoDB/bellek | Aktif |
 | `reminders` | `/remind`, `/hatirlat`, `/hatirlatmalar` | Kişisel | MongoDB/Redis | Aktif |

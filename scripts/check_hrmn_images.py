@@ -29,7 +29,7 @@ async def check(names: list[str]) -> int:
     failed = False
     try:
         for name in names:
-            model = Config.HRMN_IMAGE_MODELS[0 if name == "prism" else 1]
+            model = {"prism": "gpt-image-2.5-prism", "flare": "gpt-image-2.5-flare"}.get(name, name)
             start = time.monotonic()
             artifact = None
             result = {"model": model}
@@ -59,7 +59,8 @@ async def check(names: list[str]) -> int:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--models", nargs="+", choices=["prism", "flare"],
-                        default=["prism", "flare"])
+    parser.add_argument("--models", nargs="+",
+                        choices=[*Config.HRMN_IMAGE_MODELS, *Config.HRMN_IMAGE_LEGACY_MODELS, "prism", "flare"],
+                        default=list(Config.HRMN_IMAGE_MODELS))
     args = parser.parse_args()
     raise SystemExit(asyncio.run(check(list(dict.fromkeys(args.models)))))
