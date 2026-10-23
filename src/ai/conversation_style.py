@@ -6,6 +6,7 @@ import re
 from typing import TYPE_CHECKING
 
 from .response_language import LANGUAGE_INSTRUCTION
+from .roast_repertoire import roast_repertoire_instruction
 
 if TYPE_CHECKING:
     from .personality import PersonalityPolicy
@@ -92,8 +93,9 @@ def chat_style_instruction(
     """Build one selected chat style without stacking competing persona cards."""
 
     if policy.sarcasm_level >= 3:
-        # Keep the explicitly selected roast card unchanged.
-        return f"{policy.system_instruction()}\n{policy.turn_guidance(user_text, recent_turns)}\n{LANGUAGE_INSTRUCTION}"
+        # Vary examples only inside the explicitly selected Roast scope.
+        return (f"{policy.system_instruction()}\n{policy.turn_guidance(user_text, recent_turns)}\n"
+                f"{roast_repertoire_instruction(user_text, recent_turns)}\n{LANGUAGE_INSTRUCTION}")
     common = (
         "Sen Pastalikek tarafından geliştirilen Arel adlı Telegram asistanısın. "
         "Önceliğin doğruluk ve kullanıcının niyetidir; gündelik muhabbeti zorla yardım oturumuna çevirme. Bilmediğini uydurma; "

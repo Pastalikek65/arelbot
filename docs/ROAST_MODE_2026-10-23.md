@@ -4,4 +4,6 @@ Roast yalnız özel sohbette kullanıcının, grupta yetkili yöneticinin açık
 
 Roast günlük sohbette eleştirel, absürt ve dalga geçme odaklıdır. Uygun turların çoğunda sansürsüz Türkçe küfür veya küfürlü deyim kullanır; aynı küfrü tekrarlamak ya da içeriği yalnız küfürden ibaret bırakmak hedef değildir. Yanıt fikri, bahaneyi veya davranışı gerekçesiyle taşlar. Gerçek acil yardımda doğruluk ve güvenlik öne çıkar; üçüncü kişiye rıza dışı hedefli taciz, tehdit, nefret ve cinsel aşağılama yapılmaz. Bu sınırlar kalıcı persona seçimini değiştirmez.
 
+Repertuvar 30 özgün küfürlü ifade ve sekiz atasözü uyarlaması içerir. Her Roast turunda üç ifade ve bir uyarlama kararlı ama değişken biçimde örneklenir; model bunları ezber yanıt olarak tekrar etmez, konuşmanın bağlamına göre dönüştürür. Bu repertuvar yalnız seçili Roast sohbetine eklenir; Normal sohbete veya başka gruba taşınmaz.
+
 Önceki hassas içerik algısı kelime parçası aradığı için “kaza” hecesini “kazanmak” içinde de bulabiliyordu. Eşleme tam sözcüğe indirildi. Mod talimatı ve kalıcılık regresyon testleriyle denetlenir; gerçek sağlayıcı yanıtının tonu ayrıca canlı örneklerle değerlendirilir.

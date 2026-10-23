@@ -1,9 +1,12 @@
 from src.ai.conversation_style import (
+    chat_style_instruction,
     is_normal_mode,
-    normalize_normal_response,
     normal_chat_style_instruction,
+    normalize_normal_response,
     style_mode_label,
 )
+from src.ai.personality import PersonalityPolicy
+from src.ai.roast_repertoire import ROAST_PHRASES, roast_repertoire_instruction
 
 
 def test_normal_chat_style_is_compact_and_conversational():
@@ -37,3 +40,17 @@ def test_normal_response_removes_service_bot_closers_and_relaxes_punctuation():
 def test_normal_response_does_not_rewrite_normal_question_or_words():
     value = normalize_normal_response("bugün ne istiyorsun? ben kahve içiyorum")
     assert value == "bugün ne istiyorsun? ben kahve içiyorum"
+
+
+def test_roast_repertoire_is_diverse_and_varies_without_leaking_into_normal():
+    assert len(ROAST_PHRASES) >= 24
+    assert len(set(ROAST_PHRASES)) == len(ROAST_PHRASES)
+    first = roast_repertoire_instruction("yine son güne bıraktım", 0)
+    assert first == roast_repertoire_instruction("yine son güne bıraktım", 0)
+    assert len({roast_repertoire_instruction("yine son güne bıraktım", turn)
+                for turn in range(6)}) >= 3
+    assert "ROAST REPERTUVARI" in first
+    assert "ROAST REPERTUVARI" in chat_style_instruction(
+        PersonalityPolicy().for_mode("roast"), "roast", "yine son güne bıraktım", 0)
+    assert "ROAST REPERTUVARI" not in chat_style_instruction(
+        PersonalityPolicy().for_mode("normal"), "normal", "yine son güne bıraktım", 0)

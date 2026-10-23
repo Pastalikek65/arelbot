@@ -118,3 +118,25 @@ async def test_group_message_does_not_override_persisted_roast_selection():
         )
         assert await handler._resolve_persona_mode(update, -100) == "roast"
     handler.data_port.get_chat_settings.assert_awaited()
+
+
+@pytest.mark.asyncio
+async def test_roast_selection_is_scoped_to_the_chat_where_it_was_enabled():
+    from src.handlers.message_handler import MessageHandler
+
+    handler = MessageHandler.__new__(MessageHandler)
+    handler.data_port = SimpleNamespace(
+        get_chat_settings=AsyncMock(side_effect=lambda chat_id: {
+            "persona_mode": "roast" if chat_id == -100 else "normal"}),
+        get_user=AsyncMock(side_effect=lambda user_id: {
+            "persona_mode": "roast" if user_id == 42 else "normal"}),
+    )
+    def update(chat_id, chat_type, user_id):
+        return SimpleNamespace(effective_chat=SimpleNamespace(id=chat_id, type=chat_type),
+                               effective_user=SimpleNamespace(id=user_id),
+                               effective_message=SimpleNamespace(text="böyle konuşma"))
+
+    assert await handler._resolve_persona_mode(update(-100, "supergroup", 42), -100) == "roast"
+    assert await handler._resolve_persona_mode(update(-101, "supergroup", 42), -101) == "normal"
+    assert await handler._resolve_persona_mode(update(42, "private", 42), 42) == "roast"
+    assert await handler._resolve_persona_mode(update(43, "private", 43), 43) == "normal"
