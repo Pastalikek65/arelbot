@@ -50,7 +50,7 @@ class QuizGame:
             {"q": "Dünyanın en derin gölü hangisidir?", "a": "Baykal Gölü", "options": ["Baykal Gölü", "Hazar Denizi", "Van Gölü", "Victoria Gölü"]},
             {"q": "Amazon Nehri hangi kıtadadır?", "a": "Güney Amerika", "options": ["Güney Amerika", "Afrika", "Asya", "Kuzey Amerika"]},
             {"q": "Sahara Çölü hangi kıtadadır?", "a": "Afrika", "options": ["Afrika", "Asya", "Avustralya", "Güney Amerika"]},
-            {"q": "Karadeniz hangi boğaz ile Akdeniz'e bağlanır?", "a": "Çanakkale", "options": ["Çanakkale", "İstanbul", "Cebelitarık", "Hürmüz"]},
+            {"q": "Karadeniz'i Marmara Denizi'ne bağlayan boğaz hangisidir?", "a": "İstanbul", "options": ["Çanakkale", "İstanbul", "Cebelitarık", "Hürmüz"]},
             {"q": "Japonya'nın başkenti neresidir?", "a": "Tokyo", "options": ["Tokyo", "Kyoto", "Osaka", "Seul"]},
         ],
         "spor": [
@@ -80,7 +80,7 @@ class QuizGame:
         "sanat": [
             {"q": "Mona Lisa tablosunu kim yapmıştır?", "a": "Leonardo da Vinci", "options": ["Leonardo da Vinci", "Michelangelo", "Raphael", "Rembrandt"]},
             {"q": "Yıldızlı Gece tablosu kime aittir?", "a": "Van Gogh", "options": ["Van Gogh", "Monet", "Picasso", "Dalí"]},
-            {"q": "Beethoven hangi müzik döneminin bestecisidir?", "a": "Romantik", "options": ["Romantik", "Barok", "Klasik", "Modern"]},
+            {"q": "Beethoven hangi iki müzik dönemi arasında köprü kabul edilir?", "a": "Klasik ve Romantik", "options": ["Klasik ve Romantik", "Barok ve Klasik", "Rönesans ve Barok", "Romantik ve Modern"]},
             {"q": "Hababam Sınıfı'nın yazarı kimdir?", "a": "Rıfat Ilgaz", "options": ["Rıfat Ilgaz", "Aziz Nesin", "Orhan Kemal", "Yaşar Kemal"]},
             {"q": "Guernica tablosunu kim yapmıştır?", "a": "Pablo Picasso", "options": ["Pablo Picasso", "Salvador Dalí", "Andy Warhol", "Claude Monet"]},
             {"q": "'Çığlık' tablosu hangi sanatçıya aittir?", "a": "Edvard Munch", "options": ["Edvard Munch", "Gustav Klimt", "Frida Kahlo", "René Magritte"]},

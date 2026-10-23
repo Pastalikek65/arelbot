@@ -38,3 +38,13 @@ def test_quiz_difficulty_filter_keeps_category_and_returns_safe_projection():
     assert len(question["options"]) == 4
     assert question["answer"] in question["options"]
     assert question["question_id"]
+
+
+def test_geography_and_beethoven_questions_have_unambiguous_answers():
+    geography = next(row for row in QuizGame.QUESTIONS["cografya"]
+                     if "Karadeniz" in row["q"] and "boğaz" in row["q"])
+    assert "Marmara" in geography["q"]
+    assert geography["a"] == "İstanbul"
+
+    music = next(row for row in QuizGame.QUESTIONS["sanat"] if "Beethoven" in row["q"])
+    assert "iki" in music["q"] and music["a"] == "Klasik ve Romantik"

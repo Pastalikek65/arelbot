@@ -61,3 +61,11 @@ def test_turn_button_is_present_for_inline_and_legacy_tables():
             game.pop("inline_query")
         labels = [button.text for row in uno_keyboard(game).inline_keyboard for button in row]
         assert labels[0] == "▶️ Sıradaki: Ayşe"
+
+
+def test_uno_source_stays_available_outside_the_game_panel():
+    game = state()
+    game["source_url"] = "https://t.me/ArelChat_Bot?start=uno_source"
+    buttons = [button for row in uno_keyboard(game).inline_keyboard for button in row]
+    assert all("Kaynak kodu" not in button.text for button in buttons)
+    assert game["source_url"].endswith("uno_source")

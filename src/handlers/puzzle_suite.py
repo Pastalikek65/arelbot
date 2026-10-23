@@ -70,6 +70,14 @@ class PuzzleSuite:
                 return True
         return False
 
+    async def on_private_photo(self, update, context):
+        lookup = getattr(self.repository, "list_active_draw_routes", None)
+        adapter = self.adapters.get("ciz_bil")
+        if not callable(lookup) or adapter is None:
+            return False
+        routes = await lookup(int(update.effective_user.id))
+        return bool(routes and await adapter.on_private_photo(update, context, routes=routes))
+
     async def on_text(self, update, context, text):
         message = update.effective_message
         if not message or not str(text).strip() or str(text).startswith('/'):

@@ -210,8 +210,6 @@ def uno_keyboard(state: dict[str, Any], *, user_id: int | None = None, miniapp_u
         else:
             rows.append([InlineKeyboardButton("🌐 Mini App'te aç", url=str(miniapp_url))])
     rows.append([InlineKeyboardButton("🎮 Oyun salonu", callback_data="menu_games")])
-    if state.get("source_url"):
-        rows.append([InlineKeyboardButton("📦 Kaynak kodu · AGPL", url=state["source_url"])])
     return InlineKeyboardMarkup(rows)
 
 

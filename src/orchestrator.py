@@ -1108,6 +1108,8 @@ class Orchestrator:
         moderate = getattr(self.media_handler, "moderate_update", None)
         if callable(moderate) and await moderate(update, context):
             return
+        if await self._route_private_draw_photo(update, context):
+            return
         if await self._route_social_caption(update, context):
             return
         url = extract_media_url(message.caption or "")
@@ -1152,7 +1154,24 @@ class Orchestrator:
         return False
 
     async def handle_photo(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        message = update.effective_message
+        if (getattr(update.effective_chat, "type", None) == "private" and
+                message is not None and getattr(message, "photo", None)):
+            moderate = getattr(self.media_handler, "moderate_update", None)
+            if callable(moderate) and await moderate(update, context):
+                return
+            if await self._route_private_draw_photo(update, context):
+                return
+            await self.media_handler.handle_photo(update, context, skip_moderation=True)
+            return
         await self.media_handler.handle_photo(update, context)
+
+    async def _route_private_draw_photo(self, update, context):
+        if (getattr(update.effective_chat, "type", None) != "private" or
+                not getattr(update.effective_message, "photo", None)):
+            return False
+        suite = getattr(self, "puzzle_suite", None)
+        return bool(suite and await suite.on_private_photo(update, context))
 
     async def handle_document(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         await self.media_handler.handle_document(update, context)

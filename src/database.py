@@ -1871,6 +1871,15 @@ class Database:
         return await self.game_states.find(self._active_secret_route_query(user_id),
             {"_id": 0, "chat_id": 1, "game_type": 1}).limit(50).to_list(length=50)
 
+    async def list_active_draw_routes(self, user_id: int) -> list[dict]:
+        """Only the current artist may submit a private drawing; no word leaves Mongo."""
+        if Database._db is None:
+            raise RuntimeError("game_persistence_unavailable")
+        query = {"game_type": {"$regex": r"^ciz_bil(?:_t[0-9]+)?$"},
+                 "state.phase": "draw", "state.artist_id": int(user_id)}
+        return await self.game_states.find(query,
+            {"_id": 0, "chat_id": 1, "game_type": 1}).limit(20).to_list(length=20)
+
     async def list_active_puzzle_routes(self, chat_id: int, thread_id: int | None, user_id: int) -> list[dict]:
         """One bounded metadata read replaces per-game secret-state fetches."""
         if Database._db is None:

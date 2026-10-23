@@ -71,7 +71,14 @@ class LogicPuzzlesHandler:
                                              thread_id=thread_id)
         except Exception as exc:  # retryable idempotent ledger effect
             logger.warning("Logic puzzle rewards deferred: %s", type(exc).__name__)
-        await self.publish(bot, game_key=game_key, chat_id=chat_id, thread_id=thread_id)
+        # Preparation and actionable panels must arrive in the same request;
+        # otherwise players wait for the next five-second recovery tick.
+        for _ in range(3):
+            await self.publish(bot, game_key=game_key, chat_id=chat_id, thread_id=thread_id)
+            current = await self.service.current(game_key=game_key, chat_id=chat_id,
+                                                 thread_id=thread_id)
+            if not current or not current.get("panel_dirty"):
+                break
 
     async def _flush(self, context, *, game_key, chat_id, thread_id):
         state = await self.service.current(game_key=game_key, chat_id=chat_id,
@@ -147,7 +154,8 @@ class LogicPuzzlesHandler:
                 await query.answer("Yeni oyun için oyun salonunu aç.", show_alert=True)
                 return True
             action = {"j": "join", "s": "start", "u": "undo", "h": "hint",
-                      "n": "next", "x": "stop", "e": "press"}.get(code)
+                      "n": "next", "x": "stop", "e": "press",
+                      "z": "code_clear", "t": "code_submit"}.get(code)
             kwargs = {}
             if code.startswith("c") and len(code) == 3:
                 action = "select"
@@ -169,6 +177,12 @@ class LogicPuzzlesHandler:
                 if not 0 <= index < len(rules.SYMBOLS):
                     raise ValueError("lp_invalid_action")
                 kwargs["symbol"] = rules.SYMBOLS[index]
+            elif code.startswith("k") and len(code) == 2:
+                action = "code_digit"
+                kwargs["value"] = code[1]
+            elif code.startswith("f") and len(code) == 2:
+                action = "spot_pick"
+                kwargs["value"] = int(code[1], 36)
             if action is None:
                 raise ValueError("lp_invalid_action")
             await self.service.act(game_key=game, chat_id=chat_id, thread_id=topic,

@@ -407,6 +407,7 @@ async def register_bot_commands(application):
         ("amiral", "Amiral Battı oyunu"),
         ("ikidogru", "İki Doğru Bir Yalan oyunu"),
         ("kimimben", "Kimim Ben oyunu"),
+        ("cizbil", "Gizli kelimeyi çizerek anlat"),
         ("takimligi", "Takım Bilgi Ligi oyunu"),
         ("kadeh", "Zehirli Kadeh oyunu"),
         ("pisti", "Pişti · 2 veya 4 kişilik kart masası"),
@@ -422,6 +423,8 @@ async def register_bot_commands(application):
         ("sudoku", "Sudoku çöz · 4×4 veya 9×9"),
         ("sayitahmin", "Sıralı sayı tahmin maçı"),
         ("refleks", "Hedef düğmesini yakala"),
+        ("sifre", "Gizli şifreyi ipuçlarıyla çöz"),
+        ("fark", "İki desendeki farkları bul"),
         ("casus", "Gizli mekân ve casus oyunu"),
         ("spy", "Casus oyunu"),
         ("vampir", "Kurt Adam ve klasik Vampir Köylü"),
@@ -652,7 +655,7 @@ def register_handlers(application, orchestrator):
     add_handler(CommandHandler(["uno", "kartuno"], orchestrator.handle_uno_command))
     add_handler(CommandHandler(["zincir", "kelimezinciri"], orchestrator.handle_word_chain_command))
     add_handler(CommandHandler("tabu", orchestrator.handle_tabu_command))
-    add_handler(CommandHandler(["pisti", "papazkimde", "2048", "besipucu", "emojibilmece", "harfmaraton", "sozcukavi", "yasakharf", "ortakhikaye", "bomba", "korsiralama", "kronoloji", "dogruyanlis", "dedektif", "amiral", "ikidogru", "kimimben", "takimligi", "kadeh", "wordle", "karsikelime", "anagram", "eslestirme", "mayin", "sudoku", "sayitahmin", "refleks"], orchestrator.handle_puzzle_command))
+    add_handler(CommandHandler(["pisti", "papazkimde", "2048", "besipucu", "emojibilmece", "harfmaraton", "sozcukavi", "yasakharf", "ortakhikaye", "bomba", "korsiralama", "kronoloji", "dogruyanlis", "dedektif", "amiral", "ikidogru", "kimimben", "cizbil", "takimligi", "kadeh", "wordle", "karsikelime", "anagram", "eslestirme", "mayin", "sudoku", "sayitahmin", "refleks", "sifre", "fark"], orchestrator.handle_puzzle_command))
     add_handler(CommandHandler(["casus", "spy"], orchestrator.handle_spy_command))
     add_handler(CommandHandler(["vampir", "vampirkoylu", "kurtadam", "werewolf"], orchestrator.handle_vampire_command))
     add_handler(CommandHandler("batak", orchestrator.handle_batak_command))

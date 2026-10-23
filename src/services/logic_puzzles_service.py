@@ -120,7 +120,19 @@ class LogicPuzzlesService:
             if action == "undo":
                 return rules.undo(state, user_id=user_id, now=moment)
             if action == "hint":
+                if state["game_key"] == "sifre_tahmin":
+                    return rules.code_hint(state, user_id=user_id, now=moment)
+                if state["game_key"] == "fark_bulmaca":
+                    return rules.spot_hint(state, user_id=user_id, now=moment)
                 return rules.hint(state, user_id=user_id, now=moment)
+            if action == "code_digit":
+                return rules.code_digit(state, user_id=user_id, digit=str(value), now=moment)
+            if action == "code_clear":
+                return rules.code_clear(state, user_id=user_id, now=moment)
+            if action == "code_submit":
+                return rules.code_submit(state, user_id=user_id, now=moment)
+            if action == "spot_pick":
+                return rules.spot_pick(state, user_id=user_id, index=int(value), now=moment)
             if action == "guess":
                 if submitted_at is not None and float(submitted_at) < float(state.get("turn_started_at") or 0):
                     raise ValueError("lp_stale_input")
@@ -217,9 +229,14 @@ class LogicPuzzlesService:
                     result.update(phase="turn", deadline=None,
                                   panel_dirty=True, delivery_retry_at=0)
                 elif state["phase"] == "turn" and state.get("deadline") is None:
-                    result.update(deadline=moment + rules.TURN_SECONDS,
+                    result.update(deadline=moment + (60 if game_key == "sifre_tahmin" else rules.TURN_SECONDS),
                                   turn_started_at=moment, input_floor=int(message_id),
                                   panel_wait_until=None)
+                elif state["phase"] == "spot_pending":
+                    result.update(phase="spot", deadline=None,
+                                  panel_dirty=True, delivery_retry_at=0)
+                elif state["phase"] == "spot" and state.get("deadline") is None:
+                    result.update(deadline=moment + 90, panel_wait_until=None)
                 elif state["phase"] == "go_pending":
                     result.update(phase="go", deadline=None,
                                   panel_dirty=True, delivery_retry_at=0)
@@ -253,7 +270,7 @@ class LogicPuzzlesService:
                         points = max(10, 100 - 20 * state["hint_count"] -
                                      2 * max(0, state["moves"] - sum(v == 0 for r in state["givens"] for v in r)))
                     else:
-                        points = max(0, int(state["scores"][str(player["id"])]) * 10)
+                        points = min(100, max(0, int(state["scores"][str(player["id"])]) * 10))
                     event = f"{game_key}:{chat_id}:{state['round_id']}:{player['id']}"
                     if state.get("leaderboard_required") is not False and self.leaderboard:
                         await self.leaderboard.record_score(

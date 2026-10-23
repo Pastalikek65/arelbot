@@ -177,7 +177,7 @@ Kaynaklar: [`quote_handler.py`](../src/handlers/quote_handler.py), [`command_han
 
 ## 10. Oyunlar, puan ve sanal ekonomi
 
-**45 oyun için tam liste:** [Oyun rehberi](GAMES.md) — her oyunun komutu, oyuncu sayısı ve mekaniği. Aşağıdaki tablo ortak giriş ve ekonomi yüzeylerini özetler.
+**48 oyun için tam liste:** [Oyun rehberi](GAMES.md) — her oyunun komutu, oyuncu sayısı ve mekaniği. Aşağıdaki tablo ortak giriş ve ekonomi yüzeylerini özetler.
 
 | Oyun/özellik | Komut | Davranış |
 |---|---|---|

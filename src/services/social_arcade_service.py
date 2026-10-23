@@ -144,7 +144,12 @@ class SocialArcadeService:
             # same precision and use message order for private input in that second.
             if submitted_at is not None and float(submitted_at) < int(state["created_at"]):
                 raise ValueError("sa_stale_input")
-            if action in {"claim", "lie", "vote", "question", "guess", "yes", "no",
+            if action == "draw_guess" and (
+                input_message_id is not None and int(input_message_id) <= int(state.get("panel_message_id") or 0)
+                or submitted_at is not None and float(submitted_at) < int(state.get("guess_started_at") or 0)
+            ):
+                raise ValueError("sa_stale_input")
+            if action in {"claim", "lie", "vote", "question", "guess", "drawing", "yes", "no",
                           "poison", "serve", "drink", "swap", "refuse"}:
                 receipt = state.get("private_panels", {}).get(str(user_id), {})
                 if (not receipt or receipt.get("phase_seq") != state["phase_seq"] or
@@ -255,7 +260,7 @@ class SocialArcadeService:
 
     async def claim_delivery(self, *, game_key, chat_id, thread_id=None,
                              kind, user_id=None, now=None, force=False):
-        if kind not in {"panel", "private"}:
+        if kind not in {"panel", "private", "drawing"}:
             raise ValueError("sa_invalid_delivery")
         moment = time.time() if now is None else float(now)
         async with self._lock(game_key, chat_id, thread_id):
@@ -265,27 +270,51 @@ class SocialArcadeService:
                     return None
                 if kind == "panel":
                     eligible = (state.get("panel_dirty") or force) and float(state.get("delivery_retry_at") or 0) <= moment
-                else:
+                elif kind == "private":
                     eligible = (int(user_id or 0) in state.get("private_recipients", []) and
                                 str(user_id) not in state.get("private_delivery", {}) and
                                 float(state.get("private_retry", {}).get(str(user_id), 0)) <= moment)
+                else:
+                    eligible = (game_key == "ciz_bil" and state.get("phase") == "guess"
+                                and state.get("drawing_pending") and not state.get("drawing_message_id")
+                                and float(state.get("drawing_retry_at") or 0) <= moment)
                 if not eligible:
                     return None
                 result = dict(state, version=state["version"] + 1)
                 if kind == "panel":
                     result["delivery_retry_at"] = moment + 30
-                else:
+                elif kind == "private":
                     result["private_retry"] = dict(state.get("private_retry", {}))
                     result["private_retry"][str(user_id)] = moment + 30
                     pending = [float(result["private_retry"].get(str(uid), 0))
                                for uid in state["private_recipients"]
                                if str(uid) not in state["private_delivery"]]
                     result["private_retry_at"] = min(pending) if pending else None
+                else:
+                    result["drawing_retry_at"] = moment + 30
                 if await self.repository.compare_and_save_game_state(
                     int(chat_id), self.key(game_key, thread_id), result,
                     expected_version=state["version"]):
                     return result
         raise RuntimeError("game_state_conflict")
+
+    async def acknowledge_drawing(self, *, game_key, chat_id, thread_id=None,
+                                  round_id, phase_seq, message_id, now=None):
+        if game_key != "ciz_bil" or int(message_id) <= 0:
+            raise ValueError("sa_invalid_drawing")
+
+        def transform(state):
+            if state["phase"] != "guess" or not state.get("drawing_pending"):
+                return state
+            result = rules._copy(state)
+            result.update(drawing_pending=False, drawing_message_id=int(message_id),
+                          drawing_retry_at=0, panel_dirty=True, delivery_retry_at=0)
+            return result
+
+        return await self._apply(game_key=game_key, chat_id=chat_id,
+            thread_id=thread_id, round_id=round_id, phase_seq=phase_seq,
+            action_id=f"drawing-delivered:{round_id}:{phase_seq}:{message_id}",
+            transform=transform)
 
     async def acknowledge_panel(self, *, game_key, chat_id, thread_id=None,
                                 round_id, expected_version, message_id, now=None):
@@ -307,6 +336,8 @@ class SocialArcadeService:
                 result = dict(state, version=state["version"] + 1,
                               panel_message_id=int(message_id), panel_dirty=False,
                               delivery_retry_at=0, group_ready=True)
+                if game_key == "ciz_bil":
+                    result["panel_phase_seq"] = state["phase_seq"]
                 if state["phase"] not in rules.TERMINAL and state["phase"] != "lobby":
                     if moment >= float(state.get("panel_wait_until") or 0) and not state["phase_ready"]:
                         result = rules._copy(state)
@@ -327,6 +358,8 @@ class SocialArcadeService:
                         result.update(phase_ready=activated["phase_ready"],
                                       deadline=activated["deadline"],
                                       panel_wait_until=activated["panel_wait_until"])
+                        if game_key == "ciz_bil" and state["phase"] == "guess" and activated["phase_ready"]:
+                            result["guess_started_at"] = moment
                 if await self.repository.compare_and_save_game_state(
                     int(chat_id), self.key(game_key, thread_id), result,
                     expected_version=state["version"]):

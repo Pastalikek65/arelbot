@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 from copy import deepcopy
+import random
 import secrets
 import time
 
-GAME_KEYS = ("sudoku", "sayisal_tahmin", "hizli_buton")
+GAME_KEYS = ("sudoku", "sayisal_tahmin", "hizli_buton", "sifre_tahmin", "fark_bulmaca")
 TERMINAL = {"finished", "cancelled"}
 LOBBY_SECONDS = 1200
 PANEL_WAIT_SECONDS = 300
@@ -16,6 +17,9 @@ SUDOKU_SECONDS = 1800
 ROUNDS = 5
 RESULT_SECONDS = 5
 SYMBOLS = ("◆", "●", "▲", "■")
+SPOT_SYMBOLS = ("◆", "●", "▲", "■")
+SPOT_PAIR = {"◆": "◇", "●": "○", "▲": "△", "■": "□"}
+ARCADE_ROUNDS = 3
 
 # Curated givens; the solver validates one completion for every transformed board.
 BASE = {
@@ -139,9 +143,16 @@ def new(*, game_key, chat_id, thread_id, owner_id, owner_name, round_id,
                      guesses_counts={},
                      low=1, high=1000, secret=None, last_guess=None, last_distance=None,
                      feedback=None, panel_ready=False)
-    else:
+    elif game_key == "hizli_buton":
         state.update(round_no=0, attempts={}, target=None, decoys=[],
                      go_at=None, panel_ready=False, result=None)
+    elif game_key == "sifre_tahmin":
+        state.update(round_no=0, turn_index=0, code_length=4, alphabet="123456",
+                     secret=None, draft="", history=[], attempts_left=8,
+                     hint_revealed=False, revealed_digit=None, round_winner=None)
+    else:
+        state.update(round_no=0, left_grid=[], right_grid=[], diff_positions=[],
+                     found=[], tried={}, misses={}, hint_used=False, hint_row=None)
     return state
 
 
@@ -151,7 +162,7 @@ def join(state, *, user_id, user_name, now=None):
         raise ValueError("lp_lobby_closed")
     if any(p["id"] == int(user_id) for p in state["players"]):
         raise ValueError("lp_already_joined")
-    limit = 30
+    limit = 12 if state["game_key"] in {"sifre_tahmin", "fark_bulmaca"} else 30
     if len(state["players"]) >= limit:
         raise ValueError("lp_full")
     result = _copy(state, moment)
@@ -191,21 +202,185 @@ def _next_reflex_round(result, now, *, delay=None, symbol=None):
                   deadline=None, panel_wait_until=_time(now) + PANEL_WAIT_SECONDS, panel_ready=False)
 
 
-def start(state, *, user_id, now=None, secret=None, delay=None, symbol=None):
+def start(state, *, user_id, now=None, secret=None, delay=None, symbol=None, seed=None):
     moment = _time(now)
     if state["phase"] != "lobby" or moment >= state["lobby_expires_at"]:
         raise ValueError("lp_lobby_closed")
     if int(user_id) != state["owner_id"]:
         raise ValueError("lp_not_owner")
-    minimum = 1 if state["game_key"] == "sayisal_tahmin" else 2
+    minimum = 2 if state["game_key"] == "hizli_buton" else 1
     if len(state["players"]) < minimum:
         raise ValueError("lp_player_count")
     result = _copy(state, moment)
     result["lobby_expires_at"] = None
     if state["game_key"] == "sayisal_tahmin":
         _next_number_round(result, moment, secret=secret)
-    else:
+    elif state["game_key"] == "hizli_buton":
         _next_reflex_round(result, moment, delay=delay, symbol=symbol)
+    elif state["game_key"] == "sifre_tahmin":
+        _next_code_round(result, moment, secret=secret)
+    else:
+        _next_spot_round(result, moment, seed=seed)
+    return result
+
+
+def _arcade_finish(state):
+    best = max(state["scores"].values(), default=0)
+    state.update(phase="finished", deadline=None, panel_wait_until=None,
+                 winner_id=next((int(uid) for uid, score in state["scores"].items() if score == best), None) if best > 0 else None,
+                 score_pending=best > 0)
+
+
+def _next_code_round(state, now, *, secret=None):
+    if state["round_no"] >= ARCADE_ROUNDS:
+        _arcade_finish(state)
+        return
+    round_no = state["round_no"] + 1
+    length = 5 if round_no == 3 else 4
+    alphabet = "123456" if round_no == 1 else "12345678"
+    if secret is None:
+        secret = "".join(secrets.SystemRandom().sample(alphabet, length))
+    if len(secret) != length or len(set(secret)) != length or any(digit not in alphabet for digit in secret):
+        raise ValueError("lp_invalid_secret")
+    state.update(round_no=round_no, phase="turn_pending", secret=secret,
+                 code_length=length, alphabet=alphabet, draft="", history=[],
+                 attempts_left=8, turn_index=(round_no - 1) % len(state["players"]),
+                 round_winner=None, hint_revealed=False, revealed_digit=None, deadline=None,
+                 panel_wait_until=now + PANEL_WAIT_SECONDS)
+
+
+def _code_turn(state, user_id, now):
+    if state["game_key"] != "sifre_tahmin" or state["phase"] != "turn" or state.get("deadline") is None:
+        raise ValueError("lp_wrong_phase")
+    if now >= state["deadline"]:
+        raise ValueError("lp_expired")
+    if state["players"][state["turn_index"]]["id"] != int(user_id):
+        raise ValueError("lp_not_turn")
+
+
+def code_digit(state, *, user_id, digit, now=None):
+    moment = _time(now)
+    _code_turn(state, user_id, moment)
+    digit = str(digit)
+    if digit not in state["alphabet"] or len(digit) != 1 or len(state["draft"]) >= state["code_length"]:
+        raise ValueError("lp_invalid_digit")
+    if digit in state["draft"]:
+        raise ValueError("lp_duplicate_digit")
+    result = _copy(state, moment)
+    result["draft"] += digit
+    return result
+
+
+def code_clear(state, *, user_id, now=None):
+    moment = _time(now)
+    _code_turn(state, user_id, moment)
+    if not state["draft"]:
+        raise ValueError("lp_empty_draft")
+    result = _copy(state, moment)
+    result["draft"] = result["draft"][:-1]
+    return result
+
+
+def code_submit(state, *, user_id, now=None):
+    moment = _time(now)
+    _code_turn(state, user_id, moment)
+    if len(state["draft"]) != state["code_length"]:
+        raise ValueError("lp_incomplete_code")
+    result = _copy(state, moment)
+    exact = sum(a == b for a, b in zip(result["draft"], result["secret"]))
+    misplaced = sum(digit in result["secret"] for digit in result["draft"]) - exact
+    result["history"].append({"user_id": int(user_id), "guess": result["draft"],
+                              "exact": exact, "misplaced": misplaced})
+    result["attempts_left"] -= 1
+    result["draft"] = ""
+    if exact == result["code_length"]:
+        result["scores"][str(user_id)] += max(2, 10 - len(result["history"]))
+        result["round_winner"] = int(user_id)
+    if exact == result["code_length"] or result["attempts_left"] == 0:
+        result.update(phase="round_result", deadline=None,
+                      panel_wait_until=moment + PANEL_WAIT_SECONDS)
+    else:
+        result.update(phase="turn_pending", deadline=None,
+                      panel_wait_until=moment + PANEL_WAIT_SECONDS,
+                      turn_index=(result["turn_index"] + 1) % len(result["players"]))
+    return result
+
+
+def code_hint(state, *, user_id, now=None):
+    moment = _time(now)
+    _code_turn(state, user_id, moment)
+    if state["hint_revealed"] or len(state["history"]) < 3:
+        raise ValueError("lp_hint_unavailable")
+    result = _copy(state, moment)
+    result["hint_revealed"] = True
+    result["revealed_digit"] = result["secret"][0]
+    result["scores"][str(user_id)] -= 1
+    return result
+
+
+def _next_spot_round(state, now, *, seed=None):
+    if state["round_no"] >= ARCADE_ROUNDS:
+        _arcade_finish(state)
+        return
+    round_no = state["round_no"] + 1
+    rng = random.Random(seed if seed is not None else secrets.randbits(64))
+    left = [rng.choice(SPOT_SYMBOLS) for _ in range(25)]
+    right = left[:]
+    positions = sorted(rng.sample(range(25), round_no + 1))
+    for index in positions:
+        right[index] = SPOT_PAIR[left[index]]
+    state.update(round_no=round_no, phase="spot_pending", left_grid=left,
+                 right_grid=right, diff_positions=positions, found=[], tried={},
+                 misses={}, hint_used=False, hint_row=None,
+                 deadline=None, panel_wait_until=now + PANEL_WAIT_SECONDS)
+
+
+def spot_pick(state, *, user_id, index, now=None):
+    moment = _time(now)
+    if state["game_key"] != "fark_bulmaca" or state["phase"] != "spot" or state.get("deadline") is None:
+        raise ValueError("lp_wrong_phase")
+    if moment >= state["deadline"]:
+        raise ValueError("lp_expired")
+    if not any(p["id"] == int(user_id) for p in state["players"]):
+        raise ValueError("lp_not_player")
+    index = int(index)
+    if not 0 <= index < 25:
+        raise ValueError("lp_invalid_cell")
+    if index in state["found"]:
+        raise ValueError("lp_already_found")
+    if index in state["tried"].get(str(user_id), []):
+        raise ValueError("lp_already_tried")
+    if state["misses"].get(str(user_id), 0) >= 3:
+        raise ValueError("lp_no_attempts")
+    result = _copy(state, moment)
+    result["tried"].setdefault(str(user_id), []).append(index)
+    if index in result["diff_positions"]:
+        result["found"].append(index)
+        result["scores"][str(user_id)] += 2
+        if len(result["found"]) == len(result["diff_positions"]):
+            result.update(phase="round_result", deadline=None,
+                          panel_wait_until=moment + PANEL_WAIT_SECONDS)
+    else:
+        result["misses"][str(user_id)] = result["misses"].get(str(user_id), 0) + 1
+        result["scores"][str(user_id)] -= 1
+    return result
+
+
+def spot_hint(state, *, user_id, now=None):
+    moment = _time(now)
+    if state["game_key"] != "fark_bulmaca" or state["phase"] != "spot" or state["hint_used"]:
+        raise ValueError("lp_hint_unavailable")
+    if state.get("deadline") is None or moment >= state["deadline"]:
+        raise ValueError("lp_expired")
+    if not any(p["id"] == int(user_id) for p in state["players"]):
+        raise ValueError("lp_not_player")
+    remaining = [index for index in state["diff_positions"] if index not in state["found"]]
+    if not remaining:
+        raise ValueError("lp_hint_unavailable")
+    result = _copy(state, moment)
+    result["hint_used"] = True
+    result["hint_row"] = remaining[0] // 5 + 1
+    result["scores"][str(user_id)] -= 1
     return result
 
 
@@ -412,7 +587,7 @@ def advance(state, *, now=None):
                       score_pending=False)
         return result
     if state.get("panel_wait_until") is not None and moment >= state["panel_wait_until"]:
-        if state["phase"] in {"active", "turn_pending", "turn", "go_pending", "go", "round_result", "waiting"}:
+        if state["phase"] in {"active", "turn_pending", "turn", "spot_pending", "spot", "go_pending", "go", "round_result", "waiting"}:
             result = _copy(state, moment)
             result.update(phase="cancelled", deadline=None, panel_wait_until=None, score_pending=False)
             return result
@@ -420,8 +595,27 @@ def advance(state, *, now=None):
         result = _copy(state, moment)
         if state["game_key"] == "sayisal_tahmin":
             _next_number_round(result, moment)
-        else:
+        elif state["game_key"] == "hizli_buton":
             _next_reflex_round(result, moment)
+        elif state["game_key"] == "sifre_tahmin":
+            _next_code_round(result, moment)
+        else:
+            _next_spot_round(result, moment)
+        return result
+    if state["game_key"] == "sifre_tahmin" and state["phase"] == "turn" and state.get("deadline") is not None and moment >= state["deadline"]:
+        result = _copy(state, moment)
+        result["history"].append({"user_id": state["players"][state["turn_index"]]["id"],
+                                  "guess": "—", "exact": 0, "misplaced": 0})
+        result["draft"] = ""
+        result["attempts_left"] -= 1
+        result.update(phase="round_result" if result["attempts_left"] == 0 else "turn_pending",
+                      deadline=None, panel_wait_until=moment + PANEL_WAIT_SECONDS,
+                      turn_index=(result["turn_index"] + 1) % len(result["players"]))
+        return result
+    if state["game_key"] == "fark_bulmaca" and state["phase"] == "spot" and state.get("deadline") is not None and moment >= state["deadline"]:
+        result = _copy(state, moment)
+        result.update(phase="round_result", deadline=None,
+                      panel_wait_until=moment + PANEL_WAIT_SECONDS)
         return result
     if (state["game_key"] == "sayisal_tahmin" and state["phase"] == "turn" and
             state.get("deadline") is not None and moment >= state["deadline"]):
@@ -468,7 +662,9 @@ def cancel(state, *, user_id, moderator=False, now=None):
 def public_state(state):
     view = deepcopy(state)
     view.pop("solution", None)
-    view.pop("secret", None)
+    if view["phase"] not in {"round_result", "finished"}:
+        view.pop("secret", None)
+    view.pop("diff_positions", None)
     if view["game_key"] == "hizli_buton" and view["phase"] in {"lobby", "waiting", "go_pending"}:
         view.pop("target", None)
     view.pop("processed_actions", None)

@@ -1,6 +1,6 @@
 # Oyun rehberi
 
-Kanonik oyun kaydında **45 ayrı oyun** bulunur. Komut eş adları, zar ve yazı-tura gibi ek mini etkileşimler bu sayıyı şişirmek için sayılmaz.
+Kanonik oyun kaydında **48 ayrı oyun** bulunur. Komut eş adları, zar ve yazı-tura gibi ek mini etkileşimler bu sayıyı şişirmek için sayılmaz.
 
 Oyun salonu: `/oyun`. Oyuna göre lobi, zorluk ve kategori seçilir. Gizli rollü oyunlarda oyuncuların botla özel sohbeti başlatması gerekir.
 
@@ -30,6 +30,7 @@ Oyun salonu: `/oyun`. Oyuna göre lobi, zorluk ve kategori seçilir. Gizli roll�
 | Hafıza Eşleştirme | `/eslestirme` | 1–4 | Kapalı kart çiftlerini bulma ve hamle takibi. |
 | Mayın Tarlası | `/mayin` | 1 | Hücre açma, bayraklama ve mayın kontrolü. |
 | Sudoku | `/sudoku` | 1 | Zorluk seçimi, hücre doğrulama, ipucu ve kayıtlı tahta. |
+| Fark Bulmaca | `/fark` | 1–12 | Üç turda iki, üç ve dört fark içeren iki şekil ızgarası; kare seçimi, yanlış hakkı, satır ipucu ve puan. |
 | Amiral Battı | `/amiral` | 2 | İki oyuncunun gizli filoları, atış ve isabet takibi. |
 | 2048 | `/2048` | 1 | Kaydırma, birleşme, puan ve hamle kalmadığında sonuç. |
 
@@ -41,6 +42,7 @@ Oyun salonu: `/oyun`. Oyuna göre lobi, zorluk ve kategori seçilir. Gizli roll�
 | Yaş Tahmini | `/yas` | 1–100 | Lisans kayıtlı Commons fotoğrafları, çekim tarihindeki yaş ve beş turlu puanlama. |
 | Bilgi Yarışması | `/quiz` | 1–100 | Kategorili soru havuzu, cevap süresi ve puan. |
 | Sayı Tahmini | `/sayitahmin` | 1–30 | Sayı aralığı, yüksek/düşük yönlendirmesi ve deneme takibi. |
+| Şifre Tahmin | `/sifre` | 1–12 | Üç aşamalı, tekrarsız rakam şifresi; doğru yer/yanlış yer geri bildirimi, sırayla tahmin ve sınırlı ipucu. |
 | Kör Sıralama | `/korsiralama` | 1 | Görülmeden ayrılan konumlara değer yerleştirme. |
 | Kronoloji | `/kronoloji` | 1–12 | Olayları zaman sırasına dizme. |
 | Doğru–Yanlış | `/dogruyanlis` | 1–30 | İddiaları doğru veya yanlış olarak değerlendirme. |
@@ -70,6 +72,7 @@ Oyun salonu: `/oyun`. Oyuna göre lobi, zorluk ve kategori seçilir. Gizli roll�
 | Bomba | `/bomba` | 2–12 | Süre baskısı altında kelime üretme ve oyuncu eleme. |
 | İki Doğru Bir Yalan | `/ikidogru` | 3–12 | Özel ifadeler ve grubun yalanı seçtiği oylama. |
 | Kimim Ben | `/kimimben` | 3–12 | 108 kimlik ve dört kategori; ikinci sorudan sonra kategori ipucu, kullanıcıya özel grup kartı, kalıcı özel sohbet kartı. Botla önceden konuştuysan yeniden `/start` gerekmez. |
+| Çiz Bil | `/cizbil` | 2–12 | 80 somut çizilebilir kelime; lobide özel sohbet hazırlığı, çizerin gizli kelimeyi alıp çizimini fotoğrafla göndermesi, grupta iki tahmin hakkı, çizer dönüşümü ve puan. |
 | Takım Bilgi Ligi | `/takimligi` | 4–20 | Takımlara ayrılmış soru ve ortak skor akışı. |
 | Zehirli Kadeh | `/kadeh` | 3–10 | Gizli bilgiye dayalı grup seçimi ve eleme. |
 
@@ -89,7 +92,7 @@ UNO, Batak, Pişti, Papaz Kimde ve Blackjack kart yüzlerini görsel/sticker ak�
 
 ## Ek mini etkileşimler
 
-Zar, yazı-tura, slot, doğruluk/cesaret, düello ve Rus ruleti yüzeyleri de vardır. Bunlar yukarıdaki 45 oyun kaydından ayrı belgelenir; komutlar için [özellik rehberine](FEATURES.md#10-oyunlar-puan-ve-sanal-ekonomi) bakın.
+Zar, yazı-tura, slot, doğruluk/cesaret, düello ve Rus ruleti yüzeyleri de vardır. Bunlar yukarıdaki 48 oyun kaydından ayrı belgelenir; komutlar için [özellik rehberine](FEATURES.md#10-oyunlar-puan-ve-sanal-ekonomi) bakın.
 
 ## Doğrulama sınırı
 

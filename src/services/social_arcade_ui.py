@@ -12,11 +12,12 @@ CODE = {key: str(index) for index, key in enumerate(game.GAME_KEYS)}
 DECODE = {value: key for key, value in CODE.items()}
 TITLE = {"amiral_batti": "Amiral Battı", "iki_dogru_bir_yalan": "İki Doğru Bir Yalan",
          "kimim_ben": "Kimim Ben?", "takim_bilgi_ligi": "Takım Bilgi Ligi",
-         "zehirli_kadeh": "Zehirli Kadeh"}
+         "zehirli_kadeh": "Zehirli Kadeh", "ciz_bil": "Çiz Bil"}
 PHASE = {"lobby": "Lobi", "shot": "Atış sırası", "author": "Üç ifade hazırlanıyor",
          "vote": "Gizli oylama", "question": "Soru sırası", "answer": "Yanıt oylaması",
          "trivia": "Takım sorusu", "poison": "Kadehler hazırlanıyor",
          "serve": "Kadeh sunumu", "react": "Karar sırası", "result": "Tur sonucu",
+         "draw": "Çizer hazırlanıyor", "guess": "Tahmin zamanı",
          "finished": "Maç bitti", "cancelled": "İptal edildi"}
 
 
@@ -60,6 +61,20 @@ def group_text(state):
     elif phase == "cancelled":
         # A lobby may close before start has initialized game-specific fields.
         pass
+    elif key == "ciz_bil":
+        if phase != "finished":
+            artist = view["players"][view["artist_index"]]
+            lines.append(f"✍️ Çizer: {name(artist)} · {view['artist_index'] + 1}/{len(view['players'])}")
+        if phase == "draw":
+            lines.append("Gizli kelime çizerin özel sohbetinde. Çizimi fotoğraf olarak bota özelden gönderir; yazı ve açıklama kullanılmaz.")
+        elif phase == "guess":
+            lines.append("Çizim gruba gönderildi. Çizer dışındaki oyuncular cevabı normal mesajla yazar; kişi başı iki tahmin.")
+            lines.append(f"Kullanılan tahminler: {sum(len(items) for items in view['guesses'].values())}")
+        elif phase == "result" and view.get("last_event"):
+            event = view["last_event"]
+            lines.append(f"Kelime: <b>{escape(event['word'])}</b>" +
+                         (" · süre doldu" if event.get("timeout") else " · doğru bilindi"))
+        lines.append("Puan: " + " · ".join(f"{name(p)} {view['scores'][str(p['id'])]}" for p in view["players"]))
     elif key == "amiral_batti":
         actor = view["players"][view["turn_index"]]
         lines.append(f"Sıra: {name(actor)} · 6×6 sahada bir kare seç.")
@@ -221,6 +236,9 @@ def private_text(state, user_id):
         elif phase == "react":
             lines.append(f"Sunulan kadeh {state['served_cup']+1}. İç, bir kere değiştir veya bir kere reddet.")
             lines.append(f"Kalan değiştir: {state['swaps'][str(user_id)]}; ret: {state['refuses'][str(user_id)]}.")
+    elif key == "ciz_bil" and phase == "draw":
+        lines.append(f"Çizilecek kelime: <b>{escape(state['word'])}</b>")
+        lines.append("Bu kelimeyi yazma, söyleme veya fotoğraf açıklamasına ekleme. Nesneyi çizip bu özel sohbete fotoğraf olarak gönder. Bot görseli grubuna taşır; süre çizim tesliminden sonra başlar.")
     return "\n".join(lines)
 
 
@@ -257,6 +275,12 @@ ERRORS = {"sa_not_owner": "Bu işlemi kurucu veya grup yöneticisi yapabilir.",
           "sa_stale_private_panel": "Eski özel panelden işlem yapılamaz.",
           "sa_invalid_invite": "Bu özel sohbet bağlantısının süresi doldu.",
           "sa_invalid_claim": "İfade 5–100 karakter olmalı; bu bölümde üç ifade var.",
+          "sa_not_drawer": "Çizimi yalnız sıradaki çizer gönderebilir.",
+          "sa_not_guesser": "Bu turda yalnız diğer oyuncular tahmin edebilir.",
+          "sa_invalid_drawing": "Geçerli bir çizim fotoğrafı gönder.",
+          "sa_waiting_drawing": "Çizim henüz gruba ulaşmadı; biraz bekle.",
+          "sa_guess_limit": "Bu turdaki iki tahmin hakkın bitti.",
+          "sa_invalid_guess": "Başka, kısa ve açık bir tahmin yaz.",
           "sa_duplicate_claim": "Aynı ifadeyi iki kez yazamazsın.",
           "sa_invalid_question": "Evet/hayır sorusu 5–120 karakter olmalı ve ? ile bitmeli."}
 

@@ -8,10 +8,10 @@ import unicodedata
 from copy import deepcopy
 
 GAME_KEYS = ("amiral_batti", "iki_dogru_bir_yalan", "kimim_ben",
-             "takim_bilgi_ligi", "zehirli_kadeh")
+             "takim_bilgi_ligi", "zehirli_kadeh", "ciz_bil")
 LIMITS = {"amiral_batti": (2, 2), "iki_dogru_bir_yalan": (3, 12),
           "kimim_ben": (3, 12), "takim_bilgi_ligi": (4, 20),
-          "zehirli_kadeh": (3, 10)}
+          "zehirli_kadeh": (3, 10), "ciz_bil": (2, 12)}
 TERMINAL = {"finished", "cancelled"}
 LOBBY_SECONDS = 1200
 PANEL_WAIT_SECONDS = 300
@@ -44,6 +44,14 @@ IDENTITY_CATEGORIES = {
 IDENTITIES = tuple(identity for values in IDENTITY_CATEGORIES.values() for identity in values)
 IDENTITY_CATEGORY = {identity: category for category, values in IDENTITY_CATEGORIES.items()
                      for identity in values}
+DRAWABLE_WORDS = tuple(dict.fromkeys((
+    *IDENTITY_CATEGORIES["Hayvan"], *IDENTITY_CATEGORIES["Eşya"],
+    "ağaç", "balon", "bisiklet", "bulut", "çadır", "çaydanlık", "deniz feneri",
+    "dondurma", "elma", "ev", "gemi", "gökkuşağı", "güneş", "kalem",
+    "kale", "karpuz", "kedi", "kelebek", "kitap", "köprü", "lamba",
+    "martı", "masa", "mantar", "otomobil", "roket", "saat", "şapka",
+    "tren", "uçak", "yıldız", "yol", "zarf",
+)))
 # Adjacent questions form a matched topic/difficulty pair, one per team.
 # Four locally checked subjects and five pairs per subject keep a five-round
 # match varied without relying on changing facts or external APIs.
@@ -252,6 +260,13 @@ def start(state, *, user_id, now=None, seed=None):
         result.update(teams=teams, team_scores=[0, 0], turn_no=0,
                       wager=1, passes=[1, 1], questions=questions, last_event=None)
         _phase(result, "trivia", moment, 60)
+    elif key == "ciz_bil":
+        words = rng.sample(DRAWABLE_WORDS, len(ids))
+        result.update(artist_index=0, artist_id=ids[0], draw_words=words, word=words[0],
+                      drawing_file_id=None, drawing_message_id=None,
+                      drawing_pending=False, drawing_retry_at=0,
+                      guess_started_at=None, guesses={}, last_event=None)
+        _phase(result, "draw", moment, 120, [ids[0]])
     else:
         poisoner = rng.choice(ids)
         result.update(poisoner_id=poisoner, round_no=1, health={str(uid): 2 for uid in ids},
@@ -314,9 +329,26 @@ def _next_poison_round(state, now):
     _phase(state, "poison", now, 60, [state["poisoner_id"]])
 
 
+def _next_draw(state, now):
+    state["artist_index"] += 1
+    if state["artist_index"] >= len(state["players"]):
+        best = max(state["scores"].values())
+        winners = [int(uid) for uid, points in state["scores"].items() if points == best]
+        _finish(state, now=now, winners=winners)
+        return
+    artist = state["players"][state["artist_index"]]["id"]
+    state.update(artist_id=artist, word=state["draw_words"][state["artist_index"]],
+                 drawing_file_id=None, drawing_message_id=None,
+                 drawing_pending=False, drawing_retry_at=0,
+                 guess_started_at=None, guesses={}, last_event=None)
+    _phase(state, "draw", now, 120, [artist])
+
+
 def _normalized(text):
-    return "".join(ch for ch in unicodedata.normalize("NFKC", str(text).strip().casefold())
-                   if ch.isalnum() or ch.isspace()).strip()
+    folded = unicodedata.normalize("NFKD", str(text).strip().casefold().replace("ı", "i"))
+    return " ".join("".join(ch for ch in folded
+                            if not unicodedata.combining(ch) and (ch.isalnum() or ch.isspace()))
+                    .split())
 
 
 def act(state, *, user_id, action, value=None, text=None, now=None, moderator=False):
@@ -364,6 +396,40 @@ def act(state, *, user_id, action, value=None, text=None, now=None, moderator=Fa
     if state["phase"] in TERMINAL or not state["phase_ready"] or moment >= state["deadline"]:
         raise ValueError("sa_wrong_phase")
     key, phase = state["game_key"], state["phase"]
+    if key == "ciz_bil":
+        artist = state["players"][state["artist_index"]]["id"]
+        if phase == "draw" and action == "drawing":
+            if int(user_id) != artist:
+                raise ValueError("sa_not_drawer")
+            file_id = str(value or "").strip()
+            if not file_id or len(file_id) > 256 or any(ch.isspace() for ch in file_id):
+                raise ValueError("sa_invalid_drawing")
+            result = _copy(state)
+            result.update(drawing_file_id=file_id, drawing_message_id=None,
+                          drawing_pending=True, drawing_retry_at=0)
+            _phase(result, "guess", moment, 90)
+            return result
+        if phase == "guess" and action == "draw_guess":
+            if int(user_id) == artist or not any(p["id"] == int(user_id) for p in state["players"]):
+                raise ValueError("sa_not_guesser")
+            if not state.get("drawing_message_id") and state.get("drawing_pending"):
+                raise ValueError("sa_waiting_drawing")
+            guesses = state.get("guesses", {}).get(str(user_id), [])
+            if len(guesses) >= 2:
+                raise ValueError("sa_guess_limit")
+            answer = _normalized(text)
+            if not answer or len(answer) > 50 or answer in guesses:
+                raise ValueError("sa_invalid_guess")
+            result = _copy(state)
+            result["guesses"].setdefault(str(user_id), []).append(answer)
+            if answer == _normalized(state["word"]):
+                result["scores"][str(user_id)] += 5 if len(guesses) == 0 else 3
+                result["scores"][str(artist)] += 2
+                result["last_event"] = {"word": state["word"], "artist": artist,
+                                        "guesser": int(user_id)}
+                _phase(result, "result", moment, RESULT_SECONDS)
+            return result
+        raise ValueError("sa_invalid_action")
     if key == "amiral_batti" and phase == "shot" and action == "shot":
         actor = state["players"][state["turn_index"]]["id"]
         if int(user_id) != actor:
@@ -590,6 +656,8 @@ def advance(state, *, now=None):
                 _phase(result, "trivia", moment, 60)
         elif key == "zehirli_kadeh":
             _next_poison_round(result, moment)
+        elif key == "ciz_bil":
+            _next_draw(result, moment)
         return result
     if key == "amiral_batti" and phase == "shot":
         actor = state["players"][state["turn_index"]]["id"]
@@ -647,6 +715,11 @@ def advance(state, *, now=None):
                                     "poison_cup": state["poison_cup"],
                                     "served_cup": state["served_cup"], "poisoned": False}
             _phase(result, "result", moment, RESULT_SECONDS)
+    elif key == "ciz_bil":
+        artist = state["players"][state["artist_index"]]["id"]
+        result["last_event"] = {"word": state["word"], "artist": artist,
+                                "timeout": True}
+        _phase(result, "result", moment, RESULT_SECONDS)
     return result
 
 
@@ -661,7 +734,8 @@ def poison_server_and_target(state):
 
 def public_view(state):
     view = deepcopy(state)
-    for key in ("ships", "identities", "poisoner_id", "poison_cup", "dm_invites",
+    for key in ("ships", "identities", "poisoner_id", "poison_cup", "word", "draw_words",
+                "drawing_file_id", "drawing_retry_at", "dm_invites",
                 "processed_actions", "private_message_ids", "private_retry",
                 "private_delivery", "private_recipients", "private_panels", "questions"):
         view.pop(key, None)

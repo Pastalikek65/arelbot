@@ -4,11 +4,11 @@
 
 **Sohbet et · Birlikte oyna · Gününü düzenle · Grubunu yönet**
 
-[Özellikler](docs/FEATURES.md) · [45 oyun](docs/GAMES.md) · [Kurulum](#kurulum) · [Operasyon](docs/OPERATIONS.md)
+[Özellikler](docs/FEATURES.md) · [48 oyun](docs/GAMES.md) · [Kurulum](#kurulum) · [Operasyon](docs/OPERATIONS.md)
 
 </div>
 
-Arel, özel sohbetler ve Telegram grupları için geliştirilen açık kaynak bir Python botudur. **45 oyun** ve **91 kayıtlı özellik**; sohbet, üretkenlik, güncel bilgi, medya ve moderasyon araçlarıyla aynı menüde buluşur.
+Arel, özel sohbetler ve Telegram grupları için geliştirilen açık kaynak bir Python botudur. **48 oyun** ve **94 kayıtlı özellik**; sohbet, üretkenlik, güncel bilgi, medya ve moderasyon araçlarıyla aynı menüde buluşur.
 
 ## Özellikler
 
@@ -20,21 +20,21 @@ Arel, özel sohbetler ve Telegram grupları için geliştirilen açık kaynak bi
 | **Bilgi araçları** | Şehir/ilçe, plaka/telefon kodu, hava ve hava kalitesi, deprem, nöbetçi eczane, akaryakıt, namaz, BİM aktüel; uçuş arama bağlantıları |
 | **Finans ve kültür** | Döviz/altın, kripto/borsa ve grafikler; kategorili haberler ve özet; film, dizi, kitap, müzik önerileri ve şarkı sözü araması |
 | **Medya ve sticker** | Desteklenen herkese açık medyayı indirme, dönüştürme, iş takibi/iptal; görsel mesaj alıntıları, temalar, alıntı arşivi; statik/video sticker, arama, etiketleme ve kişisel paket yönetimi |
-| **Oyun ve ekonomi** | Aşağıdaki 45 oyun; inline görselli kart elleri, lobiler, özel roller, skor/profil, başarımlar, sezon, sanal bakiye, günlük ödül, mağaza ve envanter |
+| **Oyun ve ekonomi** | Aşağıdaki 48 oyun; inline görselli kart elleri, lobiler, özel roller, skor/profil, başarımlar, sezon, sanal bakiye, günlük ödül, mağaza ve envanter |
 | **Topluluk yönetimi** | Yetkili moderasyon, uyarı/ceza, flood/link/kelime/medya koruması, captcha/raid, karşılama/veda, grup notları/filtreler, duyurular, istatistikler, federasyon ve raporlama |
 | **İşletim** | Inline arama, kapsamlı komut menüleri, özellik anahtarları; bot/worker ayrımı, kalıcı kuyruk, önbellek, sağlık/ölçüm, yedekleme ve geri dönüş araçları |
 
-[Tüm komutlar ve kullanım koşulları →](docs/FEATURES.md) · [91 özellik için teknik kayıt →](docs/FEATURE_CATALOG.md)
+[Tüm komutlar ve kullanım koşulları →](docs/FEATURES.md) · [94 özellik için teknik kayıt →](docs/FEATURE_CATALOG.md)
 
-## 45 oyun, tek salon
+## 48 oyun, tek salon
 
 | Kategori | Oyunlar |
 |---|---|
 | **Kelime** | Kelime Oyunu, Anlatmaca, Adam Asmaca, Kelime Zinciri, Türkçe Wordle, Karşı Kelime, Anagram, Harf Maratonu, Sözcük Avı, Yasak Harf |
-| **Tahta ve bulmaca** | Connect Four, Gomoku / Beşli, Satranç, XOX, Hafıza Eşleştirme, Mayın Tarlası, Sudoku, Amiral Battı, 2048 |
-| **Bilgi ve tahmin** | Akinatör, Yaş Tahmini, Bilgi Yarışması, Sayı Tahmini, Kör Sıralama, Kronoloji, Doğru–Yanlış, Dedektif, Beş İpucu, Emoji Bilmece |
+| **Tahta ve bulmaca** | Connect Four, Gomoku / Beşli, Satranç, XOX, Hafıza Eşleştirme, Mayın Tarlası, Sudoku, Fark Bulmaca, Amiral Battı, 2048 |
+| **Bilgi ve tahmin** | Akinatör, Yaş Tahmini, Bilgi Yarışması, Sayı Tahmini, Şifre Tahmin, Kör Sıralama, Kronoloji, Doğru–Yanlış, Dedektif, Beş İpucu, Emoji Bilmece |
 | **Kart** | UNO, Batak, Blackjack, Pişti, Papaz Kimde |
-| **Grup oyunları** | Takım Tabu, Casus, Vampir Köylü / Kurt Adam (45 rol), Refleks, Ortak Hikâye, Bomba, İki Doğru Bir Yalan, Kimim Ben, Takım Bilgi Ligi, Zehirli Kadeh |
+| **Grup oyunları** | Takım Tabu, Casus, Vampir Köylü / Kurt Adam (45 rol), Refleks, Ortak Hikâye, Bomba, İki Doğru Bir Yalan, Kimim Ben, Çiz Bil, Takım Bilgi Ligi, Zehirli Kadeh |
 | **Sosyal** | Şişe Çevirme |
 
 `/oyun` salonu açar. [Kurt Adam rehberi](docs/WEREWOLF_GAME_GUIDE.md) ve [oyun rehberi](docs/GAMES.md) her oyunun komutunu, oyuncu sayısını ve mekaniğini açıklar. Zar, yazı-tura ve doğruluk/cesaret gibi ek mini etkileşimler de bulunur.
@@ -60,7 +60,7 @@ Normal kişilik samimi ve esprili Türkçe kullanır; ciddi konularda üslubunu 
 
 **Prism ve Flare için açık dış sorun:** 23 Ekim’de iki model HRMN tarafından listelenmesine rağmen yerelden ve sunucudan `HTTP 500 / no provider responded` döndürdü. Bu iki model otomatik sırada yer almaz. Açık model seçimi başka modelmiş gibi başarılı gösterilmez; [çalışan beş model ve sıra](docs/HRMN_IMAGE_MODELS_2026-10-23.md) ayrı belgelenir. [Tanı ve yeniden test](docs/HRMN_IMAGE_DIAGNOSIS_2026-10-23.md).
 
-Güncel yerel kontrollerde **3.264 test geçti, 19 atlandı**; önceki dağıtımda canlı sohbet ve yedek görsel üretimi API üzerinden doğrulandı. Bunlar tüm oyunların gerçek oyuncularla Telegram kabulü değildir. Güncel kapsam: [dağıtım kanıtı](docs/IMAGE_DEPLOYMENT_2026-10-23.md), [faz kaydı](docs/PHASE_STATUS.json).
+Güncel yerel kontrollerde **3.468 test geçti, 19 atlandı**; önceki dağıtımda canlı sohbet ve yedek görsel üretimi API üzerinden doğrulandı. Bunlar tüm oyunların gerçek oyuncularla Telegram kabulü değildir. Güncel kapsam: [dağıtım kanıtı](docs/IMAGE_DEPLOYMENT_2026-10-23.md), [faz kaydı](docs/PHASE_STATUS.json).
 
 ## Kurulum
 

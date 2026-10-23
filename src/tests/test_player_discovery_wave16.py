@@ -18,7 +18,7 @@ def test_every_game_command_is_visible_in_bounded_public_picker():
     assert {'help', 'iptal'}.issubset(visible)
     assert len(menu) < 100
     assert len(menu) == len(visible)
-    assert len(game_guide.COMMANDS) == 45
+    assert len(game_guide.COMMANDS) == 48
     for command in game_guide.COMMANDS.values():
         resolved = registry.resolve(command)
         assert resolved is not None, command

@@ -157,6 +157,7 @@ EXPLICIT_HANDLER_MAP: Mapping[str, str] = {
     "amiral": "handle_puzzle_command",
     "ikidogru": "handle_puzzle_command",
     "kimimben": "handle_puzzle_command",
+    "cizbil": "handle_puzzle_command",
     "takimligi": "handle_puzzle_command",
     "kadeh": "handle_puzzle_command",
     "pisti": "handle_puzzle_command",
@@ -172,6 +173,8 @@ EXPLICIT_HANDLER_MAP: Mapping[str, str] = {
     "sudoku": "handle_puzzle_command",
     "sayitahmin": "handle_puzzle_command",
     "refleks": "handle_puzzle_command",
+    "sifre": "handle_puzzle_command",
+    "fark": "handle_puzzle_command",
     # Public information providers.
     "haber": "handle_haber_command",
     "deprem": "handle_deprem_command",

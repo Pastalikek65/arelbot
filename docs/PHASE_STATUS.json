@@ -369,5 +369,15 @@
     },
     "normal_style": "API_samples_verified",
     "hrmn_image_upstream": "HTTP_500_fallback_verified"
+  },
+  "games_wave48_20261023": {
+    "status": "local_automated_verified_deployment_pending",
+    "catalog_games": 48,
+    "games_added": ["sifre_tahmin", "fark_bulmaca", "ciz_bil"],
+    "existing_games_improved": ["uno", "bilgi_yarismasi", "kimim_ben"],
+    "human_multiplayer_acceptance": "NOT_RUN",
+    "github_publication": "PENDING",
+    "server_deployment": "PENDING",
+    "release_gate": "offline checks passed; local pytest 3468 passed/19 skipped; live deployment pending"
   }
 }

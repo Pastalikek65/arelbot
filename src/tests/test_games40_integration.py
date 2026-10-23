@@ -66,7 +66,7 @@ async def test_private_claim_is_consumed_before_secret_guard_and_ai_history():
 
 def test_expanded_mechanics_does_not_count_dice_or_theme_aliases():
     from src.games.catalog import GAME_DEFINITIONS
-    assert len(GAME_DEFINITIONS)==45
+    assert len(GAME_DEFINITIONS)==48
     assert not {'dice','zar','slot','yazitura'} & set(GAME_DEFINITIONS)
 
 

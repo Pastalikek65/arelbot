@@ -78,8 +78,20 @@ class SocialArcadeHandler:
 
     @staticmethod
     def accepts_text(state):
-        # Every authored statement/question is privately submitted. Group chat remains discussion.
-        return False
+        return (state.get("game_key") == "ciz_bil" and state.get("phase") == "guess"
+                and state.get("phase_ready") and bool(state.get("drawing_message_id")))
+
+    async def deliver_drawing(self, bot, *, chat_id, thread_id=None):
+        claim = await self.service.claim_delivery(game_key="ciz_bil", chat_id=chat_id,
+            thread_id=thread_id, kind="drawing")
+        if not claim:
+            return
+        sent = await bot.send_photo(chat_id=chat_id, photo=claim["drawing_file_id"],
+            caption="✍️ Çizim hazır. Tahminleri grupta normal mesaj olarak yazın.",
+            message_thread_id=thread_id)
+        await self.service.acknowledge_drawing(game_key="ciz_bil", chat_id=chat_id,
+            thread_id=thread_id, round_id=claim["round_id"],
+            phase_seq=claim["phase_seq"], message_id=sent.message_id)
 
     async def publish(self, bot, *, game_key, chat_id, thread_id=None):
         state = await self.service.claim_delivery(game_key=game_key, chat_id=chat_id,
@@ -87,6 +99,11 @@ class SocialArcadeHandler:
         if not state:
             return False
         message_id = state.get("panel_message_id")
+        old_id = message_id
+        fresh_phase = (game_key == "ciz_bil" and bool(message_id) and
+                       state.get("panel_phase_seq") != state["phase_seq"])
+        if fresh_phase:
+            message_id = None
         kwargs = {"chat_id": chat_id, "text": ui.group_text(state), "parse_mode": "HTML",
                   "reply_markup": ui.group_keyboard(state)}
         if message_id:
@@ -106,6 +123,13 @@ class SocialArcadeHandler:
         await self.service.acknowledge_panel(game_key=game_key, chat_id=chat_id,
             thread_id=thread_id, round_id=state["round_id"],
             expected_version=state["version"], message_id=message_id)
+        if fresh_phase and old_id != message_id:
+            try:
+                cleanup = getattr(bot, "edit_message_reply_markup", None)
+                if callable(cleanup):
+                    await cleanup(chat_id=chat_id, message_id=old_id, reply_markup=None)
+            except TelegramError:
+                pass
         return True
 
     async def deliver_private(self, bot, *, game_key, chat_id, thread_id=None):
@@ -144,6 +168,12 @@ class SocialArcadeHandler:
         except Exception as exc:  # noqa: BLE001 - transport boundary retains durable retries
             self.service.metrics.inc("social_arcade_score_retry_total")
             logger.warning("Social arcade rewards deferred: %s", type(exc).__name__)
+        if game_key == "ciz_bil":
+            await self.deliver_drawing(bot, chat_id=chat_id, thread_id=thread_id)
+            fresh = await self.service.current(game_key=game_key, chat_id=chat_id,
+                                               thread_id=thread_id)
+            if fresh and fresh.get("drawing_pending"):
+                return
         # A group-action phase needs one preparation receipt and one actionable receipt.
         for _ in range(3):
             await self.publish(bot, game_key=game_key, chat_id=chat_id, thread_id=thread_id)
@@ -238,12 +268,14 @@ class SocialArcadeHandler:
                 if rules._person(state, uid)["ready"]:
                     await query.answer("Özel sohbetin zaten hazır.")
                     return True
-                if key == "kimim_ben":
+                if key in {"kimim_ben", "ciz_bil"}:
                     # A successful DM proves that this user has already opened the bot.
                     # The link remains available when Telegram rejects the first DM.
                     try:
                         await context.bot.send_message(chat_id=uid,
-                            text="Kimim Ben özel sohbetin hazır. Oyun başlayınca kimlik kartın buraya gelecek.",
+                            text=("Çiz Bil özel sohbetin hazır. Sıran geldiğinde çizilecek kelime burada görünecek."
+                                  if key == "ciz_bil" else
+                                  "Kimim Ben özel sohbetin hazır. Oyun başlayınca kimlik kartın buraya gelecek."),
                             protect_content=True)
                     except TelegramError:
                         pass
@@ -326,7 +358,81 @@ class SocialArcadeHandler:
         return True
 
     async def on_text(self, update, context, text):
-        return False
+        chat, user, message = update.effective_chat, update.effective_user, update.effective_message
+        if not chat or chat.type not in {"group", "supergroup"} or not user or not message:
+            return False
+        topic = forum_thread_id(message)
+        state = await self.service.current(game_key="ciz_bil", chat_id=chat.id,
+                                           thread_id=topic)
+        if not state or not self.accepts_text(state):
+            return False
+        if not any(p["id"] == user.id for p in state["players"]):
+            return False
+        if getattr(update, "edited_message", None) is message:
+            return True
+        try:
+            await self.service.act(game_key="ciz_bil", chat_id=chat.id,
+                thread_id=topic, user_id=user.id, action_id=f"guess:{message.message_id}",
+                action="draw_guess", text=str(text), round_id=state["round_id"],
+                phase_seq=state["phase_seq"],
+                input_message_id=message.message_id,
+                submitted_at=message.date.timestamp() if getattr(message, "date", None) else None)
+        except ValueError:
+            return True
+        try:
+            await self._flush(context, game_key="ciz_bil", chat_id=chat.id,
+                              thread_id=topic)
+        except Exception as exc:  # noqa: BLE001 - scored guess remains durable; worker retries panel
+            logger.warning("Draw guess panel delivery deferred: %s", type(exc).__name__)
+        return True
+
+    async def on_private_photo(self, update, context, *, routes):
+        chat, user, message = update.effective_chat, update.effective_user, update.effective_message
+        if not chat or chat.type != "private" or not user or not message or not getattr(message, "photo", None):
+            return False
+        matches = []
+        reply_id = getattr(getattr(message, "reply_to_message", None), "message_id", None)
+        for route in routes:
+            stored = str(route.get("game_type") or "")
+            if stored != "ciz_bil" and not stored.startswith("ciz_bil_t"):
+                continue
+            topic = int(stored.removeprefix("ciz_bil_t")) if stored.startswith("ciz_bil_t") else None
+            group_id = int(route["chat_id"])
+            state = await self.service.current(game_key="ciz_bil", chat_id=group_id,
+                                               thread_id=topic)
+            if not state or state["phase"] != "draw" or state["players"][state["artist_index"]]["id"] != user.id:
+                continue
+            receipt = state.get("private_panels", {}).get(str(user.id), {})
+            if receipt.get("phase_seq") != state["phase_seq"]:
+                continue
+            if reply_id is not None and int(reply_id) != int(receipt.get("message_id") or 0):
+                continue
+            matches.append((group_id, topic, state, receipt))
+        if not matches:
+            return False
+        if len(matches) != 1:
+            await message.reply_text("Çizimi ilgili güncel gizli kelime mesajına yanıt olarak gönder.")
+            return True
+        if (str(getattr(message, "caption", None) or "").strip() or
+                getattr(message, "forward_origin", None) is not None or
+                int(getattr(message.photo[-1], "file_size", 0) or 0) > 10_000_000):
+            await message.reply_text("Çizimi açıklamasız, iletilmemiş ve 10 MB altında bir fotoğraf olarak gönder.")
+            return True
+        group_id, topic, state, receipt = matches[0]
+        try:
+            await self.service.act(game_key="ciz_bil", chat_id=group_id,
+                thread_id=topic, user_id=user.id, action_id=f"drawing:{message.message_id}",
+                action="drawing", value=message.photo[-1].file_id,
+                round_id=state["round_id"], phase_seq=state["phase_seq"],
+                private_message_id=receipt["message_id"], input_message_id=message.message_id,
+                submitted_at=message.date.timestamp() if getattr(message, "date", None) else None)
+            await self._flush(context, game_key="ciz_bil", chat_id=group_id, thread_id=topic)
+        except ValueError as exc:
+            await message.reply_text(ui.error_message(str(exc)))
+        except Exception as exc:
+            logger.warning("Draw delivery deferred: %s", type(exc).__name__)
+            await message.reply_text("Çizimin kaydedildi. Gruba gönderim yeniden denenecek.")
+        return True
 
     async def on_private_text(self, update, context, text, *, routes):
         chat, user, message = update.effective_chat, update.effective_user, update.effective_message

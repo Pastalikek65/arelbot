@@ -6,15 +6,17 @@ import math
 import time
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-from src.telegram.game_controls import with_game_help
+from src.telegram.game_controls import disabled_button, with_game_help
 
 from src.games import logic_puzzles as rules
 
-CODE = {"sudoku": "s", "sayisal_tahmin": "n", "hizli_buton": "r"}
+CODE = {"sudoku": "s", "sayisal_tahmin": "n", "hizli_buton": "r",
+        "sifre_tahmin": "k", "fark_bulmaca": "f"}
 REVERSE_CODE = {value: key for key, value in CODE.items()}
 DIGITS = "0123456789abcdefghijklmnopqrstuvwxyz"
 PHASE_LABEL = {"lobby": "Lobi", "active": "Oynanıyor", "turn_pending": "Sıra hazırlanıyor",
                "turn": "Tahmin sırası", "waiting": "GO bekleniyor", "go_pending": "GO hazırlanıyor",
+               "spot_pending": "Görsel hazırlanıyor", "spot": "Farkları bul",
                "go": "GO!", "round_result": "Tur sonucu", "finished": "Maç bitti",
                "cancelled": "İptal edildi"}
 
@@ -98,6 +100,64 @@ def render(state):
             text += "\n✅ Bulmaca tamamlandı. Yeni oyun için aşağıdaki düğmeyi kullan."
         else:
             text += "\nOyun iptal edildi; ödül verilmedi."
+        return text
+    if game == "sifre_tahmin":
+        text = f"🔐 <b>Şifre Tahmin</b> · {PHASE_LABEL[phase]}\nTur {view['round_no']}/3 · "
+        text += f"{view['code_length']} farklı rakam · {view['attempts_left']} hak"
+        if phase == "lobby":
+            return ("🔐 <b>Şifre Tahmin</b> · Lobi\n\n"
+                    "1–12 oyuncu. Şifre üç turda zorlaşır. Her sıradaki oyuncu "
+                    "rakamları seçip tahmini gönderir. ● doğru yer, ○ yanlış yerde doğru rakam. "
+                    "Aynı rakam tekrar edilmez. Kurucu Başlat'a basar.")
+        text += "\nPuan: " + ", ".join(
+            f"{_name(p)} {view['scores'][str(p['id'])]}" for p in view["players"])
+        if phase in {"turn", "turn_pending"}:
+            actor = view["players"][view["turn_index"]]
+            text += f"\n▶️ Sıra: {_name(actor)}"
+            text += f"\nTahmin: <code>{view['draft'] + '·' * (view['code_length'] - len(view['draft']))}</code>"
+            if phase == "turn":
+                text += "\nSüre" + _remaining(view.get("deadline"))
+            else:
+                text += "\nSüre, panel hazır olduğunda başlayacak."
+            if view["hint_revealed"]:
+                text += f"\n💡 İlk rakam: {escape(str(view['revealed_digit']))}"
+        for number, row in enumerate(view["history"][-8:], 1):
+            text += (f"\n{number}. <code>{escape(str(row['guess']))}</code> · "
+                     f"●{row['exact']} ○{row['misplaced']}")
+        if phase in {"round_result", "finished"} and view.get("secret"):
+            text += f"\n🔓 Şifre: <b>{escape(view['secret'])}</b>"
+        if phase == "round_result":
+            text += "\nSonraki tur kısa süre sonra başlayacak."
+        if phase == "finished":
+            text += "\n🏁 Üç tur tamamlandı."
+        if phase == "cancelled":
+            text += "\nOyun iptal edildi; ödül verilmez."
+        return text
+    if game == "fark_bulmaca":
+        if phase == "lobby":
+            return ("🔎 <b>Fark Bulmaca</b> · Lobi\n\n"
+                    "1–12 oyuncu. Üç görsel ızgara turunda farklar artar. "
+                    "Soldaki deseni sağdaki düğmelerle karşılaştır; yalnız farklı kareleri seç. "
+                    "Doğru +2, yanlış −1. Kişi başı üç yanlış hakkı var.")
+        left = "\n".join(" ".join(view["left_grid"][row * 5:row * 5 + 5]) for row in range(5))
+        text = (f"🔎 <b>Fark Bulmaca</b> · {PHASE_LABEL[phase]}\n"
+                f"Tur {view['round_no']}/3 · {len(view['found'])}/{view['round_no'] + 1} fark bulundu\n\n"
+                f"<b>A · Sol desen</b>\n<pre>{escape(left)}</pre>\n"
+                "<b>B · Sağ desen</b> aşağıdaki düğmelerde. Farklı karelere bas.")
+        text += "\nPuan: " + ", ".join(
+            f"{_name(p)} {view['scores'][str(p['id'])]}" for p in view["players"])
+        if phase == "spot":
+            text += "\nSüre" + _remaining(view.get("deadline"))
+        elif phase == "spot_pending":
+            text += "\nSüre, panel hazır olduğunda başlayacak."
+        if view.get("hint_row"):
+            text += f"\n💡 En az bir fark {view['hint_row']}. satırda."
+        if phase == "round_result":
+            text += "\nTur tamamlandı; yeni desen kısa süre sonra açılacak."
+        if phase == "finished":
+            text += "\n🏁 Üç tur tamamlandı."
+        if phase == "cancelled":
+            text += "\nOyun iptal edildi; ödül verilmez."
         return text
     if game == "sayisal_tahmin":
         names = ", ".join(_name(p) for p in view["players"])
@@ -188,6 +248,21 @@ def keyboard(state):
         if selected is not None and not state["givens"][selected[0]][selected[1]]:
             controls.append(_btn(state, "Sil", f"d0{b36(selected[0])}{b36(selected[1])}"))
         rows.append(controls)
+    elif game == "sifre_tahmin" and phase == "turn":
+        for first in range(0, len(state["alphabet"]), 4):
+            rows.append([disabled_button(digit) if digit in state["draft"] else
+                         _btn(state, digit, f"k{digit}")
+                         for digit in state["alphabet"][first:first + 4]])
+        rows.append([_btn(state, "↩️ Sil", "z"), _btn(state, "✅ Tahmini gönder", "t")])
+        if len(state["history"]) >= 3 and not state["hint_revealed"]:
+            rows.append([_btn(state, "💡 İlk rakam (−1 puan)", "h")])
+    elif game == "fark_bulmaca" and phase == "spot":
+        for row in range(5):
+            rows.append([disabled_button("✅") if index in state["found"] else
+                         _btn(state, state["right_grid"][index], f"f{b36(index)}")
+                         for index in range(row * 5, row * 5 + 5)])
+        if not state["hint_used"]:
+            rows.append([_btn(state, "💡 Satır ipucu (−1 puan)", "h")])
     elif phase == "lobby":
         rows.append([_btn(state, "Katıl", "j"), _btn(state, "Başlat", "s")])
     elif phase == "waiting":
@@ -219,6 +294,14 @@ ERRORS = {
     "lp_expired": "Hamle süresi doldu; güncel paneli bekle.",
     "lp_already_pressed": "Bu tur hakkını kullandın.",
     "lp_wrong_phase": "Bu işlem için güncel paneli bekle.",
+    "lp_duplicate_digit": "Aynı rakam bir şifrede iki kez kullanılamaz.",
+    "lp_incomplete_code": "Şifreyi göndermeden önce bütün rakamları seç.",
+    "lp_invalid_digit": "Bu rakam şu turda kullanılamaz.",
+    "lp_empty_draft": "Silinecek rakam yok.",
+    "lp_already_found": "Bu fark zaten bulundu.",
+    "lp_already_tried": "Bu kareyi zaten denedin.",
+    "lp_no_attempts": "Bu turdaki üç yanlış hakkını kullandın.",
+    "lp_hint_unavailable": "İpucu henüz kullanılamıyor veya zaten alındı.",
 }
 
 
