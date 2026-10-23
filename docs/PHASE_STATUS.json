@@ -371,13 +371,14 @@
     "hrmn_image_upstream": "HTTP_500_fallback_verified"
   },
   "games_wave48_20261023": {
-    "status": "local_automated_verified_deployment_pending",
+    "status": "deployed_automated_and_partial_live_telegram_verified",
     "catalog_games": 48,
     "games_added": ["sifre_tahmin", "fark_bulmaca", "ciz_bil"],
     "existing_games_improved": ["uno", "bilgi_yarismasi", "kimim_ben"],
-    "human_multiplayer_acceptance": "NOT_RUN",
-    "github_publication": "PENDING",
-    "server_deployment": "PENDING",
-    "release_gate": "offline checks passed; local pytest 3468 passed/19 skipped; live deployment pending"
+    "human_multiplayer_acceptance": "NOT_RUN - second player unavailable",
+    "telegram_live": "Şifre Tahmin lobi, tur ve feedback; Fark Bulmaca lobi, fark ve puan; Çiz Bil lobi, DM hazır ve tek oyuncu engeli doğrulandı",
+    "github_publication": "main 54f66fa1a1a9471ef59b45908b151de53c261423; CI offline and Docker gates passed: https://github.com/Pastalikek65/arelbot/actions/runs/39977404949",
+    "server_deployment": "2026.10.23-games-48-1; bot and worker healthy; runtime source 516566d19780e42405d92085755cf7da7558e89d",
+    "release_gate": "local 3468 passed/19 skipped; isolated server 3472 passed/6 skipped; GitHub offline and Docker gates passed"
   }
 }
