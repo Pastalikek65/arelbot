@@ -9,7 +9,7 @@
       "name": "Köylü",
       "emoji": "👱",
       "team": "village",
-      "description": "Sıradan bir köylüsün, tarlanı ekip biçmek ve zamanı gelince ölmeye mahkumsun.",
+      "description": "Özel gece yeteneğin yok. Tartışmada ipuçlarını değerlendir, oyunu dikkatli kullan ve köyü koru.",
       "night_action": null,
       "day_action": null,
       "setup_action": null
@@ -21,7 +21,7 @@
       "name": "Sarhoş",
       "emoji": "🍻",
       "team": "village",
-      "description": "Alkolik bir köylüsün. Eğer kurtlar seni öldürürse, alkollü kanını içtikleri için bir sonraki öldürmeleri başarısızla sonuçlanacak.",
+      "description": "Köy takımındasın. Kurtlar seni gece öldürürse bir sonraki gece sürü saldırısı sarhoşluk yüzünden başarısız olur.",
       "night_action": null,
       "day_action": null,
       "setup_action": null
@@ -31,9 +31,9 @@
       "source_name": "Harlot",
       "source_id": 8,
       "name": "Gezgin",
-      "emoji": "💋",
+      "emoji": "🌙",
       "team": "village",
-      "description": "Yancısın! Geceleri kağıt oynamak ve bedava yemek için birine davetsiz misafir olabilirsin, bu sayede kurt olmadığını da bildirmiş oluyorsun. Fakat eğer kurtu ziyaret edersen ya da kurtun o gece saldırdığı birisini ziyaret edersen ölürsün. Birine gider sen evde değilken kurt seni öldürmeyi seçerse de kurtulmuş olursun.",
+      "description": "Her gece başka bir oyuncuyu ziyaret edebilirsin. Ziyaret ettiğin kişi kurt ise veya aynı gece kurtların hedefiyse tehlikeye girersin; evde yokken sana yönelen kurt saldırısından kurtulabilirsin.",
       "night_action": "visit",
       "day_action": null,
       "setup_action": null
@@ -43,9 +43,9 @@
       "source_name": "Seer",
       "source_id": 16,
       "name": "Kâhin",
-      "emoji": "👳",
+      "emoji": "🔮",
       "team": "village",
-      "description": "Gözcüsün. Her gece “gözetlemek” için bir oyuncu seçebilirsin ve kimliklerini ortaya çıkarırsın.",
+      "description": "Her gece bir oyuncu seçip rolüne dair gizli bir görüntü alırsın. Bazı roller ve dönüşümler görüntüyü yanıltabilir.",
       "night_action": "inspect",
       "day_action": null,
       "setup_action": null
@@ -55,9 +55,9 @@
       "source_name": "Traitor",
       "source_id": 32,
       "name": "Hain",
-      "emoji": "🖕",
+      "emoji": "🎭",
       "team": "village",
-      "description": "Hain! Şimdilik sadece bir köylüsün. Tüm kurtlar öldüğündeyse kurtadama dönüşüyorsun. Gözcü sana baktığında, kurt olduğun ortaya çıkmış da olabilir, çıkmamış da olabilir.",
+      "description": "Başlangıçta köy tarafındasın. Hayatta kalan son kurt da ölürse Kurt Adam rolüne dönüşürsün. Kâhinin seni görme sonucu her zaman aynı olmayabilir.",
       "night_action": null,
       "day_action": null,
       "setup_action": null
@@ -69,7 +69,7 @@
       "name": "Koruyucu Melek",
       "emoji": "👼",
       "team": "village",
-      "description": "Koruyucu meleksin. Her gece bir kişiyi korumak için seçebilirsin. Fakat eğer bir kurtu seçersen, yaşama ihtimalin yüzde %50.",
+      "description": "Her gece bir oyuncuyu saldırıya karşı korursun. Kendini koruma ve art arda aynı kişiyi seçme kuralları lobi ayarlarına bağlıdır; kurdu korumaya gitmek risklidir.",
       "night_action": "protect",
       "day_action": null,
       "setup_action": null
@@ -81,7 +81,7 @@
       "name": "Dedektif",
       "emoji": "🕵",
       "team": "village",
-      "description": "Dedektifsin. Gün içinde rölünü öğrenmek için bir oyucuyu seçebilirsin. Fakat bunu yaparken kimliğin kurtlar tarafından öğrenilebilir! (%40 ihtimal)",
+      "description": "Gündüz bir oyuncunun gerçek rolünü özelden öğrenebilirsin. Araştırma sırasında yüzde 40 olasılıkla kimliğin kurtlara açığa çıkar.",
       "night_action": null,
       "day_action": "investigate",
       "setup_action": null
@@ -93,7 +93,7 @@
       "name": "Kurt Adam",
       "emoji": "🐺",
       "team": "wolves",
-      "description": "SEN KURTSUN!! XD (hadi yine iyisin) Her gece öldürmek için birini seçebilirsin.",
+      "description": "Kurt sürüsündesin. Her gece sürüyle birlikte bir hedef seçersin; hayatta kalan kurtlar aynı takım için mücadele eder.",
       "night_action": "hunt",
       "day_action": null,
       "setup_action": null
@@ -105,7 +105,7 @@
       "name": "Lanetli",
       "emoji": "😾",
       "team": "village",
-      "description": "Lanetlisin. Şu anda düz bir köylüsün, fakat eğer kurtlar seni yemeye karar verirse sen de kurtadama dönüşüyorsun.",
+      "description": "Başlangıçta köylüsün. Kurt saldırısına uğrayıp hayatta kalırsan lanetin uyanır ve Kurt Adam rolüne geçersin.",
       "night_action": null,
       "day_action": null,
       "setup_action": null
@@ -117,7 +117,7 @@
       "name": "Silahşor",
       "emoji": "🔫",
       "team": "village",
-      "description": "Silahşörsün. İki kurşunun var. Gün içinde bir oyuncuyu öldürebilirsin. Köyde herkes sesi duyacak ve senin kurt değil silahşör olduğun bilinecek.",
+      "description": "İki mermin var. Gündüz bir hedefe ateş edebilirsin; atışın grupta duyulur ve rolün açığa çıkar. Mermilerini dikkatli kullan.",
       "night_action": null,
       "day_action": "shoot",
       "setup_action": null
@@ -129,7 +129,7 @@
       "name": "Darağacı Yolcusu",
       "emoji": "👺",
       "team": "tanner",
-      "description": "İblissin. Linç olursan otomatik olarak kazanıyorsun!",
+      "description": "Bağımsız bir hedefin var: köy oylamasında linç edilirsen tek başına kazanırsın. Gece ölmek bu özel zaferi sağlamaz.",
       "night_action": null,
       "day_action": null,
       "setup_action": null
@@ -141,7 +141,7 @@
       "name": "Sahte Kâhin",
       "emoji": "🃏",
       "team": "village",
-      "description": "Kendini kâhin sanırsın; gece gördüğün roller rastgele ve yanıltıcı olabilir. Köylü takımındasın. Oyun içinde sana kâhin kartı gösterilir.",
+      "description": "Kendini Kâhin sanırsın ve gece gördüğün roller yanıltıcı olabilir. Köy tarafındasın; özel rol kartın sana Kâhin olarak görünür.",
       "night_action": "false_vision",
       "day_action": null,
       "setup_action": null
@@ -153,7 +153,7 @@
       "name": "Yabani Çocuk",
       "emoji": "👶",
       "team": "village",
-      "description": "Yabani çocuksun! Kendine bir “rol model” seç, eğer ölürse kurtadama dönüşürsün.",
+      "description": "İlk gece bir rol modeli seçersin. Seçtiğin kişi ölürse Kurt Adam rolüne dönüşürsün.",
       "night_action": null,
       "day_action": null,
       "setup_action": "model"
@@ -165,7 +165,7 @@
       "name": "Gözcü",
       "emoji": "👁",
       "team": "village",
-      "description": "Seyircisin, “gerçek” gözcünün kim olduğunu biliyorsun. Tüm olayın bu..",
+      "description": "Gerçek Kâhinin kim olduğunu özelden öğrenirsin. Bu bilgiyi nasıl kullanacağına sen karar verirsin; gece hedef seçmezsin.",
       "night_action": null,
       "day_action": null,
       "setup_action": null
@@ -177,7 +177,7 @@
       "name": "Kâhin Çırağı",
       "emoji": "🙇",
       "team": "village",
-      "description": "Gözcü çırağısın. Eğer “gerçek” gözcü ölürse onun yerini alacaksın.",
+      "description": "Kâhin Çırağısın. Hayatta gerçek Kâhin kalmadığında onun rolünü devralırsın ve sonraki gecelerde görüntü alırsın.",
       "night_action": null,
       "day_action": null,
       "setup_action": null
@@ -189,7 +189,7 @@
       "name": "Tarikatçı",
       "emoji": "👤",
       "team": "cult",
-      "description": "Gizli tarikat üyesisin. Her gece tarikata almak için birini seçebilirsin. Tüm kalan oyuncular tarikat üyesi olduğunda kazanıyorsun.",
+      "description": "Tarikat takımındasın. Her gece birini tarikata katılmaya çağırırsın; bazı roller dönüşmez, bazı hedefler seni öldürebilir.",
       "night_action": "convert",
       "day_action": null,
       "setup_action": null
@@ -201,7 +201,7 @@
       "name": "Tarikat Avcısı",
       "emoji": "💂",
       "team": "village",
-      "description": "Tarikatçı avcısısın. Tüm köyün tarikata girmesini engellemeye çalışıyorsun!  Her gece bir oyuncu seçiyorsun.  Seçtiğin kişi tarikat üyesiyse ölür. Eğer seni tarikata almaya çalışırlarsa tarikatın en yeni üyesi ölür.",
+      "description": "Her gece bir oyuncuyu araştırırsın. Hedef tarikatçıysa onu elersin; tarikat seni dönüştürmeye kalkarsa son katılan üyesi tehlikeye girer.",
       "night_action": "hunt_cult",
       "day_action": null,
       "setup_action": null
@@ -213,7 +213,7 @@
       "name": "Mason",
       "emoji": "👷",
       "team": "village",
-      "description": "Masonsun. Eğer başka mason varsa bunu biliyorsun, yoksa sıradan bir köylüsün.",
+      "description": "Başka Masonlar varsa kim olduklarını özelden öğrenirsin. Köy takımındasın ve doğrudan saldırı yeteneğin yok.",
       "night_action": null,
       "day_action": null,
       "setup_action": null
@@ -225,7 +225,7 @@
       "name": "Suret Değiştiren",
       "emoji": "🎭",
       "team": "shifter",
-      "description": "Çift-giden’sin. Efsaneye göre ataların istediği şekli alabiliyordu. Belli özellikleri sana da geçmiş. Bir oyuncu seç, öldüğünde rolü sana geçecek.",
+      "description": "İlk gece bir rol modeli seçersin. Modelin ölürse rolünü devralırsın; yeni rolünün takım ve yetenek kuralları uygulanır.",
       "night_action": null,
       "day_action": null,
       "setup_action": "model"
@@ -237,7 +237,7 @@
       "name": "Aşk Tanrısı",
       "emoji": "🏹",
       "team": "village",
-      "description": "Eros oldun (aşk tanrısı). Bir yay ve iki ok ile beraber yeryüzüne gönderildin. İki kişiyi birbirlerine ölümüne aşık et ki biri diğerinin ölümüne dayanamayıp acısından can versin.",
+      "description": "İlk gece iki farklı oyuncuyu âşık olarak bağlarsın. Biri ölürse diğeri de elenir; son iki kişi olarak kalırlarsa birlikte kazanırlar.",
       "night_action": null,
       "day_action": null,
       "setup_action": "lovers"
@@ -249,7 +249,7 @@
       "name": "Avcı",
       "emoji": "🎯",
       "team": "village",
-      "description": "Köyün avcısısın. Az uyursun, uyuduğunda da silahın yastığının altındadır. Öldüğünde yanında götürmek için birisini seçebilirsin. Eğer kurtlar tarafından yenirsen kurtu da yeme şansın var ama hangisini öldüreceğini seçemezsin.",
+      "description": "Öldüğünde son bir hedef seçme hakkı kazanırsın. Kurtların gece saldırısında bazı durumlarda saldırganlardan biri otomatik vurulabilir.",
       "night_action": null,
       "day_action": null,
       "setup_action": null
@@ -261,7 +261,7 @@
       "name": "Seri Katil",
       "emoji": "🔪",
       "team": "serial_killer",
-      "description": "Seri Katilsin. Yerel bi akıl hastanesinden kaçtın, hedefin herkesi öldürmek. Her gece koleksiyonuna eklemek için birisini seçebilirsin.",
+      "description": "Bağımsız taraftasın. Her gece bir hedef seçersin; seni ziyaret edenler risk altındadır. Mezarcıyla karşılaşma sonraki gece hedefini şaşırtabilir.",
       "night_action": "kill",
       "day_action": null,
       "setup_action": null
@@ -273,7 +273,7 @@
       "name": "Büyücü",
       "emoji": "🔮",
       "team": "wolves",
-      "description": "Sen Falcı’sın. Köylülerle olmaktansa gecenin yaratıklarıyla iş birliği yapıyorsun. Geceleri gücünü kurtları ve gözcüleri bulmak için kullanıyorsun. Sadece kurtlar kazanırsa kazanırsın. Sefil köylülerin yenilmesine yardım ederken iyi eğlenceler!",
+      "description": "Kurt takımına yardım edersin. Gece seçtiğin kişinin kurt sürüsünden veya Kâhin olup olmadığına dair özel bilgi alırsın.",
       "night_action": "scry",
       "day_action": null,
       "setup_action": null
@@ -285,7 +285,7 @@
       "name": "Alfa Kurt",
       "emoji": "⚡️",
       "team": "wolves",
-      "description": "Sen Alfa Kurt’sun, belanın kaynağı. Senin ısırığın insanları Kurt Adam’a dönüştüren bir lanet taşıyor. Her gece saldırmak için birini seç ve onu öldür. Yaşadığın sürece kurbanın %20 ihtimalle Kurt Adam’a dönüşecek.",
+      "description": "Kurt sürüsündesin. Gece saldırılarında hayattaysan kurbanın yüzde 20 olasılıkla ısırılır; dönüşüm bir sonraki gece etkisini gösterir.",
       "night_action": "hunt",
       "day_action": null,
       "setup_action": null
@@ -297,7 +297,7 @@
       "name": "Kurt Yavrusu",
       "emoji": "🐶",
       "team": "wolves",
-      "description": "Sen sürü tarafından tatlılığıyla sevilen Yavru Kurt’sun. Her kurt gibi her gece bir köylü seç ve onu öldür. Eğer öldürülürsen kurt sürüsü ertesi gece kudurup 2 kişiye saldıracak. Sen yine de ölmüş olacaksın.",
+      "description": "Kurt sürüsündesin. Ölürsen sürü sonraki gece iki saldırı hakkı kazanır.",
       "night_action": "hunt",
       "day_action": null,
       "setup_action": null
@@ -309,7 +309,7 @@
       "name": "Demirci",
       "emoji": "⚒",
       "team": "village",
-      "description": "Sen Demirci’sin. Köyün demir işçisi. Az miktarda bir gümüş, köylüleri bir geceliğine saldırıya uğramaktan koruyacak. Gündüz ortalıkta dolaşıp tozu etrafa serp. Bunun dışında sadece düz bir köylüsün.",
+      "description": "Köy takımındasın. Gündüz tek kullanımlık gümüşünü hazırlarsan gelecek gece kurt saldırısı engellenir.",
       "night_action": null,
       "day_action": "silver",
       "setup_action": null
@@ -321,7 +321,7 @@
       "name": "Sakar",
       "emoji": "🤕",
       "team": "village",
-      "description": "Sen Beceriksiz’sin. Oy vermeye çalışırken %50 ihtimalle istediğinden farklı, rastgele birine oy vereceksin. Yine de Köy Takımı’ndasın.",
+      "description": "Köy takımındasın. Oy verirken yüzde 50 olasılıkla oyun seçtiğin hedef yerine geçerli başka bir hedefe gidebilir.",
       "night_action": null,
       "day_action": null,
       "setup_action": null
@@ -333,7 +333,7 @@
       "name": "Belediye Başkanı",
       "emoji": "🎖",
       "team": "village",
-      "description": "Muhtarsın. Kendini ortaya çıkarırsan verdiğin oy 2 oy sayılacak. Köylü takımındasın.",
+      "description": "Gündüz kimliğini açığa çıkarabilirsin. Açıklandığında sonraki oylamalarda oyun iki oy sayılır.",
       "night_action": null,
       "day_action": "reveal",
       "setup_action": null
@@ -345,7 +345,7 @@
       "name": "Prens",
       "emoji": "👑",
       "team": "village",
-      "description": "Sen Prens’sin ama çaktırmıyorsun. Hizmetçilerle çevrili, sıkıcı ve şımartılmış bir hayattan kaçtın. Seni linç etmeye kalkarlarsa hatalarını anlayacaklar ve kimse linç edilmeyecek.",
+      "description": "Köy takımındasın. İlk kez linç edilmek üzere seçildiğinde kimliğin ortaya çıkar ve o elemeden sağ çıkarsın.",
       "night_action": null,
       "day_action": null,
       "setup_action": null
@@ -357,7 +357,7 @@
       "name": "Gizli Kurt",
       "emoji": "🐺🌝",
       "team": "wolves",
-      "description": "Sen Lycan’sın. Ancak Gözcü seni köylü olarak görecek :)",
+      "description": "Köy takımındasın. Kâhin seni incelese bile Köylü olarak görür; gece saldırısı yeteneğin yoktur.",
       "night_action": "hunt",
       "day_action": null,
       "setup_action": null
@@ -369,7 +369,7 @@
       "name": "Barışçı",
       "emoji": "☮️",
       "team": "village",
-      "description": "Sen Barışçılsın ☮️. Bir günlüğüne mahsus köydeki herkesi linç olmaması için ikna edebilirsin. Sadece bir kere yapılabilir.",
+      "description": "Bir kez gündüz gücünü kullanarak o günkü eleme oylamasını durdurabilirsin. Köy takımındasın.",
       "night_action": null,
       "day_action": "peace",
       "setup_action": null
@@ -381,7 +381,7 @@
       "name": "Bilge",
       "emoji": "📚",
       "team": "village",
-      "description": "Sen Yaşlı Bilgesin 📚. Bir kurt adam saldırısından bir kez kurtulabilirsin - ikinci kez seni yiyebilirler.  Silahşör ya da Avcı seni yetenekleriyle öldürürlerse, güçlerini üzüntüden kaybedecekler ve normal bir köylüye dönüştürülecekler.",
+      "description": "İlk kurt saldırısından sağ çıkarsın. Silahşor ya da Avcı seni öldürürse hayatta kalan saldırganın gücü etkilenebilir.",
       "night_action": null,
       "day_action": null,
       "setup_action": null
@@ -393,7 +393,7 @@
       "name": "Orakl",
       "emoji": "🌀",
       "team": "village",
-      "description": "Sen Kâhin'sin. Her gece birine bakmayı seçebilirsin, ama sadece o kişinin ne olmadığını görebileceksin.  Oyunda hala hayatta olan bir başkasının rolü sana gösterilecek, bu yüzden hangi rolün söylendiğine dikkat edin, bu demek oluyor ki o rol hala hayatta :)",
+      "description": "Her gece bir oyuncu seçersin. Onun kesinlikle sahip olmadığı bir rolü özelden öğrenirsin; bu ipucu tam rolünü söylemez.",
       "night_action": "exclude",
       "day_action": null,
       "setup_action": null
@@ -405,7 +405,7 @@
       "name": "Uyku Perisi",
       "emoji": "💤",
       "team": "village",
-      "description": "Sen Uyutucusun. Oyun başına bir kez, sihrinizi herkesi derin bir uykuya sokmak için kullanabilirsiniz, geceleri yeteneğini kullanamazsın..",
+      "description": "Bir kez gündüz gücünü kullanarak gelecek gece tüm gece yeteneklerini devre dışı bırakabilirsin.",
       "night_action": null,
       "day_action": "sleep",
       "setup_action": null
@@ -417,7 +417,7 @@
       "name": "Kurt Görünümlü",
       "emoji": "👱🌚",
       "team": "village",
-      "description": "Sen Kurdumsu bir köylüsün!  Zamanının çoğunu gerçek kurtların olduğu ormanda geçirdiğin için, Gözcünün kafası karışacak ve bir kurt adam olduğunu düşünecek! Oh hayır...",
+      "description": "Köy takımındasın fakat Kâhin seni Kurt Adam olarak görür. Bu görünüm gerçek tarafını değiştirmez.",
       "night_action": null,
       "day_action": null,
       "setup_action": null
@@ -429,11 +429,11 @@
       "name": "Hırsız",
       "emoji": "😈",
       "team": "shifter",
-      "description": "Sen Hırsızsın 😈! İlk gece bir oyuncunun rolünü çalabilir ve onu normal bir köylüye dönüştürebilirsin!",
+      "description": "İlk gece başka bir oyuncunun rolünü çalabilirsin. Genişletilmiş Hırsız ayarı açıksa her gece yeniden deneyebilirsin; bazı rollerde çalma başarısız olabilir.",
       "night_action": null,
       "day_action": null,
       "setup_action": "steal",
-      "description_full": "Tam Hırsızsın 😈 Her gece bir oyuncunun rolünü çalmayı deneyebilirsin. Başarı şansı %50. Başarırsan eski rol sahibi yeni Hırsız olur."
+      "description_full": "Genişletilmiş Hırsız ayarında her gece başka bir oyuncunun rolünü çalmayı deneyebilirsin. Başarılı olursan onun rolünü alır, eski sahibi Hırsız olur; kurt ve tarikat rollerine karşı girişim başarısız olabilir."
     },
     {
       "key": "troublemaker",
@@ -442,7 +442,7 @@
       "name": "Olay Çıkaran",
       "emoji": "🤯",
       "team": "village",
-      "description": "Sen Baş Belasısın 🤯. Köyün ergen, kızgın gencisin. Bir gün öyle bir sinirleneceksin ki o gün köy 1 yerine 2 kere linç edecek!",
+      "description": "Bir kez gündüz gücünü kullanarak o gün ikinci bir eleme oylaması açabilirsin. Köy takımındasın.",
       "night_action": null,
       "day_action": "double_lynch",
       "setup_action": null
@@ -454,7 +454,7 @@
       "name": "Kimyacı",
       "emoji": "👨‍🔬",
       "team": "village",
-      "description": "Sen Kimyagersin👨‍🔬! Risk almayı seven köyün bilim adamısın. İki iksir yaparak (Biri zehirli, diğeri zehirsiz) insanları ziyaret edebilirsin. Ziyaret ettiğin kişi bir iksiri içerken kalan içkiyi de sen alacaksın %50-%50.. Seni ziyaret ederlerse son dileğin olarak içmeye zorlayacaksın.!",
+      "description": "Gece bir oyuncuyu iksir buluşmasına çağırırsın. İki bardaktan biri zehirlidir; yüzde 50 olasılıkla hedef, aksi hâlde sen elenirsin.",
       "night_action": "potion",
       "day_action": null,
       "setup_action": null
@@ -466,7 +466,7 @@
       "name": "Kar Kurdu",
       "emoji": "🐺☃️",
       "team": "wolves",
-      "description": "Sen Beyaz Kurtsun 🐺☃️. Kurtlarla birliktesin ama vejeteryansın öyle köylü falan yemek tarzın değil. Dostlarına yardım etmek için her gece 1 kişiyi dondurarak işlevsiz kalmasını sağlayabilirsin. Aynı kişi 2 gece dondurulamaz..",
+      "description": "Kurt sürüsündesin. Gece bir oyuncuyu dondurup yeteneğini durdurabilirsin; aynı kişiyi art arda iki gece donduramazsın.",
       "night_action": "freeze",
       "day_action": null,
       "setup_action": null
@@ -478,7 +478,7 @@
       "name": "Mezarcı",
       "emoji": "☠️",
       "team": "village",
-      "description": "Sen Mezarcısın ☠️. Sen ölenler için mezar kazıyorsun (evet, kurtadamlar bile cenazeyi hakediyor). Kurtadamlar ve tarikatlar bütün gece dışarıda oldukları için mezar kazarken şans eseri görülüp öldürülebilirsin. Ancak seni ziyaret ettiklerinde evde kimse bulamazlar. Eğer kimse ölmemişse doğal olarak mezar kazamayacağın için evde olacaksın bu sefer kurtlara ve seri katillere karşı hazırlı olsan iyi edersin çünkü tırpanla gelir en dürüst melek..",
+      "description": "Ölülerin mezarlarıyla ilgilenirsin. Mezarı olan bir gecede seni ziyaret edenler risk alır; Seri Katil bu karşılaşmadan sonraki gece hedefini şaşırabilir.",
       "night_action": null,
       "day_action": null,
       "setup_action": null
@@ -490,7 +490,7 @@
       "name": "Kehanetçi",
       "emoji": "🦅",
       "team": "village",
-      "description": "Sen Müneccimsin 🦅. Bir şeyleri görme gücüne sahipsiniz, ancak Gözcü veya Kâhinden oldukça farklı. Köyde olmayan rolleri görebilen tek kişi sensin, hatta aynı rolü iki kez göremezsin!",
+      "description": "Gece köyde bulunmayan rollerden birine dair özel ipucu alırsın. Aynı yokluk işareti tekrar verilmez.",
       "night_action": null,
       "day_action": null,
       "setup_action": null
@@ -502,7 +502,7 @@
       "name": "Kundakçı",
       "emoji": "🔥",
       "team": "arsonist",
-      "description": "Sen Kundakçısın 🔥. Seri katil gibi yalnız çalışırsın. Her gece evlere benzin dökebilirsin, istediğin zaman ise benzinlenmiş evleri ateşe verip uzaktan yanışını izlersin. Eve gelecek potansiyel ziyaretçiler de ölümlerin tuzu biberi. Tek sen hayatta kalırsan kazanırsın.",
+      "description": "Bağımsız taraftasın. Geceleri hedefleri işaretler, sonraki bir gecede işaretlileri yakabilirsin; yangını ziyaret edenler de tehlikeye girer.",
       "night_action": "douse",
       "day_action": null,
       "setup_action": null
@@ -514,7 +514,7 @@
       "name": "Balkabağı",
       "emoji": "🎃",
       "team": "village",
-      "description": "Balkabağısın 🎃 Gündüz bir hedefte patlamayı deneyebilirsin. Yüzde 40 olasılıkla hem sen hem hedefin ölür. Köylü takımındasın. Bu mevsimsel rol normal dağıtımda yalnız 28–31 Ekim civarında bulunur.",
+      "description": "Mevsimsel köy rolüsün. Gündüz patlama girişimi yapabilirsin; yüzde 40 olasılıkla hem sen hem hedefin elenir.",
       "night_action": null,
       "day_action": "detonate",
       "setup_action": null
@@ -526,7 +526,7 @@
       "name": "Aşçı",
       "emoji": "🍚",
       "team": "village",
-      "description": "Aşçısın 🍚 Gündüz bir oyuncunun kapısına pirinç serp. Gece sonunda o oyuncunun evden çıkıp çıkmadığını ve evine kaç ziyaretçi geldiğini özelden öğrenirsin.",
+      "description": "Gündüz bir oyuncunun kapısına pirinç serpersin. Gece sonunda evden çıkıp çıkmadığını ve kaç ziyaret aldığını özelden öğrenirsin.",
       "night_action": null,
       "day_action": "rice",
       "setup_action": null
@@ -538,7 +538,7 @@
       "name": "Barmen",
       "emoji": "🍸",
       "team": "village",
-      "description": "Barmensin 🍸 Gece köylüler barını ziyaret edebilir. Üç kez gelen köylü Sarhoş olur; yeni dostlarını özelden öğrenirsin.",
+      "description": "Barına gelen köylüleri özelden öğrenirsin. Üç kez ziyarete gelen bir köylü Sarhoş rolüne dönüşür.",
       "night_action": null,
       "day_action": null,
       "setup_action": null

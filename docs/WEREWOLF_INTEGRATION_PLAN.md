@@ -1,6 +1,6 @@
 # GreyWolf Werewolf entegrasyonu
 
-Durum: LOCAL_VALIDATED; sunucu ve gerçek Telegram lobi kontrolü bekleniyor. Kaynak commit: `bac172a29f8b394ebbb4822c6f244d769fac21ac`.
+Durum: LIVE_LOBBY_VALIDATED; gönüllü oyuncularla tam maç `NOT_RUN`. Kaynak commit: `bac172a29f8b394ebbb4822c6f244d769fac21ac`.
 
 ## Amaç ve sınır
 
@@ -22,6 +22,14 @@ GreyWolfDev/Werewolf GPL-3.0 kaynak motorunun oyun kuralları ve Türkçe rol i�
 - Bağımsız kod incelemesindeki Avcı turu, Mezarcı/Seri Katil etkisi ve rehber paneli kusurları regresyon testleriyle düzeltildi.
 - Yalıtılmış yayın kapısı 14/14 kontrolü geçti: 3.381 test başarılı, 19 atlandı; mimari ve 91 özellik kaydı doğrulandı.
 - 14 senaryo × 5 tohumla 70 sentetik tam maç geçti. Bu, gerçek çok oyunculu Telegram kabulünün yerini tutmaz.
+
+## Sunucu ve Telegram kanıtı, 2026-10-23
+
+- Yalıtılmış sunucu testinde 3.386 test başarılı, 6 atlandı; bot ve worker sağlıklı, yeniden başlatma sayısı sıfır. Etkin `.env`, diğer yapay zekâ sağlayıcıları ve CLI köprüsü değişmedi.
+- Yetkili test grubunda `/kurtadam` yeni 5–35 kişilik lobiyi açtı. Tek oyuncuyla başlatma reddedildi.
+- Grup düğmesinden bot özel sohbetine geçiş ve “Özel sohbetin hazır” yanıtı görüldü; grup panelindeki hazır sayısı 0'dan 1'e çıktı.
+- Rol rehberinin lobi sırasında okunabilir süre boyunca açık kaldığı ve “Oyuna dön” kontrolü canlı arayüzde doğrulandı.
+- Beş gerçek oyuncuyla gizli rol teslimi, gece/gündüz oylaması ve maç sonu ödülü `NOT_RUN` kalır.
 
 ## Korunacaklar
 
