@@ -48,9 +48,9 @@ def new_akinator_state(
         "status": "pending",
         "language": "tr",
         "theme": "c",
-        # Match the upstream bot's safer default; a future settings surface
-        # can explicitly opt out after a user confirmation.
-        "child_mode": True,
+        # The general character catalog can produce named proposals for
+        # people that the upstream child catalog leaves unanswered.
+        "child_mode": False,
         "questions": 0,
         "revision": 0,
         "question": "",

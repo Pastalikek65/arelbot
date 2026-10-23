@@ -67,6 +67,7 @@ def test_akinator_state_and_theme_normalization_are_bounded():
     state = new_akinator_state(owner_id=10, owner_name="Ada", chat_id=-100)
     assert state["status"] == "pending"
     assert state["theme"] == "c"
+    assert state["child_mode"] is False
     assert normalize_akinator_theme("karakter") == "c"
     assert normalize_akinator_theme("bilinmeyen") == "c"
     assert set(ANSWER_CHOICES) == {"0", "1", "2", "3", "4"}
@@ -81,6 +82,7 @@ async def test_akinator_service_transitions_answer_back_and_proposition():
     await service.start(state)
     assert state["status"] == "playing"
     assert state["question"] == "Bu bir karakter mi? <b>"
+    assert fake.calls[0][1]["child_mode"] is False
 
     await service.answer(state, "0")
     assert state["questions"] == 1

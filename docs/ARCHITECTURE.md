@@ -604,7 +604,9 @@ Arel Tahmin, `akipy==1.7.0` istemcisini `AkinatorService` üzerinden kullanır.
 Telegram handler yalnızca state ve panel teslimini yönetir; upstream çağrısı
 typed servis, semaphore ve timeout ile sınırlandırılır. Callback payload'ı
 `akinator:<round_id>:...` biçiminde round ve owner kapsamına bağlıdır.
-Türkçe akış karakter temasını kullanır; Akinator-Bot deposu kaynak kodu veya
+Türkçe akış genel karakter temasını kullanır; çocuk filtresi varsayılan olarak
+kapalıdır, çünkü canlı karşılaştırmada filtreli oturum 24 soruda isimli tahmin
+üretmezken genel oturum 21. soruda öneri üretti. Akinator-Bot deposu kaynak kodu veya
 görselleri kopyalanmaz. Mongo state restart sonrasında kaydı korur, fakat
 upstream istemci süreç içi olduğundan yarım tur güvenli şekilde expire edilir.
 Semaphore beklemesi ve upstream isteği aynı 45 saniyelik sınırı paylaşır.
