@@ -22,7 +22,7 @@ class UnoFixture:
                 {"user_id": 10, "name": "Ali", "hand": [{"id": "r5-0", "color": "red", "kind": "5"}]},
                 {"user_id": 20, "name": "Ayşe", "hand": [{"id": "b3-0", "color": "blue", "kind": "3"}]},
             ],
-            "current_player_id": 10, "prompt_message_id": 200,
+            "current_player_id": 10, "prompt_message_id": 200, "panel_turn_player_id": 10,
             "discard": [{"id": "r2-0", "color": "red", "kind": "2"}],
             "current_color": "red", "round_number": 1, "match_target": 500,
             "direction": 1, "turn_seconds": 60,

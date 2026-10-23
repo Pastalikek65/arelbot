@@ -11,7 +11,7 @@ from telegram.error import BadRequest
 from src.security.output_sanitizer import sanitize_html
 from src.games.guess_age import round_expired
 from src.services.guess_age_ui import guess_age_keyboard, render_guess_age_text, render_guess_age_round_result, render_guess_age_photo_answer
-from src.services.uno_ui import render_uno_text, uno_keyboard
+from src.services.uno_panel import publish_uno_panel
 from src.services.word_chain_service import WordChainService
 from src.services.word_chain_ui import render_word_chain, word_chain_keyboard
 
@@ -276,20 +276,4 @@ class GameRuntime:
                 await self._publish_uno(bot, chat_id, current)
 
     async def _publish_uno(self, bot, chat_id, state):
-        kwargs = {"chat_id": chat_id, "text": render_uno_text(state), "reply_markup": uno_keyboard(state), "parse_mode": "HTML"}
-        prompt_id = int(state.get("prompt_message_id", 0) or 0)
-        if prompt_id:
-            try:
-                await bot.edit_message_text(message_id=prompt_id, **kwargs)
-            except BadRequest as error:
-                if "not modified" not in str(error).casefold():
-                    if not any(code in str(error).casefold() for code in ("not found", "can't be edited", "cannot be edited")):
-                        raise
-                    message = await bot.send_message(**kwargs, message_thread_id=state.get("thread_id"))
-                    prompt_id = int(message.message_id)
-                    await self.uno.set_prompt_message(chat_id=chat_id, message_id=prompt_id, expected_revision=int(state.get("revision", 0)))
-        else:
-            message = await bot.send_message(**kwargs, message_thread_id=state.get("thread_id"))
-            prompt_id = int(message.message_id)
-            await self.uno.set_prompt_message(chat_id=chat_id, message_id=prompt_id, expected_revision=int(state.get("revision", 0)))
-        await self.uno.mark_panel_delivered(chat_id, int(state.get("revision", 0)), prompt_id)
+        await publish_uno_panel(bot, self.uno, chat_id, state)

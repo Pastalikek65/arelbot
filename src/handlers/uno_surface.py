@@ -5,6 +5,7 @@ from telegram.error import BadRequest, TelegramError
 
 from src.services.uno_service import UnoError
 from src.services.uno_ui import CARD_POSITION_PAGE_SIZE, render_uno_text, render_uno_hand_alert, uno_keyboard
+from src.services.uno_panel import publish_uno_panel
 
 
 async def handle_uno_callback(handler, update, query, context, data):
@@ -45,6 +46,10 @@ async def _handle_uno_callback(handler, update, query, context, data):
         if action == "hand" and len(parts) == 5:
             page = int(parts[4]) if parts[4].isdigit() else -1
             await answer(query, render_uno_hand_alert(state, user_id=int(user.id), page=page), show_alert=True)
+            return
+        if action == "turn":
+            current = next((p for p in state.get("players", []) if int(p.get("user_id", 0)) == int(state.get("current_player_id", 0) or 0)), None)
+            await answer(query, f"Sıradaki oyuncu: {str((current or {}).get('name') or 'Oyuncu')[:30]}")
             return
         prompt_id = int(state.get("prompt_message_id", 0) or 0)
         if prompt_id and int(getattr(message, "message_id", 0) or 0) != prompt_id:
@@ -96,12 +101,8 @@ async def _handle_uno_callback(handler, update, query, context, data):
                 card_position=int(value) if action == "playpos" and value and value.isdigit() else None,
                 color=value if action == "color" else None,
                 target_id=int(value) if action == "challenge" and value and value.isdigit() else None)
-        try:
-            await query.edit_message_text(render_uno_text(state), reply_markup=uno_keyboard(state), parse_mode="HTML")
-        except BadRequest as error:
-            if "not modified" not in str(error).casefold():
-                raise
-        await handler.uno_service.mark_panel_delivered(int(chat.id), int(state.get("revision", 0)), int(getattr(query.message, "message_id", 0) or 0))
+        await publish_uno_panel(getattr(context, "bot", None), handler.uno_service,
+                                int(chat.id), state, query=query)
         await answer(query)
     except UnoError as error:
         messages = {

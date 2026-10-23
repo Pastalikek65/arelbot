@@ -1533,7 +1533,7 @@ class ChatEngine:
         )
         try:
             result = await asyncio.wait_for(
-                router.complete(request, provider_names=names), timeout=18.0)
+                router.complete(request, provider_names=names, provider_timeout_seconds=16.0), timeout=18.0)
         except Exception as exc:
             logger.warning("AI reply quality code=roast_repair_failed type=%s", type(exc).__name__)
             return fallback

@@ -66,6 +66,7 @@ async def test_roast_capitulation_is_repaired_by_existing_turkish_provider_once(
     assert 'sikindirik' in reply
     router.complete.assert_awaited_once()
     assert router.complete.await_args.kwargs['provider_names'] == ['evren']
+    assert router.complete.await_args.kwargs['provider_timeout_seconds'] == 16.0
     repair_request = router.complete.await_args.args[0]
     assert repair_request.max_tokens <= 160
     assert len(repair_request.messages[0]['content']) < 1000
@@ -75,8 +76,9 @@ async def test_roast_capitulation_is_repaired_by_existing_turkish_provider_once(
 @pytest.mark.asyncio
 @pytest.mark.parametrize('replacement', ['Siktiriboktanlık olmuş.', None])
 async def test_roast_repair_rejects_bad_rewrite_and_drops_capitulation_prefix(replacement):
-    async def complete(_request, provider_names=None):
+    async def complete(_request, provider_names=None, provider_timeout_seconds=None):
         assert provider_names == ['evren']
+        assert provider_timeout_seconds == 16.0
         if replacement is None:
             raise TimeoutError('fixture timeout')
         return CompletionResponse(replacement, 'evren', 'fixture')
@@ -87,6 +89,24 @@ async def test_roast_repair_rejects_bad_rewrite_and_drops_capitulation_prefix(re
         'Böyle konuşma, yine son güne bıraktım',
         'Seçili roast modu geçerli.')
     assert answer == 'İşleri küçük parçalara böl.'
+
+
+@pytest.mark.asyncio
+async def test_roast_repair_gets_scoped_extra_time_without_changing_normal_router_cap():
+    async def provider(_request):
+        await asyncio.sleep(0.08)
+        return CompletionResponse('Bu boktan planı bölerek düzelt.', 'evren', 'fixture')
+
+    router = AIProviderRouter([
+        SimpleNamespace(name='evren', complete=provider, timeout_seconds=0.2),
+    ], routes={'chat':['evren']}, request_timeout_seconds=0.3,
+       provider_timeout_seconds=0.03, failure_threshold=3)
+    with pytest.raises(Exception):
+        await router.complete(CompletionRequest([{'role':'user','content':'selam'}]))
+    reply = await router.complete(CompletionRequest([{'role':'user','content':'selam'}]),
+                                  provider_timeout_seconds=0.15)
+    assert reply.provider == 'evren'
+    assert router.provider_timeout_seconds == 0.03
 
 
 @pytest.mark.asyncio

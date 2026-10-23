@@ -14,7 +14,7 @@ import re
 from typing import Any
 
 from src.services.uno_service import UnoError, UnoService
-from src.services.uno_ui import render_uno_text, uno_keyboard
+from src.services.uno_panel import publish_uno_panel
 
 
 _ROUND = re.compile(r"[0-9a-f]{16}\Z")
@@ -229,15 +229,11 @@ class UnoInlineService:
             prompt_id = int(state.get("prompt_message_id", 0) or 0)
             if prompt_id and getattr(context, "bot", None):
                 try:
-                    await context.bot.edit_message_text(
-                        chat_id=chat_id, message_id=prompt_id, text=render_uno_text(state),
-                        reply_markup=uno_keyboard(state), parse_mode="HTML",
-                    )
+                    await publish_uno_panel(context.bot, self.uno, chat_id, state)
                 except Exception as error:
                     if "not modified" not in str(error).casefold():
                         await self.uno.defer_delivery(chat_id)
                         return True
-                await self.uno.mark_panel_delivered(chat_id, int(state["revision"]), prompt_id)
             else:
                 await self.uno.defer_delivery(chat_id)
         return True

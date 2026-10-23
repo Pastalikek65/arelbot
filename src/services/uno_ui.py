@@ -42,7 +42,7 @@ def render_uno_text(state: dict[str, Any], *, user_id: int | None = None, note: 
         current_name = _display_name(current)
         top = state.get("discard", [])[-1] if state.get("discard") else {}
         color = COLOR_LABELS.get(str(state.get("current_color") or top.get("color")), "—")
-        lines.append(f"▶️ Sıra: <b>{current_name}</b> · Yön: {'ileri' if int(state.get('direction', 1)) == 1 else 'geri'}")
+        lines.append(f"▶️ Sıradaki oyuncu: <b>{current_name}</b> · Yön: {'ileri' if int(state.get('direction', 1)) == 1 else 'geri'}")
         lines.append(f"Üst kart: <b>{escape(card_label(top))}</b> · Aktif renk: <b>{escape(color)}</b>")
         lines.append(f"Hamle süresi: {int(state.get('turn_seconds', 60))} sn")
         if state.get("awaiting_color"):
@@ -143,6 +143,8 @@ def uno_keyboard(state: dict[str, Any], *, user_id: int | None = None, miniapp_u
         rows.append([InlineKeyboardButton("▶️ Maçı başlat", callback_data=f"{prefix}:start")])
         rows.append([InlineKeyboardButton("Oyunu bitir", callback_data=f"{prefix}:stop")])
     elif status == "playing" and state.get("inline_query"):
+        current = next((p for p in state.get("players", []) if int(p.get("user_id", 0)) == int(state.get("current_player_id", 0) or 0)), None)
+        rows.append([InlineKeyboardButton(f"▶️ Sıradaki: {str((current or {}).get('name') or 'Oyuncu')[:20]}", callback_data=f"{prefix}:turn")])
         rows.append([InlineKeyboardButton("🃏 Kartlarımı aç", switch_inline_query_current_chat=state["inline_query"])])
         rows.append([InlineKeyboardButton("📣 UNO de", callback_data=f"{prefix}:call")])
         if vulnerable:
@@ -152,6 +154,8 @@ def uno_keyboard(state: dict[str, Any], *, user_id: int | None = None, miniapp_u
         rows.append([InlineKeyboardButton("🛑 Masayı kapat", callback_data=f"{prefix}:stop")])
     elif status == "playing":
         current_id = int(state.get("current_player_id", 0) or 0)
+        current = next((p for p in state.get("players", []) if int(p.get("user_id", 0)) == current_id), None)
+        rows.append([InlineKeyboardButton(f"▶️ Sıradaki: {str((current or {}).get('name') or 'Oyuncu')[:20]}", callback_data=f"{prefix}:turn")])
         max_hand = max((len(p.get("hand", [])) for p in state.get("players", [])), default=0)
         for start in range(0, max(1, (max_hand + HAND_PAGE_SIZE - 1) // HAND_PAGE_SIZE), 4):
             rows.append([

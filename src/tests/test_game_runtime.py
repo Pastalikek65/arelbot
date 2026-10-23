@@ -52,17 +52,23 @@ async def test_periodic_runtime_advances_uno_without_any_player_click():
     await uno.join(chat_id=-100, user_id=2, name="İki")
     await uno.begin(chat_id=-100, user_id=1, action_id="start")
     state = repository.states[(-100, "uno")]
-    state.update(turn_expires_at=0, prompt_message_id=10)
+    state.update(turn_expires_at=0, prompt_message_id=10,
+                 panel_turn_player_id=state["current_player_id"])
     actor = state["current_player_id"]
     before = len(next(p for p in state["players"] if p["user_id"] == actor)["hand"])
     draw_count = int(state.get("pending_draw", 0)) or 1
-    bot = SimpleNamespace(edit_message_text=AsyncMock(return_value=True))
+    bot = SimpleNamespace(edit_message_text=AsyncMock(return_value=True),
+                          send_message=AsyncMock(return_value=SimpleNamespace(message_id=11)),
+                          delete_message=AsyncMock())
     runtime = GameRuntime(repository, uno=uno)
     await runtime.tick(SimpleNamespace(bot=bot))
     state = repository.states[(-100, "uno")]
     assert state["current_player_id"] != actor
     assert len(next(p for p in state["players"] if p["user_id"] == actor)["hand"]) == before + draw_count
-    assert bot.edit_message_text.await_count == 1 and state["panel_dirty"] is False
+    assert bot.send_message.await_count == 1 and bot.delete_message.await_count == 1
+    assert bot.edit_message_text.await_count == 0 and state["panel_dirty"] is False
+    assert state["prompt_message_id"] == 11
+    assert state["panel_turn_player_id"] == state["current_player_id"]
 
 
 @pytest.mark.asyncio

@@ -100,8 +100,11 @@ class AIProviderRouter:
         self,
         request: CompletionRequest,
         provider_names: list[str] | None = None,
+        *,
+        provider_timeout_seconds: float | None = None,
     ) -> CompletionResponse:
-        return await self._call("complete", request.task, request, provider_names=provider_names)
+        return await self._call("complete", request.task, request, provider_names=provider_names,
+                                provider_timeout_seconds=provider_timeout_seconds)
 
     async def vision(self, request: Any) -> Any:
         return await self._call("vision", "vision", request)
@@ -119,6 +122,7 @@ class AIProviderRouter:
         request: Any,
         *,
         provider_names: list[str] | None = None,
+        provider_timeout_seconds: float | None = None,
     ) -> Any:
         last_error: Exception | None = None
         names = provider_names if provider_names is not None else self._ordered_names(task)
@@ -146,8 +150,8 @@ class AIProviderRouter:
                         for other in names[index + 1:]
                     )
                     per_provider = getattr(provider, "fast_timeout_seconds" if task == "fast" else "timeout_seconds", remaining)
-                    if method == "complete" and self.provider_timeout_seconds is not None:
-                        cap = self.provider_timeout_seconds
+                    cap = self.provider_timeout_seconds if provider_timeout_seconds is None else provider_timeout_seconds
+                    if method == "complete" and cap is not None:
                         if task != "fast" and available_tail and getattr(provider, "needs_startup_budget", False):
                             # A local CLI has process/login startup overhead.
                             # Give it more than the HTTP cap while retaining

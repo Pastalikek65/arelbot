@@ -213,6 +213,7 @@ class UnoService:
         async with self._lock_for(chat_id):
             state = await self._required(chat_id)
             state["prompt_message_id"] = int(message_id)
+            state["panel_turn_player_id"] = state.get("current_player_id") if state.get("status") == "playing" else None
             state["panel_dirty"] = expected_revision is not None and int(state.get("revision", 0)) != int(expected_revision)
             await self._save(chat_id, state)
             return state
@@ -223,6 +224,8 @@ class UnoService:
             if not state or (message_id is not None and int(state.get("prompt_message_id", 0) or 0) != int(message_id)):
                 return
             state["panel_dirty"] = int(state.get("revision", 0)) != int(revision)
+            if int(state.get("revision", 0)) == int(revision):
+                state["panel_turn_player_id"] = state.get("current_player_id") if state.get("status") == "playing" else None
             state.update(delivery_retry_at=0, delivery_failures=0)
             await self._save(chat_id, state)
 
