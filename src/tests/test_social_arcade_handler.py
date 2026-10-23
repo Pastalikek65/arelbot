@@ -5,6 +5,7 @@ from types import SimpleNamespace
 import pytest
 from telegram.error import Forbidden
 
+from src.games import social_arcade as rules
 from src.handlers.social_arcade_handler import SocialArcadeHandler
 from src.services import social_arcade_ui as ui
 from src.services.social_arcade_service import SocialArcadeService
@@ -30,13 +31,45 @@ class Bot:
     async def do_api_request(self, endpoint, api_kwargs):
         self.sent.append({"endpoint": endpoint, **api_kwargs})
         self.counter += 1
-        return {"message_id": self.counter,
+        if endpoint == "deleteEphemeralMessage":
+            return True
+        return {"message_id": 0,
                 "receiver_user": {"id": api_kwargs["ephemeral_message_parameters"]["receiver_user_id"]},
                 "ephemeral_message_id": self.counter}
 
     async def delete_message(self, **kwargs):
         self.deleted.append(kwargs)
         return True
+
+
+@pytest.mark.parametrize("key", rules.GAME_KEYS)
+def test_cancelled_unstarted_social_lobby_renders_without_round_fields(key):
+    lobby = rules.new(game_key=key, chat_id=-100, thread_id=8,
+                      owner_id=1, owner_name="Kurucu", round_id="cancel", now=100)
+    cancelled = rules.act(lobby, user_id=1, action="stop", now=101)
+    text = ui.group_text(cancelled)
+    assert cancelled["phase"] == "cancelled"
+    assert "ödülsüz" in text
+    assert ui.group_keyboard(cancelled).inline_keyboard
+
+
+@pytest.mark.asyncio
+async def test_cancelled_identity_lobby_retries_and_clears_stale_group_panel(monkeypatch):
+    monkeypatch.setattr("src.services.social_arcade_service.time.time", lambda: 101)
+    service = SocialArcadeService(Repository())
+    _, lobby = await service.open(game_key="kimim_ben", chat_id=-100,
+                                  thread_id=8, user_id=1, user_name="Kurucu", now=100)
+    bot = Bot()
+    handler = SocialArcadeHandler(service)
+    await handler.process(bot, {"state": lobby})
+    current_lobby = await current(service, "kimim_ben")
+    await service.act(game_key="kimim_ben", chat_id=-100, thread_id=8,
+                      user_id=1, action_id="stop:test", action="stop",
+                      round_id=current_lobby["round_id"], phase_seq=current_lobby["phase_seq"])
+    await handler.process(bot, {"state": await current(service, "kimim_ben")})
+    closed = await current(service, "kimim_ben")
+    assert closed["phase"] == "cancelled" and closed["panel_dirty"] is False
+    assert any("ödülsüz" in edit["text"] for edit in bot.edited)
 
 
 @pytest.mark.asyncio
@@ -192,15 +225,17 @@ async def test_identity_card_is_ephemeral_and_subject_cannot_request_it(monkeypa
     helper = next(p["id"] for p in state["players"] if p["id"] != subject)
     update, answers = _group_callback(state, helper, "card")
     await handler.callback(update, SimpleNamespace(bot=bot))
-    card = bot.sent[-1]
-    assert card["endpoint"] == "sendMessage"
-    assert card["ephemeral_message_parameters"] == {
+    overlays = [entry for entry in bot.sent if entry.get("endpoint") == "sendMessage"]
+    assert len(overlays) == 2
+    assert overlays[0]["ephemeral_message_parameters"] == {
         "receiver_user_id": helper, "callback_query_id": update.callback_query.id}
-    assert state["identities"][str(subject)] not in card["text"]
-    assert all(state["identities"][str(subject)] not in entry["text"]
-               for entry in bot.sent if entry["chat_id"] == -100)
-    assert answers[-1][1]["show_alert"] is True
-    assert state["identities"][str(subject)] in answers[-1][0][0]
+    assert state["identities"][str(subject)] not in overlays[0]["text"]
+    assert state["identities"][str(subject)] in overlays[1]["text"]
+    assert overlays[1]["ephemeral_message_parameters"]["receiver_user_id"] == helper
+    assert all(state["identities"][str(subject)] not in entry.get("text", "")
+               for entry in bot.sent if entry["chat_id"] == -100 and not entry.get("ephemeral_message_parameters"))
+    assert any(entry.get("endpoint") == "deleteEphemeralMessage" for entry in bot.sent)
+    assert "yalnız sana" in answers[-1][0][0]
     count = len(bot.sent)
     update, answers = _group_callback(state, subject, "card")
     await handler.callback(update, SimpleNamespace(bot=bot))
@@ -231,3 +266,29 @@ async def test_identity_card_deletes_unverified_group_probe(monkeypatch):
     assert bot.deleted == [{"chat_id": -100, "message_id": 999}]
     assert state["identities"][str(subject)] not in bot.sent[-1]["text"]
     assert state["identities"][str(subject)] in answers[-1][0][0]
+
+
+@pytest.mark.asyncio
+async def test_identity_card_falls_back_to_private_alert_if_second_ephemeral_send_is_unverified(monkeypatch):
+    monkeypatch.setattr("src.services.social_arcade_service.time.time", lambda: 103)
+    service, _, _ = await setup("kimim_ben", 3)
+
+    class DowngradedBot(Bot):
+        async def do_api_request(self, endpoint, api_kwargs):
+            if endpoint == "sendMessage" and any(
+                entry.get("endpoint") == "sendMessage" for entry in self.sent):
+                self.sent.append({"endpoint": endpoint, **api_kwargs})
+                return {"message_id": 998}
+            return await super().do_api_request(endpoint, api_kwargs)
+
+    bot = DowngradedBot()
+    handler = SocialArcadeHandler(service)
+    await handler.process(bot, {"state": await current(service, "kimim_ben")})
+    state = await current(service, "kimim_ben")
+    subject = state["players"][state["subject_index"]]["id"]
+    helper = next(p["id"] for p in state["players"] if p["id"] != subject)
+    update, answers = _group_callback(state, helper, "card")
+    await handler.callback(update, SimpleNamespace(bot=bot))
+    assert {"chat_id": -100, "message_id": 998} in bot.deleted
+    assert state["identities"][str(subject)] in answers[-1][0][0]
+    assert answers[-1][1]["show_alert"] is True

@@ -57,6 +57,9 @@ def group_text(state):
     if phase == "lobby":
         low, high = game.LIMITS[key]
         lines.append(f"{low}–{high} kişi. Katıl, özel sohbetini hazırla; kurucu başlatır.")
+    elif phase == "cancelled":
+        # A lobby may close before start has initialized game-specific fields.
+        pass
     elif key == "amiral_batti":
         actor = view["players"][view["turn_index"]]
         lines.append(f"Sıra: {name(actor)} · 6×6 sahada bir kare seç.")

@@ -28,6 +28,55 @@ class SocialArcadeHandler:
                               authorization=self.authorization)
 
     @staticmethod
+    async def _private_group_identity(bot, *, chat_id, thread_id, user_id, query_id, identity):
+        """Reveal only after a harmless request proves ephemeral delivery."""
+        common = {"chat_id": chat_id}
+        if thread_id is not None:
+            common["message_thread_id"] = thread_id
+
+        async def send(text, *, callback_id=None):
+            private = {"receiver_user_id": user_id}
+            if callback_id:
+                private["callback_query_id"] = callback_id
+            return await bot.do_api_request("sendMessage", api_kwargs={
+                **common, "text": text, "ephemeral_message_parameters": private})
+
+        def verified(value):
+            return (isinstance(value, dict) and value.get("message_id") == 0 and
+                    (value.get("receiver_user") or {}).get("id") == user_id and
+                    bool(value.get("ephemeral_message_id")))
+
+        async def remove_public(value):
+            if isinstance(value, dict) and value.get("message_id"):
+                try:
+                    await bot.delete_message(chat_id=chat_id,
+                                             message_id=int(value["message_id"]))
+                except TelegramError:
+                    pass
+
+        probe = None
+        try:
+            probe = await send("🔐 Kimim Ben kartı hazırlanıyor…", callback_id=query_id)
+            if not verified(probe):
+                await remove_public(probe)
+                return False
+            revealed = await send(f"🔐 Öznenin kimliği: {identity}")
+            if not verified(revealed):
+                await remove_public(revealed)
+                return False
+            return True
+        except TelegramError:
+            return False
+        finally:
+            if verified(probe):
+                try:
+                    await bot.do_api_request("deleteEphemeralMessage", api_kwargs={
+                        "chat_id": chat_id, "receiver_user_id": user_id,
+                        "ephemeral_message_id": probe["ephemeral_message_id"]})
+                except TelegramError:
+                    pass
+
+    @staticmethod
     def accepts_text(state):
         # Every authored statement/question is privately submitted. Group chat remains discussion.
         return False
@@ -222,26 +271,13 @@ class SocialArcadeHandler:
                                        show_alert=True)
                     return True
                 identity = state["identities"][str(subject)]
-                # PTB 22.6 discards the new receiver_user response field. Keep
-                # the secret in callback_query.answer, which is private by design.
-                # A server that ignores the new parameter can only leak this
-                # non-secret reminder, never the identity.
-                try:
-                    response = await context.bot.do_api_request("sendMessage", api_kwargs={
-                        "chat_id": chat_id,
-                        "text": "🔐 Kimim Ben kartın botun özel sohbetinde duruyor.",
-                        "message_thread_id": thread_id,
-                        "ephemeral_message_parameters": {
-                            "receiver_user_id": uid, "callback_query_id": query.id}})
-                    verified = (isinstance(response, dict) and
-                        (response.get("receiver_user") or {}).get("id") == uid and
-                        response.get("ephemeral_message_id") is not None)
-                    if not verified and isinstance(response, dict) and response.get("message_id"):
-                        await context.bot.delete_message(chat_id=chat_id,
-                                                         message_id=response["message_id"])
-                except TelegramError:
-                    pass
-                await query.answer(f"Öznenin kimliği: {identity}", show_alert=True)
+                delivered = await self._private_group_identity(context.bot,
+                    chat_id=chat_id, thread_id=thread_id, user_id=uid,
+                    query_id=query.id, identity=identity)
+                if delivered:
+                    await query.answer("Kimliğin yalnız sana gösterildi; özel sohbette de var.")
+                else:
+                    await query.answer(f"Öznenin kimliği: {identity}", show_alert=True)
                 return True
             if code == "j" and not private:
                 operation, value = "join", None
