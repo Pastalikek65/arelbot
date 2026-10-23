@@ -1,10 +1,12 @@
 from datetime import datetime, timezone
 import json
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 
 from src.chat_engine import ChatEngine
+from src.ai.router import AIProviderRouter
 from src.ai.personality import PersonalityPolicy
 from src.ai.conversation_style import chat_style_instruction
 from src.group_replies import GroupMessageRef, GroupTurnContext
@@ -63,3 +65,16 @@ async def test_group_reply_plan_returns_none_when_provider_is_unavailable():
     current = ref(202, 2, "arel naber")
 
     assert await engine.get_group_reply_plan(GroupTurnContext(current, (current,), "mention")) is None
+
+
+@pytest.mark.asyncio
+async def test_group_roast_plan_uses_scoped_fallback_order():
+    engine = ChatEngine.__new__(ChatEngine)
+    engine.ai_router = AIProviderRouter(routes={
+        'chat': ['openai', 'hrmn', 'cloudflare', 'evren', 'nvidia']})
+    engine._request_with_failover = AsyncMock(return_value={'message': {'content': '{"replies": []}'}})
+    current = ref(202, 2, 'böyle konuşma ama yine son güne bıraktım')
+    await engine.get_group_reply_plan(GroupTurnContext(current, (current,), 'mention'),
+                                      persona_mode='roast')
+    assert engine._request_with_failover.await_args.kwargs['provider_names'] == [
+        'openai', 'hrmn', 'evren', 'cloudflare', 'nvidia']

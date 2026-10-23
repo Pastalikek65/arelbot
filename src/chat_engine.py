@@ -1173,6 +1173,16 @@ class ChatEngine:
                 )
         return router
 
+    def _roast_provider_names(self) -> list[str] | None:
+        """Prefer the proven Turkish fallback only for an explicit Roast turn."""
+        route = list(getattr(getattr(self, "ai_router", None), "routes", {}).get("chat", ()))
+        if not route:
+            return None
+        if "evren" in route and "cloudflare" in route and route.index("evren") > route.index("cloudflare"):
+            route.remove("evren")
+            route.insert(route.index("cloudflare"), "evren")
+        return route
+
     async def _request_with_failover(
         self,
         messages,
@@ -1184,11 +1194,13 @@ class ChatEngine:
         reasoning_effort=None,
         thinking_enabled=None,
         response_format=None,
+        provider_names=None,
     ):
         """Request completion through the typed adapter router."""
         if not hasattr(self, "ai_router"):
             self.ai_router = self._build_ai_router()
-        names = None if services is None else [service.value for service in services]
+        names = (provider_names if provider_names is not None else
+                 None if services is None else [service.value for service in services])
         try:
             response = await self.ai_router.complete(
                 CompletionRequest(
@@ -1237,8 +1249,9 @@ class ChatEngine:
         ]
         candidate_payload = json.dumps(candidates, ensure_ascii=False, separators=(",", ":"))
         policy = getattr(self, "personality_policy", None) or PersonalityPolicy.from_config(Config)
+        selected_policy = policy.for_mode(persona_mode)
         selected_style = chat_style_instruction(
-            policy.for_mode(persona_mode), persona_mode, turn_context.current_message.text, 0,
+            selected_policy, persona_mode, turn_context.current_message.text, 0,
         )
         system = selected_style + "\n\n" + (
             "Arel grup sohbeti için yapılandırılmış kısa yanıt planı üret. "
@@ -1262,6 +1275,7 @@ class ChatEngine:
             reasoning_effort="none",
             thinking_enabled=False,
             response_format={"type": "json_object"},
+            provider_names=self._roast_provider_names() if selected_policy.sarcasm_level >= 3 else None,
         )
         if not response:
             return None
@@ -1640,6 +1654,7 @@ class ChatEngine:
                 tools,
                 task=task,
                 max_tokens=max_tokens,
+                provider_names=self._roast_provider_names() if not normal_mode_active else None,
             )
             if provider_result:
                 service = provider_result["service"]
@@ -1712,6 +1727,7 @@ class ChatEngine:
                                         task="chat",
                                         max_tokens=getattr(Config, "AI_TOOL_MAX_TOKENS", 384),
                                     ),
+                                    provider_names=self._roast_provider_names() if not normal_mode_active else None,
                                 )
                                 final_text = follow_up.content or ""
                             except AIProviderUnavailable:

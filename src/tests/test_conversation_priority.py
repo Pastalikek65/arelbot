@@ -24,6 +24,28 @@ def engine(router):
     return e
 
 
+def test_roast_prefers_proven_turkish_fallback_without_changing_normal_route():
+    router = AIProviderRouter(routes={'chat': ['openai', 'hrmn', 'cloudflare', 'evren', 'nvidia']})
+    app = engine(router)
+    assert app._roast_provider_names() == ['openai', 'hrmn', 'evren', 'cloudflare', 'nvidia']
+    assert router.routes['chat'] == ['openai', 'hrmn', 'cloudflare', 'evren', 'nvidia']
+
+
+@pytest.mark.asyncio
+async def test_roast_response_uses_scoped_fallback_order():
+    router = AIProviderRouter(routes={'chat': ['openai', 'hrmn', 'cloudflare', 'evren', 'nvidia']})
+    app = engine(router)
+    app._request_with_failover = AsyncMock(return_value={
+        'provider':'evren', 'service':None, 'key':None, 'url':None,
+        'model':'fixture', 'timeout':1, 'message':{'content':'bu plan bok gibi olmuş'},
+    })
+    app._ensure_reply_language = AsyncMock(side_effect=lambda text,*_args:text)
+    await app.get_response(42,'yine son güne bıraktım',persona_mode='roast',
+                           persist_conversation=False)
+    assert app._request_with_failover.await_args.kwargs['provider_names'] == [
+        'openai', 'hrmn', 'evren', 'cloudflare', 'nvidia']
+
+
 @pytest.mark.asyncio
 async def test_tool_follow_up_uses_other_providers_when_first_completion_provider_times_out():
     calls = []
