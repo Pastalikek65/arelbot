@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import random
 import re
+from collections import Counter
 
 ROAST_PHRASES = (
     "sikindirik plan", "sikik bahane", "siktir et", "boktan fikir",
@@ -39,6 +40,17 @@ _CAPITULATION = re.compile(
     re.IGNORECASE,
 )
 _PROFANITY = re.compile(r"\b(?:sik\w*|bok\w*|göt\w*|sıç\w*|yarra\w*|amk)\b", re.IGNORECASE)
+_AWKWARD_COMPOUND = re.compile(r"siktiri?bok", re.IGNORECASE)
+
+
+def strip_roast_capitulation(response: str) -> str:
+    """Remove only a leading promise to abandon the already selected style."""
+
+    value = str(response or "").strip()
+    if _CAPITULATION.search(value) and "." in value[:160]:
+        remainder = value.split(".", 1)[1].strip()
+        return remainder or value
+    return value
 
 
 def roast_needs_repair(user_text: str, response: str) -> bool:
@@ -47,7 +59,11 @@ def roast_needs_repair(user_text: str, response: str) -> bool:
     value = str(response or "").strip()
     if not value:
         return False
+    stems = Counter("bok" if word.casefold().startswith("bok") else word.casefold()
+                    for word in _PROFANITY.findall(value))
     return bool(_CAPITULATION.search(value) or
+                _AWKWARD_COMPOUND.search(value) or
+                any(count > 2 for count in stems.values()) or
                 _STYLE_OBJECTION.search(str(user_text or "")) and not _PROFANITY.search(value))
 
 

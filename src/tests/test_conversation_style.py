@@ -6,7 +6,12 @@ from src.ai.conversation_style import (
     style_mode_label,
 )
 from src.ai.personality import PersonalityPolicy
-from src.ai.roast_repertoire import ROAST_PHRASES, roast_needs_repair, roast_repertoire_instruction
+from src.ai.roast_repertoire import (
+    ROAST_PHRASES,
+    roast_needs_repair,
+    roast_repertoire_instruction,
+    strip_roast_capitulation,
+)
 
 
 def test_normal_chat_style_is_compact_and_conversational():
@@ -63,3 +68,7 @@ def test_roast_quality_gate_catches_tone_capitulation_without_rejecting_mode_hin
     assert not roast_needs_repair(objection,
         "Roast açık; değiştirmek istersen /persona normal seç. Bu boktan erteleme artık yeter.")
     assert not roast_needs_repair("bugün ne yapayım", "Önce en kritik işi seç.")
+    assert roast_needs_repair(objection, "Siktiriboktanlık olmuş; yine sıçmışsın.")
+    assert roast_needs_repair(objection, "Bok gibi, boktan iş, yine bok gibi bir gün.")
+    assert strip_roast_capitulation(
+        "Anladım, daha sakin bir şekilde yanıtlayayım. İşleri küçük parçalara böl.") == "İşleri küçük parçalara böl."

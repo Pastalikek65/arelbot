@@ -65,7 +65,28 @@ async def test_roast_capitulation_is_repaired_by_existing_turkish_provider_once(
                                    persona_mode='roast',persist_conversation=False)
     assert 'sikindirik' in reply
     router.complete.assert_awaited_once()
-    assert router.complete.await_args.kwargs['provider_names'][0] == 'evren'
+    assert router.complete.await_args.kwargs['provider_names'] == ['evren']
+    repair_request = router.complete.await_args.args[0]
+    assert repair_request.max_tokens <= 160
+    assert len(repair_request.messages[0]['content']) < 1000
+    assert 'daha sakin' not in repair_request.messages[1]['content']
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('replacement', ['Siktiriboktanlık olmuş.', None])
+async def test_roast_repair_rejects_bad_rewrite_and_drops_capitulation_prefix(replacement):
+    async def complete(_request, provider_names=None):
+        assert provider_names == ['evren']
+        if replacement is None:
+            raise TimeoutError('fixture timeout')
+        return CompletionResponse(replacement, 'evren', 'fixture')
+
+    app = engine(SimpleNamespace(providers={'evren':object()},complete=complete))
+    answer = await app._repair_roast_reply(
+        'Anladım, daha sakin bir şekilde yanıtlayayım. İşleri küçük parçalara böl.',
+        'Böyle konuşma, yine son güne bıraktım',
+        'Seçili roast modu geçerli.')
+    assert answer == 'İşleri küçük parçalara böl.'
 
 
 @pytest.mark.asyncio

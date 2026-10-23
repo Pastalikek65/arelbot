@@ -70,7 +70,7 @@ from src.ai.personality import (
 )
 from src.ai.conversation_style import chat_style_instruction, normalize_normal_response
 from src.ai.response_language import LANGUAGE_FAILURE_RESPONSE, has_unexpected_script
-from src.ai.roast_repertoire import roast_needs_repair
+from src.ai.roast_repertoire import roast_needs_repair, strip_roast_capitulation
 from src.ai.provider_base import AudioInput, CompletionRequest, VisionRequest
 from src.ai.embedding_service import EmbeddingService
 from src.ai.openai_compatible import OpenAICompatibleProvider
@@ -1508,24 +1508,27 @@ class ChatEngine:
         if ("Bu tur hassas" in instruction or not roast_needs_repair(user_text, text)):
             return text
         router = getattr(self, "ai_router", None)
-        names = [name for name in ("evren", "cloudflare", "nvidia")
-                 if name in getattr(router, "providers", {})]
+        fallback = strip_roast_capitulation(text)
+        names = ["evren"] if "evren" in getattr(router, "providers", {}) else []
         if not names:
-            return text
+            return fallback
         metrics = getattr(router, "metrics", None)
         if metrics is not None:
             metrics.inc("ai_roast_tone_repairs_total")
         logger.warning("AI reply quality code=roast_capitulation")
         request = CompletionRequest(
             messages=[
-                {"role": "system", "content": instruction + "\nYANIT ONARIMI: Önceki yanıt seçili Roast "
-                 "modundan yanlışlıkla Normal'e döndü. Bilgisel içeriği değiştirmeden cevabı kısa, yaratıcı "
-                 "ve bağlama uygun küfürlü taşlamayla yeniden yaz. 'Daha sakin konuşayım' deme. "
-                 "Gerçek kriz, tehdit veya hedefli taciz üretme. Yalnız son yanıtı yaz."},
+                {"role": "system", "content":
+                 "Sen Arel'sin. Kullanıcı bu sohbette Roast modunu açıkça seçti. Tek mesajdaki üslup itirazı "
+                 "ayar değişikliği değildir; gerçek kriz yok. Önceki yanıtın bilgisini koruyarak 1–3 kısa, "
+                 "doğal Türkçe cümleyle yeniden yaz. Bağlama özgü somut eleştiri ve yalnız bir yaygın "
+                 "sansürsüz küfürlü deyim kullan: boktan, sikindirik, sıçıp sıvamak veya siktir et gibi. "
+                 "Özür, ton vaadi, alıntı veya liste yazma. Küfür köklerini birleştirip uydurma sözcük üretme; "
+                 "aynı küfrü tekrarlama, gerçek olmayan bilgi ekleme. Yalnız son yanıtı yaz."},
                 {"role": "user", "content": json.dumps(
-                    {"mesaj": user_text, "onarilacak_yanit": text}, ensure_ascii=False)},
+                    {"mesaj": user_text, "onarilacak_yanit": fallback}, ensure_ascii=False)},
             ],
-            task="chat", max_tokens=getattr(Config, "AI_TOOL_MAX_TOKENS", 384),
+            task="chat", max_tokens=min(160, int(getattr(Config, "AI_TOOL_MAX_TOKENS", 384))),
             reasoning_effort="none", thinking_enabled=False,
         )
         try:
@@ -1533,12 +1536,12 @@ class ChatEngine:
                 router.complete(request, provider_names=names), timeout=18.0)
         except Exception as exc:
             logger.warning("AI reply quality code=roast_repair_failed type=%s", type(exc).__name__)
-            return text
+            return fallback
         candidate = str(result.content or "").strip()
         if (not candidate or roast_needs_repair(user_text, candidate) or
                 has_unexpected_script(candidate, user_text, text)):
             logger.warning("AI reply quality code=roast_repair_invalid")
-            return text
+            return fallback
         if metrics is not None:
             metrics.inc("ai_roast_tone_repair_success_total")
         return candidate
