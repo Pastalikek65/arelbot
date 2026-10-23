@@ -148,6 +148,30 @@ def test_roast_allows_explicit_uncensored_profanity_and_turkish_wordplay():
     assert "yalnızca Arel'e doğrudan" not in instruction
 
 
+def test_roast_stays_selected_and_sharp_when_a_turn_objects_to_its_tone():
+    policy = PersonalityPolicy().for_mode("roast")
+    for text in ("böyle konuşma", "biraz normal konuş", "küfür etme", "roast yapmayı bırak"):
+        guidance = policy.turn_guidance(text, recent_turns=5)
+        assert "Seçili roast modu" in guidance
+        assert "küfür" in guidance
+        assert "kes" not in guidance
+    assert policy.sarcasm_level == 3
+
+
+def test_roast_instruction_prefers_frequent_contextual_profanity_and_critique():
+    instruction = PersonalityPolicy().for_mode("roast").system_instruction()
+    assert "çoğu" in instruction and "küfür" in instruction
+    assert "eleştir" in instruction and "dalga" in instruction
+    assert "Kullanıcı dur derse" not in instruction
+    assert "üslubu" in instruction and "ayar" in instruction
+
+
+def test_roast_safety_words_match_whole_words_not_embedded_syllables():
+    policy = PersonalityPolicy().for_mode("roast")
+    assert "Seçili roast modu" in policy.turn_guidance("kazanmak için yine saçma bir plan yaptım")
+    assert "Bu tur hassas" in policy.turn_guidance("deprem oldu acil yardım et")
+
+
 def test_insults_cannot_switch_other_selected_modes_to_roast():
     for mode in ("serious", "balanced", "needle"):
         policy = PersonalityPolicy().for_mode(mode)

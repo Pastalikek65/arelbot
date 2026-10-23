@@ -101,3 +101,20 @@ async def test_failed_normal_save_preserves_previous_choice():
     assert db.settings["persona_mode"] == "roast"
     query.edit_message_reply_markup.assert_not_called()
     assert query.answer.call_args.kwargs["show_alert"] is True
+
+
+@pytest.mark.asyncio
+async def test_group_message_does_not_override_persisted_roast_selection():
+    from src.handlers.message_handler import MessageHandler
+
+    handler = MessageHandler.__new__(MessageHandler)
+    handler.data_port = SimpleNamespace(
+        get_chat_settings=AsyncMock(return_value={"persona_mode": "roast"}))
+    for message in ("böyle konuşma", "küfür etme", "normal konuş"):
+        update = SimpleNamespace(
+            effective_chat=SimpleNamespace(id=-100, type="supergroup"),
+            effective_user=SimpleNamespace(id=42),
+            effective_message=SimpleNamespace(text=message),
+        )
+        assert await handler._resolve_persona_mode(update, -100) == "roast"
+    handler.data_port.get_chat_settings.assert_awaited()
