@@ -1709,10 +1709,9 @@ class ChatEngine:
                                 follow_up = await self.ai_router.complete(
                                     CompletionRequest(
                                         messages=messages_inner,
-                                        model=model,
                                         task="chat",
+                                        max_tokens=getattr(Config, "AI_TOOL_MAX_TOKENS", 384),
                                     ),
-                                    provider_names=[service.value] if service else None,
                                 )
                                 final_text = follow_up.content or ""
                             except AIProviderUnavailable:

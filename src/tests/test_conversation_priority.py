@@ -9,6 +9,7 @@ from src.ai.personality import PersonalityPolicy
 from src.ai.provider_base import CompletionRequest, CompletionResponse
 from src.ai.router import AIProviderRouter
 from src.chat_engine import ChatEngine
+from src.key_manager import ServiceType
 
 
 def engine(router):
@@ -21,6 +22,47 @@ def engine(router):
     e._should_attach_tools = lambda *args, **kwargs: False
     e.tool_manager = SimpleNamespace()
     return e
+
+
+@pytest.mark.asyncio
+async def test_tool_follow_up_uses_other_providers_when_first_completion_provider_times_out():
+    calls = []
+
+    async def openai(request):
+        calls.append(('openai',request.model))
+        raise RuntimeError('cli_tools_unsupported')
+
+    async def hrmn(request):
+        calls.append(('hrmn',request.model))
+        if any(item.get('role') == 'tool' for item in request.messages):
+            raise TimeoutError('follow-up timed out')
+        return CompletionResponse('', 'hrmn', 'fixture-model', raw={
+            'service': ServiceType.HRMN,
+            'message': {'content': '', 'tool_calls': [
+                {'id':'call-1','type':'function','function':{'name':'web_search','arguments':'{}'}}
+            ]},
+        })
+
+    async def nvidia(request):
+        calls.append(('nvidia',request.model))
+        return CompletionResponse('yedek cevap geldi', 'nvidia', 'fixture-nvidia')
+
+    router = AIProviderRouter([
+        SimpleNamespace(name='openai',complete=openai),
+        SimpleNamespace(name='hrmn',complete=hrmn),
+        SimpleNamespace(name='nvidia',complete=nvidia),
+    ],routes={'chat':['openai','hrmn','nvidia']},request_timeout_seconds=1)
+    app = engine(router)
+    app._should_attach_tools = lambda *_args, **_kwargs: True
+    app.tool_manager = SimpleNamespace(get_openai_tools_def=lambda:[{'type':'function'}],
+                                       execute_tool=AsyncMock(return_value={'ok':True}))
+    app._ensure_reply_language = AsyncMock(side_effect=lambda text,*_args:text)
+    reply = await app.get_response(42,'bana bir bilgi bul',user_id=7,
+                                   persona_mode='normal',persist_conversation=False)
+    assert reply == 'yedek cevap geldi'
+    assert [name for name,_model in calls] == ['openai','hrmn','openai','hrmn','nvidia']
+    assert all(model is None for name,model in calls[2:])
+    app.tool_manager.execute_tool.assert_awaited_once()
 
 
 @pytest.mark.asyncio
@@ -106,6 +148,24 @@ async def test_cli_startup_timeout_leaves_a_working_http_fallback_slot():
     assert reply.provider == 'hrmn'
     assert cancelled.is_set()
     hrmn.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_two_slow_providers_do_not_use_entire_chat_budget_before_working_tail():
+    async def stalled(_request):
+        await asyncio.Event().wait()
+
+    tail = AsyncMock(return_value=CompletionResponse('üçüncü sağlayıcı yanıtladı','nvidia','fixture'))
+    router = AIProviderRouter([
+        SimpleNamespace(name='openai',complete=stalled,timeout_seconds=1,needs_startup_budget=True),
+        SimpleNamespace(name='hrmn',complete=stalled,timeout_seconds=1),
+        SimpleNamespace(name='nvidia',complete=tail,timeout_seconds=1),
+    ],routes={'chat':['openai','hrmn','nvidia']},request_timeout_seconds=0.3,
+       provider_timeout_seconds=0.05)
+    reply = await asyncio.wait_for(router.complete(CompletionRequest(
+        [{'role':'user','content':'selam'}])),timeout=1)
+    assert reply.provider == 'nvidia'
+    tail.assert_awaited_once()
 
 
 @pytest.mark.asyncio

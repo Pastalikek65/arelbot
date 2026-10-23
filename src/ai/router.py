@@ -140,20 +140,30 @@ class AIProviderRouter:
                 if deadline is None:
                     result = await call
                 else:
-                    per_provider = getattr(provider, "fast_timeout_seconds" if task == "fast" else "timeout_seconds", deadline-now)
+                    remaining = deadline - now
+                    available_tail = sum(
+                        other in self.providers and self._opened_until.get(other, 0) <= now
+                        for other in names[index + 1:]
+                    )
+                    per_provider = getattr(provider, "fast_timeout_seconds" if task == "fast" else "timeout_seconds", remaining)
                     if method == "complete" and self.provider_timeout_seconds is not None:
                         cap = self.provider_timeout_seconds
-                        if task != "fast" and getattr(provider, "needs_startup_budget", False):
+                        if task != "fast" and available_tail and getattr(provider, "needs_startup_budget", False):
                             # A local CLI has process/login startup overhead.
-                            # Preserve a full HTTP-provider slot for fallback
-                            # instead of killing a healthy CLI at the generic
-                            # HTTP cap, or consuming the entire route budget.
-                            reserve = min(cap, (deadline-now) / 2) if index + 1 < len(names) else 0
-                            cap = max(cap, deadline-now-reserve)
+                            # Give it more than the HTTP cap while retaining
+                            # half of the remaining budget for HTTP fallbacks.
+                            cap = max(cap, remaining / 2)
                         per_provider = min(per_provider, cap)
+                    if task != "fast" and available_tail:
+                        # Each earlier timeout must leave meaningful time for
+                        # the remaining route. Do not let CLI + one gateway
+                        # exhaust the entire chat deadline.
+                        tail_slot = min(2.0, remaining / (available_tail + 1))
+                        reserve = max(remaining / 2, tail_slot * available_tail)
+                        per_provider = min(per_provider, remaining - reserve)
                     if task == "fast":
-                        per_provider = min(per_provider, (deadline-now)/max(1,len(names)-index))
-                    result = await asyncio.wait_for(call, timeout=min(float(per_provider), deadline-now))
+                        per_provider = min(per_provider, remaining/max(1,len(names)-index))
+                    result = await asyncio.wait_for(call, timeout=min(float(per_provider), remaining))
                 elapsed = time.perf_counter() - started
                 self.metrics.inc("ai_provider_success_total")
                 self.metrics.inc(f"ai_provider_success_total_{name}")
