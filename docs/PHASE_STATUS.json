@@ -382,11 +382,12 @@
     "release_gate": "local 3468 passed/19 skipped; isolated server 3472 passed/6 skipped; GitHub offline and Docker gates passed"
   },
   "uno_compact_turn_20261023": {
-    "status": "local_automated_verified_deployment_pending",
+    "status": "deployed_automated_verified_live_turn_pending",
     "scope": "short UNO turn text and first-row Kartları gör control for inline and fallback tables",
     "local_tests": "3468 passed/19 skipped with provider env isolated",
-    "server_deployment": "PENDING",
-    "telegram_live": "NOT_RUN",
-    "github_publication": "PENDING"
+    "server_tests": "3472 passed/6 skipped",
+    "server_deployment": "2026.10.23-uno-compact-1; bot and worker healthy; runtime source d313848b02f68863e8f8db1e5bd7e2a2f8e12329",
+    "telegram_live": "UNO lobi opened and closed in test group; active turn NOT_RUN - second player unavailable",
+    "github_publication": "main 99f34ef9902c4f434e21628ecab71bf99b66ecf9; CI offline and Docker gates passed: https://github.com/Pastalikek65/arelbot/actions/runs/39988256123"
   }
 }
