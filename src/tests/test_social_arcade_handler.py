@@ -3,15 +3,19 @@ from datetime import UTC, datetime
 from types import SimpleNamespace
 
 import pytest
+from telegram.error import Forbidden
 
 from src.handlers.social_arcade_handler import SocialArcadeHandler
-from src.tests.test_social_arcade_service import current, delivered, setup
+from src.services import social_arcade_ui as ui
+from src.services.social_arcade_service import SocialArcadeService
+from src.tests.test_social_arcade_service import Repository, current, delivered, setup
 
 
 class Bot:
     def __init__(self):
         self.sent = []
         self.edited = []
+        self.deleted = []
         self.counter = 40
 
     async def send_message(self, **kwargs):
@@ -21,6 +25,17 @@ class Bot:
 
     async def edit_message_text(self, **kwargs):
         self.edited.append(kwargs)
+        return True
+
+    async def do_api_request(self, endpoint, api_kwargs):
+        self.sent.append({"endpoint": endpoint, **api_kwargs})
+        self.counter += 1
+        return {"message_id": self.counter,
+                "receiver_user": {"id": api_kwargs["ephemeral_message_parameters"]["receiver_user_id"]},
+                "ephemeral_message_id": self.counter}
+
+    async def delete_message(self, **kwargs):
+        self.deleted.append(kwargs)
         return True
 
 
@@ -82,3 +97,137 @@ async def test_private_text_routes_only_canonical_reply_and_question_prefix(monk
     state = await current(service, "kimim_ben")
     assert consumed and not replies and state["phase"] == "answer"
     assert state["question_text"] == "Bu kişi insan mı?"
+
+
+def _group_callback(state, user_id, code):
+    answers = []
+
+    async def answer(*args, **kwargs):
+        answers.append((args, kwargs))
+
+    query = SimpleNamespace(id=f"q-{user_id}-{code}",
+        data=ui.callback_data(state, code), answer=answer,
+        message=SimpleNamespace(message_id=state["panel_message_id"],
+                                is_topic_message=True, message_thread_id=8))
+    update = SimpleNamespace(callback_query=query,
+        effective_chat=SimpleNamespace(id=-100, type="supergroup"),
+        effective_user=SimpleNamespace(id=user_id, first_name=f"Oyuncu {user_id}"))
+    return update, answers
+
+
+@pytest.mark.asyncio
+async def test_identity_lobby_uses_existing_dm_without_start(monkeypatch):
+    monkeypatch.setattr("src.services.social_arcade_service.time.time", lambda: 101)
+    service = SocialArcadeService(Repository())
+    _, state = await service.open(game_key="kimim_ben", chat_id=-100,
+        thread_id=8, user_id=1, user_name="Kurucu", now=100)
+    bot = Bot()
+    handler = SocialArcadeHandler(service)
+    await handler.process(bot, {"state": state})
+    state = await current(service, "kimim_ben")
+    update, answers = _group_callback(state, 1, "ready")
+    await handler.callback(update, SimpleNamespace(bot=bot))
+    state = await current(service, "kimim_ben")
+    assert state["players"][0]["ready"] is True
+    assert state["dm_invites"] == {}
+    assert any(entry["chat_id"] == 1 and entry["protect_content"] for entry in bot.sent)
+    assert answers[-1][0] == ("Özel sohbet hazır.",)
+
+
+@pytest.mark.asyncio
+async def test_identity_ready_button_is_idempotent_after_dm_is_open(monkeypatch):
+    monkeypatch.setattr("src.services.social_arcade_service.time.time", lambda: 101)
+    service = SocialArcadeService(Repository())
+    _, state = await service.open(game_key="kimim_ben", chat_id=-100,
+        thread_id=8, user_id=1, user_name="Kurucu", now=100)
+    bot = Bot()
+    handler = SocialArcadeHandler(service)
+    await handler.process(bot, {"state": state})
+    first, _ = _group_callback(await current(service, "kimim_ben"), 1, "ready")
+    await handler.callback(first, SimpleNamespace(bot=bot))
+    sent_before = len(bot.sent)
+    second, answers = _group_callback(await current(service, "kimim_ben"), 1, "ready")
+    await handler.callback(second, SimpleNamespace(bot=bot))
+    assert len(bot.sent) == sent_before
+    assert answers[-1][0] == ("Özel sohbetin zaten hazır.",)
+
+
+@pytest.mark.asyncio
+async def test_identity_lobby_falls_back_to_link_if_dm_is_closed(monkeypatch):
+    monkeypatch.setattr("src.services.social_arcade_service.time.time", lambda: 101)
+    service = SocialArcadeService(Repository())
+    _, state = await service.open(game_key="kimim_ben", chat_id=-100,
+        thread_id=8, user_id=1, user_name="Kurucu", now=100)
+
+    class ClosedBot(Bot):
+        async def send_message(self, **kwargs):
+            if kwargs["chat_id"] == 1:
+                raise Forbidden("bot blocked")
+            return await super().send_message(**kwargs)
+
+        async def get_me(self):
+            return SimpleNamespace(username="test_bot")
+
+    bot = ClosedBot()
+    handler = SocialArcadeHandler(service)
+    await handler.process(bot, {"state": state})
+    update, answers = _group_callback(await current(service, "kimim_ben"), 1, "ready")
+    await handler.callback(update, SimpleNamespace(bot=bot))
+    state = await current(service, "kimim_ben")
+    assert state["players"][0]["ready"] is False
+    assert state["dm_invites"].get("1")
+    assert answers[-1][1]["url"].startswith("https://t.me/test_bot?start=sa_")
+
+
+@pytest.mark.asyncio
+async def test_identity_card_is_ephemeral_and_subject_cannot_request_it(monkeypatch):
+    monkeypatch.setattr("src.services.social_arcade_service.time.time", lambda: 103)
+    service, _, _ = await setup("kimim_ben", 3)
+
+    bot = Bot()
+    handler = SocialArcadeHandler(service)
+    await handler.process(bot, {"state": await current(service, "kimim_ben")})
+    state = await current(service, "kimim_ben")
+    subject = state["players"][state["subject_index"]]["id"]
+    helper = next(p["id"] for p in state["players"] if p["id"] != subject)
+    update, answers = _group_callback(state, helper, "card")
+    await handler.callback(update, SimpleNamespace(bot=bot))
+    card = bot.sent[-1]
+    assert card["endpoint"] == "sendMessage"
+    assert card["ephemeral_message_parameters"] == {
+        "receiver_user_id": helper, "callback_query_id": update.callback_query.id}
+    assert state["identities"][str(subject)] not in card["text"]
+    assert all(state["identities"][str(subject)] not in entry["text"]
+               for entry in bot.sent if entry["chat_id"] == -100)
+    assert answers[-1][1]["show_alert"] is True
+    assert state["identities"][str(subject)] in answers[-1][0][0]
+    count = len(bot.sent)
+    update, answers = _group_callback(state, subject, "card")
+    await handler.callback(update, SimpleNamespace(bot=bot))
+    assert len(bot.sent) == count and answers[-1][1]["show_alert"] is True
+    update, answers = _group_callback(state, 999, "card")
+    await handler.callback(update, SimpleNamespace(bot=bot))
+    assert len(bot.sent) == count and answers[-1][1]["show_alert"] is True
+
+
+@pytest.mark.asyncio
+async def test_identity_card_deletes_unverified_group_probe(monkeypatch):
+    monkeypatch.setattr("src.services.social_arcade_service.time.time", lambda: 103)
+    service, _, _ = await setup("kimim_ben", 3)
+
+    class LegacyBot(Bot):
+        async def do_api_request(self, endpoint, api_kwargs):
+            self.sent.append({"endpoint": endpoint, **api_kwargs})
+            return {"message_id": 999}
+
+    bot = LegacyBot()
+    handler = SocialArcadeHandler(service)
+    await handler.process(bot, {"state": await current(service, "kimim_ben")})
+    state = await current(service, "kimim_ben")
+    subject = state["players"][state["subject_index"]]["id"]
+    helper = next(p["id"] for p in state["players"] if p["id"] != subject)
+    update, answers = _group_callback(state, helper, "card")
+    await handler.callback(update, SimpleNamespace(bot=bot))
+    assert bot.deleted == [{"chat_id": -100, "message_id": 999}]
+    assert state["identities"][str(subject)] not in bot.sent[-1]["text"]
+    assert state["identities"][str(subject)] in answers[-1][0][0]

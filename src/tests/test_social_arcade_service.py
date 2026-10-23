@@ -4,6 +4,7 @@ from copy import deepcopy
 import pytest
 
 from src.games import social_arcade as rules
+from src.services import social_arcade_ui as ui
 from src.services.social_arcade_service import SocialArcadeService
 
 
@@ -157,6 +158,27 @@ async def test_identity_full_three_subjects_and_private_secrecy():
         await svc.advance(game_key=key, chat_id=-100, thread_id=8,
                           round_id=state["round_id"], now=118 + index * 10)
     assert (await current(svc, key))["phase"] == "finished"
+
+
+def test_identity_catalog_is_varied_and_hint_never_reveals_secret():
+    assert len(rules.IDENTITIES) >= 100
+    assert len(rules.IDENTITIES) == len(set(rules.IDENTITIES))
+    assert set(rules.IDENTITY_CATEGORY.values()) == {"Meslek", "Hayvan", "Eşya", "Yer"}
+    state = rules.new(game_key="kimim_ben", chat_id=-100, thread_id=8,
+                      owner_id=1, owner_name="Kurucu", round_id="test", now=100)
+    for uid in (2, 3):
+        state = rules.join(state, user_id=uid, user_name=f"Oyuncu {uid}", now=100)
+    for uid in (1, 2, 3):
+        state = rules.ready(state, user_id=uid)
+    state = rules.start(state, user_id=1, now=101, seed=2)
+    subject = state["players"][0]["id"]
+    secret = state["identities"][str(subject)]
+    state["question_count"] = 2
+    public = ui.group_text(state)
+    private = ui.private_text(state, subject)
+    assert f"kategori: {rules.IDENTITY_CATEGORY[secret]}" in public
+    assert f"kategori: {rules.IDENTITY_CATEGORY[secret]}" in private
+    assert secret not in public and secret not in private
 
 
 @pytest.mark.asyncio

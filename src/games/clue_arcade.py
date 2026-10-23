@@ -56,10 +56,39 @@ CLUES = (
     ("yankı", "Sesle ilişkiliyim.", "Biraz gecikerek duyulurum.", "Dağlık yerde belirgin olabilirim.", "Ses bir yüzeye çarpıp geri döner.", "Bağırınca geri işittiğin sestim."),
     ("takvim", "Zamanı düzenlerim.", "Sayfalı ya da dijital olabilirim.", "Günleri sıralarım.", "Ayları ve tarihleri gösteririm.", "Randevunun hangi gün olduğunu bende bulursun."),
     ("şifre", "Bir diziyim.", "Gizlilikle ilgilenirim.", "Harf ve rakam içerebilirim.", "Hesaba girişte beni yazarsın.", "Yetkisiz kişilerin erişimini engelleyen gizli bilgiyim."),
+    ("çömlek", "Evde kullanılabilirim.", "Topraktan yapılırım.", "Bir çark üzerinde biçim alabilirim.", "Fırında pişirilince sertleşirim.", "Kilden yapılan geleneksel pişirme kabıyım."),
+    ("kavanoz", "Bir kap türüyüm.", "Mutfakta sık görülürüm.", "Ağzım kapakla kapanır.", "İçimde reçel veya turşu saklanır.", "Camdan yapılmış, kapaklı saklama kabıyım."),
+    ("kar küresi", "Bir süs eşyasıyım.", "Camdan bir bölümüm vardır.", "İçimde küçük bir manzara bulunur.", "Sallanınca beyaz tanelerim yağar.", "Salladığında içinde kar yağan cam süsüm."),
+    ("salıncak", "Açık havada bulunabilirim.", "Oturmak için bir yerim vardır.", "İleri geri hareket ederim.", "Parkta zincirlerle asılırım.", "Çocukların üzerinde sallandığı oyun aracıyım."),
+    ("vantilatör", "Evde işe yararım.", "Elektrikle çalışabilirim.", "Havayı hareket ettiririm.", "Pervanem döner.", "Sıcak günlerde rüzgâr üfleyerek serinletirim."),
+    ("kroki", "Bir çizimim.", "Bir yeri anlatırım.", "Ölçekli olmam gerekmez.", "Sokakları ve dönemeçleri basitçe gösteririm.", "Bir adresi bulmak için çizilen basit yol haritasıyım."),
+    ("mendil", "Küçük bir eşyayım.", "Cepte taşınabilirim.", "Kumaş veya kâğıttan yapılırım.", "Gözyaşı ya da burnu silmek için kullanılırım.", "Kullanıp atılabilen kâğıt türüm de vardır."),
+    ("terazi", "Ölçüm yaparım.", "Pazarda kullanılabilirim.", "Kefelerim ya da dijital ekranım olabilir.", "Bir nesnenin ağırlığını bulurum.", "Tartı yapmaya yarayan aracım."),
+    ("çalar saat", "Zamanla ilgilenirim.", "Yatağın yanında durabilirim.", "İstenilen ana ayarlanırım.", "Sabah ses çıkarıp uyandırırım.", "Alarmı kurulan saatim."),
+    ("buz pateni", "Bir sporum.", "Denge gerektiririm.", "Özel ayakkabıyla yapılırım.", "Kaygan bir pistte ilerlenir.", "Bıçağı olan ayakkabıyla buz üzerinde kayılırım."),
+    ("hamak", "Dinlenmek için kullanılırım.", "İki uçtan asılırım.", "Ağaçların arasında kurulabilirim.", "İçimde yatınca hafifçe sallanırsın.", "İplerle asılan kumaş yatağım."),
+    ("zımba", "Masa üzerinde durabilirim.", "Ofiste işe yararım.", "Küçük metal parçalar kullanırım.", "Bastırınca kâğıtları birbirine tuttururum.", "Kâğıt destesini telle birleştiren aracım."),
+    ("güneş kremi", "Bir bakım ürünüyüm.", "Cilde sürülürüm.", "Yazın sık kullanılırım.", "Üzerimde koruma faktörü yazar.", "Güneş ışınlarına karşı deriyi koruyan kremim."),
+    ("deniz kabuğu", "Doğada bulunurum.", "Kumsalda toplanabilirim.", "Sert bir dış yüzeyim vardır.", "Bir deniz canlısının koruyucu evi olabilirim.", "Dalgaların kıyıya taşıdığı kabuğum."),
+    ("piknik", "Açık havada yapılırım.", "Arkadaşlarla keyifliyimdir.", "Bir örtü serilebilir.", "Yiyecekler sepetle getirilir.", "Parkta veya kırda yenilen dışarı öğünüyüm."),
+    ("yelpaze", "Elde taşınırım.", "Hafif bir eşyayım.", "Açılıp kapanabilirim.", "Sallandıkça yüzüne hava üflerim.", "Elektriksiz serinleten katlanır el aracıyım."),
+    ("kiremit", "Bir yapı malzemesiyim.", "Sert ve ağır olabilirim.", "Yağmurdan korumaya yardım ederim.", "Çatıda yan yana dizilirim.", "Kırmızımsı çatı örtüsü parçasıyım."),
+    ("havan", "Mutfakta kullanılabilirim.", "İki parçalı bir aracım.", "Sert malzemeden yapılırım.", "İçimde baharat tokmakla ezilir.", "Sarımsak dövmeye yarayan çukur kabım."),
+    ("atlıkarınca", "Eğlence yerinde bulunurum.", "Çocuklar bana biner.", "Daire çizerek dönerim.", "Üzerimde yukarı aşağı giden at figürleri vardır.", "Lunaparktaki dönen atlı oyuncağım."),
+    ("yağmurluk", "Dışarıda giyilirim.", "Kumaşım su geçirmez.", "Kapüşonum olabilir.", "Islanmamak için üzerime giyilirim.", "Yağışta giyilen koruyucu üstlüğüm."),
+    ("dürüm", "Bir yiyeceğim.", "Elde yenebilirim.", "İçime çeşitli malzemeler konur.", "İnce ekmek sarılarak hazırlanırım.", "Lavaşın içine konan yemeğin sarılmış hâliyim."),
+    ("fener alayı", "Bir toplu etkinliğim.", "Akşam düzenlenebilirim.", "İnsanlar birlikte yürür.", "Işıklar ellerde taşınır.", "Meşaleli veya ışıklı kutlama yürüyüşüyüm."),
+    ("rüzgâr gülü", "Rüzgârla hareket ederim.", "Renkli olabilirim.", "Bir çubuğa takılırım.", "Kanatlarım esen havayla döner.", "Çocukların üfleyerek döndürdüğü pervaneli oyuncağım."),
+    ("kumdan kale", "Sahilde yapılırım.", "Kalıcı değilim.", "Islak malzemeyle daha kolay biçim alırım.", "Kova ve kürekle kulelerim yapılır.", "Kumsalda kumla yapılan oyuncak kaleyim."),
+    ("posta kutusu", "Bir kutuyum.", "Sokakta ya da binada bulunurum.", "Üzerimde bir giriş aralığı vardır.", "Mektuplar içime bırakılır.", "Gönderilecek zarfların atıldığı kutuyum."),
 )
 
 CATEGORIES = ("Nesne",) * 20 + ("Meslek", "Mekân", "Yapı", "Denizcilik", "Araç") + (
     "Duygu", "Tutum", "Meslek", "Meslek", "Görev", "Meslek", "Doğa", "Ses", "Nesne", "Kavram")
+CATEGORIES += ("Nesne", "Kap", "Süs", "Oyun aracı", "Ev aleti", "Çizim", "Eşya",
+               "Ölçüm aracı", "Saat", "Spor", "Dinlenme", "Ofis aracı", "Bakım ürünü",
+               "Doğa", "Etkinlik", "Eşya", "Yapı malzemesi", "Mutfak aracı", "Eğlence",
+               "Giysi", "Yiyecek", "Etkinlik", "Oyuncak", "Oyun", "Eşya")
 
 # Emoji cards use familiar, concrete concepts; aliases are accepted after Turkish folding.
 EMOJI = (
@@ -92,7 +121,20 @@ EMOJI = (
     ("🌈🌧️", "gökkuşağı", "gokkusagi"), ("⚡🌩️", "şimşek", "simsek"),
     ("🌕🌙", "dolunay", "dolunay"), ("🐱🐟", "kedi maması", "kedi mamasi"),
     ("🐶🦴", "köpek kemiği", "kopek kemigi"), ("🐦🏠", "kuş yuvası", "kus yuvasi"),
-    ("🐢🏁", "kaplumbağa yarışı", "kaplumbaga yarisi"), ("🦋🌸", "çiçek bahçesi", "cicek bahcesi"),
+    ("🐢🏁", "kaplumbağa yarışı", "kaplumbaga yarisi"), ("🦋🌸", "çiçekte kelebek", "cicekte kelebek"),
+    ("🍞🧀", "peynirli tost", "peynirli tost"), ("🍚🥛", "sütlaç", "sutlac"),
+    ("🍋🍰", "limonlu kek", "limonlu kek"), ("🍯🥞", "ballı krep", "balli krep"),
+    ("🍅🍝", "domatesli makarna", "domatesli makarna"), ("🥒🫙", "salatalık turşusu", "salatalik tursusu"),
+    ("🍉🧊", "soğuk karpuz", "soguk karpuz"), ("🧀🥧", "peynirli börek", "peynirli borek"),
+    ("🐈🧶", "iple oynayan kedi", "iple oynayan kedi"), ("🐕🏡", "köpek kulübesi", "kopek kulubesi"),
+    ("🐝🌸", "çiçekte arı", "cicekte ari"), ("🐣🥚", "yumurtadan çıkan civciv", "yumurtadan cikan civciv"),
+    ("🦆🏞️", "göldeki ördek", "goldeki ordek"), ("🐜🍞", "ekmek taşıyan karınca", "ekmek tasiyan karinca"),
+    ("🚴🏞️", "parkta bisiklet", "parkta bisiklet"), ("🏕️🔥", "kamp ateşi", "kamp atesi"),
+    ("🛶🏞️", "gölde kano", "golde kano"), ("🏖️📖", "plajda kitap okuma", "plajda kitap okuma"),
+    ("🌧️🥾", "yağmurda yürüyüş", "yagmurda yuruyus"), ("❄️🛷", "kızakla kayma", "kizakla kayma"),
+    ("🧳🏨", "otel tatili", "otel tatili"), ("🚉🎫", "tren bileti", "tren bileti"),
+    ("🚲🔒", "bisiklet kilidi", "bisiklet kilidi"), ("🚌🛑", "otobüs durağı", "otobus duragi"),
+    ("🛫🌍", "yurt dışı uçuşu", "yurt disi ucusu"),
 )
 
 # Hand-reviewed alternatives for the displayed concept, not fuzzy matching.
@@ -136,6 +178,14 @@ EMOJI_ALIASES = {
 
 
 def emoji_category(index):
+    if index >= 80:
+        return "Ulaşım ve seyahat"
+    if index >= 74:
+        return "Açık hava"
+    if index >= 68:
+        return "Hayvanlar"
+    if index >= 60:
+        return "Yiyecek ve içecek"
     if index < 2:
         return "Günlük eşya"
     if index < 4:

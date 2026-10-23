@@ -17,9 +17,33 @@ LOBBY_SECONDS = 1200
 PANEL_WAIT_SECONDS = 300
 RESULT_SECONDS = 5
 SHIPS = (3, 2, 2)
-IDENTITIES = ("astronot", "itfaiyeci", "arkeolog", "veteriner", "deniz feneri bekçisi",
-              "fırıncı", "bahçıvan", "mimar", "tren makinisti", "gökbilimci", "kütüphaneci",
-              "balıkçı", "heykeltıraş", "pilot", "müzisyen", "çiftçi")
+IDENTITY_CATEGORIES = {
+    "Meslek": (
+        "astronot", "itfaiyeci", "arkeolog", "veteriner", "deniz feneri bekçisi",
+        "fırıncı", "bahçıvan", "mimar", "tren makinisti", "gökbilimci", "kütüphaneci",
+        "balıkçı", "heykeltıraş", "pilot", "müzisyen", "çiftçi", "aşçı", "terzi",
+        "dalgıç", "eczacı", "diş hekimi", "gazeteci", "haritacı", "hakem",
+        "kasap", "madenci", "marangoz", "postacı", "ressam", "şoför",
+        "tıraş ustası", "öğretmen", "fotoğrafçı", "seramikçi", "arıcı", "kaptan"),
+    "Hayvan": (
+        "ahtapot", "bukalemun", "denizatı", "fil", "flamingo", "gelincik",
+        "goril", "kaplumbağa", "karınca", "kartal", "kelebek", "kirpi", "koala",
+        "kutup ayısı", "panda", "penguen", "su samuru", "tavus kuşu", "timsah",
+        "yarasa", "yunus", "zebra", "zürafa", "kanguru", "sincap", "baykuş"),
+    "Eşya": (
+        "ayna", "bavul", "bisiklet", "büyüteç", "çalar saat", "çaydanlık",
+        "dürbün", "el feneri", "fotoğraf makinesi", "gitar", "harita", "keman",
+        "mikroskop", "piyano", "pusula", "radyo", "şemsiye", "teleskop",
+        "termometre", "uçurtma", "valiz", "yelpaze", "daktilo", "gramofon"),
+    "Yer": (
+        "akvaryum", "deniz feneri", "fırın", "havaalanı", "kale", "kütüphane",
+        "lunapark", "müze", "orman", "pazar yeri", "rasathane", "sergi salonu",
+        "stadyum", "tren istasyonu", "yanardağ", "hayvanat bahçesi", "mağara",
+        "köprü", "şelale", "tiyatro", "liman", "çiftlik"),
+}
+IDENTITIES = tuple(identity for values in IDENTITY_CATEGORIES.values() for identity in values)
+IDENTITY_CATEGORY = {identity: category for category, values in IDENTITY_CATEGORIES.items()
+                     for identity in values}
 # Adjacent questions form a matched topic/difficulty pair, one per team.
 # Four locally checked subjects and five pairs per subject keep a five-round
 # match varied without relying on changing facts or external APIs.
@@ -299,6 +323,8 @@ def act(state, *, user_id, action, value=None, text=None, now=None, moderator=Fa
     moment = _now(now)
     if action == "join":
         return join(state, user_id=user_id, user_name=text or "Oyuncu", now=moment)
+    if action == "ready":
+        return ready(state, user_id=user_id)
     if action == "start":
         return start(state, user_id=user_id, now=moment)
     if action == "stop":

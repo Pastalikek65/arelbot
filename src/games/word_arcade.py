@@ -39,6 +39,11 @@ FORBIDDEN_CARDS = (
     ("merdiven", "e"), ("papatya", "a"), ("robot", "o"), ("sandalye", "a"),
     ("terlik", "e"), ("uçurtma", "u"), ("yastık", "ı"), ("zeytin", "e"),
     ("çorap", "o"), ("oymak", "o"), ("telefon", "e"), ("mektup", "e"),
+    ("anahtar", "a"), ("balon", "o"), ("çekiç", "e"), ("davul", "a"),
+    ("eldiven", "e"), ("fincan", "i"), ("gazete", "e"), ("havlu", "a"),
+    ("köprü", "ö"), ("çadır", "a"), ("radyo", "o"), ("lamba", "a"),
+    ("takvim", "i"), ("nehir", "e"), ("balık", "a"), ("perde", "e"),
+    ("simit", "i"), ("tarak", "a"), ("vapur", "a"), ("yelpaze", "e"),
 )
 STORY_WORDS = ("kapı", "orman", "anahtar", "nehir", "ışık", "yol", "gemi",
                "bahçe", "kuş", "kitap", "dünya", "saat", "rüzgâr", "köprü")

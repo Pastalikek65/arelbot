@@ -5,8 +5,8 @@ from html import escape
 
 from src.games import social_arcade as game
 from src.services.social_arcade_service import b36
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from src.telegram.game_controls import with_game_help
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 CODE = {key: str(index) for index, key in enumerate(game.GAME_KEYS)}
 DECODE = {value: key for key, value in CODE.items()}
@@ -93,6 +93,9 @@ def group_text(state):
             lines.append(f"Sıradaki özne: {name(subject)} · soru {view['question_count']}/8.")
         if phase == "question":
             lines.append("Özne özelden evet/hayır sorusu veya kimlik tahmini yazar. Yanlış tahmin bir hak götürür.")
+            if view["question_count"] >= 2:
+                identity = state["identities"][str(subject["id"])]
+                lines.append(f"İpucu · kategori: {escape(game.IDENTITY_CATEGORY[identity])}.")
         elif phase == "answer":
             lines.append(f"Soru: {escape(view['question_text'] or '')}")
             lines.append(f"Diğer oyuncular özelden evet/hayır oyu verir: {len(state['answers'])}/{len(view['players'])-1}.")
@@ -162,6 +165,8 @@ def group_keyboard(state):
         rows.append([_button(state, str(index+1), f"a{index}") for index in range(4)])
         rows.append([_button(state, "Risk 1", "w1"), _button(state, "Risk 2", "w2"),
                      _button(state, "Pas", "pass")])
+    elif key == "kimim_ben" and phase in {"question", "answer"}:
+        rows.append([_button(state, "Kimlik kartımı gör", "card")])
     if phase not in game.TERMINAL:
         rows.append([_button(state, "Ayrıl", "leave"), _button(state, "Oyunu bitir", "x")])
     else:
@@ -197,6 +202,9 @@ def private_text(state, user_id):
         if int(user_id) == subject:
             lines.append("Kimliğin sana gösterilmez. Özelden '? ...?' ile evet/hayır sorusu,")
             lines.append("'= kimlik' ile doğrudan tahmin yaz. Yanlış tahmin de bir hak tüketir; toplam sekiz hakkın var.")
+            if phase == "question" and state["question_count"] >= 2:
+                identity = state["identities"][str(subject)]
+                lines.append(f"İpucu · kategori: {escape(game.IDENTITY_CATEGORY[identity])}.")
         else:
             lines.append(f"Öznenin kimliği: <b>{escape(state['identities'][str(subject)])}</b>.")
             if phase == "answer":

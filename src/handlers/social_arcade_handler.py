@@ -186,10 +186,62 @@ class SocialArcadeHandler:
                   int(query.message.message_id) != int(state.get("panel_message_id") or 0)):
                 raise ValueError("sa_stale_panel")
             if code == "ready" and not private:
+                if rules._person(state, uid)["ready"]:
+                    await query.answer("Özel sohbetin zaten hazır.")
+                    return True
+                if key == "kimim_ben":
+                    # A successful DM proves that this user has already opened the bot.
+                    # The link remains available when Telegram rejects the first DM.
+                    try:
+                        await context.bot.send_message(chat_id=uid,
+                            text="Kimim Ben özel sohbetin hazır. Oyun başlayınca kimlik kartın buraya gelecek.",
+                            protect_content=True)
+                    except TelegramError:
+                        pass
+                    else:
+                        await self.service.act(game_key=key, chat_id=chat_id,
+                            thread_id=thread_id, user_id=uid,
+                            action_id=f"dm-ready:{query.id}", action="ready",
+                            round_id=round_id, phase_seq=phase_seq)
+                        await query.answer("Özel sohbet hazır.")
+                        await self._flush(context, game_key=key, chat_id=chat_id,
+                                          thread_id=thread_id)
+                        return True
                 payload = await self.service.mint_invite(game_key=key, chat_id=chat_id,
                     thread_id=thread_id, user_id=uid, round_id=round_id, request_id=query.id)
                 identity = await context.bot.get_me()
                 await query.answer(url=f"https://t.me/{identity.username}?start={payload}")
+                return True
+            if code == "card" and key == "kimim_ben" and not private:
+                if state["phase"] not in {"question", "answer"}:
+                    raise ValueError("sa_wrong_phase")
+                subject = state["players"][state["subject_index"]]["id"]
+                rules._person(state, uid)
+                if uid == subject:
+                    await query.answer("Kendi kimliğini göremezsin; soru sor veya tahmin et.",
+                                       show_alert=True)
+                    return True
+                identity = state["identities"][str(subject)]
+                # PTB 22.6 discards the new receiver_user response field. Keep
+                # the secret in callback_query.answer, which is private by design.
+                # A server that ignores the new parameter can only leak this
+                # non-secret reminder, never the identity.
+                try:
+                    response = await context.bot.do_api_request("sendMessage", api_kwargs={
+                        "chat_id": chat_id,
+                        "text": "🔐 Kimim Ben kartın botun özel sohbetinde duruyor.",
+                        "message_thread_id": thread_id,
+                        "ephemeral_message_parameters": {
+                            "receiver_user_id": uid, "callback_query_id": query.id}})
+                    verified = (isinstance(response, dict) and
+                        (response.get("receiver_user") or {}).get("id") == uid and
+                        response.get("ephemeral_message_id") is not None)
+                    if not verified and isinstance(response, dict) and response.get("message_id"):
+                        await context.bot.delete_message(chat_id=chat_id,
+                                                         message_id=response["message_id"])
+                except TelegramError:
+                    pass
+                await query.answer(f"Öznenin kimliği: {identity}", show_alert=True)
                 return True
             if code == "j" and not private:
                 operation, value = "join", None

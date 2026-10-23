@@ -17,7 +17,7 @@ Oyun salonu: `/oyun`. Oyuna göre lobi, zorluk ve kategori seçilir. Gizli roll�
 | Anagram | `/anagram` | 1–30 | Karışık harflerden sözlükteki kelimeyi bulma. |
 | Harf Maratonu | `/harfmaraton` | 2–20 | Süreli harf temelli çok oyunculu kelime yarışı. |
 | Sözcük Avı | `/sozcukavi` | 1–12 | Tahtada sözcük bulma ve tekrar kontrolü. |
-| Yasak Harf | `/yasakharf` | 2–12 | Yasak harfi kullanmadan kelime üretme. |
+| Yasak Harf | `/yasakharf` | 2–12 | 44 kartlık havuzdan gelen yasak harfi kullanmadan kelime üretme. |
 
 ## Tahta ve bulmacalar
 
@@ -45,8 +45,8 @@ Oyun salonu: `/oyun`. Oyuna göre lobi, zorluk ve kategori seçilir. Gizli roll�
 | Kronoloji | `/kronoloji` | 1–12 | Olayları zaman sırasına dizme. |
 | Doğru–Yanlış | `/dogruyanlis` | 1–30 | İddiaları doğru veya yanlış olarak değerlendirme. |
 | Dedektif | `/dedektif` | 1–12 | İpuçlarıyla cevaba ulaşma. |
-| Beş İpucu | `/besipucu` | 1–20 | Aşamalı ipuçlarıyla tahmin; erken çözümün puana etkisi. |
-| Emoji Bilmece | `/emojibilmece` | 1–20 | Emoji dizilerinden cevap bulma ve tur puanı. |
+| Beş İpucu | `/besipucu` | 1–20 | 60 özgün karttan aşamalı ipuçları; erken çözümün puana etkisi. |
+| Emoji Bilmece | `/emojibilmece` | 1–20 | 85 emoji kartından cevap bulma ve tur puanı. |
 
 ## Kart oyunları
 
@@ -62,14 +62,14 @@ Oyun salonu: `/oyun`. Oyuna göre lobi, zorluk ve kategori seçilir. Gizli roll�
 
 | Oyun | Komut | Oyuncu | Oynanış |
 |---|---|---|---|
-| Takım Tabu | `/tabu` | 4–20 | Takımlar, özel kart, yasak kelimeler, süre, pas ve hakem kontrolü. |
+| Takım Tabu | `/tabu` | 4–20 | 200 özgün kart, takımlar, özel kart, yasak kelimeler, süre, pas ve hakem kontrolü. |
 | Casus | `/casus` | 4–16 | Gizli roller, konum, tartışma, oylama ve casusun konum tahmini. |
 | Vampir Köylü / Kurt Adam | `/kurtadam`, `/vampir` | 5–35 | GreyWolf uyarlaması: 45 rol, Normal/Kaos, özel rol kartları, gece/gündüz yetenekleri, dönüşümler, âşıklar, farklı taraf kazanımları. `/vampir klasik` eski 7–20 kişilik dört rollü varyanttır. |
 | Refleks | `/refleks` | 2–30 | Ortak lobi, başlangıç işareti ve tepki süresi yarışı. |
 | Ortak Hikâye | `/ortakhikaye` | 3–10 | Sırayla katkı verilen ortak anlatı. |
 | Bomba | `/bomba` | 2–12 | Süre baskısı altında kelime üretme ve oyuncu eleme. |
 | İki Doğru Bir Yalan | `/ikidogru` | 3–12 | Özel ifadeler ve grubun yalanı seçtiği oylama. |
-| Kimim Ben | `/kimimben` | 3–12 | Gizli kimlik, soru ve tahmin turları. |
+| Kimim Ben | `/kimimben` | 3–12 | 108 kimlik ve dört kategori; ikinci sorudan sonra kategori ipucu, kullanıcıya özel grup kartı, kalıcı özel sohbet kartı. Botla önceden konuştuysan yeniden `/start` gerekmez. |
 | Takım Bilgi Ligi | `/takimligi` | 4–20 | Takımlara ayrılmış soru ve ortak skor akışı. |
 | Zehirli Kadeh | `/kadeh` | 3–10 | Gizli bilgiye dayalı grup seçimi ve eleme. |
 

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from .turkish_words import canonical_word
 
-
 # Target, category, five forbidden expressions. Keep clues concrete and distinct.
 _ROWS = (
     ("ağaç", "doğa", "dal,yaprak,orman,kök,gövde"),
@@ -173,6 +172,40 @@ _ROWS = (
     ("veteriner", "meslek", "hayvan,doktor,klinik,tedavi,kedi"),
     ("yemek tarifi", "günlük yaşam", "malzeme,pişirmek,ölçü,mutfak,anlatmak"),
     ("zeytin", "yiyecek", "yağ,kahvaltı,ağaç,siyah,çekirdek"),
+    ("akvaryumcu", "meslek", "balık,cam,mağaza,yem,su"),
+    ("ambulans", "ulaşım", "hasta,siren,acil,hastane,sedye"),
+    ("antika", "eşya", "eski,koleksiyon,değerli,müzayede,tarih"),
+    ("armut", "yiyecek", "meyve,ağaç,yeşil,sulu,tatlı"),
+    ("atlıkarınca", "eğlence", "lunapark,dönmek,çocuk,at,bilet"),
+    ("bakır", "malzeme", "metal,tel,kazan,iletken,kırmızı"),
+    ("buz pateni", "spor", "buz,kaymak,pist,ayakkabı,denge"),
+    ("cetvel", "eşya", "ölçmek,çizgi,uzunluk,okul,santimetre"),
+    ("çömlek", "el işi", "kil,çark,seramik,fırın,toprak"),
+    ("deniz kabuğu", "doğa", "sahil,midye,kum,dalga,toplamak"),
+    ("dondurucu", "ev", "soğuk,buz,yiyecek,saklamak,dolap"),
+    ("fırıncı", "meslek", "ekmek,hamur,un,pişirmek,simit"),
+    ("gölge oyunu", "sanat", "perde,ışık,Karagöz,Hacivat,figür"),
+    ("güneş kremi", "sağlık", "cilt,korumak,plaj,sürmek,faktör"),
+    ("hamak", "ev", "ağaç,ip,uzanmak,sallanmak,rahatlamak"),
+    ("havan", "alet", "ezmek,baharat,tokmak,mutfak,taş"),
+    ("ipek", "malzeme", "koza,kumaş,yumuşak,böcek,dokuma"),
+    ("kar küresi", "eşya", "cam,sallamak,kar,hediyelik,minyatür"),
+    ("kavanoz", "ev", "cam,kapak,reçel,turşu,saklamak"),
+    ("kiremit", "yapı", "çatı,tuğla,kırmızı,yağmur,örtmek"),
+    ("konserve", "yiyecek", "kutu,saklamak,kapak,raf,teneke"),
+    ("kroki", "bilgi", "çizim,yol,adres,kuşbakışı,tarif"),
+    ("mendil", "eşya", "burun,kumaş,cep,kağıt,silmek"),
+    ("oyun hamuru", "eğlence", "çocuk,şekil,renk,yoğurmak,yumuşak"),
+    ("patlamış mısır", "yiyecek", "sinema,tane,tuz,atıştırmak,tencere"),
+    ("piknik", "eğlence", "örtü,çimen,sepet,dışarı,yemek"),
+    ("sabun", "ev", "yıkamak,köpük,el,temizlik,koku"),
+    ("salıncak", "eğlence", "park,sallanmak,zincir,çocuk,oturmak"),
+    ("süpürge", "ev", "temizlik,toz,yer,elektrik,sap"),
+    ("terazi", "alet", "tartmak,ağırlık,kefe,kilo,denge"),
+    ("turşu", "yiyecek", "sirke,kavanoz,salatalık,ekşi,kurmak"),
+    ("vantilatör", "ev", "pervane,serinletmek,elektrik,rüzgâr,dönmek"),
+    ("yelpaze", "eşya", "serinlemek,katlamak,el,sallamak,sıcak"),
+    ("zımba", "eşya", "kağıt,tel,birleştirmek,basmak,ofis"),
 )
 
 _ALIASES = {
